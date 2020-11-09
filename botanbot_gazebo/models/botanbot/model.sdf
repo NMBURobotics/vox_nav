@@ -40,7 +40,7 @@
                 <pose>0 0 0 0 -0 0</pose>
                 <geometry>
                     <mesh>
-                        <uri>/home/atas/colcon_ws/src/OUTDOOR_NAV2/botanbot_gazebo/models/botanbot/meshes/base.stl</uri>
+                        <uri>model://botanbot/meshes/base.stl</uri>
                         <scale>1 1 1</scale>
                     </mesh>
                 </geometry>
