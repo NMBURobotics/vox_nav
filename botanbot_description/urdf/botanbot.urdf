@@ -1,0 +1,261 @@
+<?xml version="1.0"?>
+<robot name="botanbot" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- BEGIN LINKS-->
+  <!-- begin robot body links-->
+
+  <link name="base_footprint" />
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1 0.5 0.15" />
+      </geometry>
+      <material name="Cyan">
+        <color rgba="0 1.0 1.0 1.0" />
+      </material>
+    </visual>
+
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="1" length="0.5" />
+      </geometry>
+    </collision>
+  </link>
+
+
+  <link name='wheel_left_link'>
+    <visual name='visual'>
+      <geometry>
+        <cylinder radius="0.15" length="0.05" />
+      </geometry>
+      <material name="Red">
+        <color rgba="1.0 0 0 0.6" />
+      </material>
+    </visual>
+
+    <collision name='collision'>
+      <geometry>
+        <cylinder radius="0.15" length="0.05" />
+      </geometry>
+    </collision>
+  </link>
+
+
+  <link name='wheel_right_link'>
+    <visual name='visual'>
+      <geometry>
+        <cylinder radius="0.15" length="0.05" />
+      </geometry>
+      <material name="Red">
+        <color rgba="1.0 0 0 0.6" />
+      </material>
+    </visual>
+
+    <collision name='collision'>
+      <geometry>
+        <cylinder radius="0.15" length="0.05" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name='caster_front_link'>
+    <visual name='visual'>
+      <geometry>
+        <sphere radius="0.1" />
+      </geometry>
+      <material name="Green">
+        <color rgba="0 1.0 0 1" />
+      </material>
+    </visual>
+
+    <collision name='collision'>
+      <geometry>
+        <sphere radius="0.1" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name='caster_back_link'>
+    <visual name='visual'>
+      <geometry>
+        <sphere radius="0.1" />
+      </geometry>
+      <material name="Blue">
+        <color rgba="0 0 1.0 1.0" />
+      </material>
+    </visual>
+
+    <collision name='collision'>
+      <geometry>
+        <sphere radius="0.1" />
+      </geometry>
+    </collision>
+  </link>
+  <!-- end robot body links-->
+
+  <!-- begin sensor links-->
+  <link name="imu_link"></link>
+
+  <link name="base_scan">
+    <visual>
+      <geometry>
+        <mesh filename="package://botanbot_description/meshes/sensors/lds.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://botanbot_description/meshes/sensors/lds.stl" scale="0.001 0.001 0.001" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="camera_bottom_screw_frame">
+    <visual>
+      <geometry>
+        <mesh filename="package://botanbot_description/meshes/sensors/d435.dae" />
+      </geometry>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="package://botanbot_description/meshes/sensors/d435.dae" />
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="camera_link"></link>
+
+  <link name="camera_depth_frame"></link>
+
+  <link name="camera_depth_optical_frame"></link>
+
+  <link name="camera_color_frame"></link>
+
+  <link name="camera_color_optical_frame"></link>
+
+  <link name="camera_left_ir_frame"></link>
+
+  <link name="camera_left_ir_optical_frame"></link>
+
+  <link name="camera_right_ir_frame"></link>
+
+  <link name="camera_right_ir_optical_frame"></link>
+
+  <!-- end sensor links-->
+  <!-- END LINKS-->
+
+  <!--  BEGIN  JOINTS-->
+  <!-- begin robot body joints-->
+  <joint name="base_joint" type="fixed">
+    <parent link="base_footprint" />
+    <child link="base_link" />
+    <origin xyz="0 0 0.0" rpy="0 0 0" />
+  </joint>
+
+  <joint name='wheel_right_joint' type='continuous'>
+    <parent link="base_link" />
+    <child link="wheel_right_link" />
+    <origin xyz="0.0 0.3 -0.125" rpy="-1.57 0 0" />
+    <axis xyz="0 0 -1" />
+  </joint>
+
+  <joint name='wheel_left_joint' type='continuous'>
+    <parent link="base_link" />
+    <child link="wheel_left_link" />
+    <origin xyz="0.0 -0.3 -0.125" rpy="-1.57 0 0" />
+    <axis xyz="0 0 -1" />
+  </joint>
+
+  <joint name='caster_front_joint' type='fixed'>
+    <parent link="base_link" />
+    <child link="caster_front_link" />
+    <origin xyz="0.3 0 -0.125" rpy="0 0 0" />
+  </joint>
+
+  <joint name='caster_back_joint' type='fixed'>
+    <parent link="base_link" />
+    <child link="caster_back_link" />
+    <origin xyz="-0.3 0 -0.125" rpy="0 0 0" />
+  </joint>
+  <!-- end robot body joints-->
+
+  <!-- begin sensor joints-->
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="imu_link" />
+    <origin xyz="0 0 0.3" rpy="0 0 0" />
+  </joint>
+
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="base_scan" />
+    <origin xyz="0 0 0.4" rpy="0 0 0" />
+  </joint>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="camera_bottom_screw_frame" />
+    <pose xyz="0.4 0 0.25" rpy="-1.57 0 -1.57" />
+  </joint>
+
+  <joint name="camera_link_joint" type="fixed">
+    <parent link="camera_bottom_screw_frame" />
+    <child link="camera_link" />
+    <pose xyz="0 0.0175 0.0125 " rpy="0 0 0" />
+  </joint>
+
+  <joint name="camera_depth_joint" type="fixed">
+    <parent link="camera_link" />
+    <child link="camera_depth_frame" />
+    <pose xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+
+  <joint name="camera_depth_optical_joint" type="fixed">
+    <parent link="camera_depth_frame" />
+    <child link="camera_depth_optical_frame" />
+    <pose xyz="0 0 0 " rpy="-1.57 0 -1.57" />
+  </joint>
+
+  <joint name="camera_color_joint" type="fixed">
+    <parent link="camera_depth_frame" />
+    <child link="camera_color_frame" />
+    <pose xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+
+  <joint name="camera_color_optical_joint" type="fixed">
+    <parent link="camera_color_frame" />
+    <child link="camera_color_optical_frame" />
+    <pose xyz="0 0 0 " rpy="-1.57 0 -1.57" />
+  </joint>
+
+  <joint name="camera_left_ir_joint" type="fixed">
+    <parent link="camera_depth_frame" />
+    <child link="camera_left_ir_frame" />
+    <pose xyz="0 0 0 " rpy="0 0 0 " />
+  </joint>
+
+  <joint name="camera_left_ir_optical_joint" type="fixed">
+    <parent link="camera_left_ir_frame" />
+    <child link="camera_left_ir_optical_frame" />
+    <pose xyz="0 0 0 " rpy="-1.57 0 -1.57" />
+  </joint>
+
+  <joint name="camera_right_ir_joint" type="fixed">
+    <parent link="camera_depth_frame" />
+    <child link="camera_right_ir_frame" />
+    <pose xyz="0 -0.050 0 " rpy="0 0 0" />
+  </joint>
+
+  <joint name="camera_right_ir_optical_joint" type="fixed">
+    <parent link="camera_right_ir_frame" />
+    <child link="camera_right_ir_optical_frame" />
+    <pose xyz="0 0 0 " rpy="-1.57 0 -1.57" />
+  </joint>
+
+  <!-- end sensor joints-->
+  <!-- END JOINTS-->
+
+
+</robot>

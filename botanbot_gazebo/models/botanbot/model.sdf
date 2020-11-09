@@ -1,0 +1,467 @@
+<?xml version='1.0'?>
+<sdf version='1.7'>
+    <model name='botanbot'>
+        <link name='base_link'>
+            <inertial>
+                <inertial>
+                    <mass>1326.0</mass>
+                    <pose>0 -0.266 0.48 0 0 0</pose>
+                    <inertia>
+                        <ixx>2581.13354740</ixx>
+                        <ixy>0.0</ixy>
+                        <iyy>591.30846112</iyy>
+                        <ixz>0.0</ixz>
+                        <iyz>0.0</iyz>
+                        <izz>2681.95008628</izz>
+                    </inertia>
+                </inertial>
+                <pose>0 0 0 0 0 0</pose>
+            </inertial>
+            <pose>-0.019375 0.005287 0.340756 0 -0 0</pose>
+            <visual name='visual'>
+                <pose>0 0 0 0 0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>model://botanbot/meshes/base.stl</uri>
+                        <scale>1 1 1</scale>
+                    </mesh>
+                </geometry>
+                <material>
+                    <script>
+                        <uri>model://botanbot/materials/scripts</uri>
+                        <uri>model://botanbot/materials/textures</uri>
+                        <name>botanbot/fur</name>
+                    </script>
+                    <shader type='pixel'/>
+                    <emissive>0 0 0 1</emissive>
+                </material>
+            </visual>
+            <collision name='collision'>
+                <pose>0 0 0 0 -0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>/home/atas/colcon_ws/src/OUTDOOR_NAV2/botanbot_gazebo/models/botanbot/meshes/base.stl</uri>
+                        <scale>1 1 1</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+        </link>
+        <link name='steering_wheel'>
+            <pose>0.400132 9.3e-05 0.399996 -5.9e-05 -1.57 6.4e-05</pose>
+            <inertial>
+                <mass>1.0</mass>
+                <inertia>
+                    <ixx>0.14583300</ixx>
+                    <ixy>0</ixy>
+                    <ixz>0</ixz>
+                    <iyy>0.14583300</iyy>
+                    <iyz>0</iyz>
+                    <izz>0.12500000</izz>
+                </inertia>
+            </inertial>
+            <visual name='visual'>
+                <pose>0 0 0 1.57 -0 0</pose>
+                <geometry>
+                    <mesh>
+                        <uri>model://botanbot/meshes/wheel.stl</uri>
+                        <scale>0.5 0.5 1</scale>
+                    </mesh>
+                </geometry>
+                <material>
+                    <ambient>0.19225 0.19225 0.19225 1.0</ambient>
+                    <diffuse>0.50754 0.50754 0.50754 1.0</diffuse>
+                    <specular>0.508273 0.508273 0.508273 1.0</specular>
+                    <emissive>0.0 0.0 0.0 0.0</emissive>
+                </material>
+            </visual>
+            <collision name="collision">
+                <geometry>
+                    <sphere>
+                        <radius>0.15</radius>
+                    </sphere>
+                </geometry>
+                <surface>
+                    <friction>
+                        <ode>
+                            <mu>0.9</mu>
+                            <mu2>0.9</mu2>
+                            <slip1>0.0</slip1>
+                            <slip2>0.0</slip2>
+                        </ode>
+                    </friction>
+                    <contact>
+                        <ode>
+                            <min_depth>0.001</min_depth>
+                            <kp>1e9</kp>
+                        </ode>
+                    </contact>
+                </surface>
+            </collision>
+        </link>
+        <link name='front_left_wheel'>
+            <inertial>
+                <mass>11</mass>
+                <inertia>
+                    <ixx>0.58631238</ixx>
+                    <ixy>0.0</ixy>
+                    <iyy>0.33552910</iyy>
+                    <ixz>0.0</ixz>
+                    <iyz>0.0</iyz>
+                    <izz>0.33552910</izz>
+                </inertia>
+            </inertial>
+            <pose>0.653624 0.496194 -0.084805 0 -0 1.5706</pose>
+            <visual name='visual'>
+                <pose>0 0 0 0 -0 1.5706</pose>
+                <geometry>
+                    <mesh>
+                        <uri>model://botanbot/meshes/wheel.stl</uri>
+                        <scale>1 1 1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+            <collision name='collision'>
+                <pose>0 0 0 0 -0 1.5706</pose>
+                <geometry>
+                    <sphere>
+                        <radius>0.15</radius>
+                    </sphere>
+                </geometry>
+                <surface>
+                    <friction>
+                        <ode>
+                            <mu>0.9</mu>
+                            <mu2>0.9</mu2>
+                            <slip1>0.0</slip1>
+                            <slip2>0.0</slip2>
+                        </ode>
+                    </friction>
+                    <contact>
+                        <ode>
+                            <min_depth>0.001</min_depth>
+                            <kp>1e9</kp>
+                        </ode>
+                    </contact>
+                </surface>
+            </collision>
+        </link>
+        <link name='front_right_wheel'>
+            <inertial>
+                <mass>11</mass>
+                <inertia>
+                    <ixx>0.58631238</ixx>
+                    <ixy>0.0</ixy>
+                    <iyy>0.33552910</iyy>
+                    <ixz>0.0</ixz>
+                    <iyz>0.0</iyz>
+                    <izz>0.33552910</izz>
+                </inertia>
+            </inertial>
+            <pose>0.666123 -0.495391 -0.085288 0 2.7e-05 1.5706</pose>
+            <visual name='visual'>
+                <pose>0 0 0 0 -0 1.5706</pose>
+                <geometry>
+                    <mesh>
+                        <uri>model://botanbot/meshes/wheel.stl</uri>
+                        <scale>1 1 1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+            <collision name='collision'>
+                <pose>0 0 0 0 -0 1.5706</pose>
+                <geometry>
+                    <sphere>
+                        <radius>0.15</radius>
+                    </sphere>
+                </geometry>
+                <surface>
+                    <friction>
+                        <ode>
+                            <mu>0.9</mu>
+                            <mu2>0.9</mu2>
+                            <slip1>0.0</slip1>
+                            <slip2>0.0</slip2>
+                        </ode>
+                    </friction>
+                    <contact>
+                        <ode>
+                            <min_depth>0.001</min_depth>
+                            <kp>1e9</kp>
+                        </ode>
+                    </contact>
+                </surface>
+            </collision>
+        </link>
+        <link name='rear_left_wheel'>
+            <inertial>
+                <mass>11</mass>
+                <inertia>
+                    <ixx>0.58631238</ixx>
+                    <ixy>0.0</ixy>
+                    <iyy>0.33552910</iyy>
+                    <ixz>0.0</ixz>
+                    <iyz>0.0</iyz>
+                    <izz>0.33552910</izz>
+                </inertia>
+            </inertial>
+            <pose>-0.656583 0.492236 -0.085593 0 -0 1.5706</pose>
+            <visual name='visual'>
+                <pose>0 0 0 0 -0 1.5706</pose>
+                <geometry>
+                    <mesh>
+                        <uri>model://botanbot/meshes/wheel.stl</uri>
+                        <scale>1 1 1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+            <collision name='collision'>
+                <laser_retro>0</laser_retro>
+                <max_contacts>10</max_contacts>
+                <pose>0 0 0 0 -0 1.5706</pose>
+                <geometry>
+                    <sphere>
+                        <radius>0.15</radius>
+                    </sphere>
+                </geometry>
+                <surface>
+                    <friction>
+                        <ode>
+                            <mu>0.9</mu>
+                            <mu2>0.9</mu2>
+                            <slip1>0.0</slip1>
+                            <slip2>0.0</slip2>
+                        </ode>
+                    </friction>
+                    <contact>
+                        <ode>
+                            <min_depth>0.001</min_depth>
+                            <kp>1e9</kp>
+                        </ode>
+                    </contact>
+                </surface>
+            </collision>
+        </link>
+        <link name='rear_right_wheel'>
+            <inertial>
+                <mass>11</mass>
+                <inertia>
+                    <ixx>0.58631238</ixx>
+                    <ixy>0.0</ixy>
+                    <iyy>0.33552910</iyy>
+                    <ixz>0.0</ixz>
+                    <iyz>0.0</iyz>
+                    <izz>0.33552910</izz>
+                </inertia>
+            </inertial>
+            <pose>-0.644212 -0.499228 -0.085214 0 -0 1.5706</pose>
+            <visual name='visual'>
+                <pose>0 0 0 0 -0 1.5706</pose>
+                <geometry>
+                    <mesh>
+                        <uri>model://botanbot/meshes/wheel.stl</uri>
+                        <scale>1 1 1</scale>
+                    </mesh>
+                </geometry>
+            </visual>
+            <collision name='collision'>
+                <laser_retro>0</laser_retro>
+                <max_contacts>10</max_contacts>
+                <pose>0 0 0 0 -0 1.5706</pose>
+                <geometry>
+                    <sphere>
+                        <radius>0.15</radius>
+                    </sphere>
+                </geometry>
+                <surface>
+                    <friction>
+                        <ode>
+                            <mu>0.9</mu>
+                            <mu2>0.9</mu2>
+                            <slip1>0.0</slip1>
+                            <slip2>0.0</slip2>
+                        </ode>
+                    </friction>
+                    <contact>
+                        <ode>
+                            <min_depth>0.001</min_depth>
+                            <kp>1e9</kp>
+                        </ode>
+                    </contact>
+                </surface>
+            </collision>
+        </link>
+        <link name='rear_axle'>
+            <inertial>
+                <mass>30.0</mass>
+                <inertia>
+                    <ixx>0.08437499999999999</ixx>
+                    <ixy>0.0</ixy>
+                    <iyy>4.64581</iyy>
+                    <ixz>0.0</ixz>
+                    <iyz>0.0</iyz>
+                    <izz>4.64581</izz>
+                </inertia>
+            </inertial>
+            <pose>-0.656403 0.001088 -0.085593 0 -0.00022 1.57</pose>
+            <visual name='visual'>
+                <pose>0 0 0 1.57 -0 1.57</pose>
+                <geometry>
+                    <cylinder>
+                        <radius>0.0433457</radius>
+                        <length>0.694281</length>
+                    </cylinder>
+                </geometry>
+            </visual>
+            <collision name='collision'>
+                <laser_retro>0</laser_retro>
+                <max_contacts>10</max_contacts>
+                <pose>0 0 0 1.57 -0 1.57</pose>
+                <geometry>
+                    <cylinder>
+                        <radius>0.043346</radius>
+                        <length>0.694281</length>
+                    </cylinder>
+                </geometry>
+            </collision>
+        </link>
+        <joint name='rear_axle_joint' type='revolute'>
+            <parent>base_link</parent>
+            <child>rear_axle</child>
+            <pose>0 0 0 0 0 0</pose>
+            <axis>
+                <xyz>0 1 0</xyz>
+                <limit>
+                    <lower>-0.05089058524173028</lower>
+                    <upper>0.05089058524173028</upper>
+                </limit>
+                <dynamics>
+                    <spring_stiffness>20000.0</spring_stiffness>
+                    <damping>2000.0</damping>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name='front_left_combined_joint' type='universal'>
+            <parent>base_link</parent>
+            <child>front_left_wheel</child>
+            <pose>0 0 0 0 0 0</pose>
+            <axis>
+                <xyz>0 0 1</xyz>
+                <limit>
+                    <lower>-0.8727</lower>
+                    <upper>0.8727</upper>
+                </limit>
+            </axis>
+            <axis2>
+                <xyz>1 0 0</xyz>
+                <dynamics>
+                    <friction>0.024092253</friction>
+                </dynamics>
+            </axis2>
+        </joint>
+        <joint name='front_right_combined_joint' type='universal'>
+            <parent>base_link</parent>
+            <child>front_right_wheel</child>
+            <pose>0 0 0 0 0 0</pose>
+            <axis>
+                <xyz>0 0 1</xyz>
+                <limit>
+                    <lower>-0.8727</lower>
+                    <upper>0.8727</upper>
+                </limit>
+            </axis>
+            <axis2>
+                <xyz>1 0 0</xyz>
+                <dynamics>
+                    <friction>0.02092253</friction>
+                </dynamics>
+            </axis2>
+        </joint>
+        <joint name='rear_left_joint' type='revolute'>
+            <parent>rear_axle</parent>
+            <child>rear_left_wheel</child>
+            <pose>0 0 0 0 0 0</pose>
+            <axis>
+                <xyz>1 0 0</xyz>
+                <dynamics>
+                    <friction>12.031606150200002</friction>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name='rear_right_joint' type='revolute'>
+            <parent>rear_axle</parent>
+            <child>rear_right_wheel</child>
+            <pose>0 0 0 0 -0 0</pose>
+            <axis>
+                <xyz>1 0 0</xyz>
+                <dynamics>
+                    <friction>12.031606150200002</friction>
+                </dynamics>
+            </axis>
+        </joint>
+        <joint name="steering_joint" type="revolute">
+            <pose>-0.002 0 0 0 0 0</pose>
+            <parent>base_link</parent>
+            <child>steering_wheel</child>
+            <axis>
+                <xyz>0.0 0.0 1.0</xyz>
+                <limit>
+                    <lower>-7.85</lower>
+                    <upper>7.85</upper>
+                </limit>
+                <dynamics>
+                    <damping>1</damping>
+                </dynamics>
+                <use_parent_model_frame>true
+                </use_parent_model_frame>
+            </axis>
+            <physics>
+                <ode>
+                    <cfm_damping>1</cfm_damping>
+                </ode>
+            </physics>
+        </joint>
+        <plugin name='botanbot_ackermann_drive' filename='libbotanbot_ackermann_drive.so'>
+            <ros>
+                <namespace/>
+                <remapping>cmd_vel:=cmd_vel</remapping>
+                <remapping>odom:=odom</remapping>
+                <remapping>distance:=distance</remapping>
+            </ros>
+            <update_rate>100.0</update_rate>
+            <front_left_joint>front_left_combined_joint</front_left_joint>
+            <front_right_joint>front_right_combined_joint</front_right_joint>
+            <rear_left_joint>rear_left_joint</rear_left_joint>
+            <rear_right_joint>rear_right_joint</rear_right_joint>
+            <left_steering_joint>front_left_combined_joint</left_steering_joint>
+            <right_steering_joint>front_right_combined_joint</right_steering_joint>
+            <steering_wheel_joint>steering_joint</steering_wheel_joint>
+            <max_steer>0.6458</max_steer>
+            <max_steering_angle>7.85</max_steering_angle>
+            <max_speed>10</max_speed>
+            <left_steering_pid_gain>1500 0 1</left_steering_pid_gain>
+            <left_steering_i_range>0 0</left_steering_i_range>
+            <right_steering_pid_gain>1500 0 1</right_steering_pid_gain>
+            <right_steering_i_range>0 0</right_steering_i_range>
+            <linear_velocity_pid_gain>1000 0 1</linear_velocity_pid_gain>
+            <linear_velocity_i_range>0 0</linear_velocity_i_range>
+            <publish_odom>true</publish_odom>
+            <publish_odom_tf>true</publish_odom_tf>
+            <publish_wheel_tf>true</publish_wheel_tf>
+            <publish_distance>true</publish_distance>
+            <odometry_frame>odom</odometry_frame>
+            <robot_base_frame>base_link</robot_base_frame>
+        </plugin>
+        <plugin name="botanbot_joint_states" filename="libgazebo_ros_joint_state_publisher.so">
+            <ros>
+                <argument>~/out:=joint_states</argument>
+            </ros>
+            <update_rate>30</update_rate>
+            <joint_name>front_left_combined_joint</joint_name>
+            <joint_name>front_right_combined_joint</joint_name>
+            <joint_name>rear_left_joint</joint_name>
+            <joint_name>rear_right_joint</joint_name>
+            <joint_name>steering_joint</joint_name>
+            <joint_name>rear_right_joint</joint_name>
+        </plugin>
+    </model>
+</sdf>

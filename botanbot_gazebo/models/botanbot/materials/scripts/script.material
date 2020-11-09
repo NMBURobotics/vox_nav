@@ -1,0 +1,16 @@
+material botanbot/fur
+        {
+          receive_shadows off
+          technique
+          {
+            pass
+            {
+              texture_unit
+              {
+                texture sheep.png
+                filtering anistropic
+                max_anisotropy 16
+              }
+            }
+          }
+        }
