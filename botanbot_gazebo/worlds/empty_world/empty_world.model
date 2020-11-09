@@ -37,14 +37,8 @@
                 </constraints>
             </ode>
         </physics>
-        <model name="sonoma_raceway">
-            <static>1</static>
-            <include>
-                <uri>model://sonoma_raceway</uri>
-            </include>
-        </model>
         <include>
-            <pose> 10 0 25.0 0.0 0.0 0.0</pose>
+            <pose> 10 0 1.0 0.0 0.0 0.0</pose>
             <uri>model://botanbot</uri>
         </include>
     </world>
