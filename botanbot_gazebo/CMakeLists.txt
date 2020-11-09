@@ -105,10 +105,6 @@ install(DIRECTORY launch models worlds plugins
   DESTINATION share/${PROJECT_NAME}/
 )
 
-install(DIRECTORY include/
-  DESTINATION include/
-)
-
 ################################################################################
 # Macro for ament package
 ################################################################################

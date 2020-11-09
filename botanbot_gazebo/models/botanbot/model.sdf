@@ -350,11 +350,14 @@
                     <lower>-0.8727</lower>
                     <upper>0.8727</upper>
                 </limit>
+                <dynamics>
+                    <friction>2.03092253</friction>
+                </dynamics>
             </axis>
             <axis2>
                 <xyz>1 0 0</xyz>
                 <dynamics>
-                    <friction>0.024092253</friction>
+                    <friction>12.034092253</friction>
                 </dynamics>
             </axis2>
         </joint>
@@ -368,11 +371,14 @@
                     <lower>-0.8727</lower>
                     <upper>0.8727</upper>
                 </limit>
+                <dynamics>
+                    <friction>2.03092253</friction>
+                </dynamics>
             </axis>
             <axis2>
                 <xyz>1 0 0</xyz>
                 <dynamics>
-                    <friction>0.02092253</friction>
+                    <friction>12.03092253</friction>
                 </dynamics>
             </axis2>
         </joint>
