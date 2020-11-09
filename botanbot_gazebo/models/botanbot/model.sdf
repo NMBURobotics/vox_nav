@@ -453,7 +453,7 @@
         </plugin>
         <plugin name="botanbot_joint_states" filename="libgazebo_ros_joint_state_publisher.so">
             <ros>
-                <argument>~/out:=joint_states</argument>
+                <argument>--ros-args --remap ~/out:=joint_states</argument>
             </ros>
             <update_rate>30</update_rate>
             <joint_name>front_left_combined_joint</joint_name>
