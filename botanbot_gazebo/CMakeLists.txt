@@ -18,6 +18,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(camera_info_manager REQUIRED)
+find_package(gazebo REQUIRED)
 find_package(gazebo_dev REQUIRED)
 find_package(gazebo_msgs REQUIRED)
 find_package(gazebo_ros REQUIRED)
@@ -50,6 +51,7 @@ endif()
 # Build
 ################################################################################
 include_directories(include
+  ${GAZEBO_INCLUDE_DIRS}
   ${gazebo_dev_INCLUDE_DIRS}
   ${gazebo_ros_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
@@ -60,16 +62,9 @@ include_directories(include
   ${tf2_ros_INCLUDE_DIRS}
   ${tf2_INCLUDE_DIRS}
 )
-link_directories(${gazebo_dev_LIBRARY_DIRS})
-
-set(dependencies
-  "geometry_msgs"
-  "nav_msgs"
-  "rclcpp"
-  "sensor_msgs"
-  "tf2"
+link_directories(${GAZEBO_LIBRARY_DIRS}
+                 ${gazebo_dev_LIBRARY_DIRS}
 )
-
 # botanbot_ackermann_drive
 add_library(botanbot_ackermann_drive SHARED
   plugins/botanbot_ackermann_drive.cpp
@@ -90,12 +85,28 @@ if(ENABLE_PROFILER)
   target_include_directories(botanbot_ackermann_drive PUBLIC ${ignition-common3_INCLUDE_DIRS})
   target_link_libraries(botanbot_ackermann_drive ${ignition-common3_LIBRARIES})
 endif()
+#realsense_gazeo_plugin
+add_library(
+    realsense_gazebo_plugin SHARED
+    plugins/RealSensePlugin.cpp
+    plugins/gazebo_ros_realsense.cpp
+    )
+ament_target_dependencies(realsense_gazebo_plugin 
+  "rclcpp"
+  "gazebo_ros"
+  "image_transport"
+  "camera_info_manager"
+  "sensor_msgs"
+)
+ament_export_libraries(realsense_gazebo_plugin)
+target_link_libraries(realsense_gazebo_plugin ${GAZEBO_LIBRARIES})
 
 ################################################################################
 # Install
 ################################################################################
 install(TARGETS 
         botanbot_ackermann_drive
+        realsense_gazebo_plugin
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
