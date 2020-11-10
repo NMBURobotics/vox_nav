@@ -667,6 +667,7 @@
             <child>gps_link</child>
             <pose>0 0 0 0 0 0</pose>
         </joint>
+        <!-- SENSORS: VELODYNE HDL-32-->
         <link name="velodyne_link">
             <pose>0 -0 0.6 0 0 0</pose>
             <collision name="collision">
@@ -696,7 +697,7 @@
                     <emissive>0 0 0 1</emissive>
                 </material>
             </visual>
-            <sensor type="gpu_ray" name="VLP16">
+            <sensor type="gpu_ray" name="HDL32">
                 <pose>0 0 0 0 0 0</pose>
                 <visualize>false</visualize>
                 <update_rate>30</update_rate>
@@ -735,10 +736,81 @@
                 </plugin>
             </sensor>
         </link>
-        <!-- SENSORS: VELODYNE VLP-16-->
         <joint name="velodyne_joint" type="fixed">
             <parent>base_link</parent>
             <child>velodyne_link</child>
+            <pose>0 0 0 0 0 0</pose>
+        </joint>
+        <!-- SENSORS: IMU -->
+        <link name="imu_link">
+            <pose>0.7 0.5 0.6 0 0 0</pose>
+            <inertial>
+                <inertia>
+                    <ixx>0.001</ixx>
+                    <ixy>0.000</ixy>
+                    <ixz>0.000</ixz>
+                    <iyy>0.001</iyy>
+                    <iyz>0.000</iyz>
+                    <izz>0.001</izz>
+                </inertia>
+                <mass>0.035</mass>
+            </inertial>
+            <gravity>true</gravity>
+            <sensor name="imu" type="imu">
+                <always_on>true</always_on>
+                <update_rate>30</update_rate>
+                <imu>
+                    <angular_velocity>
+                        <x>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>2e-4</stddev>
+                            </noise>
+                        </x>
+                        <y>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>2e-4</stddev>
+                            </noise>
+                        </y>
+                        <z>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>2e-4</stddev>
+                            </noise>
+                        </z>
+                    </angular_velocity>
+                    <linear_acceleration>
+                        <x>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>1.7e-2</stddev>
+                            </noise>
+                        </x>
+                        <y>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>1.7e-2</stddev>
+                            </noise>
+                        </y>
+                        <z>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>1.7e-2</stddev>
+                            </noise>
+                        </z>
+                    </linear_acceleration>
+                </imu>
+                <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+                    <ros>
+                        <remapping>~/out:=imu</remapping>
+                    </ros>
+                </plugin>
+            </sensor>
+        </link>
+        <joint name="imu_joint" type="fixed">
+            <parent>base_link</parent>
+            <child>imu_link</child>
             <pose>0 0 0 0 0 0</pose>
         </joint>
     </model>
