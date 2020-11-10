@@ -100,6 +100,16 @@ ament_target_dependencies(realsense_gazebo_plugin
 )
 ament_export_libraries(realsense_gazebo_plugin)
 target_link_libraries(realsense_gazebo_plugin ${GAZEBO_LIBRARIES})
+#gazebo_ros_velodyne_laser
+add_library(gazebo_ros_velodyne_laser SHARED plugins/GazeboRosVelodyneLaser.cpp)
+ament_target_dependencies(gazebo_ros_velodyne_laser
+  "gazebo_dev"
+  "gazebo_ros"
+  "rclcpp"
+  "sensor_msgs"
+)
+ament_export_libraries(gazebo_ros_velodyne_laser)
+
 
 ################################################################################
 # Install
@@ -107,6 +117,7 @@ target_link_libraries(realsense_gazebo_plugin ${GAZEBO_LIBRARIES})
 install(TARGETS 
         botanbot_ackermann_drive
         realsense_gazebo_plugin
+        gazebo_ros_velodyne_laser
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
