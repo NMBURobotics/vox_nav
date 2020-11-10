@@ -469,7 +469,7 @@
             <joint_name>steering_joint</joint_name>
             <joint_name>rear_right_joint</joint_name>
         </plugin>
-        <!-- SENSORS-->
+        <!-- SENSORS:  REALSENSE CAMERA-->
         <link name="realsense_link">
             <pose>0.7 -0.5 0.6 0 0 0</pose>
             <visual name="realsense_link_visual">
@@ -616,5 +616,54 @@
             <pointCloudTopicName>camera/depth/color/points</pointCloudTopicName>
             <pointCloudCutoff>0.3</pointCloudCutoff>
         </plugin>
+        <!-- SENSORS:  GPS-->
+        <link name="gps_link">
+            <pose>0 -0 0.6 0 0 0</pose>
+            <collision name="collision">
+                <geometry>
+                    <box>
+                        <size>0.1 0.1 0.1</size>
+                    </box>
+                </geometry>
+            </collision>
+            <visual name="visual">
+                <geometry>
+                    <box>
+                        <size>0.1 0.1 0.1</size>
+                    </box>
+                </geometry>
+            </visual>
+            <sensor name="botanbot_gps" type="gps">
+                <always_on>true</always_on>
+                <update_rate>30</update_rate>
+                <gps>
+                    <position_sensing>
+                        <horizontal>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>2e-4</stddev>
+                            </noise>
+                        </horizontal>
+                        <vertical>
+                            <noise type="gaussian">
+                                <mean>0.0</mean>
+                                <stddev>2e-4</stddev>
+                            </noise>
+                        </vertical>
+                    </position_sensing>
+                </gps>
+                <plugin name="botanbot_gps_plugin" filename="libgazebo_ros_gps_sensor.so">
+                    <ros>
+                        <namespace>/gps</namespace>
+                        <remapping>~/out:=data</remapping>
+                    </ros>
+                </plugin>
+            </sensor>
+        </link>
+        <joint name="gps_joint" type="fixed">
+            <parent>base_link</parent>
+            <child>gps_link</child>
+            <pose>0 0 0 0 0 0</pose>
+        </joint>
     </model>
 </sdf>
