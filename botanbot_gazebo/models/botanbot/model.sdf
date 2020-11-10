@@ -618,19 +618,21 @@
         </plugin>
         <!-- SENSORS:  GPS-->
         <link name="gps_link">
-            <pose>0 -0 0.6 0 0 0</pose>
+            <pose>0 -0 0.4 0 0 0</pose>
             <collision name="collision">
                 <geometry>
-                    <box>
-                        <size>0.1 0.1 0.1</size>
-                    </box>
+                    <mesh>
+                        <uri>model://botanbot/meshes/gps.stl</uri>
+                        <scale>0.0005 0.0005 0.001</scale>
+                    </mesh>
                 </geometry>
             </collision>
             <visual name="visual">
                 <geometry>
-                    <box>
-                        <size>0.1 0.1 0.1</size>
-                    </box>
+                    <mesh>
+                        <uri>model://botanbot/meshes/gps.stl</uri>
+                        <scale>0.0005 0.0005 0.001</scale>
+                    </mesh>
                 </geometry>
             </visual>
             <sensor name="botanbot_gps" type="gps">
