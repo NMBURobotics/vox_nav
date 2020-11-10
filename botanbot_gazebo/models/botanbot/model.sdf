@@ -37,7 +37,7 @@
                 </material>
             </visual>
             <collision name='collision'>
-                <pose>0 0 0 0 -0 0</pose>
+                <pose>0 0 0 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>model://botanbot/meshes/base.stl</uri>
@@ -351,13 +351,13 @@
                     <upper>0.8727</upper>
                 </limit>
                 <dynamics>
-                    <friction>2.03092253</friction>
+                    <friction>2.0</friction>
                 </dynamics>
             </axis>
             <axis2>
                 <xyz>1 0 0</xyz>
                 <dynamics>
-                    <friction>12.034092253</friction>
+                    <friction>2.0</friction>
                 </dynamics>
             </axis2>
         </joint>
@@ -372,13 +372,13 @@
                     <upper>0.8727</upper>
                 </limit>
                 <dynamics>
-                    <friction>2.03092253</friction>
+                    <friction>2.0</friction>
                 </dynamics>
             </axis>
             <axis2>
                 <xyz>1 0 0</xyz>
                 <dynamics>
-                    <friction>12.03092253</friction>
+                    <friction>2.0</friction>
                 </dynamics>
             </axis2>
         </joint>
@@ -389,7 +389,7 @@
             <axis>
                 <xyz>1 0 0</xyz>
                 <dynamics>
-                    <friction>12.031606150200002</friction>
+                    <friction>2.0</friction>
                 </dynamics>
             </axis>
         </joint>
@@ -400,7 +400,7 @@
             <axis>
                 <xyz>1 0 0</xyz>
                 <dynamics>
-                    <friction>12.031606150200002</friction>
+                    <friction>2.0</friction>
                 </dynamics>
             </axis>
         </joint>
@@ -444,11 +444,11 @@
             <max_steer>0.6458</max_steer>
             <max_steering_angle>7.85</max_steering_angle>
             <max_speed>10</max_speed>
-            <left_steering_pid_gain>1500 0 1</left_steering_pid_gain>
+            <left_steering_pid_gain>1000 0 1</left_steering_pid_gain>
             <left_steering_i_range>0 0</left_steering_i_range>
-            <right_steering_pid_gain>1500 0 1</right_steering_pid_gain>
+            <right_steering_pid_gain>1000 0 1</right_steering_pid_gain>
             <right_steering_i_range>0 0</right_steering_i_range>
-            <linear_velocity_pid_gain>1000 0 1</linear_velocity_pid_gain>
+            <linear_velocity_pid_gain>100 0 1</linear_velocity_pid_gain>
             <linear_velocity_i_range>0 0</linear_velocity_i_range>
             <publish_odom>true</publish_odom>
             <publish_odom_tf>true</publish_odom_tf>
