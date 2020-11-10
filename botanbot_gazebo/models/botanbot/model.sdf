@@ -729,7 +729,7 @@
                 </ray>
                 <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_velodyne_laser.so">
                     <topicName>/velodyne_points</topicName>
-                    <frameName>velodyne</frameName>
+                    <frameName>velodyne_link</frameName>
                     <min_range>0.9</min_range>
                     <max_range>130.0</max_range>
                     <gaussianNoise>0.008</gaussianNoise>
