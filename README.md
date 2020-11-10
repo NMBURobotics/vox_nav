@@ -3,7 +3,7 @@ A project to develop/adapt a navigation system for outdoor robotics particularly
 
 ## Botanbot
 Botanbot is a simple 4 wheeled , ackermann drived moile robot. It is simulated under Gazebo with all required essential sensors in order to do outdoor navigation. The following table shows currently supported sensors. 
-
+### Sensor support for Botanbot
 | Sensor type | Topic Name(s) | Message Type | Update Rate |
 | :---: | :---: | :---: | :---: |
 | LIDAR | /velodyne_points | sensor_msgs::msg::PointCloud2 | 30 |
@@ -13,3 +13,8 @@ Botanbot is a simple 4 wheeled , ackermann drived moile robot. It is simulated u
 | RealSense D435 IR2 CAMERA | /camera/infra2/image_raw | sensor_msgs::msg::Image | 1 |
 | GPS | /gps/data | sensor_msgs::msg::NavSatFix | 30 |
 | IMU | /imu | sensor_msgs::msg::Imu | 30 |
+
+### Botanbot in Gazebo
+![.](docs/botanbot_0.jpg)
+
+![.](docs/botanbot_1.jpg)
