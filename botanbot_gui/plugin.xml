@@ -1,0 +1,17 @@
+<library path="botanbot_gui">
+    <class name="botanbot_gui/ControlPlugin" type="botanbot_gui::ControlPlugin" base_class_type="rqt_gui_cpp::Plugin">
+        <description>
+      Blank
+    </description>
+        <qtgui>
+            <group>
+                <label>Visualization</label>
+                <icon type="theme">folder</icon>
+                <statustip>Plugins related to visualization.</statustip>
+            </group>
+            <label>Control Plugin</label>
+            <icon type="theme">image-x-generic</icon>
+            <statustip>A GUI plugin for viewing sensor_msgs/Image topics.</statustip>
+        </qtgui>
+    </class>
+</library>

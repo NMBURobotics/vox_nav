@@ -1,0 +1,47 @@
+<package format="2">
+    <name>botanbot_gui</name>
+    <version>0.0.0</version>
+    <description>botanbot_gui provides a RQT GUI plugin for controling and interacting with botanbot.</description>
+    <license>Apache 2.0</license>
+    <author email="fetulahatas1@gmail.com">Fetullah Atas</author>
+    <maintainer email="fetulahatas1@gmail.com">Fetullah Atas</maintainer>
+    <url type="repository">https://github.com/jediofgever/OUTDOOR_NAV2</url>
+    <buildtool_depend>ament_cmake</buildtool_depend>
+    <depend>rclcpp</depend>
+    <build_depend>geometry_msgs</build_depend>
+    <build_depend>qtbase5-dev</build_depend>
+    <build_depend>rqt_gui</build_depend>
+    <build_depend>rqt_gui_cpp</build_depend>
+    <build_depend>qt_gui_cpp</build_depend>
+    <build_depend>sensor_msgs</build_depend>
+    <build_depend>rclcpp_lifecycle</build_depend>
+    <build_depend>std_msgs</build_depend>
+    <build_depend>pluginlib</build_depend>
+    <build_depend>visualization_msgs</build_depend>
+    <build_depend>tf2_geometry_msgs</build_depend>
+    <build_depend>nav2_util</build_depend>
+    <build_depend>nav2_lifecycle_manager</build_depend>
+    <build_depend>nav2_behavior_tree</build_depend>
+    <build_depend>nav_msgs</build_depend>
+    <build_depend>nav2_msgs</build_depend>
+    <exec_depend>geometry_msgs</exec_depend>
+    <exec_depend>qtbase5-dev</exec_depend>
+    <exec_depend>rqt_gui</exec_depend>
+    <exec_depend>rqt_gui_cpp</exec_depend>
+    <exec_depend>qt_gui_cpp</exec_depend>
+    <exec_depend>sensor_msgs</exec_depend>
+    <exec_depend>rclcpp_lifecycle</exec_depend>
+    <exec_depend>std_msgs</exec_depend>
+    <exec_depend>pluginlib</exec_depend>
+    <exec_depend>visualization_msgs</exec_depend>
+    <exec_depend>tf2_geometry_msgs</exec_depend>
+    <exec_depend>nav2_util</exec_depend>
+    <exec_depend>nav2_lifecycle_manager</exec_depend>
+    <exec_depend>nav2_behavior_tree</exec_depend>
+    <exec_depend>nav_msgs</exec_depend>
+    <exec_depend>nav2_msgs</exec_depend>
+    <export>
+        <build_type>ament_cmake</build_type>
+        <rqt_gui plugin="${prefix}/plugin.xml" />
+    </export>
+</package>
