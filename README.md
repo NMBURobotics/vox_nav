@@ -15,34 +15,38 @@ This can be quickly done with;
 
 * Install OUTDOOR_NAV2 packages
 
-> mkdir -p colcon_ws/src
+```bash
+mkdir -p colcon_ws/src
 
-> cd colcon_ws/src
+cd colcon_ws/src
 
-> https://github.com/jediofgever/OUTDOOR_NAV2.git && cd ..
+git clone https://github.com/jediofgever/OUTDOOR_NAV2.git && cd ..
+```
 
 * Install dependencies with; 
 
-> rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy
+```bash
+rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy
 
-> colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+```
 
 * Additional linux terminal command utility package
 
-> sudo apt-get install xdotool
+`sudo apt-get install xdotool`
 
 ## Run project
 
-THe project has a RGT GUI plugin that lets you to interact with robot. To start with this plugin make sure in previous step you built project 
+The project has a RGT GUI plugin that lets you to interact with robot. To start with this plugin make sure in previous step you built project 
 successfully. 
 
 * source your colcon_ws and start the project with;
 
-> source install/setup.bash
+` source install/setup.bash`
 
-> rqt --force-discover
+` rqt --force-discover`
 
-![.](images/3.png)
+![.](docs/gui_1.png)
 
 The rqt window should open as above. You should now find our plugin under; 
 
@@ -50,7 +54,7 @@ Plugins -> Visualization -> Control Plugin.
 
 Click on Control Plugin and you would be able to see; 
 
-![.](images/4.png)
+![.](docs/gui_2.png)
 
 ***
 
