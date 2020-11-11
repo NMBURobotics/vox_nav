@@ -169,7 +169,7 @@ def generate_launch_description():
                           'rviz_config': rviz_config_file}.items())
     
     bringup_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
+        PythonLaunchDescriptionSource(os.path.join(launch_dir, 'navigation_launch.py')),
         launch_arguments={'namespace': namespace,
                           'use_namespace': use_namespace,
                           'slam': slam,
@@ -206,6 +206,6 @@ def generate_launch_description():
     # Add the actions to launch all of the navigation nodes
     ld.add_action(start_robot_state_publisher_cmd)
     ld.add_action(rviz_cmd)
-    #ld.add_action(bringup_cmd)
+    ld.add_action(bringup_cmd)
 
     return ld

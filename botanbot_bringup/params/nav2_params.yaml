@@ -161,9 +161,9 @@ local_costmap:
       robot_base_frame: base_link
       use_sim_time: True
       rolling_window: true
-      width: 20
-      height: 20
-      resolution: 0.5
+      width: 10
+      height: 10
+      resolution: 0.1
       robot_radius: 0.60
       plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
       obstacle_layer:
