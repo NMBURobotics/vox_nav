@@ -6,7 +6,7 @@
     <link name="base_footprint" />
     <link name="base_link">
         <visual>
-            <origin xyz="0 0 0" rpy="0 0 0" />
+            <origin xyz="-0.019375 0.005287 0.340756" rpy="0 0 0" />
             <geometry>
                 <mesh filename="package://botanbot_description/meshes/base.stl"/>
             </geometry>
@@ -23,6 +23,7 @@
     </link>
     <link name='steering_wheel'>
         <visual name='visual'>
+            <origin xyz="0 0 0" rpy="1.57 0 0" />
             <geometry>
                 <mesh filename="package://botanbot_description/meshes/wheel.stl" scale="0.5 0.5 1" />
             </geometry>
@@ -38,6 +39,7 @@
     </link>
     <link name='front_left_wheel'>
         <visual name='visual'>
+            <origin xyz="0 0 0" rpy="0 0 1.57" />
             <geometry>
                 <mesh filename="package://botanbot_description/meshes/wheel.stl" scale="1 1 1" />
             </geometry>
@@ -53,6 +55,23 @@
     </link>
     <link name='front_right_wheel'>
         <visual name='visual'>
+            <origin xyz="0 0 0" rpy="0 0 1.57" />
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/wheel.stl" scale="1 1 1" />
+            </geometry>
+            <material name="Red">
+                <color rgba="1.0 0 0 0.6" />
+            </material>
+        </visual>
+        <collision name='collision'>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/wheel.stl" scale="1 1 1" />
+            </geometry>
+        </collision>
+    </link>
+    <link name='rear_left_wheel'>
+        <visual name='visual'>
+            <origin xyz="0 0 0" rpy="0 0 1.57" />
             <geometry>
                 <mesh filename="package://botanbot_description/meshes/wheel.stl" scale="1 1 1" />
             </geometry>
@@ -68,21 +87,7 @@
     </link>
     <link name='rear_right_wheel'>
         <visual name='visual'>
-            <geometry>
-                <mesh filename="package://botanbot_description/meshes/wheel.stl" scale="1 1 1" />
-            </geometry>
-            <material name="Red">
-                <color rgba="1.0 0 0 0.6" />
-            </material>
-        </visual>
-        <collision name='collision'>
-            <geometry>
-                <mesh filename="package://botanbot_description/meshes/wheel.stl" scale="1 1 1" />
-            </geometry>
-        </collision>
-    </link>
-    <link name='rear_right_wheel'>
-        <visual name='visual'>
+            <origin xyz="0 0 0" rpy="0 0 1.57" />
             <geometry>
                 <mesh filename="package://botanbot_description/meshes/wheel.stl" scale="1 1 1" />
             </geometry>
@@ -98,14 +103,16 @@
     </link>
     <link name='rear_axle'>
         <visual name='visual'>
+            <origin xyz="0 0 0" rpy="1.57 -0 1.57" />
             <geometry>
-                <cylinder radius="0.15" length="0.05" />
+                <cylinder radius="0.043346" length="0.694281" />
             </geometry>
-            <material name="Red">
-                <color rgba="1.0 0 0 0.6" />
+            <material name="Cyan">
+                <color rgba="0 1.0 1.0 1.0" />
             </material>
         </visual>
         <collision name='collision'>
+            <origin xyz="0 0 0" rpy="1.57 -0 1.57" />
             <geometry>
                 <cylinder radius="0.043346" length="0.694281" />
             </geometry>
@@ -155,12 +162,12 @@
     <link name="camera_bottom_screw_frame">
         <visual>
             <geometry>
-                <mesh filename="package://botanbot_description/d435.dae" />
+                <mesh filename="package://botanbot_description/meshes/d435.dae" />
             </geometry>
         </visual>
         <collision>
             <geometry>
-                <mesh filename="package://botanbot_description/d435.dae" />
+                <mesh filename="package://botanbot_description/meshes/d435.dae" />
             </geometry>
         </collision>
     </link>
@@ -180,7 +187,7 @@
     <joint name="base_joint" type="fixed">
         <parent link="base_footprint" />
         <child link="base_link" />
-        <origin xyz="0 0 0.0" rpy="0 0 0" />
+        <origin xyz="-0.019375 0.005287 0.340756" rpy="0 0 0" />
     </joint>
     <joint name='front_left_combined_joint' type='continuous'>
         <parent link="base_link" />
@@ -194,14 +201,22 @@
         <origin xyz="0.666123 -0.495391 -0.085288" rpy="0 0 1.5706" />
         <axis xyz="1 0 1" />
     </joint>
-    <joint name='rear_left_joint' type='continuous'>
+    <joint name='rear_axle_joint' type='revolute'>
         <parent link="base_link" />
+        <child link="rear_axle" />
+        <origin xyz="-0.656403 0.001088 -0.085593" rpy="0 0 1.57" />
+        <dynamics damping="2000.0" friction="0.0"/>
+        <limit effort="30" velocity="1.0" lower="-0.05" upper="0.05" />
+        <axis xyz="0 1 0" />
+    </joint>
+    <joint name='rear_left_joint' type='continuous'>
+        <parent link="rear_axle" />
         <child link="rear_left_wheel" />
         <origin xyz="-0.656583 0.492236 -0.085593" rpy="0 -0 1.5706" />
         <axis xyz="1 0 0" />
     </joint>
     <joint name='rear_right_joint' type='continuous'>
-        <parent link="base_link" />
+        <parent link="rear_axle" />
         <child link="rear_right_wheel" />
         <origin xyz="-0.644212 -0.499228 -0.085214" rpy="0 -0 1.5706" />
         <axis xyz="1 0 0" />
