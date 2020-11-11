@@ -67,7 +67,9 @@ You can also click on start RVIZ and you should be able to see sensor data and r
 
 ![.](docs/rviz_1.png)
 
-This Gazbo world includes hills , up and downs which tries to be more inclusive for case of agricultural robot.
+This Gazebo world includes hills , up and downs which tries to be more inclusive for case of agricultural robot.
+
+You can jog botanbot with RQT plugin, use `L/R` for giving angular speed and `D/R` for  linear speed. 
 
 ## Botanbot
 Botanbot is a simple 4 wheeled , ackermann drived moile robot. It is simulated under Gazebo with all required essential sensors in order to do outdoor navigation. The following table shows currently supported sensors. 
