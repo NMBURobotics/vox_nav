@@ -702,7 +702,7 @@
         </joint>
         <!-- SENSORS: VELODYNE HDL-32-->
         <link name="velodyne_link">
-            <pose>0 -0 0.6 0 0 0</pose>
+            <pose>0 -0 0.8 0 0 0</pose>
             <collision name="collision">
                 <pose>0 0 0 1.57 0 0</pose>
                 <geometry>
@@ -737,7 +737,7 @@
                 <ray>
                     <scan>
                         <horizontal>
-                            <samples>1024</samples>
+                            <samples>2048</samples>
                             <resolution>1</resolution>
                             <min_angle>-3.14</min_angle>
                             <max_angle>3.14</max_angle>
@@ -745,13 +745,13 @@
                         <vertical>
                             <samples>32</samples>
                             <resolution>1</resolution>
-                            <min_angle>-0.3490</min_angle>
-                            <max_angle>0.0872</max_angle>
+                            <min_angle>-0.261799</min_angle>
+                            <max_angle>0.261799</max_angle>
                         </vertical>
                     </scan>
                     <range>
                         <min>0.3</min>
-                        <max>130.0</max>
+                        <max>100.0</max>
                         <resolution>0.001</resolution>
                     </range>
                     <noise>
@@ -763,8 +763,8 @@
                 <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_velodyne_laser.so">
                     <topicName>/velodyne_points</topicName>
                     <frameName>velodyne_link</frameName>
-                    <min_range>0.9</min_range>
-                    <max_range>130.0</max_range>
+                    <min_range>0.3</min_range>
+                    <max_range>100.0</max_range>
                     <gaussianNoise>0.008</gaussianNoise>
                 </plugin>
             </sensor>
