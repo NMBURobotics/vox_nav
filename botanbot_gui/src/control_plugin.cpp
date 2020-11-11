@@ -76,23 +76,6 @@ void ControlPlugin::initPlugin(qt_gui_cpp::PluginContext & context)
     ui_.startGazeboNavigationFull, SIGNAL(pressed()), this,
     SLOT(onGazeboNavigationFullButtonClick()));
 
-  ui_.startNavigationStandalone->setIcon(QIcon::fromTheme("call-start"));
-  connect(
-    ui_.startNavigationStandalone, SIGNAL(pressed()), this,
-    SLOT(onNavigationStandAloneButtonClick()));
-
-  ui_.startNavigationFull->setIcon(QIcon::fromTheme("call-start"));
-  connect(ui_.startNavigationFull, SIGNAL(pressed()), this, SLOT(onNavigationFullButtonClick()));
-
-  ui_.startSlamMapServer->setIcon(QIcon::fromTheme("call-start"));
-  connect(ui_.startSlamMapServer, SIGNAL(pressed()), this, SLOT(onSlamMapServerButtonClick()));
-
-  ui_.startSlamCarto->setIcon(QIcon::fromTheme("call-start"));
-  connect(ui_.startSlamCarto, SIGNAL(pressed()), this, SLOT(onSlamCartoButtonClick()));
-
-  ui_.startLocalization->setIcon(QIcon::fromTheme("call-start"));
-  connect(ui_.startLocalization, SIGNAL(pressed()), this, SLOT(onLocalizationButtonClick()));
-
   ui_.startRviz->setIcon(QIcon::fromTheme("call-start"));
   connect(ui_.startRviz, SIGNAL(pressed()), this, SLOT(onRvizButtonClick()));
 
@@ -310,83 +293,6 @@ void ControlPlugin::onGazeboNavigationFullButtonClick()
   system(this_package_make_bash_files_executable_command.c_str());
 
   std::string bringup_command = this_package_path + "/../../scripts/gazebo_navigation_full.sh";
-  system(bringup_command.c_str());
-}
-
-void ControlPlugin::onNavigationStandAloneButtonClick()
-{
-  std::cout << "Starting Navigation standalone  " << std::endl;
-
-  std::string this_package_path = ament_index_cpp::get_package_share_directory("botanbot_gui");
-
-  std::string this_package_bash_files_dir = this_package_path +
-    "/../../scripts/navigation_standalone.sh";
-  std::string this_package_make_bash_files_executable_command = "chmod +x " +
-    this_package_bash_files_dir;
-  system(this_package_make_bash_files_executable_command.c_str());
-
-  std::string bringup_command = this_package_path + "/../../scripts/navigation_standalone.sh";
-  system(bringup_command.c_str());
-}
-
-void ControlPlugin::onNavigationFullButtonClick()
-{
-  std::cout << "Starting Whole Navigation2 Stack(SLAM, Localization , Navigation)" << std::endl;
-
-  std::string this_package_path = ament_index_cpp::get_package_share_directory("botanbot_gui");
-
-  std::string this_package_bash_files_dir = this_package_path + "/../../scripts/navigation_full.sh";
-  std::string this_package_make_bash_files_executable_command = "chmod +x " +
-    this_package_bash_files_dir;
-  system(this_package_make_bash_files_executable_command.c_str());
-
-  std::string bringup_command = this_package_path + "/../../scripts/navigation_full.sh";
-  system(bringup_command.c_str());
-}
-
-void ControlPlugin::onSlamMapServerButtonClick()
-{
-  std::cout << "Starting Map Server SLAM" << std::endl;
-
-  std::string this_package_path = ament_index_cpp::get_package_share_directory("botanbot_gui");
-
-  std::string this_package_bash_files_dir = this_package_path + "/../../scripts/slam_map_server.sh";
-  std::string this_package_make_bash_files_executable_command = "chmod +x " +
-    this_package_bash_files_dir;
-  system(this_package_make_bash_files_executable_command.c_str());
-
-  std::string bringup_command = this_package_path + "/../../scripts/slam_map_server.sh";
-  system(bringup_command.c_str());
-}
-
-void ControlPlugin::onSlamCartoButtonClick()
-{
-  std::cout << "Starting Cartographer SLAM" << std::endl;
-
-  std::string this_package_path = ament_index_cpp::get_package_share_directory("botanbot_gui");
-
-  std::string this_package_bash_files_dir = this_package_path + "/../../scripts/slam_carto.sh";
-  std::string this_package_make_bash_files_executable_command = "chmod +x " +
-    this_package_bash_files_dir;
-  system(this_package_make_bash_files_executable_command.c_str());
-
-  std::string bringup_command = this_package_path + "/../../scripts/slam_carto.sh";
-  system(bringup_command.c_str());
-}
-
-void ControlPlugin::onLocalizationButtonClick()
-{
-  std::cout << "Starting AMCL Localization" << std::endl;
-
-  std::string this_package_path = ament_index_cpp::get_package_share_directory("botanbot_gui");
-
-  std::string this_package_bash_files_dir = this_package_path +
-    "/../../scripts/localization_amcl.sh";
-  std::string this_package_make_bash_files_executable_command = "chmod +x " +
-    this_package_bash_files_dir;
-  system(this_package_make_bash_files_executable_command.c_str());
-
-  std::string bringup_command = this_package_path + "/../../scripts/localization_amcl.sh";
   system(bringup_command.c_str());
 }
 

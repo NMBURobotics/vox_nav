@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1538</width>
-    <height>891</height>
+    <width>1504</width>
+    <height>1389</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -37,7 +37,7 @@
         <x>190</x>
         <y>10</y>
         <width>1181</width>
-        <height>40</height>
+        <height>51</height>
        </rect>
       </property>
       <property name="minimumSize">
@@ -47,10 +47,10 @@
        </size>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(52, 101, 164);</string>
+       <string notr="true">background-color: rgba(255, 51, 221, 78);</string>
       </property>
       <property name="text">
-       <string>CHICONYBOT GUI, V0.0.1</string>
+       <string>BOTANBOT GUI, V0.0.0</string>
       </property>
       <property name="textFormat">
        <enum>Qt::RichText</enum>
@@ -65,10 +65,10 @@
      <widget class="QSlider" name="drSlider">
       <property name="geometry">
        <rect>
-        <x>700</x>
-        <y>330</y>
-        <width>241</width>
-        <height>151</height>
+        <x>280</x>
+        <y>630</y>
+        <width>291</width>
+        <height>181</height>
        </rect>
       </property>
       <property name="styleSheet">
@@ -87,9 +87,9 @@
      <widget class="QSlider" name="lrSlider">
       <property name="geometry">
        <rect>
-        <x>640</x>
-        <y>220</y>
-        <width>301</width>
+        <x>220</x>
+        <y>520</y>
+        <width>351</width>
         <height>51</height>
        </rect>
       </property>
@@ -112,44 +112,26 @@
      <widget class="QPushButton" name="stop">
       <property name="geometry">
        <rect>
-        <x>640</x>
-        <y>270</y>
-        <width>301</width>
+        <x>220</x>
+        <y>570</y>
+        <width>351</width>
         <height>61</height>
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">font: 75 16pt &quot;Ubuntu Condensed&quot;;
-background-color: rgb(220, 87, 83);</string>
+       <string notr="true"> background-color: rgb(239, 41, 41,21);</string>
       </property>
       <property name="text">
        <string>STOP</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="sendToChargeStation">
-      <property name="geometry">
-       <rect>
-        <x>630</x>
-        <y>660</y>
-        <width>311</width>
-        <height>41</height>
-       </rect>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">font: 75 16pt &quot;Ubuntu Condensed&quot;;
-background-color: rgb(85, 87, 83);</string>
-      </property>
-      <property name="text">
-       <string>SEND TO CHARGING STATION</string>
-      </property>
-     </widget>
      <widget class="QLabel" name="STATUS_LABEL">
       <property name="geometry">
        <rect>
-        <x>980</x>
+        <x>1000</x>
         <y>60</y>
-        <width>361</width>
-        <height>40</height>
+        <width>341</width>
+        <height>61</height>
        </rect>
       </property>
       <property name="minimumSize">
@@ -159,11 +141,11 @@ background-color: rgb(85, 87, 83);</string>
        </size>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(114, 159, 207,150);
+       <string notr="true">background-color: rgb(102, 102, 255,250);
 font: 57 14pt &quot;Ubuntu&quot;;</string>
       </property>
       <property name="text">
-       <string>ROBOT STATUS</string>
+       <string>ROBOT INFO</string>
       </property>
       <property name="textFormat">
        <enum>Qt::RichText</enum>
@@ -175,39 +157,13 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="Line" name="sperator_line_2">
-      <property name="geometry">
-       <rect>
-        <x>960</x>
-        <y>60</y>
-        <width>20</width>
-        <height>751</height>
-       </rect>
-      </property>
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-     </widget>
-     <widget class="Line" name="seperator_line_1">
-      <property name="geometry">
-       <rect>
-        <x>590</x>
-        <y>60</y>
-        <width>20</width>
-        <height>751</height>
-       </rect>
-      </property>
-      <property name="orientation">
-       <enum>Qt::Vertical</enum>
-      </property>
-     </widget>
      <widget class="QLabel" name="TELEOPARTION_LABEL">
       <property name="geometry">
        <rect>
-        <x>610</x>
-        <y>60</y>
-        <width>351</width>
-        <height>40</height>
+        <x>220</x>
+        <y>320</y>
+        <width>741</width>
+        <height>81</height>
        </rect>
       </property>
       <property name="minimumSize">
@@ -217,7 +173,7 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        </size>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(114, 159, 207,150);
+       <string notr="true">background-color: rgb(102, 102, 255,250);
 font: 57 14pt &quot;Ubuntu&quot;;</string>
       </property>
       <property name="text">
@@ -238,8 +194,8 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        <rect>
         <x>220</x>
         <y>60</y>
-        <width>371</width>
-        <height>40</height>
+        <width>741</width>
+        <height>61</height>
        </rect>
       </property>
       <property name="minimumSize">
@@ -249,11 +205,11 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        </size>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(114, 159, 207,150);
+       <string notr="true">background-color: rgb(102, 102, 255,250);
 font: 57 14pt &quot;Ubuntu&quot;;</string>
       </property>
       <property name="text">
-       <string>LAUNCHERS</string>
+       <string>ONE BUTTON CLICK LAUNCHERS</string>
       </property>
       <property name="textFormat">
        <enum>Qt::RichText</enum>
@@ -281,8 +237,7 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        </size>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(114, 159, 207,150);
-font: 57 14pt &quot;Ubuntu&quot;;</string>
+       <string notr="true">background-color: rgba(255, 51, 221, 78);</string>
       </property>
       <property name="text">
        <string/>
@@ -313,7 +268,7 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        </size>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgba(147, 124, 221, 78);</string>
+       <string notr="true">background-color: rgba(255, 51, 221, 78);</string>
       </property>
       <property name="text">
        <string/>
@@ -344,7 +299,7 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        </size>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgba(147, 124, 221, 78);</string>
+       <string notr="true">background-color: rgba(255, 51, 221, 78);</string>
       </property>
       <property name="text">
        <string/>
@@ -362,9 +317,9 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
      <widget class="QLabel" name="LR_LABEL">
       <property name="geometry">
        <rect>
-        <x>640</x>
-        <y>180</y>
-        <width>301</width>
+        <x>220</x>
+        <y>480</y>
+        <width>351</width>
         <height>40</height>
        </rect>
       </property>
@@ -394,10 +349,10 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
      <widget class="QLabel" name="DR_LABEL">
       <property name="geometry">
        <rect>
-        <x>640</x>
-        <y>330</y>
+        <x>220</x>
+        <y>630</y>
         <width>61</width>
-        <height>151</height>
+        <height>181</height>
        </rect>
       </property>
       <property name="minimumSize">
@@ -423,172 +378,11 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QDoubleSpinBox" name="goal_y">
-      <property name="geometry">
-       <rect>
-        <x>760</x>
-        <y>580</y>
-        <width>51</width>
-        <height>26</height>
-       </rect>
-      </property>
-      <property name="minimum">
-       <double>-20.000000000000000</double>
-      </property>
-      <property name="maximum">
-       <double>20.000000000000000</double>
-      </property>
-     </widget>
-     <widget class="QDoubleSpinBox" name="goal_x">
-      <property name="geometry">
-       <rect>
-        <x>670</x>
-        <y>580</y>
-        <width>71</width>
-        <height>26</height>
-       </rect>
-      </property>
-      <property name="minimum">
-       <double>-20.000000000000000</double>
-      </property>
-      <property name="maximum">
-       <double>20.000000000000000</double>
-      </property>
-     </widget>
-     <widget class="QDoubleSpinBox" name="goal_theta">
-      <property name="geometry">
-       <rect>
-        <x>830</x>
-        <y>580</y>
-        <width>71</width>
-        <height>26</height>
-       </rect>
-      </property>
-      <property name="minimum">
-       <double>-180.000000000000000</double>
-      </property>
-      <property name="maximum">
-       <double>180.000000000000000</double>
-      </property>
-     </widget>
-     <widget class="QLabel" name="X_LABEL_2">
-      <property name="geometry">
-       <rect>
-        <x>670</x>
-        <y>530</y>
-        <width>71</width>
-        <height>40</height>
-       </rect>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>40</height>
-       </size>
-      </property>
-      <property name="styleSheet">
-       <string notr="true"> 
-background-color: rgb(245, 121, 0, 56);</string>
-      </property>
-      <property name="text">
-       <string>X</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::RichText</enum>
-      </property>
-      <property name="scaledContents">
-       <bool>false</bool>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-     <widget class="QLabel" name="X_LABEL_3">
-      <property name="geometry">
-       <rect>
-        <x>760</x>
-        <y>530</y>
-        <width>51</width>
-        <height>40</height>
-       </rect>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>40</height>
-       </size>
-      </property>
-      <property name="styleSheet">
-       <string notr="true"> 
-background-color: rgb(245, 121, 0, 56);</string>
-      </property>
-      <property name="text">
-       <string>Y</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::RichText</enum>
-      </property>
-      <property name="scaledContents">
-       <bool>false</bool>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-     <widget class="QLabel" name="X_LABEL_4">
-      <property name="geometry">
-       <rect>
-        <x>830</x>
-        <y>530</y>
-        <width>71</width>
-        <height>40</height>
-       </rect>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>40</height>
-       </size>
-      </property>
-      <property name="styleSheet">
-       <string notr="true"> 
-background-color: rgb(245, 121, 0, 56);</string>
-      </property>
-      <property name="text">
-       <string>θ(deg)</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::RichText</enum>
-      </property>
-      <property name="scaledContents">
-       <bool>false</bool>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="sendToPose">
-      <property name="geometry">
-       <rect>
-        <x>630</x>
-        <y>610</y>
-        <width>311</width>
-        <height>41</height>
-       </rect>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">font: 75 16pt &quot;Ubuntu Condensed&quot;;
-background-color: rgb(85, 87, 83);</string>
-      </property>
-      <property name="text">
-       <string>SEND ROBOT TO  POSE</string>
-      </property>
-     </widget>
      <widget class="QLabel" name="GUI_NAME_LABEL_2">
       <property name="geometry">
        <rect>
         <x>610</x>
-        <y>490</y>
+        <y>400</y>
         <width>351</width>
         <height>40</height>
        </rect>
@@ -618,8 +412,8 @@ background-color: rgb(85, 87, 83);</string>
      <widget class="QLabel" name="GUI_NAME_LABEL_3">
       <property name="geometry">
        <rect>
-        <x>610</x>
-        <y>120</y>
+        <x>220</x>
+        <y>400</y>
         <width>351</width>
         <height>40</height>
        </rect>
@@ -646,28 +440,12 @@ background-color: rgb(85, 87, 83);</string>
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QPushButton" name="startRviz">
-      <property name="geometry">
-       <rect>
-        <x>250</x>
-        <y>670</y>
-        <width>321</width>
-        <height>51</height>
-       </rect>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">background-color: rgba(52, 101, 164,100);</string>
-      </property>
-      <property name="text">
-       <string>START START RVIZ</string>
-      </property>
-     </widget>
      <widget class="QLabel" name="GUI_NAME_LABEL_4">
       <property name="geometry">
        <rect>
         <x>220</x>
         <y>120</y>
-        <width>371</width>
+        <width>351</width>
         <height>40</height>
        </rect>
       </property>
@@ -693,43 +471,12 @@ background-color: rgb(85, 87, 83);</string>
        <set>Qt::AlignCenter</set>
       </property>
      </widget>
-     <widget class="QLabel" name="GUI_NAME_LABEL_5">
-      <property name="geometry">
-       <rect>
-        <x>220</x>
-        <y>300</y>
-        <width>371</width>
-        <height>40</height>
-       </rect>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>40</height>
-       </size>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">background-color: rgb(52, 101, 164,120);</string>
-      </property>
-      <property name="text">
-       <string>NAVIGATION2 LAUNCHERS</string>
-      </property>
-      <property name="textFormat">
-       <enum>Qt::RichText</enum>
-      </property>
-      <property name="scaledContents">
-       <bool>false</bool>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
-      </property>
-     </widget>
      <widget class="QLabel" name="GUI_NAME_LABEL_6">
       <property name="geometry">
        <rect>
-        <x>220</x>
-        <y>620</y>
-        <width>371</width>
+        <x>610</x>
+        <y>120</y>
+        <width>351</width>
         <height>40</height>
        </rect>
       </property>
@@ -759,9 +506,9 @@ background-color: rgb(85, 87, 83);</string>
       <property name="geometry">
        <rect>
         <x>1000</x>
-        <y>125</y>
-        <width>321</width>
-        <height>231</height>
+        <y>165</y>
+        <width>341</width>
+        <height>641</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_3">
@@ -774,8 +521,7 @@ background-color: rgb(85, 87, 83);</string>
           </size>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(114, 159, 207,150);
-font: 57 14pt &quot;Ubuntu&quot;;</string>
+          <string notr="true"/>
          </property>
          <property name="text">
           <string>X</string>
@@ -803,8 +549,7 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
           </size>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(114, 159, 207,150);
-font: 57 14pt &quot;Ubuntu&quot;;</string>
+          <string notr="true"/>
          </property>
          <property name="text">
           <string>Y</string>
@@ -832,8 +577,7 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
           </size>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(114, 159, 207,150);
-font: 57 14pt &quot;Ubuntu&quot;;</string>
+          <string notr="true"/>
          </property>
          <property name="text">
           <string>θ</string>
@@ -861,8 +605,7 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
           </size>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(114, 159, 207,150);
-font: 57 14pt &quot;Ubuntu&quot;;</string>
+          <string notr="true"/>
          </property>
          <property name="text">
           <string>VX</string>
@@ -890,8 +633,7 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
           </size>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(114, 159, 207,150);
-font: 57 14pt &quot;Ubuntu&quot;;</string>
+          <string notr="true"/>
          </property>
          <property name="text">
           <string>VY</string>
@@ -912,165 +654,345 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="widget" native="true">
+     <widget class="Line" name="sperator_line_3">
       <property name="geometry">
        <rect>
-        <x>234</x>
-        <y>174</y>
-        <width>341</width>
-        <height>111</height>
+        <x>569</x>
+        <y>400</y>
+        <width>41</width>
+        <height>411</height>
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">background-color: rgb(243, 243, 243, 0);</string>
+       <string notr="true">background-color: rgb(46, 52, 54);</string>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </widget>
+     <widget class="Line" name="sperator_line_4">
+      <property name="geometry">
+       <rect>
+        <x>570</x>
+        <y>120</y>
+        <width>41</width>
+        <height>201</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(46, 52, 54);</string>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </widget>
+     <widget class="Line" name="sperator_line_5">
+      <property name="geometry">
+       <rect>
+        <x>960</x>
+        <y>120</y>
+        <width>41</width>
+        <height>691</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(46, 52, 54);</string>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+     </widget>
+     <widget class="QLabel" name="GUI_NAME_LABEL_7">
+      <property name="geometry">
+       <rect>
+        <x>1000</x>
+        <y>120</y>
+        <width>341</width>
+        <height>40</height>
+       </rect>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>40</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(52, 101, 164,120);</string>
+      </property>
+      <property name="text">
+       <string>ROBOT STATES</string>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::RichText</enum>
+      </property>
+      <property name="scaledContents">
+       <bool>false</bool>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+     <widget class="QLabel" name="STATUS_LABEL_2">
+      <property name="geometry">
+       <rect>
+        <x>960</x>
+        <y>60</y>
+        <width>41</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>40</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: rgb(114, 159, 250,200);
+font: 57 14pt &quot;Ubuntu&quot;;</string>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="textFormat">
+       <enum>Qt::RichText</enum>
+      </property>
+      <property name="scaledContents">
+       <bool>false</bool>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+     </widget>
+     <widget class="QWidget" name="">
+      <property name="geometry">
+       <rect>
+        <x>610</x>
+        <y>480</y>
+        <width>351</width>
+        <height>131</height>
+       </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
-        <widget class="QPushButton" name="startGazeboStandalone">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgba(52, 101, 164,100);</string>
+       <item row="1" column="1">
+        <widget class="QDoubleSpinBox" name="goal_y">
+         <property name="minimum">
+          <double>-20.000000000000000</double>
          </property>
-         <property name="text">
-          <string>START GAZEBO STANDALONE</string>
+         <property name="maximum">
+          <double>20.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QDoubleSpinBox" name="goal_theta">
+         <property name="minimum">
+          <double>-180.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>180.000000000000000</double>
          </property>
         </widget>
        </item>
        <item row="1" column="0">
-        <widget class="QPushButton" name="startGazeboNavigationFull">
+        <widget class="QDoubleSpinBox" name="goal_x">
+         <property name="minimum">
+          <double>-20.000000000000000</double>
+         </property>
+         <property name="maximum">
+          <double>20.000000000000000</double>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0" colspan="3">
+        <widget class="QPushButton" name="sendToPose">
          <property name="styleSheet">
           <string notr="true">background-color: rgba(52, 101, 164,100);</string>
          </property>
          <property name="text">
-          <string>START GAZEBO + NAV FULL</string>
+          <string>SEND ROBOT TO  POSE</string>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="2">
+        <widget class="QLabel" name="X_LABEL_4">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>40</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true"> 
+background-color: rgb(245, 121, 0, 56);</string>
+         </property>
+         <property name="text">
+          <string>θ(deg)</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::RichText</enum>
+         </property>
+         <property name="scaledContents">
+          <bool>false</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="1">
+        <widget class="QLabel" name="X_LABEL_3">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>40</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true"> 
+background-color: rgb(245, 121, 0, 56);</string>
+         </property>
+         <property name="text">
+          <string>Y</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::RichText</enum>
+         </property>
+         <property name="scaledContents">
+          <bool>false</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="X_LABEL_2">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>40</height>
+          </size>
+         </property>
+         <property name="styleSheet">
+          <string notr="true"> 
+background-color: rgb(245, 121, 0, 56);</string>
+         </property>
+         <property name="text">
+          <string>X</string>
+         </property>
+         <property name="textFormat">
+          <enum>Qt::RichText</enum>
+         </property>
+         <property name="scaledContents">
+          <bool>false</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="widget" native="true">
+     <widget class="QSplitter" name="splitter_3">
       <property name="geometry">
        <rect>
-        <x>241</x>
-        <y>359</y>
-        <width>331</width>
-        <height>261</height>
+        <x>230</x>
+        <y>160</y>
+        <width>721</width>
+        <height>151</height>
        </rect>
       </property>
-      <property name="styleSheet">
-       <string notr="true">background-color: rgb(243, 243, 243, 0);</string>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
       </property>
-      <layout class="QGridLayout" name="gridLayout_2">
-       <item row="0" column="0">
-        <widget class="QPushButton" name="startNavigationStandalone">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgba(52, 101, 164,100);</string>
-         </property>
-         <property name="text">
-          <string>BRINGUP(SLAM+LOCALIZATION+NAV) </string>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QPushButton" name="startNavigationFull">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgba(52, 101, 164,100);</string>
-         </property>
-         <property name="text">
-          <string>BARE NAV LAUNCH</string>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
-        <widget class="QPushButton" name="startSlamMapServer">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgba(52, 101, 164,100);</string>
-         </property>
-         <property name="text">
-          <string>BARE SLAM (MAP SERVER)</string>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="0">
-        <widget class="QPushButton" name="startSlamCarto">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgba(52, 101, 164,100);</string>
-         </property>
-         <property name="text">
-          <string>BARE SLAM (GOOGLE CARTOGRAPHER)</string>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QPushButton" name="startLocalization">
-         <property name="styleSheet">
-          <string notr="true">background-color: rgba(52, 101, 164,100);</string>
-         </property>
-         <property name="text">
-          <string>BARE LOCALIZATION (AMCL)</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
+      <widget class="QSplitter" name="splitter_2">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <widget class="QPushButton" name="startGazeboStandalone">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgba(52, 101, 164,100);</string>
+        </property>
+        <property name="text">
+         <string>START GAZEBO STANDALONE</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="startGazeboNavigationFull">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgba(52, 101, 164,100);</string>
+        </property>
+        <property name="text">
+         <string>START GAZEBO + NAV FULL</string>
+        </property>
+       </widget>
+      </widget>
+      <widget class="QSplitter" name="splitter">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <widget class="QPushButton" name="startRviz">
+        <property name="styleSheet">
+         <string notr="true">background-color: rgba(52, 101, 164,100);</string>
+        </property>
+        <property name="text">
+         <string>START START RVIZ</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="terminate">
+        <property name="styleSheet">
+         <string notr="true"> background-color: rgb(239, 41, 41,21);</string>
+        </property>
+        <property name="text">
+         <string>TERMINATE ALL ACTIVE NODES</string>
+        </property>
+       </widget>
+      </widget>
      </widget>
-     <widget class="QPushButton" name="terminate">
+     <widget class="QSplitter" name="splitter_4">
       <property name="geometry">
        <rect>
-        <x>250</x>
-        <y>740</y>
-        <width>321</width>
-        <height>51</height>
+        <x>610</x>
+        <y>620</y>
+        <width>351</width>
+        <height>191</height>
        </rect>
       </property>
-      <property name="styleSheet">
-       <string notr="true"> background-color: rgb(239, 41, 41,21);</string>
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
       </property>
-      <property name="text">
-       <string>TERMINATE ALL ACTIVE NODES</string>
-      </property>
+      <widget class="QPushButton" name="sendToChargeStation">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgba(52, 101, 164,100);</string>
+       </property>
+       <property name="text">
+        <string>SEND ROBOT TO HOME POSE</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="sendAlongPredefinedWaypoints">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgba(52, 101, 164,100);</string>
+       </property>
+       <property name="text">
+        <string>SEND ALONG PREDEFINED WAYPOINTS</string>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="cancelAllGoals">
+       <property name="styleSheet">
+        <string notr="true"> background-color: rgb(239, 41, 41,21);</string>
+       </property>
+       <property name="text">
+        <string>CANCEL ALL ACTIVE GOALS</string>
+       </property>
+      </widget>
      </widget>
-     <widget class="QPushButton" name="sendAlongPredefinedWaypoints">
-      <property name="geometry">
-       <rect>
-        <x>630</x>
-        <y>710</y>
-        <width>311</width>
-        <height>41</height>
-       </rect>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">font: 75 16pt &quot;Ubuntu Condensed&quot;;
-background-color: rgb(85, 87, 83);</string>
-      </property>
-      <property name="text">
-       <string>SEND ALONG PREDEFINED WAYPOINTS</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="cancelAllGoals">
-      <property name="geometry">
-       <rect>
-        <x>630</x>
-        <y>760</y>
-        <width>311</width>
-        <height>41</height>
-       </rect>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">font: 75 16pt &quot;Ubuntu Condensed&quot;;
-background-color: rgb(220, 87, 83);</string>
-      </property>
-      <property name="text">
-       <string>CANCEL ALL GOALS</string>
-      </property>
-     </widget>
-     <zorder>widget</zorder>
      <zorder>GUI_NAME_LABEL</zorder>
      <zorder>drSlider</zorder>
      <zorder>lrSlider</zorder>
      <zorder>stop</zorder>
      <zorder>sendToChargeStation</zorder>
      <zorder>STATUS_LABEL</zorder>
-     <zorder>sperator_line_2</zorder>
-     <zorder>seperator_line_1</zorder>
      <zorder>TELEOPARTION_LABEL</zorder>
      <zorder>LAUNCHERS_LABEL</zorder>
      <zorder>FRAME_SOUTH</zorder>
@@ -1089,13 +1011,17 @@ background-color: rgb(220, 87, 83);</string>
      <zorder>GUI_NAME_LABEL_3</zorder>
      <zorder>startRviz</zorder>
      <zorder>GUI_NAME_LABEL_4</zorder>
-     <zorder>GUI_NAME_LABEL_5</zorder>
      <zorder>GUI_NAME_LABEL_6</zorder>
      <zorder>layoutWidget</zorder>
-     <zorder>widget</zorder>
      <zorder>terminate</zorder>
      <zorder>sendAlongPredefinedWaypoints</zorder>
      <zorder>cancelAllGoals</zorder>
+     <zorder>sperator_line_3</zorder>
+     <zorder>sperator_line_5</zorder>
+     <zorder>GUI_NAME_LABEL_7</zorder>
+     <zorder>STATUS_LABEL_2</zorder>
+     <zorder>splitter_2</zorder>
+     <zorder>sperator_line_4</zorder>
     </widget>
    </item>
   </layout>

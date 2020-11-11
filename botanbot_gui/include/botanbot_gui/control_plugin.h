@@ -121,36 +121,6 @@ protected slots:
   virtual void onGazeboNavigationFullButtonClick();
 
   /**
-   * @brief starts only navigation components
-   *
-   */
-  virtual void onNavigationStandAloneButtonClick();
-
-  /**
-   * @brief starts all components of navigation(slam , localization , navigation_bringup)
-   *
-   */
-  virtual void onNavigationFullButtonClick();
-
-  /**
-   * @brief starts only SLAM with map server
-   *
-   */
-  virtual void onSlamMapServerButtonClick();
-
-  /**
-   * @brief start only slam with google cartographer
-   *
-   */
-  virtual void onSlamCartoButtonClick();
-
-  /**
-   * @brief starts only AMCL localization
-   *
-   */
-  virtual void onLocalizationButtonClick();
-
-  /**
    * @brief starts only RVIZ standalone
    *
    */
