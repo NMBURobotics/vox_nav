@@ -110,7 +110,6 @@ ament_target_dependencies(gazebo_ros_velodyne_laser
 )
 ament_export_libraries(gazebo_ros_velodyne_laser)
 
-
 ################################################################################
 # Install
 ################################################################################
