@@ -7,11 +7,13 @@ A project to develop/adapt a navigation system for outdoor robotics particularly
 This is latest LTS of ROS2 distros , so it makes a lot of sense to start from this version. 
 Deb installation is strongly recomended. Detailed steps to install ROS2 Foxy can be found [here](https://index.ros.org/doc/ros2/Installation/Foxy/Linux-Install-Debians/)
 
-* Install Navigation2.
+* Install Navigation2 and robot_localization.
 ROS way to control mobile robots with different physical models(e.g differantial, ackermann, omnidirection). 
 This can be quickly done with; 
 
 `sudo apt-get install ros-foxy-navigation`
+`sudo apt-get install ros-foxy-robot-localization`
+
 
 * Install OUTDOOR_NAV2 packages
 
