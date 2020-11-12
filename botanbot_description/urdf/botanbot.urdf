@@ -3,7 +3,6 @@
     xmlns:xacro="http://ros.org/wiki/xacro">
     <!-- BEGIN LINKS-->
     <!-- begin robot body links-->
-    <link name="base_footprint" />
     <link name="base_link">
         <visual>
             <origin xyz="-0.019375 0.005287 0.340756" rpy="0 0 0" />
@@ -15,7 +14,7 @@
             </material>
         </visual>
         <collision>
-            <origin xyz="0 0 0" rpy="0 0 0" />
+            <origin xyz="-0.019375 0.005287 0.340756" rpy="0 0 0" />
             <geometry>
                 <mesh filename="package://botanbot_description/meshes/base.stl"/>
             </geometry>
@@ -184,11 +183,6 @@
     <!-- END LINKS-->
     <!--  BEGIN  JOINTS-->
     <!-- begin robot body joints-->
-    <joint name="base_joint" type="fixed">
-        <parent link="base_footprint" />
-        <child link="base_link" />
-        <origin xyz="-0.019375 0.005287 0.340756" rpy="0 0 0" />
-    </joint>
     <joint name='front_left_combined_joint' type='continuous'>
         <parent link="base_link" />
         <child link="front_left_wheel" />
@@ -206,7 +200,7 @@
         <child link="rear_axle" />
         <origin xyz="-0.656403 0.001088 -0.085593" rpy="0 0 1.57" />
         <dynamics damping="2000.0" friction="0.0"/>
-        <limit effort="30" velocity="1.0" lower="-0.05" upper="0.05" />
+        <limit effort="0" velocity="0.0" lower="-0.05" upper="0.05" />
         <axis xyz="0 1 0" />
     </joint>
     <joint name='rear_left_joint' type='continuous'>

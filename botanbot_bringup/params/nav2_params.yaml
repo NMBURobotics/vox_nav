@@ -157,13 +157,13 @@ local_costmap:
     ros__parameters:
       update_frequency: 15.0
       publish_frequency: 15.0
-      global_frame: odom
+      global_frame: base_link
       robot_base_frame: base_link
       use_sim_time: True
       rolling_window: true
-      width: 10
-      height: 10
-      resolution: 0.1
+      width: 20
+      height: 20
+      resolution: 0.2
       robot_radius: 0.60
       plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
       obstacle_layer:
@@ -174,7 +174,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 20.0
-        inflation_radius: 0.1
+        inflation_radius: 0.5
         enabled: True
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
@@ -210,10 +210,11 @@ global_costmap:
     ros__parameters:
       update_frequency: 1.0
       publish_frequency: 1.0
-      global_frame: map
+      global_frame: base_link
       robot_base_frame: base_link
       use_sim_time: True
-      robot_radius: 0.40
+      rolling_window: true
+      robot_radius: 0.60
       resolution: 0.20
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:
@@ -222,10 +223,10 @@ global_costmap:
         observation_sources: pointcloud
         pointcloud:  # no frame set, uses frame from message
           topic: /velodyne_points
-          max_obstacle_height: 3.0
-          min_obstacle_height: -1.0
-          obstacle_range: 2.0
-          raytrace_range: 2.0
+          max_obstacle_height: 1.0
+          min_obstacle_height: 0.2
+          obstacle_range: 10.0
+          raytrace_range: 10.0
           clearing: True
           marking: True
           data_type: "PointCloud2"
