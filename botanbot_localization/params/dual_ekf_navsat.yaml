@@ -14,6 +14,12 @@ ekf_filter_node_odom:
     base_link_frame: base_link
     world_frame: odom
 
+    initial_state: [0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0]
+
     odom0: odom
     odom0_config: [false, false, false,
                   false, false, false,
@@ -38,9 +44,9 @@ ekf_filter_node_odom:
     imu0_relative: true
     imu0_queue_size: 10
     imu0_remove_gravitational_acceleration: true
-    imu0_pose_rejection_threshold: 0.8                 # Note the difference in parameter names
-    imu0_twist_rejection_threshold: 0.8                #
-    imu0_linear_acceleration_rejection_threshold: 0.8  #
+    imu0_pose_rejection_threshold: 0.8                 
+    imu0_twist_rejection_threshold: 0.8                
+    imu0_linear_acceleration_rejection_threshold: 0.8  
 
     use_control: false
 
@@ -90,7 +96,7 @@ ekf_filter_node_map:
     print_diagnostics: true
     frequency: 30.0
     sensor_timeout: 0.1
-    two_d_mode: true
+    two_d_mode: false
     transform_time_offset: 0.0
     transform_timeout: 0.0
     publish_tf: true
@@ -99,6 +105,12 @@ ekf_filter_node_map:
     odom_frame: odom
     base_link_frame: base_link
     world_frame: map
+
+    initial_state: [0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0]    
 
     odom0: odom
     odom0_config: [false, false, false,
@@ -113,7 +125,7 @@ ekf_filter_node_map:
     odom0_pose_rejection_threshold: 5.0
     odom0_twist_rejection_threshold: 1.0
 
-    odom1: gps/data
+    odom1: gps/fix
     odom1_config: [true,  true,  false,
                   false, false, false,
                   false, false, false,
@@ -122,7 +134,7 @@ ekf_filter_node_map:
     odom1_queue_size: 10
     odom1_nodelay: false
     odom1_differential: false
-    odom1_relative: false
+    odom1_relative: true
     odom1_pose_rejection_threshold: 5.0
     odom1_twist_rejection_threshold: 1.0
 
@@ -189,10 +201,10 @@ navsat_transform:
   ros__parameters:
     frequency: 30.0
     delay: 3.0
-    magnetic_declination_radians: 0.0429351  # For lat/long 55.944831, -3.186998
+    magnetic_declination_radians: 0.08272861  # For lat/long 55.944831, -3.186998
     yaw_offset: 1.570796327  # IMU reads 0 facing magnetic north, not east
     zero_altitude: false
-    broadcast_utm_transform: true
+    broadcast_utm_transform: false
     publish_filtered_gps: true
     use_odometry_yaw: false
     wait_for_datum: false

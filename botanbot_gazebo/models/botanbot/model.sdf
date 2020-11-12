@@ -657,7 +657,7 @@
                 <plugin name="botanbot_gps_plugin" filename="libgazebo_ros_gps_sensor.so">
                     <ros>
                         <namespace>/gps</namespace>
-                        <remapping>~/out:=data</remapping>
+                        <remapping>~/out:=fix</remapping>
                     </ros>
                 </plugin>
             </sensor>
