@@ -83,7 +83,7 @@ Botanbot is a simple 4 wheeled , ackermann drived moile robot. It is simulated u
 | RealSense D435 DEPTH CAMERA | /camera/aligned_depth_to_color/image_raw | sensor_msgs::msg::Image | 30 |
 | RealSense D435 IR1 CAMERA | /camera/infra1/image_raw | sensor_msgs::msg::Image | 1 |
 | RealSense D435 IR2 CAMERA | /camera/infra2/image_raw | sensor_msgs::msg::Image | 1 |
-| GPS | /gps/data | sensor_msgs::msg::NavSatFix | 30 |
+| GPS | /gps/fix | sensor_msgs::msg::NavSatFix | 30 |
 | IMU | /imu | sensor_msgs::msg::Imu | 30 |
 
 ### Botanbot in Gazebo

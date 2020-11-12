@@ -200,7 +200,7 @@ ekf_filter_node_map:
 navsat_transform:
   ros__parameters:
     frequency: 30.0
-    delay: 3.0
+    delay: 1.0
     magnetic_declination_radians: 0.08272861  # For lat/long 55.944831, -3.186998
     yaw_offset: 1.570796327  # IMU reads 0 facing magnetic north, not east
     zero_altitude: false
