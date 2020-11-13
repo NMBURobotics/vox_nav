@@ -13,7 +13,7 @@ from launch_ros.actions import PushRosNamespace
 
 def generate_launch_description():
     # Get the launch directory
-    bringup_dir = get_package_share_directory('botanbot_bringup')
+    bringup_dir = get_package_share_directory('botanbot_navigation2')
     launch_dir = os.path.join(bringup_dir, 'launch')
 
     # Create the launch configuration variables
