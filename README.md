@@ -11,8 +11,10 @@ Deb installation is strongly recomended. Detailed steps to install ROS2 Foxy can
 ROS way to control mobile robots with different physical models(e.g differantial, ackermann, omnidirection). 
 This can be quickly done with; 
 
-`sudo apt-get install ros-foxy-navigation`
-`sudo apt-get install ros-foxy-robot-localization`
+```bash
+sudo apt-get install ros-foxy-navigation
+sudo apt-get install ros-foxy-robot-localization
+```
 
 
 * Install OUTDOOR_NAV2 packages
@@ -59,12 +61,12 @@ Click on Control Plugin and you would be able to see;
 ![.](docs/gui_2.png)
 
 ## Interact with GUI
-Click on Start Gazebo Stand Alone, to start botanbot simulation. Note that the Gazebo worls we use is large so your computer needs to have an dedicated GPU,it takes apprx. 10 seconds for simulation to start. After a while you should see Gazebo starting. 
+Click on Start Gazebo Stand Alone, to start botanbot simulation. Note that the Gazebo worlds we use are large, so your computer needs to have an dedicated GPU,it takes apprx. 10 seconds for simulation to start in my case. After a while you should see Gazebo starting. 
 
-This worls is lage and you may not see the Botanbot at first, At left side of Gazebo simulation, find the `models -> botanbot`
-right click and the `follow` botanbot model. This shouls put the focus to botanbot. 
+This world is large and you may not see the Botanbot at first, At left side of Gazebo simulation, find the `models -> botanbot`
+right click and then `follow` botanbot model. This should put the focus onto botanbot. 
 
-You can also click on start RVIZ and you should be able to see sensor data and robot model as ; 
+You can also click on start RVIZ and you should be able to see sensor data and robot model in rviz ; 
 
 
 ![.](docs/rviz_1.png)
@@ -74,7 +76,7 @@ This Gazebo world includes hills , up and downs which tries to be more inclusive
 You can jog botanbot with RQT plugin, use `L/R` for giving angular speed and `D/R` for  linear speed. 
 
 ## Botanbot
-Botanbot is a simple 4 wheeled , ackermann drived moile robot. It is simulated under Gazebo with all required essential sensors in order to do outdoor navigation. The following table shows currently supported sensors. 
+Botanbot is a simple 4 wheeled , ackermann drived mobile robot. It is simulated under Gazebo with all required essential sensors in order to do outdoor navigation. The following table shows currently supported sensors. 
 ### Sensor support for Botanbot
 | Sensor type | Topic Name(s) | Message Type | Update Rate |
 | :---: | :---: | :---: | :---: |
