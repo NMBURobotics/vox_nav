@@ -3,9 +3,11 @@
 ekf_filter_node_odom:
   ros__parameters:
     use_sim_time: true
+    publish_tf: true
     odom_frame: odom
     base_link_frame: base_link
     world_frame: odom
+    map_frame: odom
 
     two_d_mode: true
 
