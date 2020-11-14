@@ -430,7 +430,7 @@
             <ros>
                 <namespace/>
                 <remapping>cmd_vel:=cmd_vel</remapping>
-                <remapping>odom:=odom</remapping>
+                <remapping>odom:=odometry/wheel</remapping>
                 <remapping>distance:=distance</remapping>
             </ros>
             <update_rate>100.0</update_rate>
@@ -451,7 +451,7 @@
             <linear_velocity_pid_gain>100 0 1</linear_velocity_pid_gain>
             <linear_velocity_i_range>0 0</linear_velocity_i_range>
             <publish_odom>true</publish_odom>
-            <publish_odom_tf>true</publish_odom_tf>
+            <publish_odom_tf>false</publish_odom_tf>
             <publish_wheel_tf>true</publish_wheel_tf>
             <publish_distance>true</publish_distance>
             <odometry_frame>odom</odometry_frame>
@@ -803,7 +803,7 @@
                 </imu>
                 <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
                     <ros>
-                        <remapping>~/out:=imu</remapping>
+                        <remapping>~/out:=imu/data</remapping>
                     </ros>
                 </plugin>
             </sensor>

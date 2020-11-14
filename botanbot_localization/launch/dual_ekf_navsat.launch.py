@@ -36,8 +36,7 @@ def generate_launch_description():
             'output_location',
 	    default_value='/home/atas/ekf1.txt'),
 	
-
-	launch_ros.actions.Node(
+    launch_ros.actions.Node(
             package='robot_localization', 
             executable='ekf_node', 
             name='ekf_filter_node_odom',
@@ -60,11 +59,11 @@ def generate_launch_description():
                 str(parameters_file_path),
                 [EnvironmentVariable(name='FILE_PATH'), os.sep, 'dual_ekf_navsat.yaml'],
            ],
-           ),
+           ),           
     launch_ros.actions.Node(
             package='robot_localization', 
             executable='navsat_transform_node', 
-            name='navsat_transform',
+            name='navsat_transform_node',
 	        output='screen',
             prefix=['gdb -ex run --args'],
             parameters=[
@@ -72,5 +71,5 @@ def generate_launch_description():
                 str(parameters_file_path),
                 [EnvironmentVariable(name='FILE_PATH'), os.sep, 'dual_ekf_navsat.yaml'],
            ],
-           )
+           )           
 ])
