@@ -63,7 +63,7 @@ def generate_launch_description():
     launch_ros.actions.Node(
             package='robot_localization', 
             executable='navsat_transform_node', 
-            name='navsat_transform_node',
+            name='navsat_transform',
 	        output='screen',
             prefix=['gdb -ex run --args'],
             parameters=[
