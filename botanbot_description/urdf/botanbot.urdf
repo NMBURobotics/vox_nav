@@ -187,15 +187,15 @@
         <parent link="base_link" />
         <child link="front_left_wheel" />
         <origin xyz="0.653624 0.496194 -0.084805" rpy="0 -0 1.5706" />
-        <axis xyz="1 0 1" />
+        <axis xyz="0 0 1" />
     </joint>
     <joint name='front_right_combined_joint' type='continuous'>
         <parent link="base_link" />
         <child link="front_right_wheel" />
         <origin xyz="0.666123 -0.495391 -0.085288" rpy="0 0 1.5706" />
-        <axis xyz="1 0 1" />
+        <axis xyz="0 0 1" />
     </joint>
-    <joint name='rear_axle_joint' type='revolute'>
+    <joint name='rear_axle_joint' type='continuous'>
         <parent link="base_link" />
         <child link="rear_axle" />
         <origin xyz="-0.656403 0.001088 -0.085593" rpy="0 0 1.57" />
@@ -204,13 +204,13 @@
         <axis xyz="0 1 0" />
     </joint>
     <joint name='rear_left_joint' type='continuous'>
-        <parent link="rear_axle" />
+        <parent link="base_link" />
         <child link="rear_left_wheel" />
         <origin xyz="-0.656583 0.492236 -0.085593" rpy="0 -0 1.5706" />
         <axis xyz="1 0 0" />
     </joint>
     <joint name='rear_right_joint' type='continuous'>
-        <parent link="rear_axle" />
+        <parent link="base_link" />
         <child link="rear_right_wheel" />
         <origin xyz="-0.644212 -0.499228 -0.085214" rpy="0 -0 1.5706" />
         <axis xyz="1 0 0" />

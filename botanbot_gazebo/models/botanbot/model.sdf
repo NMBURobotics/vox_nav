@@ -2,7 +2,7 @@
 <sdf version='1.7'>
     <model name='botanbot'>
         <link name='base_link'>
-            <pose>-0.0 0.0 0.0 0 -0 0</pose>
+            <pose>0 0 0 0 0 0</pose>
             <inertial>
                 <inertial>
                     <mass>1326.0</mass>
@@ -16,10 +16,9 @@
                         <izz>2681.95008628</izz>
                     </inertia>
                 </inertial>
-                <pose>0 0 0 0 0 0</pose>
             </inertial>
             <visual name='visual'>
-                <pose>-0.019375 0.005287 0.340756 0 -0 0</pose>
+                <pose>-0.019375 0.005287 0.340756 0 0 0</pose>
                 <geometry>
                     <mesh>
                         <uri>model://botanbot/meshes/base.stl</uri>
@@ -452,7 +451,7 @@
             <linear_velocity_i_range>0 0</linear_velocity_i_range>
             <publish_odom>true</publish_odom>
             <publish_odom_tf>false</publish_odom_tf>
-            <publish_wheel_tf>true</publish_wheel_tf>
+            <publish_wheel_tf>false</publish_wheel_tf>
             <publish_distance>true</publish_distance>
             <odometry_frame>odom</odometry_frame>
             <robot_base_frame>base_link</robot_base_frame>
@@ -466,8 +465,8 @@
             <joint_name>front_right_combined_joint</joint_name>
             <joint_name>rear_left_joint</joint_name>
             <joint_name>rear_right_joint</joint_name>
+            <joint_name>rear_axle_joint</joint_name>
             <joint_name>steering_joint</joint_name>
-            <joint_name>rear_right_joint</joint_name>
         </plugin>
         <!-- SENSORS:  REALSENSE CAMERA-->
         <link name="realsense_link">
