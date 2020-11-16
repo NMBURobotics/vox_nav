@@ -4,6 +4,7 @@ ekf_filter_node_odom:
   ros__parameters:
     use_sim_time: true
     clear_params: true
+    two_d_mode: false
     publish_tf: true
     filter_type: "ekf"
     frequency: 30.0
@@ -52,6 +53,7 @@ ekf_filter_node_map:
     use_sim_time: true
     clear_params: true
     publish_tf: true
+    two_d_mode: false
     filter_type: "ekf"
     frequency: 30.0
     sensor_timeout: 0.1
@@ -70,10 +72,10 @@ ekf_filter_node_map:
     odom0_relative: false
     odom0_differential: false
     odom0_queue_size: 10
-    odom1_config: [true,  true,  false, # X , Y , Z
+    odom1_config: [true,  true,  true, # X , Y , Z
                   false, false, false, # roll , pitch ,yaw
                   false, false, false, # dX , dY , dZ
-                  false, false, false,  # droll , dpitch ,dyaw
+                  false, false, true,  # droll , dpitch ,dyaw
                   false, false, false] # ddX , ddY , ddZ
     odom1_relative: false
     odom1_differential: false
