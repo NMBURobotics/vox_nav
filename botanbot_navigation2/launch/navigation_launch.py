@@ -19,12 +19,15 @@ def generate_launch_description():
     params_file = LaunchConfiguration('params_file')
     default_bt_xml_filename = LaunchConfiguration('default_bt_xml_filename')
     map_subscribe_transient_local = LaunchConfiguration('map_subscribe_transient_local')
+    map_yaml_file = LaunchConfiguration('map')
+
 
     lifecycle_nodes = ['controller_server',
                        'planner_server',
                        'recoveries_server',
                        'bt_navigator',
-                       'waypoint_follower']
+                       'waypoint_follower',
+                       'map_server']
 
     # Map fully qualified names to relative ones so the node's namespace can be prepended.
     # In case of the transforms (tf), currently, there doesn't seem to be a better alternative
@@ -40,7 +43,8 @@ def generate_launch_description():
         'use_sim_time': use_sim_time,
         'default_bt_xml_filename': default_bt_xml_filename,
         'autostart': autostart,
-        'map_subscribe_transient_local': map_subscribe_transient_local}
+        'map_subscribe_transient_local': map_subscribe_transient_local,
+        'yaml_filename': map_yaml_file}
 
     configured_params = RewrittenYaml(
             source_file=params_file,
@@ -79,6 +83,10 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'map_subscribe_transient_local', default_value='false',
             description='Whether to set the map subscriber QoS to transient local'),
+        DeclareLaunchArgument(
+            'map',
+            default_value=os.path.join(bringup_dir, 'maps', 'map.yaml'),
+            description='Full path to map yaml file to load'),
 
         Node(
             package='nav2_controller',
@@ -120,6 +128,13 @@ def generate_launch_description():
             remappings=remappings),
 
         Node(
+            package='nav2_map_server',
+            executable='map_server',
+            name='map_server',
+            output='screen',
+            parameters=[configured_params],
+            remappings=remappings),
+        Node(
             package='nav2_lifecycle_manager',
             executable='lifecycle_manager',
             name='lifecycle_manager_navigation',
@@ -127,5 +142,6 @@ def generate_launch_description():
             parameters=[{'use_sim_time': use_sim_time},
                         {'autostart': autostart},
                         {'node_names': lifecycle_nodes}]),
+
 
     ])

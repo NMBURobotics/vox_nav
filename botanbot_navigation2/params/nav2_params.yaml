@@ -11,7 +11,7 @@ amcl:
     beam_skip_error_threshold: 0.9
     beam_skip_threshold: 0.3
     do_beamskip: false
-    global_frame_id: "map"
+    global_frame_id: "odom"
     lambda_short: 0.1
     laser_likelihood_max_dist: 2.0
     laser_max_range: 100.0
@@ -50,7 +50,7 @@ amcl_rclcpp_node:
 bt_navigator:
   ros__parameters:
     use_sim_time: True
-    global_frame: map
+    global_frame: odom
     robot_base_frame: base_link
     transform_tolerance: 0.1    
     odom_topic: /odom
@@ -157,13 +157,13 @@ local_costmap:
     ros__parameters:
       update_frequency: 15.0
       publish_frequency: 15.0
-      global_frame: base_link
+      global_frame: odom
       robot_base_frame: base_link
       use_sim_time: True
       rolling_window: true
-      width: 20
-      height: 20
-      resolution: 0.2
+      width: 16
+      height: 16
+      resolution: 0.1
       robot_radius: 0.60
       plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
       obstacle_layer:
@@ -189,7 +189,7 @@ local_costmap:
         pointcloud:  # no frame set, uses frame from message
           topic: /velodyne_points
           max_obstacle_height: 1.0
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.0
           obstacle_range: 10.0
           raytrace_range: 10.0
           clearing: True
@@ -210,7 +210,7 @@ global_costmap:
     ros__parameters:
       update_frequency: 1.0
       publish_frequency: 1.0
-      global_frame: base_link
+      global_frame: odom
       robot_base_frame: base_link
       use_sim_time: True
       rolling_window: true
@@ -224,7 +224,7 @@ global_costmap:
         pointcloud:  # no frame set, uses frame from message
           topic: /velodyne_points
           max_obstacle_height: 1.0
-          min_obstacle_height: 0.2
+          min_obstacle_height: 0.0
           obstacle_range: 10.0
           raytrace_range: 10.0
           clearing: True
