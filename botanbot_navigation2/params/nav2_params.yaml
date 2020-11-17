@@ -111,11 +111,11 @@ controller_server:
       debug_trajectory_details: True
       min_vel_x: 0.0
       min_vel_y: 0.0
-      max_vel_x: 0.8
+      max_vel_x: 2.0
       max_vel_y: 0.0
       max_vel_theta: 1.0
       min_speed_xy: 0.0
-      max_speed_xy: 0.8
+      max_speed_xy: 2.0
       min_speed_theta: 0.0
       # Add high threshold velocity for turtlebot 3 issue.
       # https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/75
@@ -161,8 +161,8 @@ local_costmap:
       robot_base_frame: base_link
       use_sim_time: True
       rolling_window: true
-      width: 16
-      height: 16
+      width: 10
+      height: 10
       resolution: 0.1
       robot_radius: 0.60
       plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
@@ -213,7 +213,10 @@ global_costmap:
       global_frame: odom
       robot_base_frame: base_link
       use_sim_time: True
-      rolling_window: true
+      rolling_window: True
+      width: 1000
+      height: 1000
+      resolution: 2
       robot_radius: 0.60
       resolution: 0.20
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -263,7 +266,7 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.5
+      tolerance: 2.5
       use_astar: false
       allow_unknown: true
 

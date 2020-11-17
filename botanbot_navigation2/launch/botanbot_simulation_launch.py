@@ -29,6 +29,8 @@ from launch_ros.actions import Node
 def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('botanbot_navigation2')
+    localization_dir = get_package_share_directory('botanbot_localization')
+
     launch_dir = os.path.join(bringup_dir, 'launch')
 
     # Create the launch configuration variables
@@ -167,7 +169,15 @@ def generate_launch_description():
         launch_arguments={'namespace': '',
                           'use_namespace': 'False',
                           'rviz_config': rviz_config_file}.items())
-    
+
+    localization_cmd = IncludeLaunchDescription(
+    PythonLaunchDescriptionSource(os.path.join(localization_dir,'launch','dual_ekf_navsat_localization.launch.py')),
+    launch_arguments={'namespace': namespace,
+                        'use_namespace': use_namespace,
+                        'use_sim_time': use_sim_time,
+                        'params_file': params_file,
+                        'autostart': autostart}.items())        
+
     bringup_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
         launch_arguments={'namespace': namespace,
@@ -207,5 +217,6 @@ def generate_launch_description():
     ld.add_action(start_robot_state_publisher_cmd)
     ld.add_action(rviz_cmd)
     ld.add_action(bringup_cmd)
+    ld.add_action(localization_cmd)
 
     return ld
