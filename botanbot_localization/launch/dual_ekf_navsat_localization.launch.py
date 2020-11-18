@@ -41,7 +41,6 @@ def generate_launch_description():
             name='ekf_filter_node_odom',
 	        output='screen',
             parameters=[parameters_file_path],
-            remappings=[('odometry/filtered', 'odometry/local')]           
            ),
     launch_ros.actions.Node(
             package='robot_localization', 

@@ -21,6 +21,9 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "nav2_util/geometry_utils.hpp"
+#include "robot_localization/srv/to_ll.hpp"
+#include "robot_localization/srv/from_ll.hpp"
+
 
 /**
  * @brief namespace for way point following, points are from a yaml file
@@ -40,7 +43,7 @@ enum class ActionStatus
  * @brief A ros node that drives robot through gievn way points from YAML file
  *
  */
-class WayPointFollowerDemo : public rclcpp::Node
+class GPSWayPointFollower : public rclcpp::Node
 {
 private:
   // shorten the Goal handler Client type
@@ -62,35 +65,40 @@ private:
   // we load poses from Yaml file and store them in this vector
   std::vector<geometry_msgs::msg::PoseStamped> acummulated_poses_;
 
+  // we load poses from Yaml file and store them in this vector
+  std::vector<std::pair<double, double>> acummulated_gps_waypoints_;
+
 public:
   /**
    * @brief Construct a new Way Point Folllower Demo object
    *
    */
-  WayPointFollowerDemo();
+  GPSWayPointFollower();
 
   /**
    * @brief Destroy the Way Point Folllower Demo object
    *
    */
-  ~WayPointFollowerDemo();
+  ~GPSWayPointFollower();
 
   /**
    * @brief send robot through each of the pose in poses vector
    *
    * @param poses
    */
-  void startWaypointFollowing(std::vector<geometry_msgs::msg::PoseStamped> poses);
+  void startWaypointFollowing();
 
+
+  void convertGPSWaypointstoPosesinMap();
   /**
-   * @brief given a parameter name on the yaml file, loads this parameter as geometry_msgs::msg::PoseStamped. Note
-   * that this parameter needs to be an array of doubles
-   *
-   * @param param_name
-   * @return geometry_msgs::msg::PoseStamped
-   */
-  geometry_msgs::msg::PoseStamped
-  loadVectorofDoubleAsPoseFromYAML(std::string param_name);
+ * @brief given a parameter name on the yaml file, loads this parameter as std::pair<double, double>.
+ *  Note that this parameter needs to be an array of doubles
+ *
+ * @param param_name
+ * @return std::pair<double, double>
+ */
+  std::pair<double, double>
+  loadVectorofDoubleAsPairFromYAML(std::string param_name);
 
   void resultCallback(
     const rclcpp_action::ClientGoalHandle
@@ -101,6 +109,8 @@ public:
     <nav2_msgs::action::FollowWaypoints>::SharedPtr> future);
 
   ActionStatus current_goal_status_;
+
+  rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr from_ll_to_map_client_;
 };
 }  // namespace botanbot_gps_waypoint_follower
 

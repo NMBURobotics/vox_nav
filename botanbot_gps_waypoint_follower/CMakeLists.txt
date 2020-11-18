@@ -11,6 +11,8 @@ find_package(nav2_msgs REQUIRED)
 find_package(nav2_util REQUIRED)
 find_package(nav2_lifecycle_manager REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(robot_localization)
+find_package(rosidl_default_generators REQUIRED)
 
 include_directories(SYSTEM ${THIS_PACKAGE_INCLUDE_DIRS})
 include_directories(include ${catkin_INCLUDE_DIRS})
@@ -22,7 +24,7 @@ include_directories(
   include
 )
 
-set(executable_name waypoint_follower_demo)
+set(executable_name gps_waypoint_follower)
 
 add_executable(${executable_name}
   src/waypoint_follower_client.cpp
@@ -37,6 +39,7 @@ set(dependencies
   nav2_util
   nav2_lifecycle_manager
   tf2_ros
+  robot_localization
 )
 
 ament_target_dependencies(${executable_name}
@@ -54,15 +57,9 @@ install(DIRECTORY include/
 )
 
 install(
-  DIRECTORY launch 
+  DIRECTORY launch params 
   DESTINATION share/${PROJECT_NAME}
 )
-
-install(
-  DIRECTORY params 
-  DESTINATION share/${PROJECT_NAME}
-)
-
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
