@@ -1,7 +1,8 @@
 gps_waypoint_follower:
   ros__parameters:
-    number_of_gps_waypoints: 4
-    gps_waypoint0: [0.0000, 0.0000]
-    gps_waypoint1: [0.0000, 0.0000]
-    gps_waypoint2: [0.0000, 0.0000]
-    gps_waypoint3: [0.0000, 0.0000]  
+    number_of_gps_waypoints: 3
+    #long, lat, alt  =  0.6338827330619097
+    gps_waypoint0: [-1.3529504911314832e-05, -9.985555552933549e-09]
+    gps_waypoint1: [-6.060580906820122e-05, -1.684290056233679e-08]
+    gps_waypoint2: [5.155126124070562e-07, 5.155126124070562e-07]
+

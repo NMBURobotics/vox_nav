@@ -133,6 +133,7 @@ void GPSWayPointFollower::convertGPSWaypointstoPosesinMap()
     auto fromLLRequest = std::make_shared<robot_localization::srv::FromLL::Request>();
     fromLLRequest->ll_point.longitude = curr_gps_waypoint.first;
     fromLLRequest->ll_point.latitude = curr_gps_waypoint.second;
+    fromLLRequest->ll_point.altitude = 0.6338827330619097;
 
     if (!from_ll_to_map_client_->wait_for_service((std::chrono::seconds(5)))) {
       RCLCPP_ERROR(
@@ -157,7 +158,7 @@ void GPSWayPointFollower::convertGPSWaypointstoPosesinMap()
 
       this_pose_msg.pose.position.x = result.get()->map_point.x;
       this_pose_msg.pose.position.y = result.get()->map_point.y;
-      this_pose_msg.pose.position.z = 0;
+      this_pose_msg.pose.position.z = result.get()->map_point.z;
 
       // convert this RPY radian angles to geometry::msg::Quaternion type
       tf2::Quaternion quat_tf;
