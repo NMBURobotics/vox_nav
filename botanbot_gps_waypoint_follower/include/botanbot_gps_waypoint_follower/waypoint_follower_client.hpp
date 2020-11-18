@@ -11,6 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#ifndef BOTANBOT_GPS_WAYPOINT_FOLLOWER__WAYPOINT_FOLLOWER_CLIENT_HPP_
+#define BOTANBOT_GPS_WAYPOINT_FOLLOWER__WAYPOINT_FOLLOWER_CLIENT_HPP_
 
 #include "nav2_lifecycle_manager/lifecycle_manager_client.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
@@ -49,7 +51,8 @@ private:
   rclcpp_action::Client<nav2_msgs::action::FollowWaypoints>::SharedPtr
     waypoint_follower_action_client_;
 
-  // stores the waypoints in a vector with additional info such as "int32[] missed_waypoints" and "uint32
+  // stores the waypoints in a vector with additional info such as
+  // "int32[] missed_waypoints" and "uint32
   // current_waypoint"
   nav2_msgs::action::FollowWaypoints::Goal waypoint_follower_goal_;
 
@@ -86,14 +89,19 @@ public:
    * @param param_name
    * @return geometry_msgs::msg::PoseStamped
    */
-  geometry_msgs::msg::PoseStamped loadVectorofDoubleAsPoseFromYAML(std::string param_name);
+  geometry_msgs::msg::PoseStamped
+  loadVectorofDoubleAsPoseFromYAML(std::string param_name);
 
   void resultCallback(
-    const rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowWaypoints>::WrappedResult & result);
+    const rclcpp_action::ClientGoalHandle
+    <nav2_msgs::action::FollowWaypoints>::WrappedResult & result);
 
   void goalResponseCallback(
-    std::shared_future<rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowWaypoints>::SharedPtr> future);
+    std::shared_future<rclcpp_action::ClientGoalHandle
+    <nav2_msgs::action::FollowWaypoints>::SharedPtr> future);
 
   ActionStatus current_goal_status_;
 };
 }  // namespace botanbot_gps_waypoint_follower
+
+#endif  // BOTANBOT_GPS_WAYPOINT_FOLLOWER__WAYPOINT_FOLLOWER_CLIENT_HPP_

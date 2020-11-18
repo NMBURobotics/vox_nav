@@ -45,8 +45,8 @@ set(botanbot_gui_SRCS
  )
 
 set(botanbot_gui_HDRS
-  include/botanbot_gui/control_plugin.h
-  include/botanbot_gui/RobotController.h
+  include/botanbot_gui/control_plugin.hpp
+  include/botanbot_gui/RobotController.hpp
 )
 
 set(botanbot_gui_UIS

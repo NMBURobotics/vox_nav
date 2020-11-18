@@ -59,14 +59,10 @@ install(
 )
 
 install(
-  DIRECTORY config 
+  DIRECTORY params 
   DESTINATION share/${PROJECT_NAME}
 )
 
-install(
-  DIRECTORY scripts/
-  DESTINATION scripts
-)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

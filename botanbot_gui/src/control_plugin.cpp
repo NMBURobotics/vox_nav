@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <botanbot_gui/control_plugin.h>
+#include "botanbot_gui/control_plugin.hpp"
 
 #include <pluginlib/class_list_macros.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 
-using namespace std::chrono_literals;
 namespace botanbot_gui
 {
 ControlPlugin::ControlPlugin()
@@ -61,10 +60,14 @@ void ControlPlugin::initPlugin(qt_gui_cpp::PluginContext & context)
     SLOT(onGazeboNavigationFullButtonClick()));
 
   ui_.startRviz->setIcon(QIcon::fromTheme("call-start"));
-  connect(ui_.startRviz, SIGNAL(pressed()), this, SLOT(onRvizButtonClick()));
+  connect(
+    ui_.startRviz, SIGNAL(pressed()), this,
+    SLOT(onRvizButtonClick()));
 
   ui_.terminate->setIcon(QIcon::fromTheme("call-start"));
-  connect(ui_.terminate, SIGNAL(pressed()), this, SLOT(onTerminateAllButtonClick()));
+  connect(
+    ui_.terminate, SIGNAL(pressed()), this,
+    SLOT(onTerminateAllButtonClick()));
 
   /**
    * TELEOPRATION
@@ -75,10 +78,14 @@ void ControlPlugin::initPlugin(qt_gui_cpp::PluginContext & context)
   connect(ui_.stop, SIGNAL(pressed()), this, SLOT(onStopButtonClick()));
 
   ui_.sendToChargeStation->setIcon(QIcon::fromTheme("system-run"));
-  connect(ui_.sendToChargeStation, SIGNAL(pressed()), this, SLOT(onToChargeStationButtonClick()));
+  connect(
+    ui_.sendToChargeStation, SIGNAL(pressed()), this,
+    SLOT(onToChargeStationButtonClick()));
 
   ui_.sendToPose->setIcon(QIcon::fromTheme("system-run"));
-  connect(ui_.sendToPose, SIGNAL(pressed()), this, SLOT(onToSpecificPoseButtonClick()));
+  connect(
+    ui_.sendToPose, SIGNAL(pressed()), this,
+    SLOT(onToSpecificPoseButtonClick()));
 
   ui_.sendAlongPredefinedWaypoints->setIcon(QIcon::fromTheme("system-run"));
   connect(
@@ -102,7 +109,8 @@ void ControlPlugin::initPlugin(qt_gui_cpp::PluginContext & context)
   timer_->connect(timer_, SIGNAL(timeout()), this, SLOT(teleoperation()));
   timer_->connect(timer_, SIGNAL(timeout()), this, SLOT(updateRobotStates()));
 
-  publisher_ = node_->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+  publisher_ =
+    node_->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
 
   std::cout << "Initialized plugin . . " << std::endl;
 
@@ -144,7 +152,6 @@ void ControlPlugin::onStopButtonClick()
   twist.linear.x = speed;
   twist.angular.z = turn;
   publisher_->publish(twist);
-
 }
 
 void ControlPlugin::onCancelAllGoals()
@@ -176,7 +183,6 @@ void ControlPlugin::onToChargeStationButtonClick()
 
 void ControlPlugin::onAlongPredefinedWaypointsButtonClick()
 {
-
   std::string this_package_path = ament_index_cpp::get_package_share_directory(
     "botanbot_gps_waypoint_follower");
 
@@ -213,12 +219,15 @@ void ControlPlugin::teleoperation()
 
 void ControlPlugin::updateRobotStates()
 {
-  geometry_msgs::msg::TransformStamped curr_pose = robot_controller_->getRobotStates();
+  geometry_msgs::msg::TransformStamped curr_pose =
+    robot_controller_->getRobotStates();
 
   ui_.x->display(curr_pose.transform.translation.x);
   ui_.y->display(curr_pose.transform.translation.y);
 
-  tf2::Quaternion quat(curr_pose.transform.rotation.x, curr_pose.transform.rotation.y,
+  tf2::Quaternion quat(
+    curr_pose.transform.rotation.x,
+    curr_pose.transform.rotation.y,
     curr_pose.transform.rotation.z,
     curr_pose.transform.rotation.w);
 
@@ -250,9 +259,9 @@ void ControlPlugin::onToSpecificPoseButtonClick()
 
 void ControlPlugin::onGazeboStandaloneButtonClick()
 {
-  std::cout << "Starting Gazebo Chiconybot Simulation" << std::endl;
 
-  std::string this_package_path = ament_index_cpp::get_package_share_directory("botanbot_gui");
+  std::string this_package_path =
+    ament_index_cpp::get_package_share_directory("botanbot_gui");
 
   std::string this_package_bash_files_dir = this_package_path +
     "/../../scripts/gazebo_standalone.sh";
@@ -260,15 +269,15 @@ void ControlPlugin::onGazeboStandaloneButtonClick()
     this_package_bash_files_dir;
   system(this_package_make_bash_files_executable_command.c_str());
 
-  std::string bringup_command = this_package_path + "/../../scripts/gazebo_standalone.sh";
+  std::string bringup_command =
+    this_package_path + "/../../scripts/gazebo_standalone.sh";
   system(bringup_command.c_str());
 }
 
 void ControlPlugin::onGazeboNavigationFullButtonClick()
 {
-  std::cout << "Starting whole Gazebo simulation and navigation SLAM" << std::endl;
-
-  std::string this_package_path = ament_index_cpp::get_package_share_directory("botanbot_gui");
+  std::string this_package_path =
+    ament_index_cpp::get_package_share_directory("botanbot_gui");
 
   std::string this_package_bash_files_dir = this_package_path +
     "/../../scripts/gazebo_navigation_full.sh";
@@ -276,16 +285,18 @@ void ControlPlugin::onGazeboNavigationFullButtonClick()
     this_package_bash_files_dir;
   system(this_package_make_bash_files_executable_command.c_str());
 
-  std::string bringup_command = this_package_path + "/../../scripts/gazebo_navigation_full.sh";
+  std::string bringup_command =
+    this_package_path + "/../../scripts/gazebo_navigation_full.sh";
   system(bringup_command.c_str());
 }
 
 void ControlPlugin::onRvizButtonClick()
 {
-  std::cout << "Starting RViz" << std::endl;
-  std::string this_package_path = ament_index_cpp::get_package_share_directory("botanbot_gui");
+  std::string this_package_path =
+    ament_index_cpp::get_package_share_directory("botanbot_gui");
 
-  std::string this_package_bash_files_dir = this_package_path + "/../../scripts/rviz.sh";
+  std::string this_package_bash_files_dir =
+    this_package_path + "/../../scripts/rviz.sh";
   std::string this_package_make_bash_files_executable_command = "chmod +x " +
     this_package_bash_files_dir;
   system(this_package_make_bash_files_executable_command.c_str());
@@ -296,9 +307,8 @@ void ControlPlugin::onRvizButtonClick()
 
 void ControlPlugin::onTerminateAllButtonClick()
 {
-  std::cout << "Terminating all Processes across gnome terminals" << std::endl;
-  std::cout << "Starting RViz" << std::endl;
-  std::string this_package_path = ament_index_cpp::get_package_share_directory("botanbot_gui");
+  std::string this_package_path =
+    ament_index_cpp::get_package_share_directory("botanbot_gui");
 
   std::string this_package_bash_files_dir = this_package_path +
     "/../../scripts/close_all_terminals.sh";
@@ -306,7 +316,8 @@ void ControlPlugin::onTerminateAllButtonClick()
     this_package_bash_files_dir;
   system(this_package_make_bash_files_executable_command.c_str());
 
-  std::string bringup_command = this_package_path + "/../../scripts/close_all_terminals.sh";
+  std::string bringup_command =
+    this_package_path + "/../../scripts/close_all_terminals.sh";
   system(bringup_command.c_str());
 }
 

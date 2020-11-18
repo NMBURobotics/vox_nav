@@ -12,26 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <botanbot_gui/RobotController.h>
+#include "botanbot_gui/RobotController.hpp"
 
 namespace botanbot_gui
 {
-using namespace std::chrono_literals;
 RobotController::RobotController(/* args */)
 {
   node_ = rclcpp::Node::make_shared("RobotController");
-  nav_to_pose_client_ = rclcpp_action::create_client<nav2_msgs::action::NavigateToPose>(
-    node_, "navigate"
-    "_to_"
-    "pose");
+  nav_to_pose_client_ =
+    rclcpp_action::create_client<nav2_msgs::action::NavigateToPose>(
+    node_, "navigate_to_pose");
   waypoint_follower_action_client_ =
     rclcpp_action::create_client<nav2_msgs::action::FollowWaypoints>(
-    node_, "FollowW"
-    "a"
-    "ypoint"
-    "s");
+    node_, "FollowWaypoints");
 
-  rclcpp::Clock::SharedPtr clock = std::make_shared<rclcpp::Clock>(RCL_SYSTEM_TIME);
+  rclcpp::Clock::SharedPtr
+    clock = std::make_shared<rclcpp::Clock>(RCL_SYSTEM_TIME);
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);

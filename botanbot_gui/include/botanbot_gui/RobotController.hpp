@@ -1,33 +1,23 @@
-/*
- * Copyright (c) 2020, Fetullah Atas
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- *   * Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- *   * Redistributions in binary form must reproduce the above
- *     copyright notice, this list of conditions and the following
- *     disclaimer in the documentation and/or other materials provided
- *     with the distribution.
- *   *
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+// Copyright (c) 2020 Fetullah Atas
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
+#ifndef BOTANBOT_GUI_INCLUDE_BOTANBOT_GUI_ROBOTCONTROLLER_HPP_
+#define BOTANBOT_GUI_INCLUDE_BOTANBOT_GUI_ROBOTCONTROLLER_HPP_
+
+// STL headers
+#include <vector>
+#include <memory>
 // Navigation2 headers
 #include <nav2_behavior_tree/plugins/action/navigate_to_pose_action.hpp>
 #include <nav2_lifecycle_manager/lifecycle_manager_client.hpp>
@@ -44,8 +34,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_ros/create_timer_interface.h>
-// STL headers
-#include <vector>
+
 
 namespace botanbot_gui
 {
@@ -67,7 +56,8 @@ public:
   // type shorteneings
   using ClientT = nav2_msgs::action::NavigateToPose;
   using ActionClient = rclcpp_action::Client<ClientT>;
-  using NavigationGoalHandle = rclcpp_action::ClientGoalHandle<nav2_msgs::action::NavigateToPose>;
+  using NavigationGoalHandle =
+    rclcpp_action::ClientGoalHandle<nav2_msgs::action::NavigateToPose>;
 
   /**
    * @brief Construct a new Robot Controller object
@@ -109,9 +99,12 @@ private:
   // tf buffer to get transfroms
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   // tf listner for tf transforms
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::shared_ptr<tf2_ros::TransformListener>
+  tf_listener_;
   // A client to cancel ongoing waypoint following
   rclcpp_action::Client<nav2_msgs::action::FollowWaypoints>::SharedPtr
     waypoint_follower_action_client_;
 };
 }  // namespace botanbot_gui
+
+#endif  // BOTANBOT_GUI_INCLUDE_BOTANBOT_GUI_ROBOTCONTROLLER_HPP_
