@@ -102,8 +102,8 @@ controller_server:
     # Goal checker parameters
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 1.5
-      yaw_goal_tolerance: 1.5
+      xy_goal_tolerance: 0.5
+      yaw_goal_tolerance: 0.5
       stateful: True
     # DWB parameters
     FollowPath:
@@ -216,13 +216,13 @@ global_costmap:
       rolling_window: True
       width: 1000
       height: 1000
-      resolution: 2
+      resolution: 10
       robot_radius: 0.60
       resolution: 0.20
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: True
+        enabled: False
         observation_sources: pointcloud
         pointcloud:  # no frame set, uses frame from message
           topic: /velodyne_points
@@ -235,9 +235,11 @@ global_costmap:
           data_type: "PointCloud2"
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
+        enabled: False
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
+        enabled: False
       always_send_full_costmap: True
   global_costmap_client:
     ros__parameters:
