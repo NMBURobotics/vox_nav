@@ -43,7 +43,7 @@ void GazeboRosRealsense::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
       "package");
     return;
   }
-  RCLCPP_ERROR(node_->get_logger(), "Realsense Gazebo ROS plugin loading.");
+  RCLCPP_INFO(node_->get_logger(), "Realsense Gazebo ROS plugin loading.");
   std::cout << "ROS IS OK LOADING REALSENSE PLUGIN" << std::endl;
 
 
