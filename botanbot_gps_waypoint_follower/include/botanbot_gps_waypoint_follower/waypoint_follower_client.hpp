@@ -20,6 +20,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "geometry_msgs/msg/point32.hpp"
 #include "nav2_util/geometry_utils.hpp"
 #include "robot_localization/srv/to_ll.hpp"
 #include "robot_localization/srv/from_ll.hpp"
@@ -66,7 +67,7 @@ private:
   std::vector<geometry_msgs::msg::PoseStamped> acummulated_poses_;
 
   // we load poses from Yaml file and store them in this vector
-  std::vector<std::pair<double, double>> acummulated_gps_waypoints_;
+  std::vector<geometry_msgs::msg::Point32> acummulated_gps_waypoints_;
 
 public:
   /**
@@ -91,13 +92,13 @@ public:
 
   void convertGPSWaypointstoPosesinMap();
   /**
- * @brief given a parameter name on the yaml file, loads this parameter as std::pair<double, double>.
+ * @brief given a parameter name on the yaml file, loads this parameter as geometry_msgs::Point.
  *  Note that this parameter needs to be an array of doubles
  *
  * @param param_name
- * @return std::pair<double, double>
+ * @return geometry_msgs::Point
  */
-  std::pair<double, double>
+  geometry_msgs::msg::Point32
   loadVectorofDoubleAsPairFromYAML(std::string param_name);
 
   void resultCallback(

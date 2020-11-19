@@ -146,7 +146,7 @@
             </geometry>
         </collision>
     </link>
-    <link name="gps_link">
+    <link name="gps">
         <visual>
             <geometry>
                 <mesh filename="package://botanbot_description/meshes/gps.stl" scale="0.0005 0.0005 0.001" />
@@ -235,7 +235,7 @@
     </joint>
     <joint name="gps_joint" type="fixed">
         <parent link="base_link" />
-        <child link="gps_link" />
+        <child link="gps" />
         <origin xyz="0 0 0.4" rpy="0 0 0" />
     </joint>
     <joint name="camera_joint" type="fixed">

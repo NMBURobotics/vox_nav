@@ -44,10 +44,10 @@ GPSWayPointFollower::GPSWayPointFollower()
     // utility  function loadVectorofDoubleAsPoseFromYAML,
     // hence this try catch block
     try {
-      std::pair<double, double>
-      this_waypoint_as_pair_of_doubles = loadVectorofDoubleAsPairFromYAML(
+      geometry_msgs::msg::Point32
+        this_waypoint_as_point_msg = loadVectorofDoubleAsPairFromYAML(
         this_param_name);
-      acummulated_gps_waypoints_.push_back(this_waypoint_as_pair_of_doubles);
+      acummulated_gps_waypoints_.push_back(this_waypoint_as_point_msg);
     } catch (const std::exception & e) {
       std::cerr << e.what() << '\n';
     }
@@ -131,11 +131,11 @@ void GPSWayPointFollower::convertGPSWaypointstoPosesinMap()
 {
   for (auto && curr_gps_waypoint : acummulated_gps_waypoints_) {
     auto fromLLRequest = std::make_shared<robot_localization::srv::FromLL::Request>();
-    fromLLRequest->ll_point.longitude = curr_gps_waypoint.first;
-    fromLLRequest->ll_point.latitude = curr_gps_waypoint.second;
-    fromLLRequest->ll_point.altitude = 0.6338827330619097;
+    fromLLRequest->ll_point.longitude = curr_gps_waypoint.x;
+    fromLLRequest->ll_point.latitude = curr_gps_waypoint.y;
+    fromLLRequest->ll_point.altitude = curr_gps_waypoint.z;
 
-    if (!from_ll_to_map_client_->wait_for_service((std::chrono::seconds(5)))) {
+    if (!from_ll_to_map_client_->wait_for_service((std::chrono::seconds(10)))) {
       RCLCPP_ERROR(
         this->get_logger(),
         "fromLL service from robot_localization is not available"
@@ -144,7 +144,7 @@ void GPSWayPointFollower::convertGPSWaypointstoPosesinMap()
     }
     auto result = from_ll_to_map_client_->async_send_request(fromLLRequest);
     auto ret = rclcpp::spin_until_future_complete(
-      this->shared_from_this(), result, std::chrono::seconds(5));
+      this->shared_from_this(), result, std::chrono::seconds(10));
 
     // Timing and spinning is updated as per ros2
     if (ret == rclcpp::FutureReturnCode::SUCCESS) {
@@ -182,18 +182,18 @@ void GPSWayPointFollower::convertGPSWaypointstoPosesinMap()
     "Converted all %i GPS waypoint o Map frame", acummulated_poses_.size());
 }
 
-std::pair<double, double> GPSWayPointFollower::loadVectorofDoubleAsPairFromYAML(
+geometry_msgs::msg::Point32 GPSWayPointFollower::loadVectorofDoubleAsPairFromYAML(
   std::string param_name)
 {
   // The function loads an array of doubles where the items of this array
-  // for 2D pose [x, y] Supposed to be RAW GPS coordnates
+  // for Supposed to be RAW GPS coordinates
 
   this->declare_parameter(param_name);
   rclcpp::Parameter this_pair_rclcpp = this->get_parameter(param_name);
   std::vector<double> this_pair_as_vector = this_pair_rclcpp.as_double_array();
 
   // throw exeption if incorrect format was detected from yaml file reading
-  if (this_pair_as_vector.size() < 2) {
+  if (this_pair_as_vector.size() < 3) {
     RCLCPP_FATAL(
       this->get_logger(),
       "GPS waypoint that was loaded from YAML file seems to have incorrect"
@@ -203,12 +203,15 @@ std::pair<double, double> GPSWayPointFollower::loadVectorofDoubleAsPairFromYAML(
             "format is; x, y as double types, please chechk YAML file");
   }
   // construct the gps waypoint and push them to pair
-  std::pair<double, double> this_pair(0.0000, 0.0000);
-  this_pair.first = this_pair_as_vector.at(0);
-  this_pair.second = this_pair_as_vector.at(1);
+  //long lat , alt
+  geometry_msgs::msg::Point32 gps_point;
+  gps_point.x = this_pair_as_vector.at(0);
+  gps_point.y = this_pair_as_vector.at(1);
+  gps_point.z = this_pair_as_vector.at(2);
+
 
   // return the read pair of this gps waypoint to it's caller
-  return this_pair;
+  return gps_point;
 }
 
 void GPSWayPointFollower::resultCallback(

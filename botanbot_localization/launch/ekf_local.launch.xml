@@ -1,0 +1,7 @@
+<launch>
+    <!-- Local frame localization -->
+    <node pkg="robot_localization" exec="ekf_node" name="ekf_local_filter_node" output="screen" >
+        <param from="/home/atas/colcon_ws/src/OUTDOOR_NAV2/botanbot_localization/params/ekf_local.yaml" />
+        <remap from="odometry/filtered" to="odometry/local" />
+    </node>
+</launch>

@@ -214,9 +214,9 @@ global_costmap:
       robot_base_frame: base_link
       use_sim_time: True
       rolling_window: True
-      width: 1000
-      height: 1000
-      resolution: 10
+      width: 40
+      height: 40
+      resolution: 1
       robot_radius: 0.60
       resolution: 0.20
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]

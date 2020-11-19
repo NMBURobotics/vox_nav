@@ -168,15 +168,8 @@ def generate_launch_description():
         condition=IfCondition(use_rviz),
         launch_arguments={'namespace': '',
                           'use_namespace': 'False',
-                          'rviz_config': rviz_config_file}.items())
-
-    localization_cmd = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(os.path.join(localization_dir,'launch','dual_ekf_navsat_localization.launch.py')),
-    launch_arguments={'namespace': namespace,
-                        'use_namespace': use_namespace,
-                        'use_sim_time': use_sim_time,
-                        'params_file': params_file,
-                        'autostart': autostart}.items())        
+                          'rviz_config': rviz_config_file}.items()) 
+                          
 
     bringup_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
@@ -217,6 +210,5 @@ def generate_launch_description():
     ld.add_action(start_robot_state_publisher_cmd)
     ld.add_action(rviz_cmd)
     ld.add_action(bringup_cmd)
-    ld.add_action(localization_cmd)
 
     return ld
