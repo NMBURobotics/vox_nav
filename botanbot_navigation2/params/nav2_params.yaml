@@ -86,7 +86,7 @@ bt_navigator_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: True
-    controller_frequency: 10.0
+    controller_frequency: 30.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
@@ -108,11 +108,11 @@ controller_server:
     FollowPath:
       plugin: "teb_local_planner::TebLocalPlannerROS"
       acc_lim_x: 2.5
-      acc_lim_theta: 3.2
+      acc_lim_theta: 1.6
       max_vel_x: 0.26
       max_vel_x_backwards: 0.26
-      max_vel_theta: 1.0
-      min_turning_radius: 1.6
+      max_vel_theta: 1.2
+      min_turning_radius: 0.6
       wheelbase: 1.0
       footprint_model.type: polygon
       min_obstacle_dist: 0.1

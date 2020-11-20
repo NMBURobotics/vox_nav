@@ -350,7 +350,7 @@
                     <upper>0.8727</upper>
                 </limit>
                 <dynamics>
-                    <friction>2.0</friction>
+                    <friction>4.0</friction>
                 </dynamics>
             </axis>
             <axis2>
@@ -371,7 +371,7 @@
                     <upper>0.8727</upper>
                 </limit>
                 <dynamics>
-                    <friction>2.0</friction>
+                    <friction>4.0</friction>
                 </dynamics>
             </axis>
             <axis2>
@@ -443,10 +443,10 @@
             <max_steer>0.6458</max_steer>
             <max_steering_angle>7.85</max_steering_angle>
             <max_speed>10</max_speed>
-            <left_steering_pid_gain>500 0 1</left_steering_pid_gain>
-            <left_steering_i_range>0 0</left_steering_i_range>
-            <right_steering_pid_gain>500 0 1</right_steering_pid_gain>
-            <right_steering_i_range>0 0</right_steering_i_range>
+            <left_steering_pid_gain>1000 0.1 10</left_steering_pid_gain>
+            <left_steering_i_range>0 1</left_steering_i_range>
+            <right_steering_pid_gain>1000 0.1 10</right_steering_pid_gain>
+            <right_steering_i_range>0 1</right_steering_i_range>
             <linear_velocity_pid_gain>100 0 1</linear_velocity_pid_gain>
             <linear_velocity_i_range>0 0</linear_velocity_i_range>
             <publish_odom>true</publish_odom>
