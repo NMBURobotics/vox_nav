@@ -33,8 +33,8 @@ class GPSWaypoitCollector(Node):
         self.latest_navsat = msg
 
     def peroidic_callback(self):
-        print('gps_waypoint'+str(self.index)+':', [self.latest_navsat.longitude,
-                                                   self.latest_navsat.latitude,
+        print('gps_waypoint'+str(self.index)+':', [self.latest_navsat.latitude,
+                                                   self.latest_navsat.longitude,
                                                    self.latest_navsat.altitude])
         input("PRESS ENTER TO COLLECT NEXT WAYPOINT ")
         self.index = self.index+1

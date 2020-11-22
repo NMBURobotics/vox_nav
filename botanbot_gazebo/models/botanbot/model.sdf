@@ -424,7 +424,7 @@
                 <remapping>odom:=odometry/wheel</remapping>
                 <remapping>distance:=distance</remapping>
             </ros>
-            <update_rate>100.0</update_rate>
+            <update_rate>60.0</update_rate>
             <front_left_joint>front_left_combined_joint</front_left_joint>
             <front_right_joint>front_right_combined_joint</front_right_joint>
             <rear_left_joint>rear_left_joint</rear_left_joint>
@@ -444,7 +444,7 @@
             <publish_odom>true</publish_odom>
             <publish_odom_tf>false</publish_odom_tf>
             <publish_wheel_tf>false</publish_wheel_tf>
-            <publish_distance>true</publish_distance>
+            <publish_distance>false</publish_distance>
             <odometry_frame>odom</odometry_frame>
             <robot_base_frame>base_link</robot_base_frame>
         </plugin>
@@ -452,7 +452,7 @@
             <ros>
                 <argument>--ros-args --remap ~/out:=joint_states</argument>
             </ros>
-            <update_rate>30</update_rate>
+            <update_rate>60</update_rate>
             <joint_name>front_left_combined_joint</joint_name>
             <joint_name>front_right_combined_joint</joint_name>
             <joint_name>rear_left_joint</joint_name>
@@ -628,7 +628,7 @@
             </visual>
             <sensor name="gps" type="gps">
                 <always_on>true</always_on>
-                <update_rate>30</update_rate>
+                <update_rate>10</update_rate>
                 <gps>
                     <position_sensing>
                         <horizontal></horizontal>
@@ -681,7 +681,7 @@
             <sensor type="gpu_ray" name="HDL32">
                 <pose>0 0 0 0 0 0</pose>
                 <visualize>false</visualize>
-                <update_rate>30</update_rate>
+                <update_rate>15</update_rate>
                 <ray>
                     <scan>
                         <horizontal>

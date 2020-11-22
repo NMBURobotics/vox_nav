@@ -131,8 +131,8 @@ void GPSWayPointFollower::convertGPSWaypointstoPosesinMap()
 {
   for (auto && curr_gps_waypoint : acummulated_gps_waypoints_) {
     auto fromLLRequest = std::make_shared<robot_localization::srv::FromLL::Request>();
-    fromLLRequest->ll_point.longitude = curr_gps_waypoint.x;
-    fromLLRequest->ll_point.latitude = curr_gps_waypoint.y;
+    fromLLRequest->ll_point.latitude = curr_gps_waypoint.x;
+    fromLLRequest->ll_point.longitude = curr_gps_waypoint.y;
     fromLLRequest->ll_point.altitude = curr_gps_waypoint.z;
 
     if (!from_ll_to_map_client_->wait_for_service((std::chrono::seconds(10)))) {
@@ -203,7 +203,7 @@ geometry_msgs::msg::Point32 GPSWayPointFollower::loadVectorofDoubleAsPairFromYAM
             "format is; x, y as double types, please chechk YAML file");
   }
   // construct the gps waypoint and push them to pair
-  //long lat , alt
+  //lat, long , alt
   geometry_msgs::msg::Point32 gps_point;
   gps_point.x = this_pair_as_vector.at(0);
   gps_point.y = this_pair_as_vector.at(1);
