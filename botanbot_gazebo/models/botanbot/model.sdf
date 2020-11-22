@@ -437,7 +437,7 @@
             <max_speed>10</max_speed>
             <left_steering_pid_gain>1000 10 100</left_steering_pid_gain>
             <left_steering_i_range>0 1</left_steering_i_range>
-            <right_steering_pid_gain>100 10 100</right_steering_pid_gain>
+            <right_steering_pid_gain>1000 10 100</right_steering_pid_gain>
             <right_steering_i_range>0 1</right_steering_i_range>
             <linear_velocity_pid_gain>100 0 1</linear_velocity_pid_gain>
             <linear_velocity_i_range>0 0</linear_velocity_i_range>

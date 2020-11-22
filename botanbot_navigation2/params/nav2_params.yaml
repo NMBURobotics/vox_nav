@@ -107,43 +107,44 @@ controller_server:
     # DWB parameters
     FollowPath:
       plugin: "teb_local_planner::TebLocalPlannerROS"
-      acc_lim_x: 2.5
-      acc_lim_theta: 1.6
-      max_vel_x: 0.9
-      max_vel_x_backwards: 0.26
-      max_vel_theta: 1.2
-      min_turning_radius: 0.6
+      acc_lim_x: 2.0
+      acc_lim_theta: 0.8
+      max_vel_x: 0.6
+      max_vel_x_backwards: 0.6
+      max_vel_theta: 1.0
+      min_turning_radius: 1.0
       wheelbase: 1.3
       xy_goal_tolerance: 0.5
       yaw_goal_tolerance: 0.5
       footprint_model.type: polygon
       footprint_model.vertices: "[[-0.85, -0.6], [-0.85, 0.6], [0.85, 0.6], [0.85, -0.6]]"
-      min_obstacle_dist: 0.1
-      inflation_dist: 0.1
+      min_obstacle_dist: 0.6
+      inflation_dist: 0.5
+      allow_init_with_backwards_motion: true
       costmap_converter_plugin: costmap_converter::CostmapToPolygonsDBSMCCH
       costmap_converter_spin_thread: True
-      costmap_converter_rate: 1
+      costmap_converter_rate: 15
       enable_homotopy_class_planning: True
       enable_multithreading: True
       #weight_obstacle: 100.0
       optimization_verbose: False
       teb_autoresize: True
       min_samples: 3
-      max_samples: 20
-      max_global_plan_lookahead_dist: 1.0
+      max_samples: 60
+      max_global_plan_lookahead_dist: 1.2
       visualize_hc_graph: True
       stateful: True
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       BaseObstacle.scale: 0.02
-      PathAlign.scale: 32.0
-      PathAlign.forward_point_distance: 0.1
-      GoalAlign.scale: 24.0
-      GoalAlign.forward_point_distance: 0.1
+      PathAlign.scale: 64.0
+      PathAlign.forward_point_distance: 0.6
+      GoalAlign.scale: 48.0
+      GoalAlign.forward_point_distance: 0.6
       PathDist.scale: 32.0
       GoalDist.scale: 24.0
-      RotateToGoal.scale: 32.0
-      RotateToGoal.slowing_factor: 5.0
-      RotateToGoal.lookahead_time: -1.0
+      RotateToGoal.scale: 64.0
+      RotateToGoal.slowing_factor: 1.0
+      RotateToGoal.lookahead_time: 1.0
 
 controller_server_rclcpp_node:
   ros__parameters:
@@ -161,41 +162,47 @@ local_costmap:
       footprint: "[[-0.85, -0.6], [-0.85, 0.6], [0.85, 0.6], [0.85, -0.6]]"
       width: 10
       height: 10
-      resolution: 0.2
+      resolution: 0.1
       robot_radius: 0.60
       plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        inflation_radius: 0.1
-        cost_scaling_factor: 20.0
+        inflation_radius: 0.9
+        cost_scaling_factor: 40.0
         enabled: True
-      inflation_layer:
-        plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 20.0
-        inflation_radius: 0.5
-        enabled: True
-      voxel_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: True
-        publish_voxel_map: True
-        origin_z: 0.0
-        z_resolution: 0.05
-        z_voxels: 16
-        max_obstacle_height: 2.0
-        mark_threshold: 0
         observation_sources: pointcloud
         pointcloud:  # no frame set, uses frame from message
           topic: /velodyne_points
-          max_obstacle_height: 1.0
+          max_obstacle_height: 4.0
           min_obstacle_height: 0.0
           obstacle_range: 10.0
           raytrace_range: 10.0
           clearing: True
           marking: True
           data_type: "PointCloud2"
-      static_layer:
-        map_subscribe_transient_local: True
-      always_send_full_costmap: True
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 40.0
+        inflation_radius: 0.9
+        enabled: True
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: True
+        publish_voxel_map: True
+        z_resolution: 0.1
+        z_voxels: 16
+        max_obstacle_height: 4.0
+        mark_threshold: 0
+        observation_sources: pointcloud
+        pointcloud:  # no frame set, uses frame from message
+          topic: /velodyne_points
+          max_obstacle_height: 4.0
+          min_obstacle_height: 0.0
+          obstacle_range: 10.0
+          raytrace_range: 10.0
+          clearing: True
+          marking: True
+          data_type: "PointCloud2"
   local_costmap_client:
     ros__parameters:
       use_sim_time: True
@@ -219,11 +226,14 @@ global_costmap:
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        enabled: False
+        enabled: True
+        cost_scaling_factor: 40.0
+        inflation_radius: 0.9
+        enabled: True
         observation_sources: pointcloud
         pointcloud:  # no frame set, uses frame from message
           topic: /velodyne_points
-          max_obstacle_height: 1.0
+          max_obstacle_height: 4.0
           min_obstacle_height: 0.0
           obstacle_range: 10.0
           raytrace_range: 10.0
@@ -236,7 +246,9 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        enabled: False
+        cost_scaling_factor: 40.0
+        inflation_radius: 0.9
+        enabled: True
       always_send_full_costmap: True
   global_costmap_client:
     ros__parameters:
@@ -272,22 +284,22 @@ planner_server:
       max_iterations: -1                # maximum total iterations to search for before failing
       max_on_approach_iterations: 1000  # maximum number of iterations to attempt to reach goal once in tolerance, 2D only
       max_planning_time_ms: 2000.0      # max time in ms for planner to plan, smooth, and upsample. Will scale maximum smoothing and upsampling times based on remaining time after planning.
-      smooth_path: true                # Whether to smooth searched path
+      smooth_path: true                 # Whether to smooth searched path
       motion_model_for_search: "REEDS_SHEPP"  # 2D Moore, Von Neumann; SE2 Dubin, Redds-Shepp
       angle_quantization_bins: 72       # For SE2 node: Number of angle bins for search, must be 1 for 2D node (no angle search)
-      minimum_turning_radius: 1.0       # For SE2 node & smoother: minimum turning radius in m of path / vehicle
-      reverse_penalty: 2.1              # For Reeds-Shepp model: penalty to apply if motion is reversing, must be => 1
-      change_penalty: 0.20              # For SE2 node: penalty to apply if motion is changing directions, must be >= 0
+      minimum_turning_radius: 1.2       # For SE2 node & smoother: minimum turning radius in m of path / vehicle
+      reverse_penalty: 5.1              # For Reeds-Shepp model: penalty to apply if motion is reversing, must be => 1
+      change_penalty: 0.40              # For SE2 node: penalty to apply if motion is changing directions, must be >= 0
       non_straight_penalty: 1.05        # For SE2 node: penalty to apply if motion is non-straight, must be => 1
-      cost_penalty: 1.3                 # For SE2 node: penalty to apply to higher cost zones
+      cost_penalty: 100.0                 # For SE2 node: penalty to apply to higher cost zones
 
       smoother:
         smoother:
           w_curve: 100.0                 # weight to minimize curvature of path
           w_dist: 0.0                   # weight to bind path to original as optional replacement for cost weight
           w_smooth: 30000.0             # weight to maximize smoothness of path
-          w_cost: 0.025                 # weight to steer robot away from collision and cost
-          cost_scaling_factor: 10.0     # this should match the inflation layer's parameter
+          w_cost: 0.80                  # weight to steer robot away from collision and cost
+          cost_scaling_factor: 40.0     # this should match the inflation layer's parameter
 
         # I do not recommend users mess with this unless they're doing production tuning
         optimizer:
@@ -325,9 +337,9 @@ recoveries_server:
     transform_timeout: 0.1
     use_sim_time: true
     simulate_ahead_time: 2.0
-    max_rotational_vel: 1.0
-    min_rotational_vel: 0.4
-    rotational_acc_lim: 3.2
+    max_rotational_vel: 0.8
+    min_rotational_vel: 0.0
+    rotational_acc_lim: 0.8
 
 robot_state_publisher:
   ros__parameters:
@@ -349,4 +361,3 @@ waypoint_follower:
       image_topic: "/camera/color/image_raw"
       save_dir: "/home/atas/waypoint_photos"
       image_format: "png"
-
