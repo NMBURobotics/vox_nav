@@ -96,7 +96,7 @@ controller_server:
     # Progress checker parameters
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.5
+      required_movement_radius: 0.1
       movement_time_allowance: 10.0
     # Goal checker parameters
     goal_checker:
@@ -109,7 +109,7 @@ controller_server:
       plugin: "teb_local_planner::TebLocalPlannerROS"
       acc_lim_x: 2.0
       acc_lim_theta: 2.0
-      max_vel_x: 0.9
+      max_vel_x: 1.8
       max_vel_x_backwards: 0.6
       max_vel_theta: 1.0
       min_turning_radius: 1.0
@@ -130,12 +130,13 @@ controller_server:
       weight_kinematics_forward_drive: 1.0
       weight_kinematics_turning_radius: 10.0
       weight_obstacle: 100.0
-      weight_viapoint: 10.0
+      weight_viapoint: 1.0
+      global_plan_viapoint_sep: 0.05
       optimization_verbose: False
       teb_autoresize: True
       min_samples: 3
       max_samples: 60
-      max_global_plan_lookahead_dist: 1.2
+      max_global_plan_lookahead_dist: 0.6
       visualize_hc_graph: True
       stateful: True
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
@@ -171,7 +172,7 @@ local_costmap:
       plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        inflation_radius: 1.0
+        inflation_radius: 1.2
         cost_scaling_factor: 60.0
         enabled: True
         observation_sources: pointcloud
@@ -186,7 +187,7 @@ local_costmap:
           data_type: "PointCloud2"
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 1.0
+        inflation_radius: 1.2
         cost_scaling_factor: 60.0
         enabled: True
       voxel_layer:
@@ -231,7 +232,7 @@ global_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        inflation_radius: 1.0
+        inflation_radius: 1.2
         cost_scaling_factor: 60.0
         enabled: True
         observation_sources: pointcloud
@@ -250,7 +251,7 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 1.0
+        inflation_radius: 1.2
         cost_scaling_factor: 60.0
         enabled: True
       always_send_full_costmap: True
@@ -281,19 +282,19 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "smac_planner/SmacPlanner"
-      tolerance: 1.5                    # tolerance for planning if unable to reach exact pose, in meters, for 2D node
+      tolerance: 2.0                    # tolerance for planning if unable to reach exact pose, in meters, for 2D node
       downsample_costmap: false         # whether or not to downsample the map
       downsampling_factor: 1            # multiplier for the resolution of the costmap layer (e.g. 2 on a 5cm costmap would be 10cm)
-      allow_unknown: true              # allow traveling in unknown space
+      allow_unknown: true               # allow traveling in unknown space
       max_iterations: -1                # maximum total iterations to search for before failing
       max_on_approach_iterations: 1000  # maximum number of iterations to attempt to reach goal once in tolerance, 2D only
       max_planning_time_ms: 2000.0      # max time in ms for planner to plan, smooth, and upsample. Will scale maximum smoothing and upsampling times based on remaining time after planning.
       smooth_path: true                 # Whether to smooth searched path
       motion_model_for_search: "REEDS_SHEPP"  # 2D Moore, Von Neumann; SE2 Dubin, Redds-Shepp
       angle_quantization_bins: 72       # For SE2 node: Number of angle bins for search, must be 1 for 2D node (no angle search)
-      minimum_turning_radius: 1.0       # For SE2 node & smoother: minimum turning radius in m of path / vehicle
+      minimum_turning_radius: 0.6       # For SE2 node & smoother: minimum turning radius in m of path / vehicle
       reverse_penalty: 5.1              # For Reeds-Shepp model: penalty to apply if motion is reversing, must be => 1
-      change_penalty: 1.50              # For SE2 node: penalty to apply if motion is changing directions, must be >= 0
+      change_penalty: 4.00              # For SE2 node: penalty to apply if motion is changing directions, must be >= 0
       non_straight_penalty: 1.1        # For SE2 node: penalty to apply if motion is non-straight, must be => 1
       cost_penalty: 100.0                 # For SE2 node: penalty to apply to higher cost zones
 
