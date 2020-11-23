@@ -172,7 +172,7 @@ local_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         inflation_radius: 1.0
-        cost_scaling_factor: 100.0
+        cost_scaling_factor: 60.0
         enabled: True
         observation_sources: pointcloud
         pointcloud:  # no frame set, uses frame from message
@@ -187,7 +187,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 1.0
-        cost_scaling_factor: 100.0
+        cost_scaling_factor: 60.0
         enabled: True
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
@@ -232,7 +232,7 @@ global_costmap:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
         inflation_radius: 1.0
-        cost_scaling_factor: 100.0
+        cost_scaling_factor: 60.0
         enabled: True
         observation_sources: pointcloud
         pointcloud:  # no frame set, uses frame from message
@@ -251,7 +251,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         inflation_radius: 1.0
-        cost_scaling_factor: 100.0
+        cost_scaling_factor: 60.0
         enabled: True
       always_send_full_costmap: True
   global_costmap_client:
@@ -303,7 +303,7 @@ planner_server:
           w_dist: 0.0                   # weight to bind path to original as optional replacement for cost weight
           w_smooth: 30000.0             # weight to maximize smoothness of path
           w_cost: 10.0                  # weight to steer robot away from collision and cost
-          cost_scaling_factor: 40.0     # this should match the inflation layer's parameter
+          cost_scaling_factor: 60.0     # this should match the inflation layer's parameter
 
         # I do not recommend users mess with this unless they're doing production tuning
         optimizer:
