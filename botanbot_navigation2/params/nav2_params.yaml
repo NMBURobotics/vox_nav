@@ -171,8 +171,8 @@ local_costmap:
       plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
-        inflation_radius: 0.9
-        cost_scaling_factor: 40.0
+        inflation_radius: 1.0
+        cost_scaling_factor: 100.0
         enabled: True
         observation_sources: pointcloud
         pointcloud:  # no frame set, uses frame from message
@@ -186,8 +186,8 @@ local_costmap:
           data_type: "PointCloud2"
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 40.0
-        inflation_radius: 0.9
+        inflation_radius: 1.0
+        cost_scaling_factor: 100.0
         enabled: True
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
@@ -231,8 +231,8 @@ global_costmap:
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
-        cost_scaling_factor: 40.0
-        inflation_radius: 0.9
+        inflation_radius: 1.0
+        cost_scaling_factor: 100.0
         enabled: True
         observation_sources: pointcloud
         pointcloud:  # no frame set, uses frame from message
@@ -250,8 +250,8 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 40.0
-        inflation_radius: 0.9
+        inflation_radius: 1.0
+        cost_scaling_factor: 100.0
         enabled: True
       always_send_full_costmap: True
   global_costmap_client:

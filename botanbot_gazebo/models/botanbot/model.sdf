@@ -650,7 +650,7 @@
         </joint>
         <!-- SENSORS: VELODYNE HDL-32-->
         <link name="velodyne_link">
-            <pose>0 0 1.2 0 0 0</pose>
+            <pose>0 0 0.9 0 0 0</pose>
             <collision name="collision">
                 <pose>0 0 0 1.57 0 0</pose>
                 <geometry>
