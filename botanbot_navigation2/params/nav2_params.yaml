@@ -108,8 +108,8 @@ controller_server:
     FollowPath:
       plugin: "teb_local_planner::TebLocalPlannerROS"
       acc_lim_x: 2.0
-      acc_lim_theta: 0.8
-      max_vel_x: 0.6
+      acc_lim_theta: 2.0
+      max_vel_x: 0.9
       max_vel_x_backwards: 0.6
       max_vel_theta: 1.0
       min_turning_radius: 1.0
@@ -118,8 +118,8 @@ controller_server:
       yaw_goal_tolerance: 0.5
       footprint_model.type: polygon
       footprint_model.vertices: "[[-0.85, -0.6], [-0.85, 0.6], [0.85, 0.6], [0.85, -0.6]]"
-      min_obstacle_dist: 0.6
-      inflation_dist: 0.5
+      min_obstacle_dist: 0.1
+      inflation_dist: 0.1
       allow_init_with_backwards_motion: true
       costmap_converter_plugin: costmap_converter::CostmapToPolygonsDBSMCCH
       costmap_converter_spin_thread: True
@@ -127,6 +127,10 @@ controller_server:
       enable_homotopy_class_planning: True
       enable_multithreading: True
       #weight_obstacle: 100.0
+      weight_kinematics_forward_drive: 1.0
+      weight_kinematics_turning_radius: 10.0
+      weight_obstacle: 100.0
+      weight_viapoint: 10.0
       optimization_verbose: False
       teb_autoresize: True
       min_samples: 3
@@ -136,13 +140,13 @@ controller_server:
       stateful: True
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
       BaseObstacle.scale: 0.02
-      PathAlign.scale: 64.0
+      PathAlign.scale: 32.0
       PathAlign.forward_point_distance: 0.6
-      GoalAlign.scale: 48.0
+      GoalAlign.scale: 24.0
       GoalAlign.forward_point_distance: 0.6
       PathDist.scale: 32.0
       GoalDist.scale: 24.0
-      RotateToGoal.scale: 64.0
+      RotateToGoal.scale: 16.0
       RotateToGoal.slowing_factor: 1.0
       RotateToGoal.lookahead_time: 1.0
 
@@ -272,33 +276,33 @@ map_saver:
 
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 5.0
+    expected_planner_frequency: 1.0
     use_sim_time: True
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "smac_planner/SmacPlanner"
-      tolerance: 0.5                    # tolerance for planning if unable to reach exact pose, in meters, for 2D node
+      tolerance: 1.5                    # tolerance for planning if unable to reach exact pose, in meters, for 2D node
       downsample_costmap: false         # whether or not to downsample the map
       downsampling_factor: 1            # multiplier for the resolution of the costmap layer (e.g. 2 on a 5cm costmap would be 10cm)
-      allow_unknown: false              # allow traveling in unknown space
+      allow_unknown: true              # allow traveling in unknown space
       max_iterations: -1                # maximum total iterations to search for before failing
       max_on_approach_iterations: 1000  # maximum number of iterations to attempt to reach goal once in tolerance, 2D only
       max_planning_time_ms: 2000.0      # max time in ms for planner to plan, smooth, and upsample. Will scale maximum smoothing and upsampling times based on remaining time after planning.
       smooth_path: true                 # Whether to smooth searched path
       motion_model_for_search: "REEDS_SHEPP"  # 2D Moore, Von Neumann; SE2 Dubin, Redds-Shepp
       angle_quantization_bins: 72       # For SE2 node: Number of angle bins for search, must be 1 for 2D node (no angle search)
-      minimum_turning_radius: 1.2       # For SE2 node & smoother: minimum turning radius in m of path / vehicle
+      minimum_turning_radius: 1.0       # For SE2 node & smoother: minimum turning radius in m of path / vehicle
       reverse_penalty: 5.1              # For Reeds-Shepp model: penalty to apply if motion is reversing, must be => 1
-      change_penalty: 0.40              # For SE2 node: penalty to apply if motion is changing directions, must be >= 0
-      non_straight_penalty: 1.05        # For SE2 node: penalty to apply if motion is non-straight, must be => 1
+      change_penalty: 1.50              # For SE2 node: penalty to apply if motion is changing directions, must be >= 0
+      non_straight_penalty: 1.1        # For SE2 node: penalty to apply if motion is non-straight, must be => 1
       cost_penalty: 100.0                 # For SE2 node: penalty to apply to higher cost zones
 
       smoother:
         smoother:
-          w_curve: 100.0                 # weight to minimize curvature of path
+          w_curve: 100.0                # weight to minimize curvature of path
           w_dist: 0.0                   # weight to bind path to original as optional replacement for cost weight
           w_smooth: 30000.0             # weight to maximize smoothness of path
-          w_cost: 0.80                  # weight to steer robot away from collision and cost
+          w_cost: 10.0                  # weight to steer robot away from collision and cost
           cost_scaling_factor: 40.0     # this should match the inflation layer's parameter
 
         # I do not recommend users mess with this unless they're doing production tuning
