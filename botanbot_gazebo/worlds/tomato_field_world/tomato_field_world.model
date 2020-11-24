@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<sdf version="1.9">
+<sdf version="1.7">
     <world name='field'>
         <include>
             <uri>model://tomato_field_ground</uri>
@@ -14,7 +14,7 @@
         </scene>
         <gui fullscreen='0'>
             <camera name='user_camera'>
-                <pose frame=''>0.319654 -0.235002 9.29441 0 1.5138 0.009599</pose>
+                <pose>0.319654 -0.235002 9.29441 0 1.5138 0.009599</pose>
                 <view_controller>orbit</view_controller>
                 <projection_type>perspective</projection_type>
             </camera>
@@ -39,6 +39,10 @@
                 </constraints>
             </ode>
         </physics>
+        <include>
+            <pose>-1.5 -3.0 0.25 0.0 0.0 1.57</pose>
+            <uri>model://botanbot</uri>
+        </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_0</name>
@@ -518,10 +522,6 @@
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_95</name>
             <pose>18.0 9.9 0 0 0 0</pose>
-        </include>
-        <include>
-            <pose>-5.0 0.0 0.25 0.0 0.0 0.0</pose>
-            <uri>model://botanbot</uri>
         </include>
     </world>
 </sdf>
