@@ -1,0 +1,16 @@
+material tomato_plant_tree/AG15blo3
+        {
+          receive_shadows off
+          technique
+          {
+            pass
+            {
+              texture_unit
+              {
+                texture AG15blo3.png
+                filtering anistropic
+                max_anisotropy 16
+              }
+            }
+          }
+        }

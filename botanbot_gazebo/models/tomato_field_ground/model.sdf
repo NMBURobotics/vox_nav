@@ -1,0 +1,26 @@
+<sdf version="1.6">
+  <model name="tomato_field_ground">
+    <static>true</static>
+    <link name="link">
+      <collision name="collision">
+        <geometry>
+          <mesh>
+            <scale>100 100 100</scale>
+            <uri>model://tomato_field_ground/meshes/ground.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+      <visual name="branch">
+        <geometry>
+          <mesh>
+            <scale>100 100 100</scale>
+            <uri>model://tomato_field_ground/meshes/ground.dae</uri>
+            <submesh>
+              <name>Plane</name>
+            </submesh>
+          </mesh>
+        </geometry>
+      </visual>
+    </link>
+  </model>
+</sdf>
