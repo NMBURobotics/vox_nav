@@ -96,13 +96,13 @@ controller_server:
     # Progress checker parameters
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.1
+      required_movement_radius: 0.05
       movement_time_allowance: 10.0
     # Goal checker parameters
     goal_checker:
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.5
-      yaw_goal_tolerance: 0.5
+      xy_goal_tolerance: 0.75
+      yaw_goal_tolerance: 0.75
       stateful: True
     # DWB parameters
     FollowPath:
@@ -112,7 +112,7 @@ controller_server:
       max_vel_x: 1.8
       max_vel_x_backwards: 0.6
       max_vel_theta: 1.0
-      min_turning_radius: 0.8
+      min_turning_radius: 1.8
       wheelbase: 1.3
       xy_goal_tolerance: 0.8
       yaw_goal_tolerance: 0.5
@@ -319,14 +319,14 @@ waypoint_follower:
     loop_rate: 30
     stop_on_failure: false
     # Choose a plugin from provided ones; photo_at_waypoint or photo_at_waypoint
-    waypoint_task_executor_plugin: "photo_at_waypoint"   
-    wait_at_waypoint:
-      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
-      enabled: True
-      waypoint_pause_duration: 200
-    photo_at_waypoint:
-      plugin: "nav2_waypoint_follower::PhotoAtWaypoint"
-      enabled: True
-      image_topic: "/camera/color/image_raw"
-      save_dir: "/home/atas/waypoint_photos"
-      image_format: "png"
+    #waypoint_task_executor_plugin: "photo_at_waypoint"   
+    #wait_at_waypoint:
+    #  plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+    #  enabled: True
+    #  waypoint_pause_duration: 200
+    #photo_at_waypoint:
+    #  plugin: "nav2_waypoint_follower::PhotoAtWaypoint"
+    #  enabled: True
+    #  image_topic: "/camera/color/image_raw"
+    #  save_dir: "/home/atas/waypoint_photos"
+    #  image_format: "png"
