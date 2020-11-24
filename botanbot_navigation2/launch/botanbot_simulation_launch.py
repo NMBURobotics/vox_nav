@@ -32,6 +32,7 @@ def generate_launch_description():
     localization_dir = get_package_share_directory('botanbot_localization')
 
     launch_dir = os.path.join(bringup_dir, 'launch')
+    params_dir = os.path.join(bringup_dir, 'params')
 
     # Create the launch configuration variables
     slam = LaunchConfiguration('slam')
@@ -88,14 +89,12 @@ def generate_launch_description():
 
     declare_params_file_cmd = DeclareLaunchArgument(
         'params_file',
-        default_value=os.path.join(bringup_dir, 'params', 'nav2_params.yaml'),
+        default_value=os.path.join(params_dir, 'nav2_params.yaml'),
         description='Full path to the ROS2 parameters file to use for all launched nodes')
 
     declare_bt_xml_cmd = DeclareLaunchArgument(
         'default_bt_xml_filename',
-        default_value=os.path.join(
-            get_package_share_directory('nav2_bt_navigator'),
-            'behavior_trees', 'navigate_w_replanning_and_recovery.xml'),
+        default_value=os.path.join(params_dir, 'navigate_w_replanning_distance.xml'),
         description='Full path to the behavior tree xml file to use')
 
     declare_autostart_cmd = DeclareLaunchArgument(

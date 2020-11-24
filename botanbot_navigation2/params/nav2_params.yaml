@@ -118,8 +118,8 @@ controller_server:
       yaw_goal_tolerance: 0.5
       footprint_model.type: polygon
       footprint_model.vertices: "[[-0.85, -0.6], [-0.85, 0.6], [0.85, 0.6], [0.85, -0.6]]"
-      min_obstacle_dist: 0.2
-      inflation_dist: 0.4
+      min_obstacle_dist: 0.3
+      inflation_dist: 0.6
       allow_init_with_backwards_motion: true
       costmap_converter_plugin: costmap_converter::CostmapToPolygonsDBSMCCH
       costmap_converter_spin_thread: True
@@ -294,7 +294,7 @@ recoveries_server:
     costmap_topic: local_costmap/costmap_raw
     footprint_topic: local_costmap/published_footprint
     cycle_frequency: 10.0
-    recovery_plugins: ["spin", "backup", "wait"]
+    recovery_plugins: [ "backup", "wait"]
     spin:
       plugin: "nav2_recoveries/Spin"
     backup:
