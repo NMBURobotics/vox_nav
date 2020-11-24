@@ -59,12 +59,14 @@ GPSWayPointFollower::GPSWayPointFollower()
     acummulated_gps_waypoints_.size());
   RCLCPP_INFO(
     this->get_logger(),
-    "Created an Instance of waypoint_follower_client");
-  RCLCPP_INFO(this->get_logger(), "GOING OUT OF SCOPE OF CONSTRUCTUR");
+    "Created an Instance of GPSWayPointFollower");
 }
 
 GPSWayPointFollower::~GPSWayPointFollower()
 {
+    RCLCPP_INFO(
+    this->get_logger(),
+    "Destroyed an Instance of GPSWayPointFollower");
 }
 
 void GPSWayPointFollower::startWaypointFollowing()
@@ -95,10 +97,6 @@ void GPSWayPointFollower::startWaypointFollowing()
       "\t(%lf, %lf)", waypoint.pose.position.x, waypoint.pose.position.y);
   }
 
-  // Enable result awareness by providing an empty lambda function
-  // auto send_goal_options =
-  // rclcpp_action::Client<nav2_msgs::action::FollowWaypoints>::SendGoalOptions();
-  // send_goal_options.result_callback = [](auto) {};
   auto goal_options =
     rclcpp_action::Client<nav2_msgs::action::FollowWaypoints>::SendGoalOptions();
   goal_options.result_callback = std::bind(
@@ -280,7 +278,7 @@ int main(int argc, char const * argv[])
   while (node->current_goal_status_ !=
     botanbot_gps_waypoint_follower::ActionStatus::SUCCEEDED)
   {
-    rclcpp::spin(node);
+    rclcpp::spin_some(node);
     return 0;
   }
 }

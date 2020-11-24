@@ -51,7 +51,7 @@ private:
   using WaypointFollowerGoalHandle =
     rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowWaypoints>;
 
-  // client to connect way point follower service(waypoint_follower)
+  // client to connect waypoint follower service(FollowWaypoints)
   rclcpp_action::Client<nav2_msgs::action::FollowWaypoints>::SharedPtr
     waypoint_follower_action_client_;
 
@@ -89,7 +89,11 @@ public:
    */
   void startWaypointFollowing();
 
-
+  
+  /**
+   * @brief 
+   * 
+   */
   void convertGPSWaypointstoPosesinMap();
   /**
  * @brief given a parameter name on the yaml file, loads this parameter as geometry_msgs::Point.
