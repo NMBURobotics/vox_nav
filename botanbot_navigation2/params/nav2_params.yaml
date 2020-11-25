@@ -157,8 +157,8 @@ controller_server_rclcpp_node:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 30.0
-      publish_frequency: 30.0
+      update_frequency: 5.0
+      publish_frequency: 5.0
       global_frame: odom
       robot_base_frame: base_link
       use_sim_time: True
@@ -166,9 +166,9 @@ local_costmap:
       footprint: "[[-0.85, -0.6], [-0.85, 0.6], [0.85, 0.6], [0.85, -0.6]]"
       width: 10
       height: 10
-      resolution: 0.1
+      resolution: 0.2
       robot_radius: 0.60
-      plugins: ["obstacle_layer", "voxel_layer", "inflation_layer"]
+      plugins: ["obstacle_layer","inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         inflation_radius: 1.4
@@ -225,7 +225,7 @@ global_costmap:
       rolling_window: True
       width: 80
       height: 80
-      resolution: 0.1
+      resolution: 0.2
       robot_radius: 0.60
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:

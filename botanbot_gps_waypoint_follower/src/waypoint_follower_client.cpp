@@ -64,7 +64,7 @@ GPSWayPointFollower::GPSWayPointFollower()
 
 GPSWayPointFollower::~GPSWayPointFollower()
 {
-    RCLCPP_INFO(
+  RCLCPP_INFO(
     this->get_logger(),
     "Destroyed an Instance of GPSWayPointFollower");
 }
@@ -278,7 +278,7 @@ int main(int argc, char const * argv[])
   while (node->current_goal_status_ !=
     botanbot_gps_waypoint_follower::ActionStatus::SUCCEEDED)
   {
-    rclcpp::spin_some(node);
+    rclcpp::spin(node);
     return 0;
   }
 }

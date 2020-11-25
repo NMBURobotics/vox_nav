@@ -241,7 +241,7 @@
     <joint name="camera_joint" type="fixed">
         <parent link="base_link" />
         <child link="camera_bottom_screw_frame" />
-        <pose xyz="0.7 -0.5 0.6" rpy="-1.57 0 -1.57" />
+        <pose xyz="0.3 0.0 0.8" rpy="-1.57 0 -1.57" />
     </joint>
     <joint name="camera_link_joint" type="fixed">
         <parent link="camera_bottom_screw_frame" />
