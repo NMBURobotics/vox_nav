@@ -259,34 +259,42 @@ void ControlPlugin::onToSpecificPoseButtonClick()
 
 void ControlPlugin::onGazeboStandaloneButtonClick()
 {
+  // get string text of selected robot
+  std::string selected_gazebo_world_name = ui_.gazebo_city_combobox->currentText().toStdString();
 
-  std::string this_package_path =
+  std::string botanbot_gui_package_path =
     ament_index_cpp::get_package_share_directory("botanbot_gui");
 
-  std::string this_package_bash_files_dir = this_package_path +
-    "/../../scripts/gazebo_standalone.sh";
-  std::string this_package_make_bash_files_executable_command = "chmod +x " +
-    this_package_bash_files_dir;
-  system(this_package_make_bash_files_executable_command.c_str());
+  std::string bash_files_dir = botanbot_gui_package_path +
+    "/../../scripts/start_selected_gazebo_standalone.sh";
+  std::string make_bash_files_executable_command = "chmod +x " +
+    bash_files_dir;
+  system(make_bash_files_executable_command.c_str());
 
   std::string bringup_command =
-    this_package_path + "/../../scripts/gazebo_standalone.sh";
+    botanbot_gui_package_path + "/../../scripts/start_selected_gazebo_standalone.sh " +
+    selected_gazebo_world_name;
   system(bringup_command.c_str());
 }
 
 void ControlPlugin::onGazeboNavigationFullButtonClick()
 {
-  std::string this_package_path =
+
+  // get string text of selected robot
+  std::string selected_gazebo_world_name = ui_.gazebo_city_combobox->currentText().toStdString();
+
+  std::string botanbot_gui_package_path =
     ament_index_cpp::get_package_share_directory("botanbot_gui");
 
-  std::string this_package_bash_files_dir = this_package_path +
-    "/../../scripts/gazebo_navigation_full.sh";
-  std::string this_package_make_bash_files_executable_command = "chmod +x " +
-    this_package_bash_files_dir;
-  system(this_package_make_bash_files_executable_command.c_str());
+  std::string bash_files_dir = botanbot_gui_package_path +
+    "/../../scripts/start_selected_gazebo_navigation_full.sh";
+  std::string make_bash_files_executable_command = "chmod +x " +
+    bash_files_dir;
+  system(make_bash_files_executable_command.c_str());
 
   std::string bringup_command =
-    this_package_path + "/../../scripts/gazebo_navigation_full.sh";
+    botanbot_gui_package_path + "/../../scripts/start_selected_gazebo_navigation_full.sh " +
+    selected_gazebo_world_name;
   system(bringup_command.c_str());
 }
 

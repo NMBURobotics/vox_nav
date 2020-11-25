@@ -25,6 +25,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
+GAZEBO_WORLD = os.environ['GAZEBO_WORLD']
 
 def generate_launch_description():
     # Get the launch directory
@@ -125,16 +126,16 @@ def generate_launch_description():
         'headless',
         default_value='False',
         description='Whether to execute gzclient)')
-
     declare_world_cmd = DeclareLaunchArgument(
         'world',
         # TODO(orduno) Switch back once ROS argument passing has been fixed upstream
         #              https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/91
         default_value=os.path.join(get_package_share_directory('botanbot_gazebo'),
-                                    'worlds/empty_world/empty_world.model'),
+                                    'worlds/',GAZEBO_WORLD,GAZEBO_WORLD+'.model'),
         #default_value=os.path.join(bringup_dir, 'worlds', 'waffle.model'),
         description='Full path to world model file to load')
-
+    print(os.path.join(get_package_share_directory('botanbot_gazebo'),
+                                    'worlds/',GAZEBO_WORLD,GAZEBO_WORLD+'.model'))
     # Specify the actions
     start_gazebo_server_cmd = ExecuteProcess(
         condition=IfCondition(use_simulator),
