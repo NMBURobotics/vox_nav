@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <sdf version="1.7">
-    <world name='field'>
+    <world name='tomato_field_world'>
         <include>
             <uri>model://tomato_field_ground</uri>
             <name>tomato_field_ground</name>

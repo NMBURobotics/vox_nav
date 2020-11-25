@@ -31,7 +31,7 @@ def generate_launch_description():
                           description='Set to "false" not to run gzserver.'),
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-    world_file_name = 'outdoor_world/outdoor_world.model'
+    world_file_name = 'sonoma_raceway_world/sonoma_raceway_world.model'
     world = os.path.join(get_package_share_directory(
         'botanbot_gazebo'), 'worlds', world_file_name)
     launch_file_dir = os.path.join(
