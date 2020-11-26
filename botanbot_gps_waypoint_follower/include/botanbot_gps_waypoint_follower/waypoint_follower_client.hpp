@@ -14,9 +14,14 @@
 #ifndef BOTANBOT_GPS_WAYPOINT_FOLLOWER__WAYPOINT_FOLLOWER_CLIENT_HPP_
 #define BOTANBOT_GPS_WAYPOINT_FOLLOWER__WAYPOINT_FOLLOWER_CLIENT_HPP_
 
+#include "botanbot_msgs/action/follow_gps_waypoints.hpp"
 #include "nav2_lifecycle_manager/lifecycle_manager_client.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
 #include "nav2_msgs/action/follow_waypoints.hpp"
+#include "nav2_util/lifecycle_node.hpp"
+#include "nav2_util/node_utils.hpp"
+#include "nav2_util/simple_action_server.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
@@ -39,26 +44,118 @@ enum class ActionStatus
   FAILED = 2,
   SUCCEEDED = 3
 };
-
 /**
- * @brief A ros node that drives robot through gievn way points from YAML file
+ * @brief A ros lifecyle node that drives robot through gievn way points from YAML file
  *
  */
-class GPSWayPointFollower : public rclcpp::Node
+class GPSWaypointFollower : public nav2_util::LifecycleNode
 {
-private:
+public:
+  using ActionT = botanbot_msgs::action::FollowGPSWaypoints;
+  using ClientT = nav2_msgs::action::FollowWaypoints;
+  using ActionServer = nav2_util::SimpleActionServer<ActionT>;
+  using ActionClient = rclcpp_action::Client<ClientT>;
+
+  /**
+   * @brief Construct a new Way Point Folllower Demo object
+   *
+   */
+  GPSWaypointFollower();
+
+  /**
+   * @brief Destroy the Way Point Folllower Demo object
+   *
+   */
+  ~GPSWaypointFollower();
+
+protected:
+  /**
+   * @brief Configures member variables
+   *
+   * Initializes action server for "FollowWaypoints"
+   * @param state Reference to LifeCycle node state
+   * @return SUCCESS or FAILURE
+   */
+  nav2_util::CallbackReturn on_configure(const rclcpp_lifecycle::State & state) override;
+  /**
+   * @brief Activates action server
+   * @param state Reference to LifeCycle node state
+   * @return SUCCESS or FAILURE
+   */
+  nav2_util::CallbackReturn on_activate(const rclcpp_lifecycle::State & state) override;
+  /**
+   * @brief Deactivates action server
+   * @param state Reference to LifeCycle node state
+   * @return SUCCESS or FAILURE
+   */
+  nav2_util::CallbackReturn on_deactivate(const rclcpp_lifecycle::State & state) override;
+  /**
+   * @brief Resets member variables
+   * @param state Reference to LifeCycle node state
+   * @return SUCCESS or FAILURE
+   */
+  nav2_util::CallbackReturn on_cleanup(const rclcpp_lifecycle::State & state) override;
+  /**
+   * @brief Called when in shutdown state
+   * @param state Reference to LifeCycle node state
+   * @return SUCCESS or FAILURE
+   */
+  nav2_util::CallbackReturn on_shutdown(const rclcpp_lifecycle::State & state) override;
+
+  /**
+   * @brief Action client result callback
+   * @param result Result of action server updated asynchronously
+   */
+  void resultCallback(const rclcpp_action::ClientGoalHandle<ClientT>::WrappedResult & result);
+
+  /**
+   * @brief Action client goal response callback
+   * @param goal Response of action server updated asynchronously
+   */
+  void goalResponseCallback(const rclcpp_action::ClientGoalHandle<ClientT>::SharedPtr & goal);
+
+  /**
+   * @brief send robot through each of the pose in poses vector
+   *
+   * @param poses
+   */
+  void followGPSWaypoints();
+
+  /**
+   * @brief
+   *
+   */
+  void convertGPSWaypointstoPosesinMap();
+
+  /**
+   * @brief given a parameter name on the yaml file, loads this parameter as geometry_msgs::Point.
+   *  Note that this parameter needs to be an array of doubles
+   *
+   * @param param_name
+   * @return geometry_msgs::Point
+  */
+  geometry_msgs::msg::Point32
+  loadVectorofDoubleAsPairFromYAML(std::string param_name);
+
+  // Our action server
+  std::unique_ptr<ActionServer> action_server_;
+
+  ActionStatus current_goal_status_;
+
+  rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr from_ll_to_map_client_;
+
   // shorten the Goal handler Client type
   using WaypointFollowerGoalHandle =
-    rclcpp_action::ClientGoalHandle<nav2_msgs::action::FollowWaypoints>;
+    rclcpp_action::ClientGoalHandle<ClientT>;
 
   // client to connect waypoint follower service(FollowWaypoints)
-  rclcpp_action::Client<nav2_msgs::action::FollowWaypoints>::SharedPtr
+  rclcpp_action::Client<ClientT>::SharedPtr
     waypoint_follower_action_client_;
 
   // stores the waypoints in a vector with additional info such as
   // "int32[] missed_waypoints" and "uint32
   // current_waypoint"
-  nav2_msgs::action::FollowWaypoints::Goal waypoint_follower_goal_;
+  ClientT::Goal waypoint_follower_goal_;
 
   // goal handler to query state of goal
   WaypointFollowerGoalHandle::SharedPtr waypoint_follower_goal_handle_;
@@ -69,53 +166,7 @@ private:
   // we load poses from Yaml file and store them in this vector
   std::vector<geometry_msgs::msg::Point32> acummulated_gps_waypoints_;
 
-public:
-  /**
-   * @brief Construct a new Way Point Folllower Demo object
-   *
-   */
-  GPSWayPointFollower();
-
-  /**
-   * @brief Destroy the Way Point Folllower Demo object
-   *
-   */
-  ~GPSWayPointFollower();
-
-  /**
-   * @brief send robot through each of the pose in poses vector
-   *
-   * @param poses
-   */
-  void startWaypointFollowing();
-
-  
-  /**
-   * @brief 
-   * 
-   */
-  void convertGPSWaypointstoPosesinMap();
-  /**
- * @brief given a parameter name on the yaml file, loads this parameter as geometry_msgs::Point.
- *  Note that this parameter needs to be an array of doubles
- *
- * @param param_name
- * @return geometry_msgs::Point
- */
-  geometry_msgs::msg::Point32
-  loadVectorofDoubleAsPairFromYAML(std::string param_name);
-
-  void resultCallback(
-    const rclcpp_action::ClientGoalHandle
-    <nav2_msgs::action::FollowWaypoints>::WrappedResult & result);
-
-  void goalResponseCallback(
-    std::shared_future<rclcpp_action::ClientGoalHandle
-    <nav2_msgs::action::FollowWaypoints>::SharedPtr> future);
-
-  ActionStatus current_goal_status_;
-
-  rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr from_ll_to_map_client_;
+  rclcpp::Node::SharedPtr client_node_;
 };
 }  // namespace botanbot_gps_waypoint_follower
 

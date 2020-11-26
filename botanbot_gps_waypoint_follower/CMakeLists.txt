@@ -2,21 +2,20 @@ cmake_minimum_required(VERSION 3.5)
 project(botanbot_gps_waypoint_follower)
 
 find_package(ament_cmake REQUIRED)
-find_package(nav2_common REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(botanbot_msgs REQUIRED)
+
 find_package(nav_msgs REQUIRED)
-find_package(nav2_msgs REQUIRED)
+find_package(nav2_common REQUIRED)
+find_package(nav2_core REQUIRED)
 find_package(nav2_util REQUIRED)
+find_package(nav2_msgs REQUIRED)
 find_package(nav2_lifecycle_manager REQUIRED)
 find_package(tf2_ros REQUIRED)
-find_package(robot_localization)
+find_package(robot_localization REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
-
-include_directories(SYSTEM ${THIS_PACKAGE_INCLUDE_DIRS})
-include_directories(include ${catkin_INCLUDE_DIRS})
-link_directories(${catkin_LIBRARY_DIRS})
 
 nav2_package()
 
@@ -34,10 +33,12 @@ set(dependencies
   rclcpp
   rclcpp_action
   rclcpp_lifecycle
-  nav_msgs
-  nav2_msgs
+  botanbot_msgs
   nav2_util
   nav2_lifecycle_manager
+  nav_msgs
+  nav2_msgs
+  nav2_core
   tf2_ros
   robot_localization
 )

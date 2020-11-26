@@ -17,27 +17,53 @@
 
 namespace botanbot_gps_waypoint_follower
 {
-GPSWayPointFollower::GPSWayPointFollower()
-: Node("gps_waypoint_follower")
+
+GPSWaypointFollower::GPSWaypointFollower()
+: nav2_util::LifecycleNode("GPSWaypointFollower", "", false)
 {
-  // Connect to waypoint following service provided by navigation2 ,
-  // https://github.com/ros-planning/navigation2/tree/main/nav2_waypoint_follower
+  RCLCPP_INFO(get_logger(), "Creating");
+  this->declare_parameter("number_of_gps_waypoints");
+}
+
+GPSWaypointFollower::~GPSWaypointFollower()
+{
+  RCLCPP_INFO(
+    this->get_logger(),
+    "Destroying");
+}
+
+nav2_util::CallbackReturn
+GPSWaypointFollower::on_configure(const rclcpp_lifecycle::State & /*state*/)
+{
+  RCLCPP_INFO(get_logger(), "Configuring");
+
+  auto node = shared_from_this();
+
+  // number of poses that robot will go throug, specified in yaml file
+  int number_of_gps_waypoints =
+    this->get_parameter("number_of_gps_waypoints").as_int();
+
+  std::vector<std::string> new_args = rclcpp::NodeOptions().arguments();
+  new_args.push_back("--ros-args");
+  new_args.push_back("-r");
+  new_args.push_back(std::string("__node:=") + this->get_name() + "_rclcpp_node");
+  new_args.push_back("--");
+  client_node_ = std::make_shared<rclcpp::Node>(
+    "_", "",
+    rclcpp::NodeOptions().arguments(new_args));
+
   waypoint_follower_action_client_ =
-    rclcpp_action::create_client<nav2_msgs::action::FollowWaypoints>(
-    this, "FollowWaypoints");
+    rclcpp_action::create_client<ClientT>(
+    client_node_, "FollowWaypoints");
   // initialize the Goal action variable
-  waypoint_follower_goal_ = nav2_msgs::action::FollowWaypoints::Goal();
+  waypoint_follower_goal_ = ClientT::Goal();
 
   // create client to convert LL to map client from robot_localization
   from_ll_to_map_client_ =
     this->create_client<robot_localization::srv::FromLL>("/fromLL");
-  // number of poses that robot will go throug, specified in yaml file
-  this->declare_parameter("number_of_gps_waypoints");
-  rclcpp::Parameter number_of_gps_waypoints =
-    this->get_parameter("number_of_gps_waypoints");
 
   // get all the poses in yaml file using provided utility function
-  for (int i = 0; i < number_of_gps_waypoints.as_int(); i++) {
+  for (int i = 0; i < number_of_gps_waypoints; i++) {
     // prefix for each fake task, the last letter is basically index
     std::string this_param_name = "gps_waypoint" + std::to_string(i);
     // we might have an exeption thrown in
@@ -59,18 +85,66 @@ GPSWayPointFollower::GPSWayPointFollower()
     acummulated_gps_waypoints_.size());
   RCLCPP_INFO(
     this->get_logger(),
-    "Created an Instance of GPSWayPointFollower");
+    "Created an Instance of GPSWaypointFollower");
+
+  action_server_ = std::make_unique<ActionServer>(
+    get_node_base_interface(),
+    get_node_clock_interface(),
+    get_node_logging_interface(),
+    get_node_waitables_interface(),
+    "FollowGPSWaypoints", std::bind(&GPSWaypointFollower::followGPSWaypoints, this));
+
+  return nav2_util::CallbackReturn::SUCCESS;
 }
 
-GPSWayPointFollower::~GPSWayPointFollower()
+nav2_util::CallbackReturn
+GPSWaypointFollower::on_activate(const rclcpp_lifecycle::State & /*state*/)
 {
-  RCLCPP_INFO(
-    this->get_logger(),
-    "Destroyed an Instance of GPSWayPointFollower");
+  RCLCPP_INFO(get_logger(), "Activating");
+
+  action_server_->activate();
+
+  // create bond connection
+  createBond();
+
+  return nav2_util::CallbackReturn::SUCCESS;
 }
 
-void GPSWayPointFollower::startWaypointFollowing()
+nav2_util::CallbackReturn
+GPSWaypointFollower::on_deactivate(const rclcpp_lifecycle::State & /*state*/)
 {
+  RCLCPP_INFO(get_logger(), "Deactivating");
+
+  action_server_->deactivate();
+
+  // destroy bond connection
+  destroyBond();
+
+  return nav2_util::CallbackReturn::SUCCESS;
+}
+
+nav2_util::CallbackReturn
+GPSWaypointFollower::on_cleanup(const rclcpp_lifecycle::State & /*state*/)
+{
+  RCLCPP_INFO(get_logger(), "Cleaning up");
+
+  action_server_.reset();
+  waypoint_follower_action_client_.reset();
+
+  return nav2_util::CallbackReturn::SUCCESS;
+}
+
+nav2_util::CallbackReturn
+GPSWaypointFollower::on_shutdown(const rclcpp_lifecycle::State & /*state*/)
+{
+  RCLCPP_INFO(get_logger(), "Shutting down");
+  return nav2_util::CallbackReturn::SUCCESS;
+}
+
+void GPSWaypointFollower::followGPSWaypoints()
+{
+  convertGPSWaypointstoPosesinMap();
+
   std::vector<geometry_msgs::msg::PoseStamped> poses = acummulated_poses_;
   // action server needs to be active, wait a it and
   // make sure it is up and running
@@ -99,12 +173,12 @@ void GPSWayPointFollower::startWaypointFollowing()
 
   auto goal_options =
     rclcpp_action::Client<nav2_msgs::action::FollowWaypoints>::SendGoalOptions();
-  goal_options.result_callback = std::bind(
-    &GPSWayPointFollower::resultCallback, this,
+  /*goal_options.result_callback = std::bind(
+    &GPSWaypointFollower::resultCallback, this,
     std::placeholders::_1);
   goal_options.goal_response_callback = std::bind(
-    &GPSWayPointFollower::goalResponseCallback, this,
-    std::placeholders::_1);
+    &GPSWaypointFollower::goalResponseCallback, this,
+    std::placeholders::_1);*/
 
   auto future_goal_handle = waypoint_follower_action_client_->async_send_goal(
     waypoint_follower_goal_, goal_options);
@@ -125,7 +199,7 @@ void GPSWayPointFollower::startWaypointFollowing()
   }
 }
 
-void GPSWayPointFollower::convertGPSWaypointstoPosesinMap()
+void GPSWaypointFollower::convertGPSWaypointstoPosesinMap()
 {
   for (auto && curr_gps_waypoint : acummulated_gps_waypoints_) {
     auto fromLLRequest = std::make_shared<robot_localization::srv::FromLL::Request>();
@@ -147,7 +221,7 @@ void GPSWayPointFollower::convertGPSWaypointstoPosesinMap()
     // Timing and spinning is updated as per ros2
     if (ret == rclcpp::FutureReturnCode::SUCCESS) {
       rclcpp::Rate(2).sleep();
-      rclcpp::spin_some(this->shared_from_this());
+      //rclcpp::spin_some(this->shared_from_this());
 
       // this poses are assumed to be on global frame (map)
       geometry_msgs::msg::PoseStamped this_pose_msg;
@@ -155,7 +229,7 @@ void GPSWayPointFollower::convertGPSWaypointstoPosesinMap()
       this_pose_msg.header.stamp = rclcpp::Clock().now();
 
       this_pose_msg.pose.position.x = result.get()->map_point.x;
-      this_pose_msg.pose.position.y = result.get()->map_point.y;
+      this_pose_msg.pose.position.y = -result.get()->map_point.y;
       this_pose_msg.pose.position.z = result.get()->map_point.z;
 
       // convert this RPY radian angles to geometry::msg::Quaternion type
@@ -180,7 +254,7 @@ void GPSWayPointFollower::convertGPSWaypointstoPosesinMap()
     "Converted all %i GPS waypoint o Map frame", acummulated_poses_.size());
 }
 
-geometry_msgs::msg::Point32 GPSWayPointFollower::loadVectorofDoubleAsPairFromYAML(
+geometry_msgs::msg::Point32 GPSWaypointFollower::loadVectorofDoubleAsPairFromYAML(
   std::string param_name)
 {
   // The function loads an array of doubles where the items of this array
@@ -212,9 +286,9 @@ geometry_msgs::msg::Point32 GPSWayPointFollower::loadVectorofDoubleAsPairFromYAM
   return gps_point;
 }
 
-void GPSWayPointFollower::resultCallback(
+void GPSWaypointFollower::resultCallback(
   const rclcpp_action::ClientGoalHandle
-  <nav2_msgs::action::FollowWaypoints>::WrappedResult & result)
+  <ClientT>::WrappedResult & result)
 {
   switch (result.code) {
     case rclcpp_action::ResultCode::SUCCEEDED:
@@ -240,15 +314,14 @@ void GPSWayPointFollower::resultCallback(
   }
 }
 
-void GPSWayPointFollower::goalResponseCallback(
-  std::shared_future<rclcpp_action::ClientGoalHandle
-  <nav2_msgs::action::FollowWaypoints>::SharedPtr> future)
+void GPSWaypointFollower::goalResponseCallback(
+  const
+  rclcpp_action::ClientGoalHandle<ClientT>::SharedPtr & goal)
 {
-  auto goal_handle = future.get();
-  if (!goal_handle) {
+  if (!goal) {
     RCLCPP_ERROR(
       get_logger(),
-      "navigate_to_pose action client failed to send goal to server");
+      "navigate_to_pose action client failed to send goal to server.");
     current_goal_status_ = ActionStatus::FAILED;
   }
 }
@@ -266,19 +339,10 @@ int main(int argc, char const * argv[])
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared
-    <botanbot_gps_waypoint_follower::GPSWayPointFollower>();
+    <botanbot_gps_waypoint_follower::GPSWaypointFollower>();
 
-  node->convertGPSWaypointstoPosesinMap();
-  // Now follow the provided way points in yaml file
-  try {
-    node->startWaypointFollowing();
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << '\n';
-  }
-  while (node->current_goal_status_ !=
-    botanbot_gps_waypoint_follower::ActionStatus::SUCCEEDED)
-  {
-    rclcpp::spin(node);
-    return 0;
-  }
+  rclcpp::spin(node->get_node_base_interface());
+  rclcpp::shutdown();
+
+  return 0;
 }
