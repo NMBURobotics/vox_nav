@@ -34,7 +34,7 @@ def generate_launch_description():
     share_dir = get_package_share_directory(
         'botanbot_gps_waypoint_follower')
     parameter_file = LaunchConfiguration('params_file')
-    node_name = 'gps_waypoint_follower'
+    node_name = 'gps_waypoint_follower_client'
 
     params_declare = DeclareLaunchArgument('params_file',
                                            default_value=os.path.join(
@@ -42,7 +42,7 @@ def generate_launch_description():
                                            description='FPath to the ROS2 parameters file to use.')
 
     driver_node = LifecycleNode(package='botanbot_gps_waypoint_follower',
-                                executable='gps_waypoint_follower',
+                                executable='gps_waypoint_follower_client',
                                 name=node_name,
                                 output='screen',
                                 parameters=[parameter_file],

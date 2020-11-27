@@ -18,6 +18,7 @@
 #include "nav2_lifecycle_manager/lifecycle_manager_client.hpp"
 #include "nav2_msgs/action/navigate_to_pose.hpp"
 #include "nav2_msgs/action/follow_waypoints.hpp"
+#include "sensor_msgs/msg/nav_sat_fix.hpp"
 #include "nav2_util/lifecycle_node.hpp"
 #include "nav2_util/node_utils.hpp"
 #include "nav2_util/simple_action_server.hpp"
@@ -29,7 +30,6 @@
 #include "nav2_util/geometry_utils.hpp"
 #include "robot_localization/srv/to_ll.hpp"
 #include "robot_localization/srv/from_ll.hpp"
-
 
 /**
  * @brief namespace for way point following, points are from a yaml file
@@ -51,10 +51,13 @@ enum class ActionStatus
 class GPSWaypointFollower : public nav2_util::LifecycleNode
 {
 public:
+  // Shorten the types
   using ActionT = botanbot_msgs::action::FollowGPSWaypoints;
   using ClientT = nav2_msgs::action::FollowWaypoints;
   using ActionServer = nav2_util::SimpleActionServer<ActionT>;
   using ActionClient = rclcpp_action::Client<ClientT>;
+  using WaypointFollowerGoalHandle =
+    rclcpp_action::ClientGoalHandle<ClientT>;
 
   /**
    * @brief Construct a new Way Point Folllower Demo object
@@ -125,48 +128,30 @@ protected:
    * @brief
    *
    */
-  void convertGPSWaypointstoPosesinMap();
+  static std::vector<geometry_msgs::msg::PoseStamped> convertGPSWaypointstoPosesinMap(
+    const
+    std::vector<sensor_msgs::msg::NavSatFix> & gps_waypoints,
+    const rclcpp_lifecycle::LifecycleNode::SharedPtr & parent_node,
+    const rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr & fromll_client);
 
-  /**
-   * @brief given a parameter name on the yaml file, loads this parameter as geometry_msgs::Point.
-   *  Note that this parameter needs to be an array of doubles
-   *
-   * @param param_name
-   * @return geometry_msgs::Point
-  */
-  geometry_msgs::msg::Point32
-  loadVectorofDoubleAsPairFromYAML(std::string param_name);
-
-  // Our action server
+  // dedicated node of client(FollowWaypoints)
+  rclcpp::Node::SharedPtr client_node_;
+  // FollowGPSWaypoints action server
   std::unique_ptr<ActionServer> action_server_;
-
-  ActionStatus current_goal_status_;
-
+  // client to call server from robot_localization to do UTM -> Map conversion
   rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr from_ll_to_map_client_;
-
-  // shorten the Goal handler Client type
-  using WaypointFollowerGoalHandle =
-    rclcpp_action::ClientGoalHandle<ClientT>;
-
   // client to connect waypoint follower service(FollowWaypoints)
-  rclcpp_action::Client<ClientT>::SharedPtr
-    waypoint_follower_action_client_;
-
+  rclcpp_action::Client<ClientT>::SharedPtr waypoint_follower_action_client_;
+  // global var to get information about current goal state
+  ActionStatus current_goal_status_;
   // stores the waypoints in a vector with additional info such as
   // "int32[] missed_waypoints" and "uint32
   // current_waypoint"
   ClientT::Goal waypoint_follower_goal_;
-
   // goal handler to query state of goal
   WaypointFollowerGoalHandle::SharedPtr waypoint_follower_goal_handle_;
 
-  // we load poses from Yaml file and store them in this vector
-  std::vector<geometry_msgs::msg::PoseStamped> acummulated_poses_;
-
-  // we load poses from Yaml file and store them in this vector
-  std::vector<geometry_msgs::msg::Point32> acummulated_gps_waypoints_;
-
-  rclcpp::Node::SharedPtr client_node_;
+  rclcpp::CallbackGroup::SharedPtr callback_group_;
 };
 }  // namespace botanbot_gps_waypoint_follower
 

@@ -24,9 +24,13 @@ include_directories(
 )
 
 set(executable_name gps_waypoint_follower)
+set(gps_client_executable_name gps_waypoint_follower_client)
 
 add_executable(${executable_name}
-  src/waypoint_follower_client.cpp
+  src/gps_waypoint_follower.cpp
+)
+add_executable(${gps_client_executable_name}
+  src/gps_waypoint_follower_client.cpp
 )
  
 set(dependencies
@@ -46,10 +50,15 @@ set(dependencies
 ament_target_dependencies(${executable_name}
   ${dependencies}
 )
+ament_target_dependencies(${gps_client_executable_name}
+  ${dependencies}
+)
 
 target_link_libraries(${executable_name} )
+target_link_libraries(${gps_client_executable_name} )
+
  
-install(TARGETS ${executable_name}
+install(TARGETS ${executable_name} ${gps_client_executable_name}
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 

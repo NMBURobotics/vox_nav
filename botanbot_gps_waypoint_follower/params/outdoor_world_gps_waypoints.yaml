@@ -1,4 +1,4 @@
-gps_waypoint_follower:
+gps_waypoint_follower_client:
   ros__parameters:
     number_of_gps_waypoints: 15
     #long, lat, alt  =  0.6338827330619097
