@@ -2,19 +2,23 @@
 A project to develop/adapt a navigation system for outdoor robotics particularly aiming for use-cases in agriculture. 
 
 ## Roadmap
-- [x] Create a ackermann model robot under Gazebo, and decorate with nexecesarry sensor suite  
+This section is aimed to keep track of development of major features.
+
+- [x] Create an ackermann model robot under Gazebo and decorate with required sensor suite for outdoor navigation. 
 - [x] Add different Gazebo worlds(farming like, city like, wild hilly world, empty world with simple shapes in it)  
-- [x] Add a GUI for interaction with Robot, starting, shutting down nodes  
+- [x] Add a GUI for interaction with Robot, jogging robot manually, starting shutting down nodes  and launch files, selecting the worlds to start.
 - [x] Configure `robot_localization` to obtain map->odom->base_link chain
-- [x] Configure `teb_local_planner` for ackermann robot, DWB does not work for ackermann
-- [x] Test `navigation2` , set simple goals and get in goals wtih all functionalities enabled; planner, controller, recovery, obstacle avoidance
+- [x] Configure `teb_local_planner` for ackermann robot, as DWB does not work for ackermann
+- [x] Test with `navigation2`, set simple goals and get in goals wtih all functionalities enabled; planner, controller, recovery, obstacle avoidance
 - [x] Add GPS Waypoint following feature
 - [x] Test GPS Waypoint Following feature in a city like envoirment, [Youtube video](https://www.youtube.com/watch?v=DQGfRRn1DBQ&t=13s) 
-- [ ] Add GPS Waypoint following to `navigation2` it is here but not merged yet [nav2_gps_waypoint_follower](https://github.com/ros-planning/navigation2/pull/2111); 
 - [ ] Test GPS waypoint following in tomato_field (farming like world)
-- [ ] Add tutorial to `navigation2`, on how to make use of `nav2_gps_waypoint_follower`, PR IS OPEN [HERE](https://github.com/ros-planning/navigation2_tutorials/pull/16), though it has not been merged
+- [ ] Add GPS Waypoint following to `navigation2`, it is here but not merged yet [nav2_gps_waypoint_follower](https://github.com/ros-planning/navigation2/pull/2111); 
+- [ ] Add tutorial to `navigation2`, on how to make use of `nav2_gps_waypoint_follower`, PR IS OPEN [HERE](https://github.com/ros-planning/navigation2_tutorials/pull/16), not merged yet
 - [ ] Consider adding 3D AMCL or another 3D SLAM to help `robot_localization`, see [here](https://answers.ros.org/question/218137/using-robot_localization-with-amcl/)  
 - [ ] Test GPS waypoint following on real hardware
+- [ ] Add perception pipeline, at least describe a perception module. 
+- [ ] Test multi-robot simulation. more than 1 botanbot doing some task collabratively.
 ## Quick Start
 
 * Install ROS2 foxy. 
@@ -29,7 +33,6 @@ This can be quickly done with;
 sudo apt-get install ros-foxy-navigation
 sudo apt-get install ros-foxy-robot-localization
 ```
-
 
 * Install OUTDOOR_NAV2 packages
 
