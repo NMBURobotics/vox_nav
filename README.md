@@ -1,6 +1,20 @@
 # OUTDOOR_NAV2
 A project to develop/adapt a navigation system for outdoor robotics particularly aiming for use-cases in agriculture. 
 
+## Roadmap
+- [x] Create a ackermann model robot under Gazebo, and decorate with nexecesarry sensor suite  
+- [x] Add different Gazebo worlds(Farming, city, race, empty)  
+- [x] Add a GUI for interaction with Robot, starting, shutting down nodes  
+- [x] Configure `robot_localization` to obtain map->odom->base_link chain
+- [x] Configure `teb_local_planner` for ackermann robot, DWB does not work for ackermann
+- [x] Test `navigation2` , set simple goals and get in goals wtih all fuinctionalities enabled; planner, controller, recovery, obstacle avoidance
+- [x] Add GPS Waypoint following feature
+- [x] Test GPS Waypoint Following feature in a city like envoirment, [Youtube video](https://www.youtube.com/watch?v=DQGfRRn1DBQ&t=13s) 
+- [ ] Add GPS Waypoint following to `navigation2` it is here but not merged [nav2_gps_waypoiny_follower](https://github.com/ros-planning/navigation2/pull/2111); 
+- [ ] Test GPS waypoint following in tomato_field world
+- [ ] Add tutorial to `navigation2`, on how to make use of `nav2_gps_waypoiny_follower`
+- [ ] Consider adding 3D AMCL to `robot_localization`, see [here](https://answers.ros.org/question/218137/using-robot_localization-with-amcl/)  
+- [ ] Test GPS waypoint following on real hardware
 ## Quick Start
 
 * Install ROS2 foxy. 
