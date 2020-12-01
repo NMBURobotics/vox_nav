@@ -10,9 +10,9 @@ A project to develop/adapt a navigation system for outdoor robotics particularly
 - [x] Test `navigation2` , set simple goals and get in goals wtih all functionalities enabled; planner, controller, recovery, obstacle avoidance
 - [x] Add GPS Waypoint following feature
 - [x] Test GPS Waypoint Following feature in a city like envoirment, [Youtube video](https://www.youtube.com/watch?v=DQGfRRn1DBQ&t=13s) 
-- [ ] Add GPS Waypoint following to `navigation2` it is here but not merged yet [nav2_gps_waypoiny_follower](https://github.com/ros-planning/navigation2/pull/2111); 
+- [ ] Add GPS Waypoint following to `navigation2` it is here but not merged yet [nav2_gps_waypoint_follower](https://github.com/ros-planning/navigation2/pull/2111); 
 - [ ] Test GPS waypoint following in tomato_field (farming like world)
-- [ ] Add tutorial to `navigation2`, on how to make use of `nav2_gps_waypoint_follower`
+- [ ] Add tutorial to `navigation2`, on how to make use of `nav2_gps_waypoint_follower`, PR IS OPEN [HERE](https://github.com/ros-planning/navigation2_tutorials/pull/16), though it has not been merged
 - [ ] Consider adding 3D AMCL or another 3D SLAM to help `robot_localization`, see [here](https://answers.ros.org/question/218137/using-robot_localization-with-amcl/)  
 - [ ] Test GPS waypoint following on real hardware
 ## Quick Start
@@ -81,7 +81,6 @@ This world is large and you may not see the Botanbot at first, At left side of G
 right click and then `follow` botanbot model. This should put the focus onto botanbot. 
 
 You can also click on start RVIZ and you should be able to see sensor data and robot model in rviz ; 
-
 
 ![.](docs/rviz_1.png)
 
