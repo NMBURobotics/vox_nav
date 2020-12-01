@@ -101,7 +101,13 @@ Botanbot is a simple 4 wheeled , ackermann drived mobile robot. It is simulated 
 | GPS | /gps/fix | sensor_msgs::msg::NavSatFix | 30 |
 | IMU | /imu | sensor_msgs::msg::Imu | 30 |
 
-### Botanbot in Gazebo
+
+### Botanbot navigation in farming world
+
+![.](docs/botanbot_2.png)
+
+
+### Botanbot in Hilly Gazebo world
 ![.](docs/botanbot_0.jpg)
 
 ![.](docs/botanbot_1.jpg)
