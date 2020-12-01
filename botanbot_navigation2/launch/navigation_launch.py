@@ -156,10 +156,9 @@ def generate_launch_description():
                         {'autostart': autostart},
                         {'node_names': lifecycle_nodes}]),
         Node(
-            package='botanbot_gps_waypoint_follower',
+            package='nav2_gps_waypoint_follower',
             executable='gps_waypoint_follower',
             name='gps_waypoint_follower',
-            prefix=['gdb -ex run --args'],
             output='screen',
             parameters=[configured_params],
             remappings=remappings),
