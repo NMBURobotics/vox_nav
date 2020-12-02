@@ -11,7 +11,7 @@ import numpy as np
 import sys
 from threading import Thread, Lock
 
-kFrequencyToSaveGPSPoint = 0.1
+kFrequencyToSaveGPSPoint = 2.0
 
 
 class GPSWaypoitCollector(Node):
@@ -29,21 +29,26 @@ class GPSWaypoitCollector(Node):
         self.latest_navsat = NavSatFix
         self.index = 0
         self.mutex = Lock()
+        self.is_first_msg_recieved = False 
 
     def listener_callback(self, msg):
         self.mutex.acquire()
         self.latest_navsat = msg
         self.mutex.release()
+        self.is_first_msg_recieved = True 
+
+
 
 
     def peroidic_callback(self):
-        self.mutex.acquire()
-        print('gps_waypoint'+str(self.index)+':', [self.latest_navsat.latitude,
-                                                   self.latest_navsat.longitude,
-                                                   self.latest_navsat.altitude])
-        input("PRESS ENTER TO COLLECT NEXT WAYPOINT ")
-        self.index = self.index+1
-        self.mutex.release()
+        if(self.is_first_msg_recieved):
+            self.mutex.acquire()
+            print('gps_waypoint'+str(self.index)+':', [abs(self.latest_navsat.latitude),
+                                                       abs(self.latest_navsat.longitude),
+                                                           self.latest_navsat.altitude])
+            input("PRESS ENTER TO COLLECT NEXT WAYPOINT ")
+            self.index = self.index+1
+            self.mutex.release()
 
 
 

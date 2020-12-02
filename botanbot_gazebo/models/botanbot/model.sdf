@@ -711,9 +711,9 @@
                 <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_velodyne_laser.so">
                     <topicName>/velodyne_points</topicName>
                     <frameName>velodyne_link</frameName>
-                    <min_range>2.5</min_range>
+                    <min_range>1.0</min_range>
                     <max_range>60.0</max_range>
-                    <gaussianNoise>0.009</gaussianNoise>
+                    <gaussianNoise>0.008</gaussianNoise>
                 </plugin>
             </sensor>
         </link>

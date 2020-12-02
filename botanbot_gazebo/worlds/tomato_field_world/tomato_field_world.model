@@ -66,7 +66,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_4</name>
-            <pose>0.0 3.9 0 0 0 0</pose>
+            <pose>0.0 3.6 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -81,7 +81,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_7</name>
-            <pose>0.0 9.3 0 0 0 0</pose>
+            <pose>0.0 6.3 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -126,7 +126,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_16</name>
-            <pose>3.0 3.9 0 0 0 0</pose>
+            <pose>3.0 3.6 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -141,7 +141,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_19</name>
-            <pose>3.0 9.3 0 0 0 0</pose>
+            <pose>3.0 6.3 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -186,7 +186,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_28</name>
-            <pose>6.0 3.9 0 0 0 0</pose>
+            <pose>6.0 3.6 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -201,7 +201,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_31</name>
-            <pose>6.0 9.3 0 0 0 0</pose>
+            <pose>6.0 6.3 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -246,7 +246,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_40</name>
-            <pose>9.0 3.9 0 0 0 0</pose>
+            <pose>9.0 3.6 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -261,7 +261,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_43</name>
-            <pose>9.0 9.3 0 0 0 0</pose>
+            <pose>9.0 6.3 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -306,7 +306,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_52</name>
-            <pose>-3.0 3.9 0 0 0 0</pose>
+            <pose>-3.0 3.6 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -321,7 +321,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_55</name>
-            <pose>-3.0 9.3 0 0 0 0</pose>
+            <pose>-3.0 6.3 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -366,7 +366,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_64</name>
-            <pose>12.0 3.9 0 0 0 0</pose>
+            <pose>12.0 3.6 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -381,7 +381,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_67</name>
-            <pose>12.0 9.3 0 0 0 0</pose>
+            <pose>12.0 6.3 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -426,7 +426,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_76</name>
-            <pose>15.0 3.9 0 0 0 0</pose>
+            <pose>15.0 3.6 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -441,7 +441,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_79</name>
-            <pose>15.0 9.3 0 0 0 0</pose>
+            <pose>15.0 6.3 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -486,7 +486,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_88</name>
-            <pose>18.0 3.9 0 0 0 0</pose>
+            <pose>18.0 3.6 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
@@ -501,7 +501,7 @@
         <include>
             <uri>model://tomato_plant_tree</uri>
             <name>tomato_91</name>
-            <pose>18.0 9.3 0 0 0 0</pose>
+            <pose>18.0 6.3 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>
