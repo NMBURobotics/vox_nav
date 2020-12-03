@@ -155,12 +155,6 @@ def generate_launch_description():
             parameters=[{'use_sim_time': use_sim_time},
                         {'autostart': autostart},
                         {'node_names': lifecycle_nodes}]),
-        Node(
-            package='nav2_gps_waypoint_follower',
-            executable='gps_waypoint_follower',
-            name='gps_waypoint_follower',
-            output='screen',
-            parameters=[configured_params],
-            remappings=remappings),
+
 
     ])
