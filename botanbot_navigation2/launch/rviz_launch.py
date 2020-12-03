@@ -32,10 +32,11 @@ def generate_launch_description():
     # Create the launch configuration variables
     rviz_config_file = LaunchConfiguration('rviz_config')
     use_namespace = LaunchConfiguration('use_namespace')
+
     declare_use_namespace_cmd = DeclareLaunchArgument(
-    'use_namespace',
-    default_value='false',
-    description='Whether to apply a namespace to the navigation stack')
+        'use_namespace',
+        default_value='false',
+        description='Whether to apply a namespace to the navigation stack')
 
 
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
@@ -61,6 +62,7 @@ def generate_launch_description():
 
     # Create the launch description and populate
     ld = LaunchDescription()
+    ld.add_action(declare_use_namespace_cmd)
 
     # Declare the launch options
     ld.add_action(declare_rviz_config_file_cmd)

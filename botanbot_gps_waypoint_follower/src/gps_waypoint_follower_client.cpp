@@ -76,9 +76,9 @@ void GPSWayPointFollowerClient::startWaypointFollowing()
   goal_options.result_callback = std::bind(
     &GPSWayPointFollowerClient::resultCallback, this,
     std::placeholders::_1);
-  goal_options.goal_response_callback = std::bind(
+  /*goal_options.goal_response_callback = std::bind(
     &GPSWayPointFollowerClient::goalResponseCallback, this,
-    std::placeholders::_1);
+    std::placeholders::_1);*/
 
   auto future_goal_handle = gps_waypoint_follower_action_client_->async_send_goal(
     gps_waypoint_follower_goal_, goal_options);
