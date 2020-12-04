@@ -25,16 +25,24 @@ from launch_ros.event_handlers import OnStateTransition
 from launch.actions import LogInfo
 from launch.events import matches_action
 from launch.event_handlers.on_shutdown import OnShutdown
+from launch_ros.actions import Node
+
 
 import lifecycle_msgs.msg
 import os
 
 
 def generate_launch_description():
+    namespace = LaunchConfiguration('namespace')
+
     share_dir = get_package_share_directory(
         'botanbot_gps_waypoint_follower')
     parameter_file = LaunchConfiguration('params_file')
     node_name = 'gps_waypoint_follower_client'
+
+    DeclareLaunchArgument(
+            'namespace', default_value='',
+            description='Top-level namespace'),
 
     params_declare = DeclareLaunchArgument('params_file',
                                            default_value=os.path.join(
@@ -44,6 +52,7 @@ def generate_launch_description():
     driver_node = LifecycleNode(package='botanbot_gps_waypoint_follower',
                                 executable='gps_waypoint_follower_client',
                                 name=node_name,
+                                namespace='',
                                 output='screen',
                                 parameters=[parameter_file],
                                 )

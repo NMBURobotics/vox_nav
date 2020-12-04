@@ -39,8 +39,7 @@ def generate_launch_description():
                        'recoveries_server',
                        'bt_navigator',
                        'waypoint_follower',
-                       'map_server',
-                       'gps_waypoint_follower']
+                       'map_server']
 
     # Map fully qualified names to relative ones so the node's namespace can be prepended.
     # In case of the transforms (tf), currently, there doesn't seem to be a better alternative
@@ -155,12 +154,5 @@ def generate_launch_description():
             parameters=[{'use_sim_time': use_sim_time},
                         {'autostart': autostart},
                         {'node_names': lifecycle_nodes}]),
-        Node(
-            package='nav2_gps_waypoint_follower',
-            executable='gps_waypoint_follower',
-            name='gps_waypoint_follower',
-            output='screen',
-            parameters=[configured_params],
-            remappings=remappings),
 
     ])

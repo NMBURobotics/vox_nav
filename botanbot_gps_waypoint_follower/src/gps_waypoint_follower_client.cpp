@@ -211,6 +211,7 @@ int main(int argc, char const * argv[])
     botanbot_gps_waypoint_follower::ActionStatus::SUCCEEDED)
   {
     rclcpp::spin_some(gps_waypoint_follower_client_node);
-    return 0;
   }
+  rclcpp::shutdown();
+  return 0;
 }
