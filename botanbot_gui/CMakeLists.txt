@@ -17,7 +17,9 @@ set(CMAKE_AUTOMOC ON)
 #Classic ROS2 packages
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(rcutils REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -77,6 +79,7 @@ nav_msgs
 pluginlib
 Qt5
 rclcpp
+rclcpp_action
 rclcpp_lifecycle
 std_msgs
 tf2_geometry_msgs
@@ -84,6 +87,7 @@ behaviortree_cpp_v3
 nav2_behavior_tree
 qt_gui_cpp
 rqt_gui_cpp
+rcutils
 )
 
 ament_target_dependencies(${library_name}

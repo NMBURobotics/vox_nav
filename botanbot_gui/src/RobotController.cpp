@@ -92,13 +92,11 @@ geometry_msgs::msg::TransformStamped RobotController::getRobotStates()
 
   tf_buffer_->setUsingDedicatedThread(true);
 
-  /*try {
+  try {
     current_pose = tf_buffer_->lookupTransform("map", "base_link", tf2::TimePointZero);
   } catch (tf2::TransformException ex) {
     RCLCPP_ERROR(node_->get_logger(), " %s", ex.what());
-
-    //rclcpp::sleep_for(20ns);
-  }*/
+  }
 
   return current_pose;
 }
