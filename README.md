@@ -19,42 +19,28 @@ This section is aimed to keep track of development of major features.
 - [ ] Test GPS waypoint following on real hardware
 - [ ] Add perception pipeline, at least describe a perception module. 
 - [ ] Test multi-robot simulation. more than 1 botanbot doing some task collabratively.
+
 ## Quick Start
 
 * Install ROS2 foxy. 
 This is latest LTS of ROS2 distros , so it makes a lot of sense to start from this version. 
 Deb installation is strongly recomended. Detailed steps to install ROS2 Foxy can be found [here](https://index.ros.org/doc/ros2/Installation/Foxy/Linux-Install-Debians/)
 
-* Install Navigation2 and robot_localization.
-ROS way to control mobile robots with different physical models(e.g differantial, ackermann, omnidirection). 
-This can be quickly done with; 
-
 ```bash
-sudo apt-get install ros-foxy-navigation
-sudo apt-get install ros-foxy-robot-localization
-```
-
-* Install OUTDOOR_NAV2 packages
-
-```bash
-mkdir -p colcon_ws/src
-
-cd colcon_ws/src
-
-git clone https://github.com/jediofgever/OUTDOOR_NAV2.git && cd ..
-```
-
-* Install dependencies with; 
-
-```bash
+source /opt/ros/foxy/setup.bash
+mkdir -p ~/colcon_ws/src
+cd ~/colcon_ws
+wget https://raw.githubusercontent.com/jediofgever/OUTDOOR_NAV2/foxy/tools/underlay.repos?token=AEM25MBHS32LY374QIBDRVC72CLJE
+vcs import src < underlay.repos
+cd ~/colcon_ws
 rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy
-
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
-```
+``` 
 
 * Additional linux terminal command utility package
-
-`sudo apt-get install xdotool`
+```bash
+sudo apt-get install xdotool
+```
 
 ## Run project
 
