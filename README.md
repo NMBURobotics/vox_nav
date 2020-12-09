@@ -1,6 +1,12 @@
 # OUTDOOR_NAV2
 A project to develop/adapt a navigation system for outdoor robotics particularly aiming for use-cases in agriculture. 
 
+
+This branch(foxy) is aiming for ROS2 Foxy distro, there is also `main` branch which keeps up with the latest commits from `ros2::main` and `navigation2::main`. This branch is more stable so we aim to keep major feature developments in this branch since it is more stable. 
+
+`main` branch unstable because of constant updates from whole ROS2 ecosystem. But it is required to be there, from time to time we may need to get involved with guys at `navigation2` e.g submitting PRs or getting/pulling latest features from navigation2. Current branch is recomended to try/test/develop. 
+
+
 ## Roadmap
 This section is aimed to keep track of development of major features.
 
@@ -26,21 +32,38 @@ This section is aimed to keep track of development of major features.
 This is latest LTS of ROS2 distros , so it makes a lot of sense to start from this version. 
 Deb installation is strongly recomended. Detailed steps to install ROS2 Foxy can be found [here](https://index.ros.org/doc/ros2/Installation/Foxy/Linux-Install-Debians/)
 
+A few helper packages we use fro gui and installation;
+
+```bash
+sudo apt-get install python3-vcstool
+sudo apt-get install xdotool
+```
+
+Finally get the project repository and dependecy repositories and build; 
+
 ```bash
 source /opt/ros/foxy/setup.bash
 mkdir -p ~/colcon_ws/src
 cd ~/colcon_ws
-wget https://raw.githubusercontent.com/jediofgever/OUTDOOR_NAV2/foxy/tools/underlay.repos?token=AEM25MBHS32LY374QIBDRVC72CLJE
+wget https://raw.githubusercontent.com/jediofgever/OUTDOOR_NAV2_UNDERLAY_REPOS/main/underlay.repos
 vcs import src < underlay.repos
 cd ~/colcon_ws
 rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 ``` 
+You will be asked to enter your github credentials, enter them correctly, since this repo is private at the moment. 
+`rosdep` might take quite long to install all required depenedencies , so please wait for that command to finish. 
 
-* Additional linux terminal command utility package
+You can update dependencies that are build from source such as `navigation2` or `teb_local_planner`
+with this convient commands; 
+
 ```bash
-sudo apt-get install xdotool
+cd ~/colcon_ws
+vcs import src < underlay.repos
+vcs pull src
 ```
+
+We need the source build of some dependencies(e.g `navigation2`), sometimes we need to add/modify functionalities, overall it gives more control for the development. For future we might remove all source built dependencies, but for now the existing 3 better stay as it is since some of them are not avaliable in from debian installations. 
 
 ## Run project
 
