@@ -583,7 +583,7 @@
             <parent>base_link</parent>
             <child>realsense_link</child>
             <pose>0 0 0 0 0 0</pose>
-        </joint>
+        </joint> 
         <plugin name="camera" filename="librealsense_gazebo_plugin.so">
             <prefix>camera</prefix>
             <depthUpdateRate>30.0</depthUpdateRate>
@@ -648,7 +648,7 @@
             <child>gps</child>
             <pose>0 0 0 0 0 0</pose>
         </joint>
-        <!-- SENSORS: VELODYNE HDL-32-->
+        <!-- SENSORS: VELODYNE VLP-16-->
         <link name="velodyne_link">
             <pose>0 0 0.9 0 0 0</pose>
             <collision name="collision">
@@ -678,29 +678,29 @@
                     <emissive>0 0 0 1</emissive>
                 </material>
             </visual>
-            <sensor type="gpu_ray" name="HDL32">
+            <sensor type="gpu_ray" name="VLP16">
                 <pose>0 0 0 0 0 0</pose>
                 <visualize>false</visualize>
-                <update_rate>15</update_rate>
+                <update_rate>10</update_rate>
                 <ray>
                     <scan>
                         <horizontal>
-                            <samples>2048</samples>
+                            <samples>512</samples>
                             <resolution>1</resolution>
                             <min_angle>-3.14</min_angle>
                             <max_angle>3.14</max_angle>
                         </horizontal>
                         <vertical>
-                            <samples>32</samples>
+                            <samples>16</samples>
                             <resolution>1</resolution>
                             <min_angle>-0.261799</min_angle>
                             <max_angle>0.261799</max_angle>
                         </vertical>
                     </scan>
                     <range>
-                        <min>0.3</min>
-                        <max>100.0</max>
-                        <resolution>0.001</resolution>
+                        <min>1.0</min>
+                        <max>40.0</max>
+                        <resolution>0.01</resolution>
                     </range>
                     <noise>
                         <type>gaussian</type>
@@ -712,7 +712,7 @@
                     <topicName>/velodyne_points</topicName>
                     <frameName>velodyne_link</frameName>
                     <min_range>1.0</min_range>
-                    <max_range>60.0</max_range>
+                    <max_range>40.0</max_range>
                     <gaussianNoise>0.008</gaussianNoise>
                 </plugin>
             </sensor>
