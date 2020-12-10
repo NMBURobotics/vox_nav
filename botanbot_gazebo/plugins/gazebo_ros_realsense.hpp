@@ -1,20 +1,32 @@
-#ifndef _GAZEBO_ROS_REALSENSE_PLUGIN_
-#define _GAZEBO_ROS_REALSENSE_PLUGIN_
+// Copyright (c) 2016 Intel Corporation
+// Modification Copyright (c) 2020 Fetullah Atas
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include "RealSensePlugin.hpp"
+#ifndef BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_REALSENSE_HPP_
+#define BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_REALSENSE_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-
-//#include <sensor_msgs/image_encodings.h>
-
 #include <camera_info_manager/camera_info_manager.hpp>
 #include <image_transport/image_transport.hpp>
 
 #include <memory>
 #include <string>
+
+#include "RealSensePlugin.hpp"
 
 namespace gazebo
 {
@@ -80,4 +92,4 @@ protected:
   sensor_msgs::msg::PointCloud2 pointcloud_msg_;
 };
 }
-#endif /* _GAZEBO_ROS_REALSENSE_PLUGIN_ */
+#endif  // BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_REALSENSE_HPP_

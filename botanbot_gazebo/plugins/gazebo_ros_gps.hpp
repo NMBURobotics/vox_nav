@@ -1,5 +1,6 @@
 //=================================================================================================
 // Copyright (c) 2012, Johannes Meyer, TU Darmstadt
+// Modification Copyright (c) 2020, Fetullah Atas
 // All rights reserved.
 
 // Redistribution and use in source and binary forms, with or without
@@ -26,8 +27,10 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //=================================================================================================
 
-#ifndef HECTOR_GAZEBO_PLUGINS_GAZEBO_ROS_GPS_H
-#define HECTOR_GAZEBO_PLUGINS_GAZEBO_ROS_GPS_H
+#ifndef BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_GPS_HPP_
+#define BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_GPS_HPP_
+
+#include <string>
 
 #include "gazebo/common/Plugin.hh"
 #include "gazebo/physics/World.hh"
@@ -109,14 +112,13 @@ private:
   SensorModel3 position_error_model_;
   SensorModel3 velocity_error_model_;
 
-  //UpdateTimer updateTimer;
+  // UpdateTimer updateTimer;
   gazebo::event::ConnectionPtr updateConnection;
 
-  /// Last update time.
+  // Last update time.
   gazebo::common::Time last_update_time_;
-
 };
 
-} // namespace gazebo
+}  // namespace gazebo
 
-#endif // HECTOR_GAZEBO_PLUGINS_GAZEBO_ROS_GPS_H
+#endif  // BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_GPS_HPP_

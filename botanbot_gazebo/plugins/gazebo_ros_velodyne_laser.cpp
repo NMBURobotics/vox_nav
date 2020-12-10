@@ -2,6 +2,7 @@
  * Software License Agreement (BSD License)
  *
  *  Copyright (c) 2015-2018, Dataspeed Inc.
+ *  Modification Copyright (c) 2020, Fetullah Atas.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -32,23 +33,24 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include "GazeboRosVelodyneLaser.hpp"
-
-#include <algorithm>
-#include <iterator>
-#include <sstream>
-#include <vector>
-#include <string>
+#include "gazebo_ros_velodyne_laser.hpp"
 
 #include <ignition/math/Angle.hh>
 #include <ignition/math/Quaternion.hh>
 #include <ignition/math/Vector3.hh>
 
 #include <gazebo/physics/MultiRayShape.hh>
-
 #include <gazebo/sensors/GpuRaySensor.hh>
 #include <gazebo/sensors/RaySensor.hh>
 #include <gazebo/sensors/Sensor.hh>
+
+#include <algorithm>
+#include <iterator>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <limits>
+
 
 namespace gazebo
 {
@@ -233,7 +235,8 @@ void GazeboRosVelodyneLaser::LoadScanPattern(sensors::SensorPtr _parent, sdf::El
   }
 
   gzthrow(
-    "GazeboRosVelodyneLaser controller requires either a Ray Sensor or a GPU Ray Sensor as its parent");
+    "GazeboRosVelodyneLaser controller requires either"
+    " a Ray Sensor or a GPU Ray Sensor as its parent");
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -314,8 +317,7 @@ void GazeboRosVelodyneLaser::Load(sensors::SensorPtr _parent, sdf::ElementPtr _s
       topic_name_, 10);
   }
 
-  // TODO lazy subscribe. Find a way to subscribe to the gazebo topic if there are
-  //      ros subscribers present.
+  //  ros subscribers present.
   sub_ = gazebo_node_->Subscribe(parent_sensor_->Topic(), &GazeboRosVelodyneLaser::OnScan, this);
 
   RCLCPP_INFO(ros_node_->get_logger(), "Velodyne %slaser plugin ready");
@@ -459,7 +461,7 @@ void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr & _msg)
         *((float *)(ptr + 4)) = range * cos(pAngle) * sin(yAngle);
         *((float *)(ptr + 8)) = range * sin(pAngle);
         *((float *)(ptr + 16)) = intensity;
-        *((uint16_t *)(ptr + 20)) = j; // ring
+        *((uint16_t *)(ptr + 20)) = j;  // ring
         ptr += POINT_STEP;
       }
     }
@@ -473,10 +475,9 @@ void GazeboRosVelodyneLaser::OnScan(ConstLaserScanStampedPtr & _msg)
   msg.width = msg.row_step / POINT_STEP;
   msg.is_bigendian = false;
   msg.is_dense = true;
-  msg.data.resize(msg.row_step); // Shrink to actual size
-
+  msg.data.resize(msg.row_step);  // Shrink to actual size
   // Publish output
   pub_->publish(msg);
 }
 
-} // namespace gazebo
+}  // namespace gazebo

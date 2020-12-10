@@ -14,8 +14,8 @@
 // limitations under the License.
 */
 
-#ifndef _GZRS_PLUGIN_HH_
-#define _GZRS_PLUGIN_HH_
+#ifndef BOTANBOT_GAZEBO__PLUGINS__REALSENSEPLUGIN_HPP_
+#define BOTANBOT_GAZEBO__PLUGINS__REALSENSEPLUGIN_HPP_
 
 #include <gazebo/common/Plugin.hh>
 #include <gazebo/common/common.hh>
@@ -27,14 +27,18 @@
 
 #include <memory>
 #include <string>
+#include <vector>
+#include <map>
 
-namespace gazebo {
+namespace gazebo
+{
 #define DEPTH_CAMERA_NAME "depth"
 #define COLOR_CAMERA_NAME "color"
 #define IRED1_CAMERA_NAME "ired1"
 #define IRED2_CAMERA_NAME "ired2"
 
-struct CameraParams {
+struct CameraParams
+{
   CameraParams() {}
 
   std::string topic_name;
@@ -43,8 +47,10 @@ struct CameraParams {
 };
 
 /// \brief A plugin that simulates Real Sense camera streams.
-class RealSensePlugin : public ModelPlugin {
+class RealSensePlugin : public ModelPlugin
+{
   /// \brief Constructor.
+
 public:
   RealSensePlugin();
 
@@ -64,8 +70,9 @@ public:
 
   /// \brief Callback that publishes a received Camera Frame as an
   /// ImageStamped message.
-  virtual void OnNewFrame(const rendering::CameraPtr cam,
-                          const transport::PublisherPtr pub);
+  virtual void OnNewFrame(
+    const rendering::CameraPtr cam,
+    const transport::PublisherPtr pub);
 
 protected:
   /// \brief Pointer to the model containing the plugin.
@@ -135,5 +142,5 @@ protected:
   float rangeMinDepth_;
   float rangeMaxDepth_;
 };
-}
-#endif
+}  // namespace gazebo
+#endif  // BOTANBOT_GAZEBO__PLUGINS__REALSENSEPLUGIN_HPP_

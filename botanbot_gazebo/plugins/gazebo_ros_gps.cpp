@@ -1,5 +1,6 @@
 //=================================================================================================
 // Copyright (c) 2012, Johannes Meyer, TU Darmstadt
+// Modification Copyright (c) 2020, Fetullah Atas
 // All rights reserved.
 
 // Redistribution and use in source and binary forms, with or without
@@ -51,14 +52,11 @@ GazeboRosGps::GazeboRosGps()
 // Destructor
 GazeboRosGps::~GazeboRosGps()
 {
-
   RCLCPP_ERROR(
     node_->get_logger(), "Shutting down Gazebo GPS node bye. ",
     link_name_.c_str());
-
 }
 
-////////////////////////////////////////////////////////////////////////////////
 // Load the controller
 void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 {
@@ -175,9 +173,7 @@ void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   velocity_publisher_ = node_->create_publisher<geometry_msgs::msg::Vector3Stamped>(
     velocity_topic_,
     10);
-
   Reset();
-
 }
 
 void GazeboRosGps::Reset()
@@ -254,10 +250,8 @@ void GazeboRosGps::OnUpdate()
   fix_publisher_->publish(fix_);
   velocity_publisher_->publish(velocity_);
   last_update_time_ = world_->SimTime();
-
 }
-
 // Register this plugin with the simulator
 GZ_REGISTER_MODEL_PLUGIN(GazeboRosGps)
 
-} // namespace gazebo
+}  // namespace gazebo

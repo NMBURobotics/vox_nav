@@ -13,14 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
-#include "RealSensePlugin.hpp"
 #include <gazebo/physics/physics.hh>
 #include <gazebo/rendering/DepthCamera.hh>
 #include <gazebo/sensors/sensors.hh>
 
-#define DEPTH_SCALE_M 0.001
+#include <utility>
+#include <string>
 
+#include "RealSensePlugin.hpp"
+
+#define DEPTH_SCALE_M 0.001
 #define DEPTH_CAMERA_TOPIC "depth"
 #define COLOR_CAMERA_TOPIC "color"
 #define IRED1_CAMERA_TOPIC "infrared"

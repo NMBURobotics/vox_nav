@@ -26,13 +26,15 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //=================================================================================================
 
-#ifndef HECTOR_GAZEBO_PLUGINS_SENSOR_MODEL_H
-#define HECTOR_GAZEBO_PLUGINS_SENSOR_MODEL_H
+#ifndef BOTANBOT_GAZEBO__PLUGINS__SENSOR_MODEL_HPP_
+#define BOTANBOT_GAZEBO__PLUGINS__SENSOR_MODEL_HPP_
+
+#include <numeric>
+#include <string>
+#include <vector>
 
 #include "sdf/sdf.hh"
 #include "ignition/math/Vector3.hh"
-
-#include <numeric>
 
 namespace gazebo
 {
@@ -89,10 +91,11 @@ namespace
 template<typename T>
 static inline T SensorModelGaussianKernel(T mu, T sigma)
 {
-  // using Box-Muller transform to generate two independent standard normally distributed normal variables
-  // see wikipedia
-  T U = (T)rand() / (T)RAND_MAX; // normalized uniform random variable
-  T V = (T)rand() / (T)RAND_MAX; // normalized uniform random variable
+  //  using Box-Muller transform to generate two independent
+  //  standard normally distributed normal variables
+  //  see wikipedia
+  T U = (T)rand() / (T)RAND_MAX;  // normalized uniform random variable
+  T V = (T)rand() / (T)RAND_MAX;  // normalized uniform random variable
   T X = sqrt(-2.0 * ::log(U)) * cos(2.0 * M_PI * V);
   X = sigma * X + mu;
   return X;
@@ -103,12 +106,13 @@ static inline T SensorModelInternalUpdate(
   T & current_drift, T drift, T drift_frequency, T offset,
   T gaussian_noise, double dt)
 {
-  // current_drift = current_drift - dt * (current_drift * drift_frequency + SensorModelGaussianKernel(T(), sqrt(2*drift_frequency)*drift));
+  // current_drift = current_drift - dt * (current_drift * drift_frequency +
+  // SensorModelGaussianKernel(T(), sqrt(2*drift_frequency)*drift));
   current_drift = exp(-dt * drift_frequency) * current_drift + dt * SensorModelGaussianKernel(
     T(), sqrt(2 * drift_frequency) * drift);
   return offset + current_drift + SensorModelGaussianKernel(T(), gaussian_noise);
 }
-}
+}  // namespace
 
 namespace helpers
 {
@@ -117,7 +121,7 @@ struct scalar_value { static double toDouble(const T & orig) {return orig;} };
 template<typename T>
 struct scalar_value<std::vector<T>> { static double toDouble(const std::vector<T> & orig)
   {
-    return (double) std::accumulate(orig.begin(), orig.end()) / orig.size();
+    return static_cast<double>(std::accumulate(orig.begin(), orig.end()) / orig.size());
   }
 };
 template<>
@@ -127,11 +131,11 @@ struct scalar_value<ignition::math::Vector3d> { static double toDouble(
     return (orig.X() + orig.Y() + orig.Z()) / 3;
   }
 };
-}
+}   // namespace helpers
 
 typedef SensorModel_<double> SensorModel;
 typedef SensorModel_<ignition::math::Vector3d> SensorModel3;
 
-}
+}  // namespace gazebo
 
-#endif // HECTOR_GAZEBO_PLUGINS_SENSOR_MODEL_H
+#endif  // BOTANBOT_GAZEBO__PLUGINS__SENSOR_MODEL_HPP_

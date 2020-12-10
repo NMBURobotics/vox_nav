@@ -26,6 +26,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //=================================================================================================
 
+#include <string>
 #include "sensor_model.hpp"
 
 namespace gazebo
@@ -37,7 +38,7 @@ SensorModel_<T>::SensorModel_()
   drift_frequency(),
   gaussian_noise()
 {
-  drift_frequency = 1.0 / 3600.0; // time constant 1h
+  drift_frequency = 1.0 / 3600.0;  // time constant 1h
   scale_error = 1.0;
   reset();
 }
@@ -63,8 +64,7 @@ void SensorModel_<T>::Load(sdf::ElementPtr _sdf, const std::string & prefix)
     _drift = prefix + "Drift ";
     _drift_frequency = prefix + "DriftFrequency ";
     _gaussian_noise = prefix + "GaussianNoise ";
-    _scale_error = prefix + "ScaleError \
-  ";
+    _scale_error = prefix + "ScaleError";
   }
 
   if (_sdf->HasElement(_offset)) {LoadImpl(_sdf->GetElement(_offset), offset);}
@@ -177,4 +177,4 @@ void SensorModel_<T>::dynamicReconfigureCallback(
   }
 }
 
-}
+}  // namespace gazebo

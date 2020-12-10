@@ -1,7 +1,25 @@
+// Copyright (c) 2016 Intel Corporation
+// Modification Copyright (c) 2020 Fetullah Atas
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include "gazebo_ros_realsense.hpp"
 #include <sensor_msgs/fill_image.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
+#include <limits>
+#include <map>
+#include <string>
 
 namespace
 {
@@ -28,7 +46,6 @@ GazeboRosRealsense::~GazeboRosRealsense()
 
 void GazeboRosRealsense::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 {
-
   this->node_ = rclcpp::Node::make_shared("GazeboRealsenseNode");
 
   // Make sure the ROS node for Gazebo has already been initialized
@@ -71,9 +88,6 @@ void GazeboRosRealsense::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
     this->pointcloud_pub_ = this->node_->create_publisher<sensor_msgs::msg::PointCloud2>(
       pointCloudTopic_, rclcpp::SystemDefaultsQoS());
   }
-
-  std::cout << "SETTED UP ALL PUBLISHERS" << std::endl;
-
 }
 
 void GazeboRosRealsense::OnNewFrame(
@@ -175,7 +189,7 @@ bool GazeboRosRealsense::FillPointCloudHelper(
         *iter_x = depth * tan(yAngle);
         *iter_y = depth * tan(pAngle);
         *iter_z = depth;
-      } else { // point in the unseeable range
+      } else {  // point in the unseeable range
         *iter_x = *iter_y = *iter_z = std::numeric_limits<float>::quiet_NaN();
         point_cloud_msg.is_dense = false;
       }
@@ -249,7 +263,7 @@ void GazeboRosRealsense::OnNewDepthFrame()
     this->pointcloud_pub_->publish(this->pointcloud_msg_);
   }
 }
-}
+}  // namespace gazebo
 
 namespace
 {
@@ -299,4 +313,4 @@ sensor_msgs::msg::CameraInfo cameraInfo(
 
   return info_msg;
 }
-}
+}  // namespace

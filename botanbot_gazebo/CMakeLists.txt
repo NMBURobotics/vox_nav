@@ -101,7 +101,7 @@ ament_target_dependencies(realsense_gazebo_plugin
 ament_export_libraries(realsense_gazebo_plugin)
 target_link_libraries(realsense_gazebo_plugin ${GAZEBO_LIBRARIES})
 #gazebo_ros_velodyne_laser
-add_library(gazebo_ros_velodyne_laser SHARED plugins/GazeboRosVelodyneLaser.cpp)
+add_library(gazebo_ros_velodyne_laser SHARED plugins/gazebo_ros_velodyne_laser.cpp)
 ament_target_dependencies(gazebo_ros_velodyne_laser
   "gazebo_dev"
   "gazebo_ros"
