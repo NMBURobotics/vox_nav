@@ -31,6 +31,7 @@
 
 #include "gazebo/common/Plugin.hh"
 #include "rclcpp/rclcpp.hpp"
+#include "rclcpp/publisher.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
 #include "geometry_msgs/msg/vector3_stamped.hpp"
 #include "sensor_model.hpp"
@@ -49,6 +50,14 @@ namespace gazebo
 class GazeboRosGps : public ModelPlugin
 {
 public:
+  struct GNSSConfig
+  {
+    double offset;
+    double drift;
+    double drift_frequency;
+    double gaussian_noise;
+    double scale_error;
+  };
   /**
   * @brief Construct a new Gazebo Ros Gps object
   *

@@ -158,7 +158,9 @@ void SensorModel_<T>::reset(const T & value)
 }
 
 template<typename T>
-void SensorModel_<T>::dynamicReconfigureCallback(SensorModelConfig & config, uint32_t level)
+void SensorModel_<T>::dynamicReconfigureCallback(
+  SensorModelConfig & config,
+  uint32_t level)
 {
   if (level == 1) {
     gaussian_noise = config.gaussian_noise;

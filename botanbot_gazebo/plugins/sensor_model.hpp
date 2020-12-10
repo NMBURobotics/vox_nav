@@ -41,6 +41,21 @@ template<typename T>
 class SensorModel_
 {
 public:
+  struct SensorModelConfig
+  {
+    double offset;
+    double drift;
+    double drift_frequency;
+    double gaussian_noise;
+    double scale_error;
+  };
+
+  T offset;
+  T drift;
+  T drift_frequency;
+  T gaussian_noise;
+  T scale_error;
+
   SensorModel_();
   virtual ~SensorModel_();
 
@@ -65,23 +80,6 @@ public:
 private:
   virtual bool LoadImpl(sdf::ElementPtr _element, T & _value);
 
-public:
-  T offset;
-  T drift;
-  T drift_frequency;
-  T gaussian_noise;
-  T scale_error;
-
-  struct SensorModelConfig
-  {
-    double offset;
-    double drift;
-    double drift_frequency;
-    double gaussian_noise;
-    double scale_error;
-  };
-
-private:
   T current_drift_;
   T current_error_;
 };
