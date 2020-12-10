@@ -45,11 +45,11 @@ class SensorModel_
 public:
   struct SensorModelConfig
   {
-    double offset;
-    double drift;
-    double drift_frequency;
-    double gaussian_noise;
-    double scale_error;
+    double offset = 0.0;
+    double drift = 0.0;
+    double drift_frequency = 0.0;
+    double gaussian_noise = 0.0;
+    double scale_error = 0.0;
   };
 
   T offset;

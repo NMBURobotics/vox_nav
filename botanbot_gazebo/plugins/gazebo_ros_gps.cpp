@@ -78,7 +78,7 @@ void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
     link_ = _model->GetLink(link_name_);
   }
 
-  if (!link) {
+  if (!link_) {
     RCLCPP_ERROR(
       node_->get_logger(), "GazeboRosGps plugin error: bodyName: %s does not exist\n",
       link_name_.c_str());
@@ -157,7 +157,7 @@ void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   radius_east_ = prime_vertical_radius * cos(reference_latitude_ * M_PI / 180.0);
 
   // Make sure the ROS node for Gazebo has already been initialized
-  if (!rclcpp::is_initialized()) {
+  if (!rclcpp::ok()) {
     RCLCPP_ERROR(
       node_->get_logger(),
       "A ROS node for Gazebo has not been initialized, unable to load plugin. "
@@ -174,6 +174,10 @@ void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
     velocity_topic_,
     10);
   Reset();
+
+  this->updateConnection_ =
+    event::Events::ConnectWorldUpdateBegin(std::bind(&GazeboRosGps::OnUpdate, this));
+
 }
 
 void GazeboRosGps::Reset()

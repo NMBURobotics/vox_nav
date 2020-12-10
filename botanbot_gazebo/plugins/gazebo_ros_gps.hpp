@@ -56,14 +56,14 @@ class GazeboRosGps : public ModelPlugin
 public:
   struct GNSSConfig
   {
-    bool STATUS_FIX;
-    bool STATUS_SBAS_FIX;
-    bool STATUS_GBAS_FIX;
+    bool STATUS_FIX = true;
+    bool STATUS_SBAS_FIX = false;
+    bool STATUS_GBAS_FIX = false;
 
-    bool SERVICE_GPS;
-    bool SERVICE_GLONASS;
-    bool SERVICE_COMPASS;
-    bool SERVICE_GALILEO;
+    bool SERVICE_GPS = true;
+    bool SERVICE_GLONASS = true;
+    bool SERVICE_COMPASS = true;
+    bool SERVICE_GALILEO = true;
   };
   /**
   * @brief Construct a new Gazebo Ros Gps object
@@ -113,7 +113,7 @@ private:
   SensorModel3 velocity_error_model_;
 
   // UpdateTimer updateTimer;
-  gazebo::event::ConnectionPtr updateConnection;
+  gazebo::event::ConnectionPtr updateConnection_;
 
   // Last update time.
   gazebo::common::Time last_update_time_;

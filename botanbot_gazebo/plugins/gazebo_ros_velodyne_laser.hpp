@@ -180,9 +180,9 @@ private:
     // using Box-Muller transform to generate two independent
     // standard normally distributed normal variables
     // see wikipedia
-    double U = static_cast<double>(rand_r()) / static_cast<double>(RAND_MAX);
+    double U = static_cast<double>(rand()) / static_cast<double>(RAND_MAX);
     // normalized uniform random variable
-    double V = static_cast<double>(rand_r()) / static_cast<double>(RAND_MAX);
+    double V = static_cast<double>(rand()) / static_cast<double>(RAND_MAX);
     // normalized uniform random variable
     return sigma * (sqrt(-2.0 * ::log(U)) * cos(2.0 * M_PI * V)) + mu;
   }
