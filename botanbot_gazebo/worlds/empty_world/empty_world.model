@@ -41,30 +41,5 @@
             <pose>0.0 0 0.25 0.0 0.0 0.0</pose>
             <uri>model://botanbot</uri>
         </include>
-        <include>
-            <pose> 10.0 3.5 0.0 0.0 0.0 0.0</pose>
-            <uri>model://workcell_bin</uri>
-            <name>bin0</name>
-        </include>
-        <include>
-            <pose> 6.0 0 0.0 0.0 0.0 0.0</pose>
-            <uri>model://workcell_bin</uri>
-            <name>bin1</name>
-        </include>
-        <include>
-            <pose> 16.0 2.5 0.0 0.0 0.0 0.0</pose>
-            <uri>model://workcell_bin</uri>
-            <name>bin2</name>
-        </include>
-        <include>
-            <pose> 13.0 -2.0 0.0 0.0 0.0 0.0</pose>
-            <uri>model://workcell_bin</uri>
-            <name>bin3</name>
-        </include>
-        <include>
-            <pose> 21.0 1.0 0.0 0.0 0.0 0.0</pose>
-            <uri>model://workcell_bin</uri>
-            <name>bin4</name>
-        </include>
     </world>
 </sdf>
