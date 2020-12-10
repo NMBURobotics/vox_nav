@@ -109,6 +109,15 @@ ament_target_dependencies(gazebo_ros_velodyne_laser
   "sensor_msgs"
 )
 ament_export_libraries(gazebo_ros_velodyne_laser)
+#gazebo_ros_gps
+add_library(gazebo_ros_gps SHARED plugins/gazebo_ros_gps.cpp)
+ament_target_dependencies(gazebo_ros_gps
+  "gazebo_dev"
+  "gazebo_ros"
+  "rclcpp"
+  "sensor_msgs"
+)
+ament_export_libraries(gazebo_ros_gps)
 
 ################################################################################
 # Install
@@ -117,10 +126,10 @@ install(TARGETS
         botanbot_ackermann_drive
         realsense_gazebo_plugin
         gazebo_ros_velodyne_laser
+        gazebo_ros_gps
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
-
 
 install(DIRECTORY launch models worlds plugins
   DESTINATION share/${PROJECT_NAME}/

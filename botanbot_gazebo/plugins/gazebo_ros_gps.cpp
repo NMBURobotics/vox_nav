@@ -51,11 +51,7 @@ GazeboRosGps::GazeboRosGps()
 // Destructor
 GazeboRosGps::~GazeboRosGps()
 {
-  updateTimer.Disconnect(updateConnection);
 
-  dynamic_reconfigure_server_position_.reset();
-  dynamic_reconfigure_server_velocity_.reset();
-  dynamic_reconfigure_server_status_.reset();
   RCLCPP_ERROR(
     node_->get_logger(), "Shutting down Gazebo GPS node bye. ",
     link_name_.c_str());
@@ -67,6 +63,7 @@ GazeboRosGps::~GazeboRosGps()
 void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 {
   world_ = _model->GetWorld();
+  node_ = rclcpp::Node::make_shared("GazeboGPSNode");
 
   // load parameters
   if (!_sdf->HasElement("robotNamespace")) {
@@ -170,7 +167,8 @@ void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
     return;
   }
 
-  node_ = rclcpp::Node::make_shared("GazeboGPSNode");
+  last_update_time_ = world_->SimTime();
+
 
   fix_publisher_ =
     node_->create_publisher<sensor_msgs::msg::NavSatFix>(fix_topic_, 10);
@@ -180,20 +178,14 @@ void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   Reset();
 
-  // connect Update function
-  updateTimer.setUpdateRate(4.0);
-  updateTimer.Load(world_, _sdf);
-  updateConnection = updateTimer.Connect(boost::bind(&GazeboRosGps::Update, this));
 }
 
 void GazeboRosGps::Reset()
 {
-  updateTimer.Reset();
-  position_error_model_.reset();
-  velocity_error_model_.reset();
+  last_update_time_ = world_->SimTime();
 }
 
-void GazeboRosGps::dynamicReconfigureCallback(GazeboRosGps::GNSSConfig & config, uint32_t level)
+void GazeboRosGps::dynamicReconfigureCallback(GNSSConfig & config, uint32_t level)
 {
   using sensor_msgs::msg::NavSatStatus;
   if (level == 1) {
@@ -220,10 +212,10 @@ void GazeboRosGps::dynamicReconfigureCallback(GazeboRosGps::GNSSConfig & config,
 
 ////////////////////////////////////////////////////////////////////////////////
 // Update the controller
-void GazeboRosGps::Update()
+void GazeboRosGps::OnUpdate()
 {
   common::Time sim_time = world_->SimTime();
-  double dt = updateTimer.getTimeSinceLastUpdate().Double();
+  double dt = (world_->SimTime() - last_update_time_).Double();
 
   ignition::math::Pose3d pose = link_->WorldPose();
 
@@ -261,6 +253,8 @@ void GazeboRosGps::Update()
 
   fix_publisher_->publish(fix_);
   velocity_publisher_->publish(velocity_);
+  last_update_time_ = world_->SimTime();
+
 }
 
 // Register this plugin with the simulator

@@ -30,6 +30,7 @@
 #define HECTOR_GAZEBO_PLUGINS_GAZEBO_ROS_GPS_H
 
 #include "gazebo/common/Plugin.hh"
+#include "gazebo/physics/World.hh"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/publisher.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
@@ -52,11 +53,14 @@ class GazeboRosGps : public ModelPlugin
 public:
   struct GNSSConfig
   {
-    double offset;
-    double drift;
-    double drift_frequency;
-    double gaussian_noise;
-    double scale_error;
+    bool STATUS_FIX;
+    bool STATUS_SBAS_FIX;
+    bool STATUS_GBAS_FIX;
+
+    bool SERVICE_GPS;
+    bool SERVICE_GLONASS;
+    bool SERVICE_COMPASS;
+    bool SERVICE_GALILEO;
   };
   /**
   * @brief Construct a new Gazebo Ros Gps object
@@ -73,20 +77,17 @@ public:
 protected:
   virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
   virtual void Reset();
-  virtual void Update();
+  virtual void OnUpdate();
 
-  typedef hector_gazebo_plugins::GNSSConfig GNSSConfig;
-
-  void dynamicReconfigureCallback(GNSSConfig & config, uint32_t level);
+  void dynamicReconfigureCallback(GazeboRosGps::GNSSConfig & config, uint32_t level);
 
 private:
-  physics::WorldPtr world_;
-
-  physics::LinkPtr link_;
+  gazebo::physics::WorldPtr world_;
+  gazebo::physics::LinkPtr link_;
 
   rclcpp::Node::SharedPtr node_;
-  std::shared_ptr<rclcpp::Publisher> fix_publisher_;
-  std::shared_ptr<rclcpp::Publisher> velocity_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr fix_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::Vector3Stamped>::SharedPtr velocity_publisher_;
 
   sensor_msgs::msg::NavSatFix fix_;
   geometry_msgs::msg::Vector3Stamped velocity_;
@@ -108,12 +109,12 @@ private:
   SensorModel3 position_error_model_;
   SensorModel3 velocity_error_model_;
 
-  UpdateTimer updateTimer;
-  event::ConnectionPtr updateConnection;
+  //UpdateTimer updateTimer;
+  gazebo::event::ConnectionPtr updateConnection;
 
-  boost::shared_ptr<dynamic_reconfigure::Server<SensorModelConfig>>
-  dynamic_reconfigure_server_position_, dynamic_reconfigure_server_velocity_;
-  boost::shared_ptr<dynamic_reconfigure::Server<GNSSConfig>> dynamic_reconfigure_server_status_;
+  /// Last update time.
+  gazebo::common::Time last_update_time_;
+
 };
 
 } // namespace gazebo
