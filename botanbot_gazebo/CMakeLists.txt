@@ -15,7 +15,6 @@ endif()
 ################################################################################
 # Find ament packages and libraries for ament and system dependencies
 ################################################################################
-
 find_package(ament_cmake REQUIRED)
 find_package(camera_info_manager REQUIRED)
 find_package(gazebo REQUIRED)
@@ -50,75 +49,54 @@ endif()
 ################################################################################
 # Build
 ################################################################################
-include_directories(include
-  ${GAZEBO_INCLUDE_DIRS}
-  ${gazebo_dev_INCLUDE_DIRS}
-  ${gazebo_ros_INCLUDE_DIRS}
-  ${geometry_msgs_INCLUDE_DIRS}
-  ${image_transport_INCLUDE_DIRS}
-  ${cv_bridge_INCLUDE_DIRS}
-  ${nav_msgs_INCLUDE_DIRS}
-  ${sensor_msgs_INCLUDE_DIRS}
-  ${tf2_ros_INCLUDE_DIRS}
-  ${tf2_INCLUDE_DIRS}
-)
-link_directories(${GAZEBO_LIBRARY_DIRS}
-                 ${gazebo_dev_LIBRARY_DIRS}
-)
-# botanbot_ackermann_drive
-add_library(botanbot_ackermann_drive SHARED
-  plugins/botanbot_ackermann_drive.cpp
-)
+include_directories(include)
+
+set(dependencies
+    camera_info_manager  
+    gazebo
+    gazebo_dev
+    gazebo_msgs
+    gazebo_ros
+    geometry_msgs
+    image_transport
+    cv_bridge
+    nav_msgs
+    rclcpp
+    sensor_msgs
+    std_msgs
+    std_srvs
+    tf2
+    tf2_geometry_msgs
+    tf2_ros
+    trajectory_msgs)
+
+# BOTANBOT ACKERMANN DRIVE GAZEBO PLUGIN SHARED LIBRARY
+add_library(botanbot_ackermann_drive SHARED  src/botanbot_ackermann_drive.cpp)
 target_include_directories(botanbot_ackermann_drive PUBLIC include)
-ament_target_dependencies(botanbot_ackermann_drive
-  "gazebo_dev"
-  "gazebo_ros"
-  "geometry_msgs"
-  "nav_msgs"
-  "rclcpp"
-  "tf2"
-  "tf2_geometry_msgs"
-  "tf2_ros"
-)
-ament_export_libraries(botanbot_ackermann_drive)
+ament_target_dependencies(botanbot_ackermann_drive ${dependencies})
 if(ENABLE_PROFILER)
   target_include_directories(botanbot_ackermann_drive PUBLIC ${ignition-common3_INCLUDE_DIRS})
   target_link_libraries(botanbot_ackermann_drive ${ignition-common3_LIBRARIES})
 endif()
-#realsense_gazeo_plugin
-add_library(
-    realsense_gazebo_plugin SHARED
-    plugins/RealSensePlugin.cpp
-    plugins/gazebo_ros_realsense.cpp
-    )
-ament_target_dependencies(realsense_gazebo_plugin 
-  "rclcpp"
-  "gazebo_ros"
-  "image_transport"
-  "camera_info_manager"
-  "sensor_msgs"
-)
-ament_export_libraries(realsense_gazebo_plugin)
-target_link_libraries(realsense_gazebo_plugin ${GAZEBO_LIBRARIES})
-#gazebo_ros_velodyne_laser
-add_library(gazebo_ros_velodyne_laser SHARED plugins/gazebo_ros_velodyne_laser.cpp)
-ament_target_dependencies(gazebo_ros_velodyne_laser
-  "gazebo_dev"
-  "gazebo_ros"
-  "rclcpp"
-  "sensor_msgs"
-)
-ament_export_libraries(gazebo_ros_velodyne_laser)
 
-#gazebo_ros_gps
-add_library(gazebo_ros_gps SHARED plugins/gazebo_ros_gps.cpp)
-ament_target_dependencies(gazebo_ros_gps
-  "gazebo_dev"
-  "gazebo_ros"
-  "rclcpp"
-  "sensor_msgs"
-)
-ament_export_libraries(gazebo_ros_gps)
+# BOTANBOT REALSENSE CAMERA GAZEBO PLUGIN SHARED LIBRARY
+add_library(realsense_gazebo_plugin SHARED  src/RealSensePlugin.cpp
+                                            src/gazebo_ros_realsense.cpp)
+ament_target_dependencies(realsense_gazebo_plugin ${dependencies})
+target_link_libraries(realsense_gazebo_plugin ${GAZEBO_LIBRARIES})
+
+# BOTANBOT VELODYNE LIDAR GAZEBO PLUGIN SHARED LIBRARY
+add_library(gazebo_ros_velodyne_laser SHARED src/gazebo_ros_velodyne_laser.cpp)
+ament_target_dependencies(gazebo_ros_velodyne_laser ${dependencies})
+
+# BOTANBOT HECTOR GPS SENSOR GAZEBO PLUGIN SHARED LIBRARY
+add_library(gazebo_ros_gps SHARED src/gazebo_ros_gps.cpp)
+ament_target_dependencies(gazebo_ros_gps ${dependencies})
+
+ament_export_libraries(botanbot_ackermann_drive 
+                       realsense_gazebo_plugin 
+                       gazebo_ros_velodyne_laser 
+                       gazebo_ros_gps)
 
 ################################################################################
 # Install
@@ -132,7 +110,7 @@ install(TARGETS
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
 
-install(DIRECTORY launch models worlds plugins
+install(DIRECTORY launch models worlds
   DESTINATION share/${PROJECT_NAME}/
 )
 
@@ -140,11 +118,6 @@ install(DIRECTORY launch models worlds plugins
 # Macro for ament package
 ################################################################################
 ament_export_include_directories(include)
-ament_export_dependencies(gazebo_ros_pkgs)
-ament_export_dependencies(geometry_msgs)
-ament_export_dependencies(nav_msgs)
-ament_export_dependencies(rclcpp)
-ament_export_dependencies(sensor_msgs)
-ament_export_dependencies(tf2)
-ament_export_dependencies(botanbot)
+ament_export_dependencies(${dependencies})
+
 ament_package()

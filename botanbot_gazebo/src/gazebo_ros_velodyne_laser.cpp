@@ -33,7 +33,7 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#include "gazebo_ros_velodyne_laser.hpp"
+#include "botanbot_gazebo/gazebo_ros_velodyne_laser.hpp"
 
 #include <ignition/math/Angle.hh>
 #include <ignition/math/Quaternion.hh>

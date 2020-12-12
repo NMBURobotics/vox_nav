@@ -27,7 +27,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //=================================================================================================
 
-#include "gazebo_ros_gps.hpp"
+#include "botanbot_gazebo/gazebo_ros_gps.hpp"
 #include "gazebo/physics/physics.hh"
 
 // WGS84 constants

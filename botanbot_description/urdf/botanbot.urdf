@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <robot name="botanbot"
     xmlns:xacro="http://ros.org/wiki/xacro">
-    <!-- BEGIN LINKS-->
-    <!-- begin robot body links-->
+    <!-- BEGIN LINKS                      -->
+    <!-- BEGIN LINKS RELATED TO ROBOT BODY-->
     <link name="base_link">
         <visual>
             <origin xyz="-0.019375 0.005287 0.340756" rpy="0 0 0" />
@@ -117,8 +117,9 @@
             </geometry>
         </collision>
     </link>
-    <!-- end robot body links-->
-    <!-- begin sensor links-->
+    <!-- END LINKS RELATED TO ROBOT BODY-->
+    <!--////////////////////////////////-->
+    <!-- BEGIN LINKS RELATED TO SENSORS -->
     <link name='imu_link'>
         <visual name='visual'>
             <geometry>
@@ -179,10 +180,11 @@
     <link name="camera_left_ir_optical_frame"></link>
     <link name="camera_right_ir_frame"></link>
     <link name="camera_right_ir_optical_frame"></link>
-    <!-- end sensor links-->
-    <!-- END LINKS-->
-    <!--  BEGIN  JOINTS-->
-    <!-- begin robot body joints-->
+    <!-- END LINKS RELATED TO SENSORS       -->
+    <!-- END LINKS                          -->
+    <!--////////////////////////////////////-->
+    <!-- BEGIN JOINTS                       -->
+    <!-- BEGIN JOINTS RELATED TO ROBOT BODY -->
     <joint name='front_left_combined_joint' type='continuous'>
         <parent link="base_link" />
         <child link="front_left_wheel" />
@@ -221,8 +223,9 @@
         <origin xyz="0.400132 9.3e-05 0.399996" rpy="0 -1.57 0" />
         <axis xyz="0 0 1" />
     </joint>
-    <!-- end robot body joints-->
-    <!-- begin sensor joints-->
+    <!-- END JOINTS RELATED TO ROBOT BODY -->
+    <!--//////////////////////////////////-->
+    <!-- BEGIN JOINTS RELATED TO SENSORS  -->
     <joint name="imu_joint" type="fixed">
         <parent link="base_link" />
         <child link="imu_link" />
@@ -288,6 +291,7 @@
         <child link="camera_right_ir_optical_frame" />
         <pose xyz="0 0 0 " rpy="-1.57 0 -1.57" />
     </joint>
-    <!-- end sensor joints-->
-    <!-- END JOINTS-->
+    <!-- END JOINTS RELATED TO SENSORS    -->
+    <!--//////////////////////////////////-->
+    <!-- END JOINTS                       -->
 </robot>

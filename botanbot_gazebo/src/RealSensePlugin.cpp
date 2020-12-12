@@ -20,7 +20,7 @@
 #include <utility>
 #include <string>
 
-#include "RealSensePlugin.hpp"
+#include "botanbot_gazebo/RealSensePlugin.hpp"
 
 #define DEPTH_SCALE_M 0.001
 #define DEPTH_CAMERA_TOPIC "depth"

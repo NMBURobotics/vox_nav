@@ -39,7 +39,7 @@
 #include <string>
 #include <vector>
 
-#include "botanbot_ackermann_drive.hpp"
+#include "botanbot_gazebo/botanbot_ackermann_drive.hpp"
 
 namespace gazebo_plugins
 {

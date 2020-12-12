@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gazebo_ros_realsense.hpp"
+#include "botanbot_gazebo/gazebo_ros_realsense.hpp"
 #include <sensor_msgs/fill_image.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
