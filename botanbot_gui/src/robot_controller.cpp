@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "botanbot_gui/RobotController.hpp"
+#include <memory>
+#include "botanbot_gui/robot_controller.hpp"
 
 namespace botanbot_gui
 {
 RobotController::RobotController(/* args */)
 {
-  node_ = rclcpp::Node::make_shared("RobotController");
+  node_ = rclcpp::Node::make_shared("robot_controller_rclcpp_node");
+  node_->set_parameter(rclcpp::Parameter("use_sim_time", true));
+
   nav_to_pose_client_ =
     rclcpp_action::create_client<nav2_msgs::action::NavigateToPose>(
     node_, "navigate_to_pose");
@@ -31,8 +34,6 @@ RobotController::RobotController(/* args */)
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-
-  node_->set_parameter(rclcpp::Parameter("use_sim_time", true));
 
   RCLCPP_INFO(node_->get_logger(), "Creating Robot Controller Instance");
 }

@@ -3,8 +3,8 @@
 <package format="3">
     <name>botanbot_gps_waypoint_follower</name>
     <version>0.0.0</version>
-    <description>Reads GPS waypoint from a file, converts them to map frame and navigates through the points
-                 with FollowWaypoints server from `navigation2`</description>
+    <description>Reads GPS waypoints from a file,calls on FollowGPSWaypoints server from `navigation2` and goes through each point consequently</description>
+    <author email="fetualahatas1@gmail.com">Fetullah Atas</author>
     <maintainer email="fetualahatas1@gmail.com">Fetullah Atas</maintainer>
     <license>Apache-2.0</license>
     <buildtool_depend>ament_cmake</buildtool_depend>

@@ -12,28 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BOTANBOT_GUI_INCLUDE_BOTANBOT_GUI_CONTROL_PLUGIN_HPP_
-#define BOTANBOT_GUI_INCLUDE_BOTANBOT_GUI_CONTROL_PLUGIN_HPP_
+#ifndef BOTANBOT_GUI__CONTROL_PLUGIN_HPP_
+#define BOTANBOT_GUI__CONTROL_PLUGIN_HPP_
 
-// STL headers
-#include <vector>
-
-// this package header
-#include "botanbot_gui/RobotController.hpp"
-
-// ros headers
-#include <rqt_gui_cpp/plugin.h>
-#include <geometry_msgs/msg/twist.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <rclcpp_action/rclcpp_action.hpp>
-#include <geometry_msgs/msg/pose_stamped.h>
-#include <ament_index_cpp/get_package_share_directory.hpp>
 
 // QT headers
 #include <QtCore/QTimer>
 #include <QtConcurrent/QtConcurrent>
-#include <ui_control_plugin.h>
+// STL headers
+#include <vector>
+// ros headers
+#include "rqt_gui_cpp/plugin.h"
+#include "geometry_msgs/msg/twist.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "rclcpp_action/rclcpp_action.hpp"
+#include "geometry_msgs/msg/pose_stamped.h"
+#include "ament_index_cpp/get_package_share_directory.hpp"
 
+#include "botanbot_gui/robot_controller.hpp"
+#include "ui_control_plugin.h"
 
 namespace botanbot_gui
 {
@@ -137,7 +134,7 @@ protected:
   // RCLCPP node
   rclcpp::Node::SharedPtr node_;
   // ROS2 oublisher to publish velocity commands , for maual robot jogging
-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
   // QT timer to update robot states and publish velocity commands(if user is doing manual jog)
   QPointer<QTimer> timer_;
 
@@ -151,4 +148,4 @@ private:
 
 }  // namespace botanbot_gui
 
-#endif  // BOTANBOT_GUI_INCLUDE_BOTANBOT_GUI_CONTROL_PLUGIN_HPP_
+#endif  // BOTANBOT_GUI__CONTROL_PLUGIN_HPP_

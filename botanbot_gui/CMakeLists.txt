@@ -39,61 +39,45 @@ include_directories(SYSTEM ${THIS_PACKAGE_INCLUDE_DIRS})
 include_directories(include ${catkin_INCLUDE_DIRS})
 link_directories(${catkin_LIBRARY_DIRS})
 
-set(botanbot_gui_SRCS
-  src/control_plugin.cpp
-  src/RobotController.cpp
- )
+set(botanbot_gui_SRCS src/control_plugin.cpp
+                      src/robot_controller.cpp)
 
-set(botanbot_gui_HDRS
-  include/botanbot_gui/control_plugin.hpp
-  include/botanbot_gui/RobotController.hpp
-)
+set(botanbot_gui_HDRS include/botanbot_gui/control_plugin.hpp
+                      include/botanbot_gui/robot_controller.hpp)
 
-set(botanbot_gui_UIS
-  resources/control_plugin.ui
-)
+set(botanbot_gui_UIS  resources/control_plugin.ui)
 
-include_directories(
-  include
-)
+include_directories(include)
 
 qt5_wrap_cpp(botanbot_gui_MOCS ${botanbot_gui_HDRS})
 qt5_wrap_ui(botanbot_gui_UIS_H ${botanbot_gui_UIS})
 
-add_library(${PROJECT_NAME} SHARED
-  ${botanbot_gui_SRCS}
-  ${botanbot_gui_MOCS}
-  ${botanbot_gui_UIS_H}
-)
+add_library(${PROJECT_NAME} SHARED  ${botanbot_gui_SRCS}
+                                    ${botanbot_gui_MOCS}
+                                    ${botanbot_gui_UIS_H})
 
 set(library_name ${PROJECT_NAME})
 
 set(dependencies
-geometry_msgs
-nav2_util
-nav2_lifecycle_manager
-nav2_msgs
-nav_msgs
-pluginlib
-Qt5
-rclcpp
-rclcpp_lifecycle
-std_msgs
-tf2_geometry_msgs
-behaviortree_cpp_v3
-nav2_behavior_tree
-qt_gui_cpp
-rqt_gui_cpp
-)
+    geometry_msgs
+    nav2_util
+    nav2_lifecycle_manager
+    nav2_msgs
+    nav_msgs
+    pluginlib
+    Qt5
+    rclcpp
+    rclcpp_lifecycle
+    std_msgs
+    tf2_geometry_msgs
+    behaviortree_cpp_v3
+    nav2_behavior_tree
+    qt_gui_cpp
+    rqt_gui_cpp)
 
-ament_target_dependencies(${library_name}
-  ${dependencies}
-)
+ament_target_dependencies(${library_name} ${dependencies})
 
-target_include_directories(${library_name} PUBLIC
-  ${Qt5Widgets_INCLUDE_DIRS}
-  ${OGRE_INCLUDE_DIRS}
-)
+target_include_directories(${library_name} PUBLIC ${Qt5Widgets_INCLUDE_DIRS} ${OGRE_INCLUDE_DIRS})
 
 #Install Directory
 install(
@@ -126,5 +110,4 @@ pluginlib_export_plugin_description_file(rqt_gui "plugin.xml")
 ament_export_include_directories(include)
 ament_export_libraries(${PROJECT_NAME})
 ament_export_dependencies(rosidl_default_runtime)
-
 ament_package()

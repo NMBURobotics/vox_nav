@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "botanbot_gui/control_plugin.hpp"
+#include <string>
+#include <memory>
 
-#include <pluginlib/class_list_macros.hpp>
-#include <sensor_msgs/image_encodings.hpp>
+#include "pluginlib/class_list_macros.hpp"
+#include "sensor_msgs/image_encodings.hpp"
+
+#include "botanbot_gui/control_plugin.hpp"
 
 namespace botanbot_gui
 {
@@ -39,6 +42,8 @@ void ControlPlugin::initPlugin(qt_gui_cpp::PluginContext & context)
   basic_timer_ = new QTimer(widget_);
 
   robot_controller_ = new RobotController();
+
+  node_ = rclcpp::Node::make_shared("control_plugin_rclcpp_node");
 
   ui_.setupUi(widget_);
 
@@ -97,8 +102,6 @@ void ControlPlugin::initPlugin(qt_gui_cpp::PluginContext & context)
     ui_.cancelAllGoals, SIGNAL(pressed()), this,
     SLOT(onCancelAllGoals()));
 
-  node_ = rclcpp::Node::make_shared("ControlPlugin");
-
   RCLCPP_INFO(node_->get_logger(), "Creating Robot Controller");
 
   /**
@@ -109,7 +112,7 @@ void ControlPlugin::initPlugin(qt_gui_cpp::PluginContext & context)
   timer_->connect(timer_, SIGNAL(timeout()), this, SLOT(teleoperation()));
   timer_->connect(timer_, SIGNAL(timeout()), this, SLOT(updateRobotStates()));
 
-  publisher_ =
+  cmd_vel_publisher_ =
     node_->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
 
   std::cout << "Initialized plugin . . " << std::endl;
@@ -151,13 +154,12 @@ void ControlPlugin::onStopButtonClick()
 
   twist.linear.x = speed;
   twist.angular.z = turn;
-  publisher_->publish(twist);
+  cmd_vel_publisher_->publish(twist);
 }
 
 void ControlPlugin::onCancelAllGoals()
 {
   std::cout << "Cancelling all goals" << std::endl;
-
   robot_controller_->cancelGoals();
 }
 
@@ -213,7 +215,7 @@ void ControlPlugin::teleoperation()
   twist.angular.z = turn;
 
   if (ui_.lrSlider->value() != 0 || ui_.drSlider->value() != 0) {
-    publisher_->publish(twist);
+    cmd_vel_publisher_->publish(twist);
   }
 }
 
@@ -279,7 +281,6 @@ void ControlPlugin::onGazeboStandaloneButtonClick()
 
 void ControlPlugin::onGazeboNavigationFullButtonClick()
 {
-
   // get string text of selected robot
   std::string selected_gazebo_world_name = ui_.gazebo_city_combobox->currentText().toStdString();
 

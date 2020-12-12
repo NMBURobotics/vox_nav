@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BOTANBOT_GUI_INCLUDE_BOTANBOT_GUI_ROBOTCONTROLLER_HPP_
-#define BOTANBOT_GUI_INCLUDE_BOTANBOT_GUI_ROBOTCONTROLLER_HPP_
+#ifndef BOTANBOT_GUI__ROBOTCONTROLLER_HPP_
+#define BOTANBOT_GUI__ROBOTCONTROLLER_HPP_
 
 // STL headers
 #include <vector>
@@ -99,12 +99,11 @@ private:
   // tf buffer to get transfroms
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   // tf listner for tf transforms
-  std::shared_ptr<tf2_ros::TransformListener>
-  tf_listener_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
   // A client to cancel ongoing waypoint following
   rclcpp_action::Client<nav2_msgs::action::FollowWaypoints>::SharedPtr
     waypoint_follower_action_client_;
 };
 }  // namespace botanbot_gui
 
-#endif  // BOTANBOT_GUI_INCLUDE_BOTANBOT_GUI_ROBOTCONTROLLER_HPP_
+#endif  // BOTANBOT_GUI__ROBOTCONTROLLER_HPP_
