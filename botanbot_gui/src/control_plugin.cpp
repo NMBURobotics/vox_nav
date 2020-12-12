@@ -185,7 +185,7 @@ void ControlPlugin::onToChargeStationButtonClick()
 
 void ControlPlugin::onAlongPredefinedWaypointsButtonClick()
 {
-  std::string this_package_path = ament_index_cpp::get_package_share_directory(
+  /*std::string this_package_path = ament_index_cpp::get_package_share_directory(
     "botanbot_gps_waypoint_follower");
 
   std::string this_package_bash_files_dir = this_package_path +
@@ -195,7 +195,7 @@ void ControlPlugin::onAlongPredefinedWaypointsButtonClick()
   system(this_package_make_bash_files_executable_command.c_str());
 
   std::string bringup_command = this_package_path + "/../../scripts/wpf_run.sh";
-  system(bringup_command.c_str());
+  system(bringup_command.c_str());*/
 }
 
 void ControlPlugin::teleoperation()
