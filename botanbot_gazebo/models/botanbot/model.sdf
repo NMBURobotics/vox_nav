@@ -626,24 +626,6 @@
                     </mesh>
                 </geometry>
             </visual>
-            <!--
-            <sensor name="gps" type="gps">
-                <always_on>true</always_on>
-                <update_rate>10</update_rate>
-                <gps>
-                    <position_sensing>
-                        <horizontal></horizontal>
-                        <vertical></vertical>
-                    </position_sensing>
-                </gps>
-                <plugin name="gps" filename="libgazebo_ros_gps_sensor.so">
-                    <ros>
-                        <namespace>/gps</namespace>
-                        <remapping>~/out:=fix</remapping>
-                    </ros>
-                </plugin>
-            </sensor>
-            -->
         </link>
         <joint name="gps_joint" type="fixed">
             <parent>base_link</parent>

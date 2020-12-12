@@ -6,7 +6,6 @@ from sensor_msgs.msg import NavSatFix
 from ament_index_python.packages import get_package_share_directory
 import os
 
-from ruamel.yaml import YAML
 import numpy as np
 import sys
 from threading import Thread, Lock
