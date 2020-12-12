@@ -167,7 +167,6 @@ void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   last_update_time_ = world_->SimTime();
 
-
   fix_publisher_ =
     node_->create_publisher<sensor_msgs::msg::NavSatFix>(fix_topic_, 10);
   velocity_publisher_ = node_->create_publisher<geometry_msgs::msg::Vector3Stamped>(
@@ -185,7 +184,7 @@ void GazeboRosGps::Reset()
   last_update_time_ = world_->SimTime();
 }
 
-void GazeboRosGps::dynamicReconfigureCallback(GNSSConfig & config, uint32_t level)
+/*void GazeboRosGps::dynamicReconfigureCallback(GNSSConfig & config, uint32_t level)
 {
   using sensor_msgs::msg::NavSatStatus;
   if (level == 1) {
@@ -208,7 +207,7 @@ void GazeboRosGps::dynamicReconfigureCallback(GNSSConfig & config, uint32_t leve
     config.SERVICE_COMPASS = (fix_.status.service & NavSatStatus::SERVICE_COMPASS);
     config.SERVICE_GALILEO = (fix_.status.service & NavSatStatus::SERVICE_GALILEO);
   }
-}
+}*/
 
 ////////////////////////////////////////////////////////////////////////////////
 // Update the controller

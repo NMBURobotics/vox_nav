@@ -109,10 +109,9 @@ ament_target_dependencies(gazebo_ros_velodyne_laser
   "sensor_msgs"
 )
 ament_export_libraries(gazebo_ros_velodyne_laser)
+
 #gazebo_ros_gps
 add_library(gazebo_ros_gps SHARED plugins/gazebo_ros_gps.cpp)
-target_include_directories(gazebo_ros_gps PUBLIC ${ignition-common3_INCLUDE_DIRS})
-target_link_libraries(gazebo_ros_gps ${ignition-common3_LIBRARIES})
 ament_target_dependencies(gazebo_ros_gps
   "gazebo_dev"
   "gazebo_ros"

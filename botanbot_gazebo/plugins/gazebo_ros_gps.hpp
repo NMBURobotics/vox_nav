@@ -82,7 +82,7 @@ protected:
   virtual void Reset();
   virtual void OnUpdate();
 
-  void dynamicReconfigureCallback(GazeboRosGps::GNSSConfig & config, uint32_t level);
+  /*void dynamicReconfigureCallback(GazeboRosGps::GNSSConfig & config, uint32_t level);*/
 
 private:
   gazebo::physics::WorldPtr world_;
@@ -109,8 +109,8 @@ private:
   double radius_north_;
   double radius_east_;
 
-  SensorModel3 position_error_model_;
-  SensorModel3 velocity_error_model_;
+  gazebo::SensorModel3 position_error_model_;
+  gazebo::SensorModel3 velocity_error_model_;
 
   // UpdateTimer updateTimer;
   gazebo::event::ConnectionPtr updateConnection_;
