@@ -1,5 +1,6 @@
 //=================================================================================================
 // Copyright (c) 2012, Johannes Meyer, TU Darmstadt
+// Modification Copyright (c) 2020, Fetullah Atas
 // All rights reserved.
 
 // Redistribution and use in source and binary forms, with or without

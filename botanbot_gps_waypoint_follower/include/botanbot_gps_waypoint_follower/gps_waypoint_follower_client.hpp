@@ -11,8 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#ifndef BOTANBOT_GPS_WAYPOINT_FOLLOWER__WAYPOINT_FOLLOWER_CLIENT_HPP_
-#define BOTANBOT_GPS_WAYPOINT_FOLLOWER__WAYPOINT_FOLLOWER_CLIENT_HPP_
+#ifndef BOTANBOT_GPS_WAYPOINT_FOLLOWER__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#define BOTANBOT_GPS_WAYPOINT_FOLLOWER__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+
+#include <vector>
+#include <string>
+#include <memory>
 
 #include "nav2_lifecycle_manager/lifecycle_manager_client.hpp"
 #include "nav2_msgs/action/follow_waypoints.hpp"
@@ -21,6 +25,7 @@
 #include "geometry_msgs/msg/point32.hpp"
 #include "nav2_waypoint_follower/waypoint_follower.hpp"
 #include "nav2_msgs/action/follow_gps_waypoints.hpp"
+
 /**
  * @brief namespace for way point following, points are from a yaml file
  *
@@ -72,29 +77,29 @@ public:
    * @return true
    * @return false
    */
-  ActionStatus current_goal_status() const;
+  bool is_goal_done() const;
 
   /**
  * @brief given a parameter name on the yaml file, loads this parameter as sensor_msgs::msg::NavSatFix
  *  Note that this parameter needs to be an array of doubles
  *
- * @param param_name
  * @return sensor_msgs::msg::NavSatFix
  */
   std::vector<sensor_msgs::msg::NavSatFix>
-  loadGPSWaypointsFromYAML(std::string waypoint_name_prefix, int num_waypoints);
-
-  void resultCallback(
-    const rclcpp_action::ClientGoalHandle
-    <ClientT>::WrappedResult & result);
+  loadGPSWaypointsFromYAML();
 
   void goalResponseCallback(
-    std::shared_future<rclcpp_action::ClientGoalHandle
-    <ClientT>::SharedPtr> future);
+    std::shared_future<GPSWaypointFollowerGoalHandle::SharedPtr> future);
+
+  void feedbackCallback(
+    GPSWaypointFollowerGoalHandle::SharedPtr,
+    const std::shared_ptr<const ClientT::Feedback> feedback);
+
+  void resultCallback(const GPSWaypointFollowerGoalHandle::WrappedResult & result);
 
 protected:
-  ActionStatus current_goal_status_;
-
+  bool goal_done_;
+  rclcpp::TimerBase::SharedPtr timer_;
   // client to connect waypoint follower service(FollowWaypoints)
   rclcpp_action::Client<ClientT>::SharedPtr
     gps_waypoint_follower_action_client_;
@@ -108,4 +113,4 @@ protected:
 };
 }  // namespace botanbot_gps_waypoint_follower
 
-#endif  // BOTANBOT_GPS_WAYPOINT_FOLLOWER__WAYPOINT_FOLLOWER_CLIENT_HPP_
+#endif  // BOTANBOT_GPS_WAYPOINT_FOLLOWER__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
