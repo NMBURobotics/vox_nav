@@ -1,17 +1,10 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-
 from sensor_msgs.msg import NavSatFix
-from ament_index_python.packages import get_package_share_directory
-import os
-
-import numpy as np
-import sys
 from threading import Thread, Lock
 
 kFrequencyToSaveGPSPoint = 2.0
-
 
 class GPSWaypoitCollector(Node):
         
@@ -36,9 +29,6 @@ class GPSWaypoitCollector(Node):
         self.mutex.release()
         self.is_first_msg_recieved = True 
 
-
-
-
     def peroidic_callback(self):
         if(self.is_first_msg_recieved):
             self.mutex.acquire()
@@ -48,8 +38,6 @@ class GPSWaypoitCollector(Node):
             input("PRESS ENTER TO COLLECT NEXT WAYPOINT ")
             self.index = self.index+1
             self.mutex.release()
-
-
 
 def main(args=None):
     rclpy.init(args=args)
@@ -63,7 +51,6 @@ def main(args=None):
     # when the garbage collector destroys the node object)
     gps_waypoint_collector.destroy_node()
     rclpy.shutdown()
-
 
 if __name__ == '__main__':
     main()
