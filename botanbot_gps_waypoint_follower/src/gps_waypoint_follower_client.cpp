@@ -21,7 +21,7 @@
 namespace botanbot_gps_waypoint_follower
 {
 GPSWayPointFollowerClient::GPSWayPointFollowerClient()
-: Node("GPSWaypointFollowerClient"), goal_done_(false)
+: Node("gps_waypoint_follower_rclcpp_node"), goal_done_(false)
 {
   gps_waypoint_follower_action_client_ =
     rclcpp_action::create_client<ClientT>(
