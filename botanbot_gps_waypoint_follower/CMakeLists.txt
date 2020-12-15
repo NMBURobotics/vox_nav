@@ -23,8 +23,11 @@ include_directories(
 )
 
 set(gps_client_executable_name gps_waypoint_follower_client)
-add_executable(${gps_client_executable_name} src/gps_waypoint_follower_client.cpp)
 
+add_executable(${gps_client_executable_name}
+  src/gps_waypoint_follower_client.cpp
+)
+ 
 set(dependencies
   rclcpp
   rclcpp_action
@@ -36,20 +39,28 @@ set(dependencies
   nav2_core
   nav2_waypoint_follower
   tf2_ros
-  robot_localization)
+  robot_localization
+)
 
-ament_target_dependencies(${gps_client_executable_name} ${dependencies})
-target_link_libraries(${gps_client_executable_name})
+ament_target_dependencies(${gps_client_executable_name}
+  ${dependencies}
+)
 
+target_link_libraries(${gps_client_executable_name} )
+
+ 
 install(TARGETS ${gps_client_executable_name}
-  RUNTIME DESTINATION lib/${PROJECT_NAME})
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
+)
 
 install(DIRECTORY include/
-       DESTINATION include/)
+  DESTINATION include/
+)
 
 install(
-  DIRECTORY launch params
-  DESTINATION share/${PROJECT_NAME})
+  DIRECTORY launch params 
+  DESTINATION share/${PROJECT_NAME}
+)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -57,5 +68,5 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_include_directories(include)
-ament_export_dependencies(${dependencies})
+
 ament_package()

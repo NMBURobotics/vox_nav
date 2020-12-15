@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 #ifndef BOTANBOT_GPS_WAYPOINT_FOLLOWER__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
 #define BOTANBOT_GPS_WAYPOINT_FOLLOWER__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
 
@@ -25,7 +26,9 @@
 #include "geometry_msgs/msg/point32.hpp"
 #include "nav2_waypoint_follower/waypoint_follower.hpp"
 #include "nav2_msgs/action/follow_gps_waypoints.hpp"
-
+#include "tf2/LinearMath/Quaternion.h"
+#include "tf2/convert.h"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 /**
  * @brief namespace for way point following, points are from a yaml file
  *
@@ -80,12 +83,12 @@ public:
   bool is_goal_done() const;
 
   /**
- * @brief given a parameter name on the yaml file, loads this parameter as sensor_msgs::msg::NavSatFix
+ * @brief given a parameter name on the yaml file, loads this parameter as nav2_msgs::msg::OrientedNavSatFix
  *  Note that this parameter needs to be an array of doubles
  *
- * @return sensor_msgs::msg::NavSatFix
+ * @return nav2_msgs::msg::OrientedNavSatFix
  */
-  std::vector<sensor_msgs::msg::NavSatFix>
+  std::vector<nav2_msgs::msg::OrientedNavSatFix>
   loadGPSWaypointsFromYAML();
 
   void goalResponseCallback(
@@ -109,7 +112,7 @@ protected:
 
   GPSWaypointFollowerGoalHandle::SharedPtr gps_waypoint_follower_goalhandle_;
 
-  std::vector<sensor_msgs::msg::NavSatFix> gps_waypoints_from_yaml_;
+  std::vector<nav2_msgs::msg::OrientedNavSatFix> gps_poses_from_yaml_;
 };
 }  // namespace botanbot_gps_waypoint_follower
 

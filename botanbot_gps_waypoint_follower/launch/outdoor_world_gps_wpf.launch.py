@@ -44,6 +44,7 @@ def generate_launch_description():
     driver_node = LifecycleNode(package='botanbot_gps_waypoint_follower',
                                 executable='gps_waypoint_follower_client',
                                 name=node_name,
+                                namespace='',
                                 output='screen',
                                 parameters=[parameter_file],
                                 )

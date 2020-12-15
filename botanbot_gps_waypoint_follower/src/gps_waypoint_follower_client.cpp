@@ -15,7 +15,6 @@
 #include <string>
 #include <vector>
 #include <memory>
-
 #include "botanbot_gps_waypoint_follower/gps_waypoint_follower_client.hpp"
 
 namespace botanbot_gps_waypoint_follower
@@ -35,11 +34,11 @@ GPSWayPointFollowerClient::GPSWayPointFollowerClient()
     std::bind(&GPSWayPointFollowerClient::startWaypointFollowing, this));
   // number of poses that robot will go throug, specified in yaml file
   this->declare_parameter("waypoints");
-  gps_waypoints_from_yaml_ = loadGPSWaypointsFromYAML();
+  gps_poses_from_yaml_ = loadGPSWaypointsFromYAML();
   RCLCPP_INFO(
     this->get_logger(),
     "Loaded %i GPS waypoints from YAML, gonna pass them to FollowGPSWaypoints...",
-    gps_waypoints_from_yaml_.size());
+    gps_poses_from_yaml_.size());
   RCLCPP_INFO(
     this->get_logger(),
     "Created an Instance of GPSWayPointFollowerClient");
@@ -74,15 +73,15 @@ void GPSWayPointFollowerClient::startWaypointFollowing()
   }
   gps_waypoint_follower_goal_ = ClientT::Goal();
   // Send the goal poses
-  gps_waypoint_follower_goal_.waypoints = gps_waypoints_from_yaml_;
+  gps_waypoint_follower_goal_.gps_poses = gps_poses_from_yaml_;
 
   RCLCPP_INFO(
     this->get_logger(),
-    "Sending a path of %zu waypoints:", gps_waypoint_follower_goal_.waypoints.size());
-  for (auto waypoint : gps_waypoint_follower_goal_.waypoints) {
+    "Sending a path of %zu gps_poses:", gps_waypoint_follower_goal_.gps_poses.size());
+  for (auto pose : gps_waypoint_follower_goal_.gps_poses) {
     RCLCPP_DEBUG(
       this->get_logger(),
-      "\t(%lf, %lf)", waypoint.latitude, waypoint.longitude);
+      "\t(%lf, %lf)", pose.position.latitude, pose.position.longitude);
   }
 
   auto goal_options =
@@ -101,35 +100,38 @@ void GPSWayPointFollowerClient::startWaypointFollowing()
     gps_waypoint_follower_goal_, goal_options);
 }
 
-std::vector<sensor_msgs::msg::NavSatFix>
+std::vector<nav2_msgs::msg::OrientedNavSatFix>
 GPSWayPointFollowerClient::loadGPSWaypointsFromYAML()
 {
   std::vector<std::string> waypoints_vector =
     this->get_parameter("waypoints").as_string_array();
-  std::vector<sensor_msgs::msg::NavSatFix> gps_waypoint_msg_vector;
+  std::vector<nav2_msgs::msg::OrientedNavSatFix> gps_waypoint_msg_vector;
   for (auto && curr_waypoint : waypoints_vector) {
     try {
       this->declare_parameter(curr_waypoint);
       std::vector<double> gps_waypoint_vector =
         this->get_parameter(curr_waypoint).as_double_array();
       // throw exception if incorrect format was detected from yaml file reading
-      if (gps_waypoint_vector.size() != 3) {
+      if (gps_waypoint_vector.size() != 4) {
         RCLCPP_FATAL(
           this->get_logger(),
           "GPS waypoint that was loaded from YAML file seems to have incorrect"
-          " form, the right format is; wpN: [Lat, Long, Alt] with double types");
+          " form, the right format is; wpN: [Lat, Long, Alt, yaw(in radians)] with double types");
         throw rclcpp::exceptions::InvalidParametersException(
                 "[ERROR] See above error"
-                " the right format is; wpN: [Lat, Long, Alt] with double types"
-                "E.g gps_waypoint0; [0.0, 0.0, 0.0], please chechk YAML file");
+                " the right format is; wpN: [Lat, Long, Alt, yaw(in radians)] with double types"
+                "E.g gps_waypoint0; [0.0, 0.0, 0.0, 0.0], please chechk YAML file");
       }
       // construct the gps waypoint and push them to their vector
       // lat, long , alt
-      sensor_msgs::msg::NavSatFix gps_point;
-      gps_point.latitude = gps_waypoint_vector.at(0);
-      gps_point.longitude = gps_waypoint_vector.at(1);
-      gps_point.altitude = gps_waypoint_vector.at(2);
-      gps_waypoint_msg_vector.push_back(gps_point);
+      nav2_msgs::msg::OrientedNavSatFix gps_pose;
+      gps_pose.position.latitude = gps_waypoint_vector.at(0);
+      gps_pose.position.longitude = gps_waypoint_vector.at(1);
+      gps_pose.position.altitude = gps_waypoint_vector.at(2);
+      tf2::Quaternion gps_pose_quat;
+      gps_pose_quat.setRPY(0.0, 0.0, gps_waypoint_vector.at(3));
+      gps_pose.orientation = tf2::toMsg(gps_pose_quat);
+      gps_waypoint_msg_vector.push_back(gps_pose);
     } catch (const std::exception & e) {
       std::cerr << e.what() << '\n';
     }
