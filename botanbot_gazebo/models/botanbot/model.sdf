@@ -597,7 +597,7 @@
                 <ray>
                     <scan>
                         <horizontal>
-                            <samples>512</samples>
+                            <samples>1875</samples>
                             <resolution>1</resolution>
                             <min_angle>-3.14</min_angle>
                             <max_angle>3.14</max_angle>
@@ -630,7 +630,7 @@
             </sensor>
         </link>
         <link name="imu_link">
-            <pose>0.7 0.5 0.6 0 0 0</pose>
+            <pose>0 0 1.2 0 0 0</pose>
             <inertial>
                 <inertia>
                     <ixx>0.001</ixx>
@@ -649,42 +649,18 @@
                 <imu>
                     <angular_velocity>
                         <x>
-                            <noise type="gaussian">
-                                <mean>0.0</mean>
-                                <stddev>2e-4</stddev>
-                            </noise>
                         </x>
                         <y>
-                            <noise type="gaussian">
-                                <mean>0.0</mean>
-                                <stddev>2e-4</stddev>
-                            </noise>
                         </y>
                         <z>
-                            <noise type="gaussian">
-                                <mean>0.0</mean>
-                                <stddev>2e-4</stddev>
-                            </noise>
                         </z>
                     </angular_velocity>
                     <linear_acceleration>
                         <x>
-                            <noise type="gaussian">
-                                <mean>0.0</mean>
-                                <stddev>1.7e-2</stddev>
-                            </noise>
                         </x>
                         <y>
-                            <noise type="gaussian">
-                                <mean>0.0</mean>
-                                <stddev>1.7e-2</stddev>
-                            </noise>
                         </y>
                         <z>
-                            <noise type="gaussian">
-                                <mean>0.0</mean>
-                                <stddev>1.7e-2</stddev>
-                            </noise>
                         </z>
                     </linear_acceleration>
                 </imu>
