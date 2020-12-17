@@ -93,10 +93,15 @@ ament_target_dependencies(gazebo_ros_velodyne_laser ${dependencies})
 add_library(gazebo_ros_gps SHARED src/gazebo_ros_gps.cpp)
 ament_target_dependencies(gazebo_ros_gps ${dependencies})
 
+# BOTANBOT HECTOR imu SENSOR GAZEBO PLUGIN SHARED LIBRARY
+add_library(gazebo_ros_imu SHARED src/gazebo_ros_imu.cpp)
+ament_target_dependencies(gazebo_ros_imu ${dependencies})
+
 ament_export_libraries(botanbot_ackermann_drive 
                        realsense_gazebo_plugin 
                        gazebo_ros_velodyne_laser 
-                       gazebo_ros_gps)
+                       gazebo_ros_gps
+                       gazebo_ros_imu)
 
 ################################################################################
 # Install
@@ -106,6 +111,7 @@ install(TARGETS
         realsense_gazebo_plugin
         gazebo_ros_velodyne_laser
         gazebo_ros_gps
+        gazebo_ros_imu
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
