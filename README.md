@@ -126,6 +126,9 @@ Botanbot is a simple 4 wheeled , ackermann drived mobile robot. It is simulated 
 
 ### Related to Google Cartographer 3D SLAM
 
+#### Notice
+Unfourtunately Cartographer has not been ported to ROS2 completely ATM. We can still create maps and visualize results, the `botanbot_cartogrpaher` is correctly configured and tested. But the node named `cartographer_asset_writter` has not been ported,this node is used to recieve actual 3D map,therefore we cannot exploit created map now. Hopefully soon enough this will be available. For exploting the actual maps created see the next SLAM option LIDAR ROS2 3D below this section.
+
 We have added configuration package(`botanbot_cartogrpaher`) in order to build 3D maps using google cartogrpaher. The main motivation behind this is; we have thoughts about switching envoirnment representationn from 2D to 3D, in that case a global prebuilt map of envoirnment might be necesarry(e.g a `.pcd` file to load instead of `.pgm`). 
 
 In order to use the provided configuration package, one will ned to create ros2 bag files with required topics. For now we use 1 LIDAR and 1 IMU(Can be changed to 2 LIDAR in future). In order to record a bag file this the required topics, do the following; 
@@ -142,6 +145,29 @@ ros2 launch botanbot_cartographer cartographer.launch.py use_sim_time:=true bag_
 ```
 Wait for cartogrpaher to finish and do optimizations on the map. 
 
+### Related to LIDAR ROS2 3D SLAM PACKAGE
+
+As second(but primary for now) SLAM package we have [lidarslam_ros2](https://github.com/jediofgever/lidarslam_ros2) package. The package is able to generate nice maps based on GICP/NDT. Underlying they also utilize hdl graph. 
+
+This package will be auomatically cloned to workspace with the vcs tool. Following same fashion with google cartogrpaher, we need to record bag files and generate maps with data inside this bags. Assuming that we have recorded bag file that contains point cloud and imu(optional) with topic names `velodyne_points`, `imu/data`, we can generate maps with ;
+
+```bash
+ros2 bag play -r 0.5 rosbag2_2020_12_18-10_25_37/
+ros2 launch lidarslam lidarslam.launch.py
+rviz2 -d src/lidarslam_ros2/lidarslam/rviz/mapping.rviz
+```
+
+Note; if the sensor topic names are different then you need to recorrect them in tha launch file `lidarslam.launch.py`
+execute all commands in seperate terminals. 
+Here are a few example maps crreated when botanbot was taking a tour to gas station and retruning back. 
+
+![.](assets/slam_0.jpg)
+
+![.](assets/slam_1.jpg)
+
+![.](assets/slam_2.jpg)
+
+TODO; Cretae maps in tomato field...
 
 ### Related presentations
 * [Possible ADs/CONSs of 3D enviornment rep. in Context of Uneven Terrain Nav.](assets/presentation_0.pdf)
