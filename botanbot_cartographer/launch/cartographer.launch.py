@@ -21,11 +21,14 @@ from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
 from launch.actions import IncludeLaunchDescription
+from launch.actions import ExecuteProcess
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import ThisLaunchFileDir
 
 def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    bag_file = LaunchConfiguration('bag_file', default='~/rosbag2_2020_12_18-10_25_37')
+
     botanbot_cartographer_prefix = get_package_share_directory('botanbot_cartographer')
     cartographer_config_dir = LaunchConfiguration('cartographer_config_dir', 
                                                     default=os.path.join(botanbot_cartographer_prefix, 'config'))
@@ -55,8 +58,7 @@ def generate_launch_description():
             executable='cartographer_node',
             name='cartographer_node',
             remappings=[('points2', 'velodyne_points'),
-                        ('imu', 'imu/data'),
-                        ('odom', 'odometry/wheel')],           
+                        ('imu', 'imu/data')],           
             output='screen',
             parameters=[{'use_sim_time': use_sim_time}],
             arguments=['-configuration_directory', cartographer_config_dir, '-configuration_basename', configuration_basename]),
@@ -75,6 +77,10 @@ def generate_launch_description():
             PythonLaunchDescriptionSource([ThisLaunchFileDir(), '/occupancy_grid.launch.py']),
             launch_arguments={'use_sim_time': use_sim_time, 'resolution': resolution, 'publish_period_sec': publish_period_sec}.items(),
         ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource([ThisLaunchFileDir(), '/robot_state_publisher.launch.py']),
+            launch_arguments={'use_sim_time': use_sim_time}.items(),
+        ),
 
         Node(
             package='rviz2',
@@ -83,4 +89,9 @@ def generate_launch_description():
             arguments=['-d', rviz_config_dir],
             parameters=[{'use_sim_time': use_sim_time}],
             output='screen'),
+
+       ExecuteProcess(
+            cmd=['ros2', 'bag', 'play', bag_file],
+            output='screen'
+        )    
     ])

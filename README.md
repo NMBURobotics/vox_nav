@@ -77,7 +77,7 @@ successfully.
 
 ` rqt --force-discover`
 
-![.](docs/gui_1.png)
+![.](assets/gui_1.png)
 
 The rqt window should open as above. You should now find our plugin under; 
 
@@ -85,7 +85,7 @@ Plugins -> Visualization -> Control Plugin.
 
 Click on Control Plugin and you would be able to see; 
 
-![.](docs/gui_2.png)
+![.](assets/gui_2.png)
 
 ## Interact with GUI
 Click on Start Gazebo Stand Alone, to start botanbot simulation. Note that the Gazebo worlds we use are large, so your computer needs to have an dedicated GPU,it takes apprx. 10 seconds for simulation to start in my case. After a while you should see Gazebo starting. 
@@ -95,7 +95,7 @@ right click and then `follow` botanbot model. This should put the focus onto bot
 
 You can also click on start RVIZ and you should be able to see sensor data and robot model in rviz ; 
 
-![.](docs/rviz_1.png)
+![.](assets/rviz_1.png)
 
 This Gazebo world includes hills , up and downs which tries to be more inclusive for case of agricultural robot.
 
@@ -117,10 +117,32 @@ Botanbot is a simple 4 wheeled , ackermann drived mobile robot. It is simulated 
 
 ### Botanbot navigation in farming world
 
-![.](docs/botanbot_2.png)
-
+![.](assets/botanbot_2.png)
 
 ### Botanbot in Hilly Gazebo world
-![.](docs/botanbot_0.jpg)
+![.](assets/botanbot_0.jpg)
 
-![.](docs/botanbot_1.jpg)
+![.](assets/botanbot_1.jpg)
+
+### Related to Google Cartographer 3D SLAM
+
+We have added configuration files in order to build 3D maps using google cartogrpaher. The main motivation behind this is; 
+As we have thoughts about switching envoirnment representationn from 2D to 3D, then a global prebuilt maps of envoirnment might be necesarry(e.g a `.pcd` file to load instead of `.pgm`). 
+
+In order to use the provided configuration file, one will ned to create a ros2 bag file with required topics. For new we use one LIDAR and 1 IMU. IN order to record a the file with this two topics do the following; 
+
+```bash
+ros2 bag record /velodyne_points /imu/data
+```
+A bag file will be created. Cartogrpaher expects you define the rigid bost transforms between sensor links and robot body frame(base_link). This transfromas are defined in botanbot_cartographer/urdf. You will need to modify translation and roation between velodyne senor and imu sensor. A strict calibration might not be necesarry for this. 
+
+Also see the cartogrpaher.launch.py file and make sure the data topics are reampped coirrectly. After we have the bag file and configuration ready do the following to build the 3D map. 
+
+```bash
+ros2 launch botanbot_cartographer cartographer.launch.py use_sim_time:=true bag_file:=${HOME}/rosbag2_2020_12_18-10_25_37/rosbag2_2020_12_18-10_25_37_0.db3
+```
+Wait for cartogrpaher to finish and do optimizations on the map. 
+
+
+### Related presentations
+* [Possible ADs/CONSs of 3D enviornment rep. in Context of Uneven Terrain Nav.](assets/presentation_0.pdf)
