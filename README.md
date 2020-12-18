@@ -126,17 +126,16 @@ Botanbot is a simple 4 wheeled , ackermann drived mobile robot. It is simulated 
 
 ### Related to Google Cartographer 3D SLAM
 
-We have added configuration files in order to build 3D maps using google cartogrpaher. The main motivation behind this is; 
-As we have thoughts about switching envoirnment representationn from 2D to 3D, then a global prebuilt maps of envoirnment might be necesarry(e.g a `.pcd` file to load instead of `.pgm`). 
+We have added configuration package(`botanbot_cartogrpaher`) in order to build 3D maps using google cartogrpaher. The main motivation behind this is; we have thoughts about switching envoirnment representationn from 2D to 3D, in that case a global prebuilt map of envoirnment might be necesarry(e.g a `.pcd` file to load instead of `.pgm`). 
 
-In order to use the provided configuration file, one will ned to create a ros2 bag file with required topics. For new we use one LIDAR and 1 IMU. IN order to record a the file with this two topics do the following; 
+In order to use the provided configuration package, one will ned to create ros2 bag files with required topics. For now we use 1 LIDAR and 1 IMU(Can be changed to 2 LIDAR in future). In order to record a bag file this the required topics, do the following; 
 
 ```bash
 ros2 bag record /velodyne_points /imu/data
 ```
-A bag file will be created. Cartogrpaher expects you define the rigid bost transforms between sensor links and robot body frame(base_link). This transfromas are defined in botanbot_cartographer/urdf. You will need to modify translation and roation between velodyne senor and imu sensor. A strict calibration might not be necesarry for this. 
+A bag file will be created. Cartogrpaher expects that you define the rigid bost transforms between sensor links and robot body frame(base_link). This transfromas are defined in `botanbot_cartographer/urdf`. You might need to modify translation and roation between velodyne senor and imu sensor for differnt setup. A strict calibration might not be necesarry betwenn IMU and LIDAR. 
 
-Also see the cartogrpaher.launch.py file and make sure the data topics are reampped coirrectly. After we have the bag file and configuration ready do the following to build the 3D map. 
+Also see the `cartogrpaher.launch.py` file and make sure the data topics are remapped correctly. After we have the bag file and configuration ready, we do the following to build the 3D map. 
 
 ```bash
 ros2 launch botanbot_cartographer cartographer.launch.py use_sim_time:=true bag_file:=${HOME}/rosbag2_2020_12_18-10_25_37/rosbag2_2020_12_18-10_25_37_0.db3
