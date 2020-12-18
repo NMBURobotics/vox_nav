@@ -161,11 +161,11 @@ Note; if the sensor topic names are different then you need to recorrect them in
 execute all commands in seperate terminals. 
 Here are a few example maps crreated when botanbot was taking a tour to gas station and retruning back. 
 
-![.](assets/slam_0.jpg)
+![.](assets/slam_0.png)
 
-![.](assets/slam_1.jpg)
+![.](assets/slam_1.png)
 
-![.](assets/slam_2.jpg)
+![.](assets/slam_2.png)
 
 TODO; Cretae maps in tomato field...
 
