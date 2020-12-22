@@ -1,4 +1,7 @@
 # OUTDOOR_NAV2
+
+Documentation will be moved to here WIP ; https://outdoor-nav2.readthedocs.io/en/main/
+
 A project to develop/adapt a navigation system for outdoor robotics particularly aiming for use-cases in agriculture. 
 
 
