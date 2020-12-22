@@ -124,6 +124,10 @@ Botanbot is a simple 4 wheeled , ackermann drived mobile robot. It is simulated 
 
 ![.](assets/botanbot_1.jpg)
 
+
+### SLAM
+We are exploring the opetantials of various SLAM algorithms in context of agri robotics. So fa 3 approaches has been experimented. The first two experiments were based on SLAM packages that consumed LIDAR.
+
 ### Related to Google Cartographer 3D SLAM
 
 #### Notice
