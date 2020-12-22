@@ -21,6 +21,7 @@ project = 'OUTDOOR_NAV2'
 copyright = '2020, Fetullah Atas'
 author = 'Fetullah Atas'
 
+master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
 
