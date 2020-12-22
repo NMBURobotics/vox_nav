@@ -17,7 +17,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <spdlog/spdlog.h>
-#include "popl.hpp"
+#include "botanbot_openvslam/popl.hpp"
 
 void mono_tracking(
   const std::shared_ptr<openvslam::config> & cfg, const std::string & vocab_file_path,

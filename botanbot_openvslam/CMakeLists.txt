@@ -30,6 +30,7 @@ if(NOT OpenCV_FOUND)
 endif()
 message(STATUS "Use OpenCV ${OpenCV_VERSION}")
 include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(include)
 
 # Eigen
 find_package(Eigen3 3.3 REQUIRED)
@@ -105,7 +106,7 @@ foreach(EXECUTABLE_TARGET IN LISTS EXECUTABLE_TARGETS)
 
     # build
     target_include_directories(${EXECUTABLE_TARGET}
-                               PRIVATE ${OpenVSLAM_SRC_DIR} ${rclcpp_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+                               PRIVATE ${OpenVSLAM_SRC_DIR} ${rclcpp_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} include)
     target_link_libraries(${EXECUTABLE_TARGET}
                           PRIVATE ${OpenVSLAM_LIB} ${rclcpp_LIBRARIES} ${OpenCV_LIBRARIES})
     ament_target_dependencies(${EXECUTABLE_TARGET}
@@ -113,5 +114,5 @@ foreach(EXECUTABLE_TARGET IN LISTS EXECUTABLE_TARGETS)
     install(TARGETS ${EXECUTABLE_TARGET}
             DESTINATION lib/${PROJECT_NAME})
 endforeach()
-
+ament_export_include_directories(include)
 ament_package()

@@ -19,7 +19,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <spdlog/spdlog.h>
-#include "popl.hpp"
+#include "botanbot_openvslam/popl.hpp"
 
 #ifdef USE_STACK_TRACE_LOGGER
 #include <glog/logging.h>
