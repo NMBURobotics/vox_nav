@@ -44,7 +44,7 @@ def generate_launch_description():
             package='botanbot_openvslam',
             executable='run_slam',
             name='run_slam',
-            remappings=[('camera/color/image_raw', 'camera/color/image_raw')],           
+            remappings=[('camera/image_raw', 'camera/color/image_raw')],           
             output='screen',
             arguments=['-v', orb_vocab_file, '-c', config_file, '--map-db', output_map_filename, '-debug']),
 
