@@ -1,5 +1,7 @@
 #ifdef USE_PANGOLIN_VIEWER
 #include <pangolin_viewer/viewer.h>
+#elif USE_SOCKET_PUBLISHER
+#include <socket_publisher/publisher.h>
 #endif
 
 #include <openvslam/system.h>
@@ -19,6 +21,14 @@
 #include <spdlog/spdlog.h>
 #include "botanbot_openvslam/popl.hpp"
 
+#ifdef USE_STACK_TRACE_LOGGER
+#include <glog/logging.h>
+#endif
+
+#ifdef USE_GOOGLE_PERFTOOLS
+#include <gperftools/profiler.h>
+#endif
+
 void mono_tracking(
   const std::shared_ptr<openvslam::config> & cfg, const std::string & vocab_file_path,
   const std::string & mask_img_path, const bool eval_log, const std::string & map_db_path)
@@ -37,6 +47,9 @@ void mono_tracking(
   // and pass the frame_publisher and the map_publisher
 #ifdef USE_PANGOLIN_VIEWER
   pangolin_viewer::viewer viewer(cfg, &SLAM, SLAM.get_frame_publisher(), SLAM.get_map_publisher());
+#elif USE_SOCKET_PUBLISHER
+  socket_publisher::publisher publisher(cfg, &SLAM,
+    SLAM.get_frame_publisher(), SLAM.get_map_publisher());
 #endif
 
   std::vector<double> track_times;
@@ -49,7 +62,7 @@ void mono_tracking(
 
   // run the SLAM as subscriber
   image_transport::Subscriber sub = image_transport::create_subscription(
-    node.get(), "camera/color/image_raw", [&](const sensor_msgs::msg::Image::ConstSharedPtr & msg) {
+    node.get(), "camera/image_raw", [&](const sensor_msgs::msg::Image::ConstSharedPtr & msg) {
       const auto tp_1 = std::chrono::steady_clock::now();
       const auto timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(
         tp_1 - tp_0).count();
@@ -83,11 +96,23 @@ void mono_tracking(
     }
     rclcpp::shutdown();
   }
+#elif USE_SOCKET_PUBLISHER
+  publisher.run();
+  if (SLAM.terminate_is_requested()) {
+    // wait until the loop BA is finished
+    while (SLAM.loop_BA_is_running()) {
+      std::this_thread::sleep_for(std::chrono::microseconds(5000));
+    }
+    rclcpp::shutdown();
+  }
 #endif
 
   // automatically close the viewer
 #ifdef USE_PANGOLIN_VIEWER
   viewer.request_terminate();
+  thread.join();
+#elif USE_SOCKET_PUBLISHER
+  publisher.request_terminate();
   thread.join();
 #endif
 
@@ -125,6 +150,10 @@ void mono_tracking(
 
 int main(int argc, char * argv[])
 {
+#ifdef USE_STACK_TRACE_LOGGER
+  google::InitGoogleLogging(argv[0]);
+  google::InstallFailureSignalHandler();
+#endif
   rclcpp::init(argc, argv);
   rclcpp::uninstall_signal_handlers();
 
@@ -180,6 +209,10 @@ int main(int argc, char * argv[])
     return EXIT_FAILURE;
   }
 
+#ifdef USE_GOOGLE_PERFTOOLS
+  ProfilerStart("slam.prof");
+#endif
+
   // run tracking
   if (cfg->camera_->setup_type_ == openvslam::camera::setup_type_t::Monocular) {
     mono_tracking(
@@ -188,6 +221,10 @@ int main(int argc, char * argv[])
   } else {
     throw std::runtime_error("Invalid setup type: " + cfg->camera_->get_setup_type_string());
   }
+
+#ifdef USE_GOOGLE_PERFTOOLS
+  ProfilerStop();
+#endif
 
   return EXIT_SUCCESS;
 }
