@@ -20,6 +20,7 @@ find_package(OCTOMAP REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(botanbot_utilities REQUIRED)
 find_package(OpenCV REQUIRED
   COMPONENTS
   opencv_highgui
@@ -41,6 +42,7 @@ set(dependencies
   grid_map_ros
   grid_map_msgs
   grid_map_pcl
+  botanbot_utilities
   OpenCV
 )
 

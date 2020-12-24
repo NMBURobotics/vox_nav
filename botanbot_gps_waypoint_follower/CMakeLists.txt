@@ -15,6 +15,7 @@ find_package(nav2_lifecycle_manager REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(robot_localization REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(botanbot_utilities REQUIRED)
 
 nav2_package()
 
@@ -40,6 +41,7 @@ set(dependencies
   nav2_waypoint_follower
   tf2_ros
   robot_localization
+  botanbot_utilities
 )
 
 ament_target_dependencies(${gps_client_executable_name}
