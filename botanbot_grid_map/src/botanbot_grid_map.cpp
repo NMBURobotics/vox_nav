@@ -149,18 +149,15 @@ double BotanbotGridMap::calculateElevationFromPointsInsideGridMapCell(
  */
 int main(int argc, char const * argv[])
 {
-  /*auto gps_waypoint_follower_client_node = std::make_shared
-  <botanbot_grid_map::BotanbotGridMap>();
-while (!rclcpp::ok()) {
-  rclcpp::spin_some(gps_waypoint_follower_client_node);
-}
-rclcpp::shutdown();*/
 
   rclcpp::init(argc, argv);
 
   rclcpp::Node node("grid_map_tutorial_demo");
   auto publisher = node.create_publisher<grid_map_msgs::msg::GridMap>(
     "grid_map", rclcpp::QoS(1).transient_local());
+
+  auto gps_waypoint_follower_client_node = std::make_shared
+    <botanbot_grid_map::BotanbotGridMap>();
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud_ptr = botanbot_utilities::loadPointcloudFromPcd(
     "/home/ros2-foxy/test_map.pcd");
@@ -192,6 +189,17 @@ rclcpp::shutdown();*/
     map.getSize()(0), map.getSize()(1),
     map.getPosition().x(), map.getPosition().y(), map.getFrameId().c_str());
 
+  gps_waypoint_follower_client_node->allocateSpaceForCloudsInsideCells(&map);
+  gps_waypoint_follower_client_node->dispatchWorkingCloudToGridMapCells(pointcloud_ptr, &map);
+  map.add("elevation");
+
+  grid_map::Matrix & gridMapData = map.get("elevation");
+  unsigned int linearGridMapSize = map.getSize().prod();
+
+  // Iterate through grid map and calculate the corresponding height based on the point cloud
+  for (unsigned int linearIndex = 0; linearIndex < linearGridMapSize; ++linearIndex) {
+    gps_waypoint_follower_client_node->processGridMapCell(&map, linearIndex, &gridMapData);
+  }
 
   // Work with grid map in a loop.
   rclcpp::Rate rate(30.0);
@@ -199,21 +207,6 @@ rclcpp::shutdown();*/
 
   while (rclcpp::ok()) {
     rclcpp::Time time = node.now();
-
-    // Add elevation and surface normal (iterating through grid map and adding data).
-    for (grid_map::GridMapIterator it(map); !it.isPastEnd(); ++it) {
-      grid_map::Position position;
-      map.getPosition(*it, position);
-      map.at(
-        "elevation",
-        *it) = -0.04 + 0.2 * std::sin(3.0 * time.seconds() + 5.0 * position.y()) * position.x();
-      Eigen::Vector3d normal(-0.2 * std::sin(3.0 * time.seconds() + 5.0 * position.y()),
-        -position.x() * std::cos(3.0 * time.seconds() + 5.0 * position.y()), 1.0);
-      normal.normalize();
-      map.at("normal_x", *it) = normal.x();
-      map.at("normal_y", *it) = normal.y();
-      map.at("normal_z", *it) = normal.z();
-    }
 
     // Add noise (using Eigen operators).
     map.add("noise", 0.015 * grid_map::Matrix::Random(map.getSize()(0), map.getSize()(1)));
@@ -278,6 +271,7 @@ rclcpp::shutdown();*/
     rclcpp::spin_some(node.get_node_base_interface());
     rate.sleep();
 
-    return 0;
   }
+  return 0;
+
 }

@@ -1,0 +1,56 @@
+grid_map_visualization:
+  ros__parameters:
+    grid_map_topic: /grid_map
+
+    grid_map_visualizations: [elevation_points, noisy_points, filtered_points, map_region, elevation_grid, error_grid, surface_normals, elevation_cells]
+
+    elevation_points:
+      type: point_cloud
+      params:
+        layer: elevation
+
+    noisy_points:
+      type: point_cloud
+      params:
+        layer: elevation_noisy
+
+    filtered_points:
+      type: point_cloud
+      params:
+        layer: elevation_filtered
+
+    map_region:
+      type: map_region
+      params:
+        color: 3289650
+        line_width: 0.003
+
+    elevation_grid:
+      type: occupancy_grid
+      params:
+        layer: elevation
+        data_min: 0.08
+        data_max: -0.16
+
+    error_grid:
+      type: occupancy_grid
+      params:
+        layer: error
+        data_min: -0.15
+        data_max: 0.15
+
+    surface_normals:
+      type: vectors
+      params:
+        layer_prefix: normal_
+        position_layer: elevation
+        scale: 0.06
+        line_width: 0.005
+        color: 15600153 # red
+
+    elevation_cells:
+      type: grid_cells
+      params:
+        layer: elevation
+        lower_threshold: -0.08
+        upper_threshold: 0.0
