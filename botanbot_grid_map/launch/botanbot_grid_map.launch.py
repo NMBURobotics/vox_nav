@@ -19,13 +19,15 @@ def generate_launch_description():
     # Declare launch arguments
     declare_visualization_config_file_cmd = DeclareLaunchArgument(
         'visualization_config',
-        default_value=os.path.join(grid_map_demos_dir, 'config', 'demo.yaml'),
+        default_value=os.path.join(grid_map_demos_dir, 'config',
+                                   'grid_map_visualization_config.yaml'),
         description='Full path to the Gridmap visualization config file to use'
     )
 
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         'rviz_config',
-        default_value=os.path.join(grid_map_demos_dir, 'rviz', 'demo.rviz'),
+        default_value=os.path.join(grid_map_demos_dir, 'rviz',
+                                   'botanbot_grid_map.rviz'),
         description='Full path to the RVIZ config file to use')
 
     # Declare node actions

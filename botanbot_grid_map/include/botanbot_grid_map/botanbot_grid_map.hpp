@@ -33,15 +33,14 @@
 
 
 /**
- * @brief
+ * @brief  client package too utilize grid_map especially with prebuild maps in .pcd formats
  *
  */
 namespace botanbot_grid_map
 {
 
-
 /**
- * @brief
+ * @brief RCLCPP node for handling .pcd files and publishing them as grid_map
  *
  */
 class BotanbotGridMap : public rclcpp::Node
@@ -59,11 +58,15 @@ public:
  */
   ~BotanbotGridMap();
 
-/**
- * @brief
- *
- */
-  void startWaypointFollowing();
+  /**
+   * @brief
+   *
+   * @param cloud
+   * @param grid_map
+   */
+  void initializeGridMapGeometryfromPointcloud(
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+    grid_map::GridMap * grid_map);
 
   /**
    * @brief
@@ -77,20 +80,18 @@ public:
     grid_map::Matrix * gridMapData) const;
 
   /**
-   * @brief Get the Pointcloud Inside Grid Map Cell Border object
-   *
-   * @param index
-   * @return pcl::PointCloud<pcl::PointXYZ>::Ptr
-   */
+  * @brief Get the Pointcloud Inside Grid Map Cell Border object
+  * @param index
+  * @return pcl::PointCloud<pcl::PointXYZ>::Ptr
+  */
   pcl::PointCloud<pcl::PointXYZ>::Ptr  getPointcloudInsideGridMapCellBorder(
     const grid_map::Index & index) const;
 
-
-/**
- * @brief Allocates space for the point clouds.  These point clouds are then filled by
- * dispatchWorkingCloudToGridMapCells function.
- *
- */
+  /**
+   * @brief Allocates space for the point clouds.  These point clouds are then filled by
+   * dispatchCloudToGridMapCells function.
+   *
+   */
   void allocateSpaceForCloudsInsideCells(grid_map::GridMap * grid_map);
 
   /**
@@ -103,7 +104,7 @@ public:
    * and x-y borders of the cell in the grid map.
    *
    */
-  void dispatchWorkingCloudToGridMapCells(
+  void dispatchCloudToGridMapCells(
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
     grid_map::GridMap * grid_map);
 
@@ -118,12 +119,24 @@ public:
   double calculateElevationFromPointsInsideGridMapCell(
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) const;
 
+  /**
+   * @brief
+   *
+   */
+  void perodicGridMapPublisherCallback();
+
 protected:
-  rclcpp::TimerBase::SharedPtr timer_;
-
-
   // Matrix of point clouds. Each point cloud has only points that fall within a grid map cell.
   std::vector<std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr>> pointcloudWithinGridMapCell_;
+  // timer to call a periodic callback, for publishing map and its layers
+  rclcpp::TimerBase::SharedPtr timer_;
+  // Global point cloud shared pointer
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud_;
+  // Global grid map shared pointer.
+  grid_map::GridMap map_;
+
+  rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr grid_map_publisher_;
+
 };
 }  // namespace botanbot_grid_map
 

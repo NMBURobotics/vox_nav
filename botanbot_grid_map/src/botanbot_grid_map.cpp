@@ -26,11 +26,35 @@
 namespace botanbot_grid_map
 {
 BotanbotGridMap::BotanbotGridMap()
-: Node("botanbot_grid_map_rclcpp_node")
+: Node("botanbot_grid_map_rclcpp_node"),
+  map_(grid_map::GridMap({"elevation", "normal_x", "normal_y", "normal_z"}))
 {
+  pointcloud_ = botanbot_utilities::loadPointcloudFromPcd(
+    "/home/ros2-foxy/test_map.pcd");
+
+  grid_map_publisher_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
+    "grid_map", rclcpp::QoS(1).transient_local());
+
+  initializeGridMapGeometryfromPointcloud(pointcloud_, &map_);
+  allocateSpaceForCloudsInsideCells(&map_);
+  dispatchCloudToGridMapCells(pointcloud_, &map_);
+
+  map_.add("elevation");
+
+  grid_map::Matrix & gridMapData = map_.get("elevation");
+  unsigned int linearGridMapSize = map_.getSize().prod();
+
+  // Iterate through grid map and calculate the corresponding height based on the point cloud
+  for (unsigned int linearIndex = 0; linearIndex < linearGridMapSize; ++linearIndex) {
+    processGridMapCell(&map_, linearIndex, &gridMapData);
+  }
+
   this->timer_ = this->create_wall_timer(
     std::chrono::milliseconds(500),
-    std::bind(&BotanbotGridMap::startWaypointFollowing, this));
+    std::bind(&BotanbotGridMap::perodicGridMapPublisherCallback, this));
+  RCLCPP_INFO(
+    this->get_logger(),
+    "Constructed an Instance of BotanbotGridMap");
 }
 
 BotanbotGridMap::~BotanbotGridMap()
@@ -40,10 +64,106 @@ BotanbotGridMap::~BotanbotGridMap()
     "Destroyed an Instance of BotanbotGridMap");
 }
 
-void BotanbotGridMap::startWaypointFollowing()
+void BotanbotGridMap::initializeGridMapGeometryfromPointcloud(
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+  grid_map::GridMap * grid_map)
 {
-  using namespace std::placeholders;
-  this->timer_->cancel();
+  const double resolution = 0.1;
+
+  pcl::PointXYZ minBound;
+  pcl::PointXYZ maxBound;
+  pcl::getMinMax3D(*cloud, minBound, maxBound);
+
+  // from min and max points we can compute the length
+  grid_map::Length length = grid_map::Length(maxBound.x - minBound.x, maxBound.y - minBound.y);
+
+  // we put the center of the grid map to be in the middle of the point cloud
+  grid_map::Position position = grid_map::Position(
+    (maxBound.x + minBound.x) / 2.0,
+    (maxBound.y + minBound.y) / 2.0);
+
+  grid_map->setFrameId("map");
+  grid_map->setGeometry(length, resolution, position);
+
+  RCLCPP_INFO(
+    get_logger(),
+    "Created map with size %f x %f m (%i x %i cells).\n"
+    " The center of the map is located at (%f, %f) in the %s frame.",
+    grid_map->getLength().x(), grid_map->getLength().y(),
+    grid_map->getSize()(0), grid_map->getSize()(1),
+    grid_map->getPosition().x(), grid_map->getPosition().y(), grid_map->getFrameId().c_str());
+
+}
+
+void BotanbotGridMap::perodicGridMapPublisherCallback()
+{
+  // Add noise (using Eigen operators).
+  map_.add(
+    "noise",
+    0.015 * grid_map::Matrix::Random(map_.getSize()(0), map_.getSize()(1)));
+  map_.add("elevation_noisy", map_.get("elevation") + map_["noise"]);
+
+  // Adding outliers (accessing cell by position).
+  for (unsigned int i = 0; i < 500; ++i) {
+    grid_map::Position randomPosition = grid_map::Position::Random();
+    if (map_.isInside(randomPosition)) {
+      map_.atPosition(
+        "elevation_noisy",
+        randomPosition) = std::numeric_limits<float>::infinity();
+    }
+  }
+
+  // Filter values for submap (iterators).
+  map_.add("elevation_filtered", map_.get("elevation_noisy"));
+  grid_map::Position topLeftCorner(1.0, 0.4);
+  grid_map::boundPositionToRange(topLeftCorner, map_.getLength(), map_.getPosition());
+  grid_map::Index startIndex;
+  map_.getIndex(topLeftCorner, startIndex);
+  RCLCPP_INFO_ONCE(
+    get_logger(),
+    "Top left corner was limited from (1.0, 0.2) to (%f, %f) and corresponds to index (%i, %i).",
+    topLeftCorner.x(), topLeftCorner.y(), startIndex(0), startIndex(1));
+
+  grid_map::Size size = (grid_map::Length(1.2, 0.8) / map_.getResolution()).cast<int>();
+  grid_map::SubmapIterator it(map_, startIndex, size);
+  for (; !it.isPastEnd(); ++it) {
+    grid_map::Position currentPosition;
+    map_.getPosition(*it, currentPosition);
+    double radius = 0.1;
+    double mean = 0.0;
+    double sumOfWeights = 0.0;
+
+    // Compute weighted mean.
+    for (grid_map::CircleIterator circleIt(map_, currentPosition, radius);
+      !circleIt.isPastEnd();
+      ++circleIt)
+    {
+      if (!map_.isValid(*circleIt, "elevation_noisy")) {continue;}
+      grid_map::Position currentPositionInCircle;
+      map_.getPosition(*circleIt, currentPositionInCircle);
+
+      // Computed weighted mean based on Euclidian distance.
+      double distance = (currentPosition - currentPositionInCircle).norm();
+      double weight = pow(radius - distance, 2);
+      mean += weight * map_.at("elevation_noisy", *circleIt);
+      sumOfWeights += weight;
+    }
+
+    map_.at("elevation_filtered", *it) = mean / sumOfWeights;
+  }
+
+  // Show absolute difference and compute mean squared error.
+  map_.add(
+    "error", (map_.get("elevation_filtered") - map_.get(
+      "elevation")).cwiseAbs());
+
+  // Publish grid map.
+  map_.setTimestamp(this->now().nanoseconds());
+  std::unique_ptr<grid_map_msgs::msg::GridMap> message;
+  message = grid_map::GridMapRosConverter::toMessage(map_);
+  grid_map_publisher_->publish(std::move(message));
+  RCLCPP_INFO(get_logger(), "Grid map published.");
+
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr BotanbotGridMap::getPointcloudInsideGridMapCellBorder(
@@ -69,7 +189,7 @@ void BotanbotGridMap::allocateSpaceForCloudsInsideCells(grid_map::GridMap * grid
   }
 }
 
-void BotanbotGridMap::dispatchWorkingCloudToGridMapCells(
+void BotanbotGridMap::dispatchCloudToGridMapCells(
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
   grid_map::GridMap * grid_map)
 {
@@ -149,129 +269,14 @@ double BotanbotGridMap::calculateElevationFromPointsInsideGridMapCell(
  */
 int main(int argc, char const * argv[])
 {
-
   rclcpp::init(argc, argv);
-
-  rclcpp::Node node("grid_map_tutorial_demo");
-  auto publisher = node.create_publisher<grid_map_msgs::msg::GridMap>(
-    "grid_map", rclcpp::QoS(1).transient_local());
 
   auto gps_waypoint_follower_client_node = std::make_shared
     <botanbot_grid_map::BotanbotGridMap>();
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud_ptr = botanbot_utilities::loadPointcloudFromPcd(
-    "/home/ros2-foxy/test_map.pcd");
+  rclcpp::spin(gps_waypoint_follower_client_node->get_node_base_interface());
 
-  const double resolution = 0.1;
 
-  pcl::PointXYZ minBound;
-  pcl::PointXYZ maxBound;
-  pcl::getMinMax3D(*pointcloud_ptr, minBound, maxBound);
-
-  // from min and max points we can compute the length
-  grid_map::Length length = grid_map::Length(maxBound.x - minBound.x, maxBound.y - minBound.y);
-
-  // we put the center of the grid map to be in the middle of the point cloud
-  grid_map::Position position = grid_map::Position(
-    (maxBound.x + minBound.x) / 2.0,
-    (maxBound.y + minBound.y) / 2.0);
-
-  // Create grid map.
-  grid_map::GridMap map({"elevation", "normal_x", "normal_y", "normal_z"});
-  map.setFrameId("map");
-  map.setGeometry(length, resolution, position);
-
-  RCLCPP_INFO(
-    node.get_logger(),
-    "Created map with size %f x %f m (%i x %i cells).\n"
-    " The center of the map is located at (%f, %f) in the %s frame.",
-    map.getLength().x(), map.getLength().y(),
-    map.getSize()(0), map.getSize()(1),
-    map.getPosition().x(), map.getPosition().y(), map.getFrameId().c_str());
-
-  gps_waypoint_follower_client_node->allocateSpaceForCloudsInsideCells(&map);
-  gps_waypoint_follower_client_node->dispatchWorkingCloudToGridMapCells(pointcloud_ptr, &map);
-  map.add("elevation");
-
-  grid_map::Matrix & gridMapData = map.get("elevation");
-  unsigned int linearGridMapSize = map.getSize().prod();
-
-  // Iterate through grid map and calculate the corresponding height based on the point cloud
-  for (unsigned int linearIndex = 0; linearIndex < linearGridMapSize; ++linearIndex) {
-    gps_waypoint_follower_client_node->processGridMapCell(&map, linearIndex, &gridMapData);
-  }
-
-  // Work with grid map in a loop.
-  rclcpp::Rate rate(30.0);
-  rclcpp::Clock clock;
-
-  while (rclcpp::ok()) {
-    rclcpp::Time time = node.now();
-
-    // Add noise (using Eigen operators).
-    map.add("noise", 0.015 * grid_map::Matrix::Random(map.getSize()(0), map.getSize()(1)));
-    map.add("elevation_noisy", map.get("elevation") + map["noise"]);
-
-    // Adding outliers (accessing cell by position).
-    for (unsigned int i = 0; i < 500; ++i) {
-      grid_map::Position randomPosition = grid_map::Position::Random();
-      if (map.isInside(randomPosition)) {
-        map.atPosition("elevation_noisy", randomPosition) = std::numeric_limits<float>::infinity();
-      }
-    }
-
-    // Filter values for submap (iterators).
-    map.add("elevation_filtered", map.get("elevation_noisy"));
-    grid_map::Position topLeftCorner(1.0, 0.4);
-    grid_map::boundPositionToRange(topLeftCorner, map.getLength(), map.getPosition());
-    grid_map::Index startIndex;
-    map.getIndex(topLeftCorner, startIndex);
-    RCLCPP_INFO_ONCE(
-      node.get_logger(),
-      "Top left corner was limited from (1.0, 0.2) to (%f, %f) and corresponds to index (%i, %i).",
-      topLeftCorner.x(), topLeftCorner.y(), startIndex(0), startIndex(1));
-
-    grid_map::Size size = (grid_map::Length(1.2, 0.8) / map.getResolution()).cast<int>();
-    grid_map::SubmapIterator it(map, startIndex, size);
-    for (; !it.isPastEnd(); ++it) {
-      grid_map::Position currentPosition;
-      map.getPosition(*it, currentPosition);
-      double radius = 0.1;
-      double mean = 0.0;
-      double sumOfWeights = 0.0;
-
-      // Compute weighted mean.
-      for (grid_map::CircleIterator circleIt(map, currentPosition, radius); !circleIt.isPastEnd();
-        ++circleIt)
-      {
-        if (!map.isValid(*circleIt, "elevation_noisy")) {continue;}
-        grid_map::Position currentPositionInCircle;
-        map.getPosition(*circleIt, currentPositionInCircle);
-
-        // Computed weighted mean based on Euclidian distance.
-        double distance = (currentPosition - currentPositionInCircle).norm();
-        double weight = pow(radius - distance, 2);
-        mean += weight * map.at("elevation_noisy", *circleIt);
-        sumOfWeights += weight;
-      }
-
-      map.at("elevation_filtered", *it) = mean / sumOfWeights;
-    }
-
-    // Show absolute difference and compute mean squared error.
-    map.add("error", (map.get("elevation_filtered") - map.get("elevation")).cwiseAbs());
-
-    // Publish grid map.
-    map.setTimestamp(time.nanoseconds());
-    std::unique_ptr<grid_map_msgs::msg::GridMap> message;
-    message = grid_map::GridMapRosConverter::toMessage(map);
-    publisher->publish(std::move(message));
-    RCLCPP_INFO_THROTTLE(node.get_logger(), clock, 1000, "Grid map published.");
-
-    rclcpp::spin_some(node.get_node_base_interface());
-    rate.sleep();
-
-  }
   return 0;
 
 }
