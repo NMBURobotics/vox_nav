@@ -21,6 +21,8 @@
 #ifndef BOTANBOT_GRID_MAP__BOTANBOT_GRID_MAP_HPP_
 #define BOTANBOT_GRID_MAP__BOTANBOT_GRID_MAP_HPP_
 
+#include <grid_map_ros/grid_map_ros.hpp>
+
 #include <vector>
 #include <string>
 #include <memory>
@@ -29,8 +31,6 @@
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "geometry_msgs/msg/point32.hpp"
 #include "botanbot_utilities/pcl_helpers.hpp"
-#include <grid_map_ros/grid_map_ros.hpp>
-
 
 /**
  * @brief  client package too utilize grid_map especially with prebuild maps in .pcd formats
@@ -59,7 +59,7 @@ public:
   ~BotanbotGridMap();
 
   /**
-   * @brief
+   * @brief given a cloud , based on geometric properties of this cloud handles correct sizes for grid map
    *
    * @param cloud
    * @param grid_map
@@ -153,9 +153,8 @@ protected:
   double resolution_;
   // desired FPS for map pulish rate
   int map_publish_fps_;
-  //
+  // optional point cloud transformfrom yaml file
   botanbot_utilities::RigidBodyTransformation pointloud_transform_matrix_;
-
 };
 }  // namespace botanbot_grid_map
 

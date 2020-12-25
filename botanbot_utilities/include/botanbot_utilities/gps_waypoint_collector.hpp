@@ -41,6 +41,6 @@ public:
   ~GPSWaypointCollector();
 };
 
-} // namespace botanbot_utilities
+}  // namespace botanbot_utilities
 
 #endif  // BOTANBOT_UTILITIES__GPS_WAYPOINT_COLLECTOR_HPP_

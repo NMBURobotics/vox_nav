@@ -21,6 +21,9 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <limits>
+#include <utility>
+#include <algorithm>
 #include "botanbot_grid_map/botanbot_grid_map.hpp"
 
 namespace botanbot_grid_map
@@ -118,7 +121,6 @@ void BotanbotGridMap::initializeGridMapGeometryfromPointcloud(
     grid_map->getLength().x(), grid_map->getLength().y(),
     grid_map->getSize()(0), grid_map->getSize()(1),
     grid_map->getPosition().x(), grid_map->getPosition().y(), grid_map->getFrameId().c_str());
-
 }
 
 void BotanbotGridMap::perodicGridMapPublisherCallback()
@@ -315,7 +317,5 @@ int main(int argc, char const * argv[])
 
   rclcpp::spin(gps_waypoint_follower_client_node->get_node_base_interface());
 
-
   return 0;
-
 }

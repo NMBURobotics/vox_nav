@@ -20,6 +20,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 #include "botanbot_utilities/pcl_helpers.hpp"
 
 namespace botanbot_utilities

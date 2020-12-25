@@ -18,13 +18,12 @@
  *      Institute: ETH Zurich, Robotic Systems Lab
  */
 
-#include "rclcpp/rclcpp.hpp"
-#include <memory>
-#include <string>
-#include <pcl/common/common.h>
+#ifndef BOTANBOT_UTILITIES__PCL_HELPERS_HPP_
+#define BOTANBOT_UTILITIES__PCL_HELPERS_HPP_
+
 #include <eigen3/Eigen/Core>
 
-
+#include <pcl/common/common.h>
 #include <pcl/common/pca.h>
 #include <pcl/common/transforms.h>
 #include <pcl/conversions.h>
@@ -35,6 +34,12 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_types.h>
 #include <pcl/segmentation/extract_clusters.h>
+
+#include <memory>
+#include <string>
+#include <vector>
+
+#include "rclcpp/rclcpp.hpp"
 
 namespace botanbot_utilities
 {
@@ -48,7 +53,6 @@ struct RigidBodyTransformation
 
   // intrinsic rotation (opposite from the ROS convention), order X-Y-Z
   Eigen::Vector3d rpyIntrinsic_ {0.0, 0.0, 0.0};
-
 };
 enum class XYZ: int {X, Y, Z};
 
@@ -115,3 +119,5 @@ Eigen::Matrix3f getRotationMatrix(
   const rclcpp::Logger & node_logger);
 
 }  // namespace botanbot_utilities
+
+#endif  // BOTANBOT_UTILITIES__PCL_HELPERS_HPP_
