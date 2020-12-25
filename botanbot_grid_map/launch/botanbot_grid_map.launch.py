@@ -34,7 +34,8 @@ def generate_launch_description():
     tutorial_demo_node = Node(package='botanbot_grid_map',
                               executable='botanbot_grid_map_node',
                               name='botanbot_grid_map_node',
-                              output='screen')
+                              output='screen',
+                              parameters=[visualization_config_file])
 
     grid_map_visualization_node = Node(package='grid_map_visualization',
                                        executable='grid_map_visualization',

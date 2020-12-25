@@ -18,6 +18,7 @@
  *      Institute: ETH Zurich, Robotic Systems Lab
  */
 
+#include "rclcpp/rclcpp.hpp"
 #include <memory>
 #include <string>
 #include <pcl/common/common.h>
@@ -37,6 +38,19 @@
 
 namespace botanbot_utilities
 {
+/**
+* @brief
+*
+*/
+struct RigidBodyTransformation
+{
+  Eigen::Vector3d translation_ {0.0, 0.0, 0.0};
+
+  // intrinsic rotation (opposite from the ROS convention), order X-Y-Z
+  Eigen::Vector3d rpyIntrinsic_ {0.0, 0.0, 0.0};
+
+};
+enum class XYZ: int {X, Y, Z};
 
 /**
  * @brief
@@ -74,4 +88,30 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr loadPointcloudFromPcd(const std::string & fi
  */
 std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> extractClusterCloudsFromPointcloud(
   pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud);
+
+/**
+ * @brief Get the Rigid Body Transform object
+ *
+ * @param translation
+ * @param intrinsicRpy
+ * @param node_logger
+ * @return Eigen::Affine3f
+ */
+Eigen::Affine3f getRigidBodyTransform(
+  const Eigen::Vector3d & translation,
+  const Eigen::Vector3d & intrinsicRpy,
+  const rclcpp::Logger & node_logger);
+
+/**
+ * @brief Get the Rotation Matrix object
+ *
+ * @param angle
+ * @param axis
+ * @param node_logger
+ * @return Eigen::Matrix3f
+ */
+Eigen::Matrix3f getRotationMatrix(
+  double angle, XYZ axis,
+  const rclcpp::Logger & node_logger);
+
 }  // namespace botanbot_utilities

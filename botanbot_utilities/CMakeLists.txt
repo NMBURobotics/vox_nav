@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(botanbot_utilities)
 
 find_package(ament_cmake REQUIRED)
+find_package(rclcpp)
 find_package(nav2_common REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -21,6 +22,7 @@ set(EIGEN3_INCLUDE_DIR ${EIGEN3_INCLUDE_DIRS})
 nav2_package()
 
 set(dependencies
+  rclcpp
   sensor_msgs
   geometry_msgs
   nav_msgs

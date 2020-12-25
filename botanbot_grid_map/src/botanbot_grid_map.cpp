@@ -26,31 +26,59 @@
 namespace botanbot_grid_map
 {
 BotanbotGridMap::BotanbotGridMap()
-: Node("botanbot_grid_map_rclcpp_node"),
+: Node("botanbot_grid_map_node"),
   map_(grid_map::GridMap({"elevation", "normal_x", "normal_y", "normal_z"}))
 {
-  pointcloud_ = botanbot_utilities::loadPointcloudFromPcd(
-    "/home/ros2-foxy/test_map.pcd");
+  this->declare_parameter("pcd_file_full_path", "/home/ros2-foxy/test_map.pcd");
+  this->declare_parameter("map_frame", "map");
+  this->declare_parameter("topic_name", "grid_map");
+  this->declare_parameter("resolution", 0.1);
+  this->declare_parameter("map_publish_fps", 15);
+  this->declare_parameter("cloud_transform.translation.x", 0.0);
+  this->declare_parameter("cloud_transform.translation.y", 0.0);
+  this->declare_parameter("cloud_transform.translation.z", 0.0);
+  this->declare_parameter("cloud_transform.rotation.r", 0.0);
+  this->declare_parameter("cloud_transform.rotation.p", 0.0);
+  this->declare_parameter("cloud_transform.rotation.y", 0.0);
+
+  pcd_file_full_path_ = this->get_parameter("pcd_file_full_path").as_string();
+  map_frame_ = this->get_parameter("map_frame").as_string();
+  topic_name_ = this->get_parameter("topic_name").as_string();
+  resolution_ = this->get_parameter("resolution").as_double();
+  map_publish_fps_ = this->get_parameter("map_publish_fps").as_int();
+
+  pointloud_transform_matrix_.translation_.x() =
+    this->get_parameter("cloud_transform.translation.x").as_double();
+  pointloud_transform_matrix_.translation_.y() =
+    this->get_parameter("cloud_transform.translation.y").as_double();
+  pointloud_transform_matrix_.translation_.z() =
+    this->get_parameter("cloud_transform.translation.z").as_double();
+  pointloud_transform_matrix_.rpyIntrinsic_.x() =
+    this->get_parameter("cloud_transform.rotation.r").as_double();
+  pointloud_transform_matrix_.rpyIntrinsic_.y() =
+    this->get_parameter("cloud_transform.rotation.p").as_double();
+  pointloud_transform_matrix_.rpyIntrinsic_.z() =
+    this->get_parameter("cloud_transform.rotation.y").as_double();
+
+  pointcloud_ = botanbot_utilities::loadPointcloudFromPcd(pcd_file_full_path_.c_str());
+
+  pointcloud_ = botanbot_utilities::transformCloud(
+    pointcloud_,
+    botanbot_utilities::getRigidBodyTransform(
+      pointloud_transform_matrix_.translation_,
+      pointloud_transform_matrix_.rpyIntrinsic_,
+      get_logger()));
 
   grid_map_publisher_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
-    "grid_map", rclcpp::QoS(1).transient_local());
+    topic_name_.c_str(), rclcpp::QoS(1).transient_local());
 
   initializeGridMapGeometryfromPointcloud(pointcloud_, &map_);
   allocateSpaceForCloudsInsideCells(&map_);
   dispatchCloudToGridMapCells(pointcloud_, &map_);
-
-  map_.add("elevation");
-
-  grid_map::Matrix & gridMapData = map_.get("elevation");
-  unsigned int linearGridMapSize = map_.getSize().prod();
-
-  // Iterate through grid map and calculate the corresponding height based on the point cloud
-  for (unsigned int linearIndex = 0; linearIndex < linearGridMapSize; ++linearIndex) {
-    processGridMapCell(&map_, linearIndex, &gridMapData);
-  }
+  processGridMapCells(&map_);
 
   this->timer_ = this->create_wall_timer(
-    std::chrono::milliseconds(500),
+    std::chrono::milliseconds(1000 / map_publish_fps_),
     std::bind(&BotanbotGridMap::perodicGridMapPublisherCallback, this));
   RCLCPP_INFO(
     this->get_logger(),
@@ -68,8 +96,6 @@ void BotanbotGridMap::initializeGridMapGeometryfromPointcloud(
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
   grid_map::GridMap * grid_map)
 {
-  const double resolution = 0.1;
-
   pcl::PointXYZ minBound;
   pcl::PointXYZ maxBound;
   pcl::getMinMax3D(*cloud, minBound, maxBound);
@@ -82,8 +108,8 @@ void BotanbotGridMap::initializeGridMapGeometryfromPointcloud(
     (maxBound.x + minBound.x) / 2.0,
     (maxBound.y + minBound.y) / 2.0);
 
-  grid_map->setFrameId("map");
-  grid_map->setGeometry(length, resolution, position);
+  grid_map->setFrameId(map_frame_.c_str());
+  grid_map->setGeometry(length, resolution_, position);
 
   RCLCPP_INFO(
     get_logger(),
@@ -163,7 +189,6 @@ void BotanbotGridMap::perodicGridMapPublisherCallback()
   message = grid_map::GridMapRosConverter::toMessage(map_);
   grid_map_publisher_->publish(std::move(message));
   RCLCPP_INFO(get_logger(), "Grid map published.");
-
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr BotanbotGridMap::getPointcloudInsideGridMapCellBorder(
@@ -231,6 +256,20 @@ void BotanbotGridMap::processGridMapCell(
   (*gridMapData)(index(0), index(1)) = calculateElevationFromPointsInsideGridMapCell(
     pointsInsideCellBorder);
 }
+
+void BotanbotGridMap::processGridMapCells(grid_map::GridMap * grid_map)
+{
+  grid_map->add("elevation");
+
+  grid_map::Matrix & gridMapData = grid_map->get("elevation");
+  unsigned int linearGridMapSize = grid_map->getSize().prod();
+
+  // Iterate through grid map and calculate the corresponding height based on the point cloud
+  for (unsigned int linearIndex = 0; linearIndex < linearGridMapSize; ++linearIndex) {
+    processGridMapCell(grid_map, linearIndex, &gridMapData);
+  }
+}
+
 
 double BotanbotGridMap::calculateElevationFromPointsInsideGridMapCell(
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) const

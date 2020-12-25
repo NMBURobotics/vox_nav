@@ -79,6 +79,13 @@ public:
     const unsigned int linearGridMapIndex,
     grid_map::Matrix * gridMapData) const;
 
+/**
+ * @brief
+ *
+ * @param grid_map
+ */
+  void  processGridMapCells(grid_map::GridMap * grid_map);
+
   /**
   * @brief Get the Pointcloud Inside Grid Map Cell Border object
   * @param index
@@ -120,7 +127,7 @@ public:
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) const;
 
   /**
-   * @brief
+   * @brief Updates several layers of gridmap and publishes them in a periodic time cycle with global var timer_
    *
    */
   void perodicGridMapPublisherCallback();
@@ -134,8 +141,20 @@ protected:
   pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud_;
   // Global grid map shared pointer.
   grid_map::GridMap map_;
-
+  // publish grid map as ROS msg
   rclcpp::Publisher<grid_map_msgs::msg::GridMap>::SharedPtr grid_map_publisher_;
+  // full path to pcd file
+  std::string pcd_file_full_path_;
+  // coordinate frame for the map
+  std::string map_frame_;
+  // grid ma published topic name
+  std::string topic_name_;
+  // grid map resolution
+  double resolution_;
+  // desired FPS for map pulish rate
+  int map_publish_fps_;
+  //
+  botanbot_utilities::RigidBodyTransformation pointloud_transform_matrix_;
 
 };
 }  // namespace botanbot_grid_map

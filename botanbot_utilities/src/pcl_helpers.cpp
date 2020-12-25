@@ -84,4 +84,45 @@ std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> extractClusterCloudsFromPointcl
 
   return clusterClouds;
 }
+
+Eigen::Matrix3f getRotationMatrix(
+  double angle, XYZ axis,
+  const rclcpp::Logger & node_logger)
+{
+  Eigen::Matrix3f rotationMatrix = Eigen::Matrix3f::Identity();
+  switch (axis) {
+    case XYZ::X: {
+        rotationMatrix = Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitX());
+        break;
+      }
+    case XYZ::Y: {
+        rotationMatrix = Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitY());
+        break;
+      }
+    case XYZ::Z: {
+        rotationMatrix = Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ());
+        break;
+      }
+    default:
+      RCLCPP_ERROR(node_logger, "Unknown axis while trying to rotate the pointcloud");
+  }
+  return rotationMatrix;
+}
+
+Eigen::Affine3f getRigidBodyTransform(
+  const Eigen::Vector3d & translation,
+  const Eigen::Vector3d & intrinsicRpy,
+  const rclcpp::Logger & node_logger)
+{
+  Eigen::Affine3f rigidBodyTransform;
+  rigidBodyTransform.setIdentity();
+  rigidBodyTransform.translation() << translation.x(), translation.y(), translation.z();
+  Eigen::Matrix3f rotation(Eigen::Matrix3f::Identity());
+  rotation *= getRotationMatrix(intrinsicRpy.x(), XYZ::X, node_logger);
+  rotation *= getRotationMatrix(intrinsicRpy.y(), XYZ::Y, node_logger);
+  rotation *= getRotationMatrix(intrinsicRpy.z(), XYZ::Z, node_logger);
+  rigidBodyTransform.rotate(rotation);
+
+  return rigidBodyTransform;
+}
 }  // namespace botanbot_utilities
