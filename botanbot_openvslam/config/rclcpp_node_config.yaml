@@ -1,0 +1,8 @@
+run_slam:
+  ros__parameters:
+    vocab_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_openvslam/config/orb_vocab.dbow2
+    setting_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_openvslam/config/slam_config.yaml
+    mask_img_path: ""
+    map_db_path : /home/ros2-foxy/f.msg
+    debug_mode: true
+    eval_log: true

@@ -31,7 +31,8 @@ def generate_launch_description():
     this_package_dir = get_package_share_directory('botanbot_openvslam')
     rviz_config_dir = os.path.join(this_package_dir, 'rviz', 'openvslam.rviz')
 
-    config_file = os.path.join(this_package_dir, 'config', 'config.yaml')
+    config_file = os.path.join(this_package_dir, 'config',
+                               'rclcpp_node_config.yaml')
     orb_vocab_file = os.path.join(this_package_dir, 'config',
                                   'orb_vocab.dbow2')
 
@@ -42,15 +43,14 @@ def generate_launch_description():
         DeclareLaunchArgument('output_map_filename',
                               default_value=output_map_filename,
                               description='Full path to output map msg file'),
-        Node(package='botanbot_openvslam',
-             executable='run_slam',
-             name='run_slam',
-             remappings=[('camera/color/image_raw', 'camera/color/image_raw'),
-                         ('camera/depth/image_raw',
-                          '/camera/aligned_depth_to_color/image_raw')],
-             output='screen',
-             arguments=[
-                 '-v', orb_vocab_file, '-c', config_file, '--map-db',
-                 output_map_filename, '-debug'
-             ]),
+        Node(
+            package='botanbot_openvslam',
+            executable='run_slam',
+            name='run_slam',
+            remappings=[('camera/color/image_raw', 'camera/color/image_raw'),
+                        ('camera/depth/image_raw',
+                         'camera/aligned_depth_to_color/image_raw')],
+            output='screen',
+            parameters=[config_file],
+        ),
     ])

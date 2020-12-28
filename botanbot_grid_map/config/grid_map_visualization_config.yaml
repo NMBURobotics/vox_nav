@@ -58,7 +58,7 @@ grid_map_visualization:
 botanbot_grid_map_node:
   ros__parameters:
     resolution: 0.2
-    pcd_file_full_path: /home/ros2-foxy/test_map.pcd
+    pcd_file_full_path: /home/ros2-foxy/f.pcd
     map_frame: odom
     topic_name: grid_map
     map_publish_fps: 10
