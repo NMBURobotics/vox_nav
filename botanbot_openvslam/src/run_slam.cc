@@ -29,100 +29,110 @@
 #include <gperftools/profiler.h>
 #endif
 
-void mono_tracking(
-  const std::shared_ptr<openvslam::config> & cfg, const std::string & vocab_file_path,
-  const std::string & mask_img_path, const bool eval_log, const std::string & map_db_path)
+class RunSlam : public rclcpp::Node
 {
-  // load the mask image
-  const cv::Mat mask = mask_img_path.empty() ? cv::Mat{} : cv::imread(
-    mask_img_path,
-    cv::IMREAD_GRAYSCALE);
+private:
+  openvslam::system SLAM_;
+  std::shared_ptr<openvslam::config> cfg_;
 
-  // build a SLAM system
-  openvslam::system SLAM(cfg, vocab_file_path);
-  // startup the SLAM process
-  SLAM.startup();
+  rmw_qos_profile_t custom_qos_;
+  std::chrono::steady_clock::time_point tp_0_;
+  cv::Mat mask_;
+  std::vector<double> track_times_;
 
-  // create a viewer object
-  // and pass the frame_publisher and the map_publisher
-#ifdef USE_PANGOLIN_VIEWER
-  pangolin_viewer::viewer viewer(cfg, &SLAM, SLAM.get_frame_publisher(), SLAM.get_map_publisher());
-#elif USE_SOCKET_PUBLISHER
-  socket_publisher::publisher publisher(cfg, &SLAM,
-    SLAM.get_frame_publisher(), SLAM.get_map_publisher());
-#endif
+  message_filters::Subscriber<sensor_msgs::msg::Image> color_sf_;
+  message_filters::Subscriber<sensor_msgs::msg::Image> depth_sf_;
 
-  std::vector<double> track_times;
-  const auto tp_0 = std::chrono::steady_clock::now();
+  // ros susbcriber to get camera image
+  rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr mono_image_subscriber_;
 
-  // initialize this node
-  auto node = std::make_shared<rclcpp::Node>("run_slam");
-  rmw_qos_profile_t custom_qos = rmw_qos_profile_default;
-  custom_qos.depth = 1;
+  std::shared_ptr<pangolin_viewer::viewer> viewer_;
 
-  // run the SLAM as subscriber
-  image_transport::Subscriber sub = image_transport::create_subscription(
-    node.get(), "camera/image_raw", [&](const sensor_msgs::msg::Image::ConstSharedPtr & msg) {
-      const auto tp_1 = std::chrono::steady_clock::now();
-      const auto timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(
-        tp_1 - tp_0).count();
+  std::string vocab_file_path_;
+  std::string setting_file_path_;
+  std::string mask_img_path_;
+  std::string map_db_path_;
+  bool debug_mode_;
+  bool eval_log_;
 
-      // input the current frame and estimate the camera pose
-      SLAM.feed_monocular_frame(cv_bridge::toCvShare(msg, "bgr8")->image, timestamp, mask);
+public:
+  RunSlam(
+    const std::shared_ptr<openvslam::config> & cfg, const std::string & vocab_file_path,
+    const std::string & mask_img_path);
+  ~RunSlam();
 
-      const auto tp_2 = std::chrono::steady_clock::now();
+  void rgbd_callback(
+    const sensor_msgs::msg::Image::SharedPtr & color,
+    const sensor_msgs::msg::Image::SharedPtr & depth);
 
-      const auto track_time = std::chrono::duration_cast<std::chrono::duration<double>>(
-        tp_2 - tp_1).count();
-      track_times.push_back(track_time);
-    },
-    "raw", custom_qos);
+  void mono_callback(const sensor_msgs::msg::Image::ConstSharedPtr & msg);
 
-  rclcpp::executors::SingleThreadedExecutor exec;
-  exec.add_node(node);
+};
 
-  // Pangolin needs to run in the main thread on OSX
-  std::thread thread([&]() {
-      exec.spin();
-    });
+RunSlam::RunSlam(
+  const std::shared_ptr<openvslam::config> & cfg, const std::string & vocab_file_path,
+  const std::string & mask_img_path)
+:  Node("run_slam_rclcpp_node"), SLAM_(cfg, vocab_file_path), cfg_(cfg),
+  custom_qos_(rmw_qos_profile_default),
+  tp_0_(std::chrono::steady_clock::now()),
+  mask_(mask_img_path.empty() ? cv::Mat{} : cv::imread(mask_img_path, cv::IMREAD_GRAYSCALE))
+{
 
-  // run the viewer in this thread
-#ifdef USE_PANGOLIN_VIEWER
-  viewer.run();
-  if (SLAM.terminate_is_requested()) {
-    // wait until the loop BA is finished
-    while (SLAM.loop_BA_is_running()) {
-      std::this_thread::sleep_for(std::chrono::microseconds(5000));
-    }
-    rclcpp::shutdown();
+  this->declare_parameter("vocab_file_path", "none");
+  this->declare_parameter("setting_file_path", "none");
+  this->declare_parameter("mask_img_path", "none");
+  this->declare_parameter("map_db_path", "");
+  this->declare_parameter("debug_mode", true);
+  this->declare_parameter("eval_log", true);
+
+  vocab_file_path_ = this->get_parameter("vocab_file_path").as_string();
+  setting_file_path_ = this->get_parameter("setting_file_path").as_string();
+  mask_img_path_ = this->get_parameter("mask_img_path").as_string();
+  map_db_path_ = this->get_parameter("map_db_path").as_string();
+  debug_mode_ = this->get_parameter("debug_mode").as_bool();
+  eval_log_ = this->get_parameter("eval_log").as_bool();
+
+  custom_qos_.depth = 1;
+  SLAM_.startup();
+
+  try {
+    cfg_ = std::make_shared<openvslam::config>(setting_file_path->value());
+  } catch (const std::exception & e) {
+    std::cerr << e.what() << std::endl;
+    return EXIT_FAILURE;
   }
-#elif USE_SOCKET_PUBLISHER
-  publisher.run();
-  if (SLAM.terminate_is_requested()) {
-    // wait until the loop BA is finished
-    while (SLAM.loop_BA_is_running()) {
-      std::this_thread::sleep_for(std::chrono::microseconds(5000));
-    }
-    rclcpp::shutdown();
+
+  viewer_ = std::make_shared<pangolin_viewer::viewer>(
+    cfg_, &SLAM_,
+    SLAM_.get_frame_publisher(), SLAM_.get_map_publisher());
+
+  // run tracking
+  if (cfg_->camera_->setup_type_ == openvslam::camera::setup_type_t::Monocular) {
+    camera_image_subscriber_ = this->create_subscription<sensor_msgs::msg::Image>(
+      "camera/color/image_raw", rclcpp::SystemDefaultsQoS(),
+      std::bind(&RunSlam::mono_callback, this, std::placeholders::_1));
+  } else if ((cfg_->camera_->setup_type_ == openvslam::camera::setup_type_t::RGBD)) {
+
+    color_sf_.subscribe(this, "camera/color/image_raw");
+    depth_sf_.subscribe(this, "camera/depth/image_raw");
+
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image,
+        sensor_msgs::msg::Image> approximate_policy;
+    message_filters::Synchronizer<approximate_policy> syncApproximate(approximate_policy(
+        10), color_sf_, depth_sf_);
+    syncApproximate.registerCallback(&RunSlam::rgbd_callback, this);
+
+  } else {
+    throw std::runtime_error("Invalid setup type: " + cfg->camera_->get_setup_type_string());
   }
-#endif
+}
 
-  // automatically close the viewer
-#ifdef USE_PANGOLIN_VIEWER
-  viewer.request_terminate();
-  thread.join();
-#elif USE_SOCKET_PUBLISHER
-  publisher.request_terminate();
-  thread.join();
-#endif
-
-  // shutdown the SLAM process
-  SLAM.shutdown();
-
-  if (eval_log) {
+RunSlam::~RunSlam()
+{
+  if (eval_log_) {
     // output the trajectories for evaluation
-    SLAM.save_frame_trajectory("frame_trajectory.txt", "TUM");
-    SLAM.save_keyframe_trajectory("keyframe_trajectory.txt", "TUM");
+    SLAM_.save_frame_trajectory("frame_trajectory.txt", "TUM");
+    SLAM_.save_keyframe_trajectory("keyframe_trajectory.txt", "TUM");
     // output the tracking times for evaluation
     std::ofstream ofs("track_times.txt", std::ios::out);
     if (ofs.is_open()) {
@@ -138,93 +148,69 @@ void mono_tracking(
     SLAM.save_map_database(map_db_path);
   }
 
-  if (track_times.size()) {
-    std::sort(track_times.begin(), track_times.end());
-    const auto total_track_time = std::accumulate(track_times.begin(), track_times.end(), 0.0);
-    std::cout << "median tracking time: " << track_times.at(track_times.size() / 2) << "[s]" <<
-      std::endl;
-    std::cout << "mean tracking time: " << total_track_time / track_times.size() << "[s]" <<
-      std::endl;
+  SLAM_.shutdown();
+}
+
+void RunSlam::rgbd_callback(
+  const sensor_msgs::msg::Image::SharedPtr & color,
+  const sensor_msgs::msg::Image::SharedPtr & depth)
+{
+  auto colorcv = cv_bridge::toCvShare(color)->image;
+  auto depthcv = cv_bridge::toCvShare(depth)->image;
+  if (colorcv.empty() || depthcv.empty()) {
+    return;
   }
+
+  const auto tp_1 = std::chrono::steady_clock::now();
+  const auto timestamp =
+    std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - tp_0_).count();
+
+  // input the current frame and estimate the camera pose
+  SLAM_.feed_RGBD_frame(colorcv, depthcv, timestamp, mask_);
+
+  const auto tp_2 = std::chrono::steady_clock::now();
+
+  const auto track_time =
+    std::chrono::duration_cast<std::chrono::duration<double>>(tp_2 - tp_1).count();
+  track_times_.push_back(track_time);
+}
+
+
+void RunSlam::mono_callback(
+  const sensor_msgs::msg::Image::ConstSharedPtr & msg)
+{
+  std::cout << "Entering to  mono::callback .. " << std::endl;
+
+  const auto tp_1 = std::chrono::steady_clock::now();
+  const auto timestamp =
+    std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - tp_0_).count();
+
+  // input the current frame and estimate the camera pose
+  SLAM_.feed_monocular_frame(cv_bridge::toCvShare(msg)->image, timestamp, mask_);
+
+  const auto tp_2 = std::chrono::steady_clock::now();
+
+  const auto track_time =
+    std::chrono::duration_cast<std::chrono::duration<double>>(tp_2 - tp_1).count();
+  track_times_.push_back(track_time);
+
+  viewer.run();
+  if (SLAM.terminate_is_requested()) {
+    // wait until the loop BA is finished
+    while (SLAM.loop_BA_is_running()) {
+      std::this_thread::sleep_for(std::chrono::microseconds(5000));
+    }
+  }
+
+  viewer.request_terminate();
+  thread.join();
 }
 
 int main(int argc, char * argv[])
 {
-#ifdef USE_STACK_TRACE_LOGGER
-  google::InitGoogleLogging(argv[0]);
-  google::InstallFailureSignalHandler();
-#endif
+
   rclcpp::init(argc, argv);
-  rclcpp::uninstall_signal_handlers();
 
-  // create options
-  popl::OptionParser op("Allowed options");
-  auto help = op.add<popl::Switch>("h", "help", "produce help message");
-  auto vocab_file_path = op.add<popl::Value<std::string>>("v", "vocab", "vocabulary file path");
-  auto setting_file_path = op.add<popl::Value<std::string>>("c", "config", "setting file path");
-  auto mask_img_path = op.add<popl::Value<std::string>>("", "mask", "mask image path", "");
-  auto debug_mode = op.add<popl::Switch>("", "debug", "debug mode");
-  auto eval_log = op.add<popl::Switch>(
-    "", "eval-log",
-    "store trajectory and tracking times for evaluation");
-  auto map_db_path = op.add<popl::Value<std::string>>(
-    "", "map-db",
-    "store a map database at this path after SLAM",
-    "");
-  try {
-    op.parse(argc, argv);
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << std::endl;
-    std::cerr << std::endl;
-    std::cerr << op << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  // check validness of options
-  if (help->is_set()) {
-    std::cerr << op << std::endl;
-    return EXIT_FAILURE;
-  }
-  if (!vocab_file_path->is_set() || !setting_file_path->is_set()) {
-    std::cerr << "invalid arguments" << std::endl;
-    std::cerr << std::endl;
-    std::cerr << op << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  // setup logger
-  spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%e] %^[%L] %v%$");
-  if (debug_mode->is_set()) {
-    spdlog::set_level(spdlog::level::debug);
-  } else {
-    spdlog::set_level(spdlog::level::info);
-  }
-
-  // load configuration
-  std::shared_ptr<openvslam::config> cfg;
-  try {
-    cfg = std::make_shared<openvslam::config>(setting_file_path->value());
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << std::endl;
-    return EXIT_FAILURE;
-  }
-
-#ifdef USE_GOOGLE_PERFTOOLS
-  ProfilerStart("slam.prof");
-#endif
-
-  // run tracking
-  if (cfg->camera_->setup_type_ == openvslam::camera::setup_type_t::Monocular) {
-    mono_tracking(
-      cfg, vocab_file_path->value(), mask_img_path->value(),
-      eval_log->is_set(), map_db_path->value());
-  } else {
-    throw std::runtime_error("Invalid setup type: " + cfg->camera_->get_setup_type_string());
-  }
-
-#ifdef USE_GOOGLE_PERFTOOLS
-  ProfilerStop();
-#endif
 
   return EXIT_SUCCESS;
 }

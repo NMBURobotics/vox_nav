@@ -37,6 +37,7 @@ BotanbotGridMap::BotanbotGridMap()
   this->declare_parameter("topic_name", "grid_map");
   this->declare_parameter("resolution", 0.1);
   this->declare_parameter("map_publish_fps", 15);
+  this->declare_parameter("min_points_in_cell", 4);
   this->declare_parameter("cloud_transform.translation.x", 0.0);
   this->declare_parameter("cloud_transform.translation.y", 0.0);
   this->declare_parameter("cloud_transform.translation.z", 0.0);
@@ -49,6 +50,8 @@ BotanbotGridMap::BotanbotGridMap()
   topic_name_ = this->get_parameter("topic_name").as_string();
   resolution_ = this->get_parameter("resolution").as_double();
   map_publish_fps_ = this->get_parameter("map_publish_fps").as_int();
+  min_points_in_cell_ = this->get_parameter("min_points_in_cell").as_int();
+
 
   pointloud_transform_matrix_.translation_.x() =
     this->get_parameter("cloud_transform.translation.x").as_double();
@@ -64,6 +67,8 @@ BotanbotGridMap::BotanbotGridMap()
     this->get_parameter("cloud_transform.rotation.y").as_double();
 
   pointcloud_ = botanbot_utilities::loadPointcloudFromPcd(pcd_file_full_path_.c_str());
+  pointcloud_ = botanbot_utilities::removeOutliersFromInputCloud(pointcloud_, 2, 1.0);
+  pointcloud_ = botanbot_utilities::downsampleInputCloud(pointcloud_, 0.01);
 
   pointcloud_ = botanbot_utilities::transformCloud(
     pointcloud_,
@@ -129,6 +134,7 @@ void BotanbotGridMap::perodicGridMapPublisherCallback()
   map_.add(
     "noise",
     0.015 * grid_map::Matrix::Random(map_.getSize()(0), map_.getSize()(1)));
+
   map_.add("elevation_noisy", map_.get("elevation") + map_["noise"]);
 
   // Adding outliers (accessing cell by position).
@@ -234,31 +240,6 @@ void BotanbotGridMap::dispatchCloudToGridMapCells(
   }
 }
 
-void BotanbotGridMap::processGridMapCell(
-  grid_map::GridMap * grid_map,
-  const unsigned int linearGridMapIndex,
-  grid_map::Matrix * gridMapData) const
-{
-  // Get grid map index from linear index and check if enough points lie within the cell
-  const grid_map::Index index(
-    grid_map::getIndexFromLinearIndex(linearGridMapIndex, grid_map->getSize()));
-
-  pcl::PointCloud<pcl::PointXYZ>::Ptr pointsInsideCellBorder(new pcl::PointCloud<pcl::PointXYZ>());
-
-  pointsInsideCellBorder = getPointcloudInsideGridMapCellBorder(index);
-  const bool isTooFewPointsInCell = pointsInsideCellBorder->size() < 1;
-  if (isTooFewPointsInCell) {
-    rclcpp::Clock clock;
-    RCLCPP_WARN_STREAM_THROTTLE(
-      get_logger(), clock,
-      10.0, "Less than " << 1 << " points in a cell");
-    return;
-  }
-
-  (*gridMapData)(index(0), index(1)) = calculateElevationFromPointsInsideGridMapCell(
-    pointsInsideCellBorder);
-}
-
 void BotanbotGridMap::processGridMapCells(grid_map::GridMap * grid_map)
 {
   grid_map->add("elevation");
@@ -272,6 +253,29 @@ void BotanbotGridMap::processGridMapCells(grid_map::GridMap * grid_map)
   }
 }
 
+void BotanbotGridMap::processGridMapCell(
+  grid_map::GridMap * grid_map,
+  const unsigned int linearGridMapIndex,
+  grid_map::Matrix * gridMapData) const
+{
+  // Get grid map index from linear index and check if enough points lie within the cell
+  const grid_map::Index index(
+    grid_map::getIndexFromLinearIndex(linearGridMapIndex, grid_map->getSize()));
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pointsInsideCellBorder(new pcl::PointCloud<pcl::PointXYZ>());
+
+  pointsInsideCellBorder = getPointcloudInsideGridMapCellBorder(index);
+  if (pointsInsideCellBorder->size() < static_cast<size_t>(min_points_in_cell_)) {
+    rclcpp::Clock clock;
+    RCLCPP_WARN_STREAM_THROTTLE(
+      get_logger(), clock,
+      10.0, "Less than " << min_points_in_cell_ << " points in a cell");
+    return;
+  }
+
+  (*gridMapData)(index(0), index(1)) = calculateElevationFromPointsInsideGridMapCell(
+    pointsInsideCellBorder);
+}
 
 double BotanbotGridMap::calculateElevationFromPointsInsideGridMapCell(
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) const

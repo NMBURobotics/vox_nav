@@ -153,6 +153,8 @@ protected:
   double resolution_;
   // desired FPS for map pulish rate
   int map_publish_fps_;
+  // minimum number of points for a cell
+  int min_points_in_cell_;
   // optional point cloud transformfrom yaml file
   botanbot_utilities::RigidBodyTransformation pointloud_transform_matrix_;
 };

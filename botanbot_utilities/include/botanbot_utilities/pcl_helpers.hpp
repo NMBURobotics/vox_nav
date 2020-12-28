@@ -118,6 +118,28 @@ Eigen::Matrix3f getRotationMatrix(
   double angle, XYZ axis,
   const rclcpp::Logger & node_logger);
 
+/*!
+* Downsample the point cloud using voxel grid method. Implementation is
+* based on the implementation from pcl. The explanation of the algorithm
+* can be found here:
+* http://pointclouds.org/documentation/tutorials/voxel_grid.php
+* @param[in] Input point cloud
+* @return Downsampled point cloud
+*/
+pcl::PointCloud<pcl::PointXYZ>::Ptr downsampleInputCloud(
+  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, double downsmaple_leaf_size);
+
+/*!
+* Remove outliers from the point cloud. Function is based on
+* the StatisticalOutlierRemoval filter from pcl. The explanation on
+* how the algorithm works can be found here:
+* http://pointclouds.org/documentation/tutorials/statistical_outlier.php
+* @param[in] Input point cloud
+* @return Point cloud where outliers have been removed.
+*/
+pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
+  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int mean_K, double stddev_thres);
+
 }  // namespace botanbot_utilities
 
 #endif  // BOTANBOT_UTILITIES__PCL_HELPERS_HPP_

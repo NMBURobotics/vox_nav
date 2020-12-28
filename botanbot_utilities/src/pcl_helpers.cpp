@@ -126,4 +126,28 @@ Eigen::Affine3f getRigidBodyTransform(
 
   return rigidBodyTransform;
 }
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr downsampleInputCloud(
+  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, double downsmaple_leaf_size)
+{
+  pcl::VoxelGrid<pcl::PointXYZ> voxelGrid;
+  voxelGrid.setInputCloud(inputCloud);
+  voxelGrid.setLeafSize(downsmaple_leaf_size, downsmaple_leaf_size, downsmaple_leaf_size);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr downsampledCloud(new pcl::PointCloud<pcl::PointXYZ>());
+  voxelGrid.filter(*downsampledCloud);
+  return downsampledCloud;
+}
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
+  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int mean_K, double stddev_thres)
+{
+  pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+  sor.setInputCloud(inputCloud);
+  sor.setMeanK(mean_K);
+  sor.setStddevMulThresh(stddev_thres);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZ>());
+  sor.filter(*filteredCloud);
+  return filteredCloud;
+}
+
 }  // namespace botanbot_utilities

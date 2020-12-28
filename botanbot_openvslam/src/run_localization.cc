@@ -6,20 +6,17 @@
 
 #include <openvslam/system.h>
 #include <openvslam/config.h>
+#include <botanbot_openvslam/openvslam_ros.hpp>
 
 #include <iostream>
 #include <chrono>
 #include <numeric>
 
-#include <rclcpp/rclcpp.hpp>
-#include <image_transport/image_transport.h>
-#include <cv_bridge/cv_bridge.h>
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <spdlog/spdlog.h>
-#include "botanbot_openvslam/popl.hpp"
+#include <botanbot_openvslam/popl.hpp>
 
 #ifdef USE_STACK_TRACE_LOGGER
 #include <glog/logging.h>
@@ -29,17 +26,21 @@
 #include <gperftools/profiler.h>
 #endif
 
-void mono_localization(
+void localization(
   const std::shared_ptr<openvslam::config> & cfg, const std::string & vocab_file_path,
-  const std::string & mask_img_path, const std::string & map_db_path, const bool mapping)
+  const std::string & mask_img_path, const std::string & map_db_path, const bool mapping,
+  rclcpp::Node::SharedPtr node)
 {
-  // load the mask image
-  const cv::Mat mask = mask_img_path.empty() ? cv::Mat{} : cv::imread(
-    mask_img_path,
-    cv::IMREAD_GRAYSCALE);
+  std::shared_ptr<openvslam_ros::system> ros;
+  if (cfg->camera_->setup_type_ == openvslam::camera::setup_type_t::Monocular) {
+    ros = std::make_shared<openvslam_ros::mono>(cfg, vocab_file_path, mask_img_path);
+  } else if (cfg->camera_->setup_type_ == openvslam::camera::setup_type_t::RGBD) {
+    ros = std::make_shared<openvslam_ros::rgbd>(cfg, vocab_file_path, mask_img_path);
+  } else {
+    throw std::runtime_error("Invalid setup type: " + cfg->camera_->get_setup_type_string());
+  }
 
-  // build a SLAM system
-  openvslam::system SLAM(cfg, vocab_file_path);
+  auto & SLAM = ros->SLAM_;
   // load the prebuilt map
   SLAM.load_map_database(map_db_path);
   // startup the SLAM process (it does not need initialization of a map)
@@ -60,59 +61,32 @@ void mono_localization(
     SLAM.get_frame_publisher(), SLAM.get_map_publisher());
 #endif
 
-  std::vector<double> track_times;
-  const auto tp_0 = std::chrono::steady_clock::now();
-
-  // initialize this node
-  auto node = std::make_shared<rclcpp::Node>("run_localization");
-  rmw_qos_profile_t custom_qos = rmw_qos_profile_default;
-  custom_qos.depth = 1;
-
-  // run the SLAM as subscriber
-  image_transport::Subscriber sub = image_transport::create_subscription(
-    node.get(), "camera/image_raw", [&](const sensor_msgs::msg::Image::ConstSharedPtr & msg) {
-      const auto tp_1 = std::chrono::steady_clock::now();
-      const auto timestamp = std::chrono::duration_cast<std::chrono::duration<double>>(
-        tp_1 - tp_0).count();
-
-      // input the current frame and estimate the camera pose
-      SLAM.feed_monocular_frame(cv_bridge::toCvShare(msg, "bgr8")->image, timestamp, mask);
-
-      const auto tp_2 = std::chrono::steady_clock::now();
-
-      const auto track_time = std::chrono::duration_cast<std::chrono::duration<double>>(
-        tp_2 - tp_1).count();
-      track_times.push_back(track_time);
-    },
-    "raw", custom_qos);
-
-  rclcpp::executors::SingleThreadedExecutor exec;
-  exec.add_node(node);
-
-  std::thread thread([&]() {
-      exec.spin();
-    });
-
-  // run the viewer in this thread
+  // run the viewer in another thread
 #ifdef USE_PANGOLIN_VIEWER
-  viewer.run();
-  if (SLAM.terminate_is_requested()) {
-    // wait until the loop BA is finished
-    while (SLAM.loop_BA_is_running()) {
-      std::this_thread::sleep_for(std::chrono::microseconds(5000));
-    }
-    rclcpp::shutdown();
-  }
+  std::thread thread([&]() {
+      viewer.run();
+      if (SLAM.terminate_is_requested()) {
+        // wait until the loop BA is finished
+        while (SLAM.loop_BA_is_running()) {
+          std::this_thread::sleep_for(std::chrono::microseconds(5000));
+        }
+        rclcpp::shutdown();
+      }
+    });
 #elif USE_SOCKET_PUBLISHER
-  publisher.run();
-  if (SLAM.terminate_is_requested()) {
-    // wait until the loop BA is finished
-    while (SLAM.loop_BA_is_running()) {
-      std::this_thread::sleep_for(std::chrono::microseconds(5000));
-    }
-    rclcpp::shutdown();
-  }
+  std::thread thread([&]() {
+      publisher.run();
+      if (SLAM.terminate_is_requested()) {
+        // wait until the loop BA is finished
+        while (SLAM.loop_BA_is_running()) {
+          std::this_thread::sleep_for(std::chrono::microseconds(5000));
+        }
+        rclcpp::shutdown();
+      }
+    });
 #endif
+
+  rclcpp::spin(node);
 
   // automatically close the viewer
 #ifdef USE_PANGOLIN_VIEWER
@@ -126,6 +100,7 @@ void mono_localization(
   // shutdown the SLAM process
   SLAM.shutdown();
 
+  auto & track_times = ros->track_times_;
   if (track_times.size()) {
     std::sort(track_times.begin(), track_times.end());
     const auto total_track_time = std::accumulate(track_times.begin(), track_times.end(), 0.0);
@@ -144,6 +119,8 @@ int main(int argc, char * argv[])
 #endif
   rclcpp::init(argc, argv);
   rclcpp::uninstall_signal_handlers();
+  auto node = std::make_shared<rclcpp::Node>("run_localization");
+
 
   // create options
   popl::OptionParser op("Allowed options");
@@ -198,14 +175,9 @@ int main(int argc, char * argv[])
   ProfilerStart("slam.prof");
 #endif
 
-  // run localization
-  if (cfg->camera_->setup_type_ == openvslam::camera::setup_type_t::Monocular) {
-    mono_localization(
-      cfg, vocab_file_path->value(), mask_img_path->value(),
-      map_db_path->value(), mapping->is_set());
-  } else {
-    throw std::runtime_error("Invalid setup type: " + cfg->camera_->get_setup_type_string());
-  }
+  localization(
+    cfg, vocab_file_path->value(), mask_img_path->value(),
+    map_db_path->value(), mapping->is_set(), node);
 
 #ifdef USE_GOOGLE_PERFTOOLS
   ProfilerStop();
