@@ -18,8 +18,8 @@
  *      Institute: AIST in Japan, XDSPACE
  */
 
-#ifndef BOTANBOT_OPENVSLAM__RUN_SLAM_HPP_
-#define BOTANBOT_OPENVSLAM__RUN_SLAM_HPP_
+#ifndef BOTANBOT_OPENVSLAM__RUN_LOCALIZATION_HPP_
+#define BOTANBOT_OPENVSLAM__RUN_LOCALIZATION_HPP_
 
 #include <pangolin_viewer/viewer.h>
 
@@ -47,17 +47,16 @@
 namespace botanbot_openvslam
 {
 
-class RunSlam : public rclcpp::Node
+class RunLocalization : public rclcpp::Node
 {
 public:
-  RunSlam();
-  ~RunSlam();
+  RunLocalization();
+  ~RunLocalization();
 
-  void rgbd_callback(
+  void rgbdCallback(
     const sensor_msgs::msg::Image::ConstSharedPtr & color,
     const sensor_msgs::msg::Image::ConstSharedPtr & depth);
-
-  void mono_callback(const sensor_msgs::msg::Image::ConstSharedPtr msg);
+  void monoCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg);
   void executeViewerPangolinThread();
 
   typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image,
@@ -83,10 +82,11 @@ private:
   std::string vocab_file_path_;
   std::string setting_file_path_;
   std::string mask_img_path_;
-  std::string map_db_path_;
+  std::string prebuilt_map_path_;
   bool debug_mode_;
   bool eval_log_;
+  bool enable_mapping_module_;
 };
 
 }  // namespace botanbot_openvslam
-#endif  // BOTANBOT_OPENVSLAM__RUN_SLAM_HPP_
+#endif  // BOTANBOT_OPENVSLAM__RUN_LOCALIZATION_HPP_

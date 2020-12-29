@@ -1,19 +1,3 @@
-# Copyright 2019 Open Source Robotics Foundation, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# Author: Darby Lim
-
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -45,8 +29,8 @@ def generate_launch_description():
                               description='Full path to output map msg file'),
         Node(
             package='botanbot_openvslam',
-            executable='run_slam',
-            name='run_slam_rclcpp_node',
+            executable='run_localization',
+            name='run_localization_rclcpp_node',
             remappings=[('camera/color/image_raw', 'camera/color/image_raw'),
                         ('camera/depth/image_raw',
                          'camera/aligned_depth_to_color/image_raw')],

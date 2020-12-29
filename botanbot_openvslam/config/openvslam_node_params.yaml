@@ -6,3 +6,12 @@ run_slam_rclcpp_node:
     map_db_path : /home/ros2-foxy/f.msg
     debug_mode: true
     eval_log: true
+run_localization_rclcpp_node:
+  ros__parameters:
+    vocab_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_openvslam/config/orb_vocab.dbow2
+    setting_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_openvslam/config/slam_config.yaml
+    mask_img_path: ""
+    prebuilt_map_path : /home/ros2-foxy/f.msg
+    debug_mode: true
+    eval_log: true
+    enable_mapping_module: false
