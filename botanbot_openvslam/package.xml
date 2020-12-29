@@ -3,16 +3,12 @@
 <package format="3">
     <name>botanbot_openvslam</name>
     <version>0.0.0</version>
-    <description>The ROS2 package for OpenVSLAM</description>
-
-    <maintainer email="fetulahatas1@gmail.com">Fetullah Atas</maintainer>
+    <description>The ROS2 package for perfroming mapping and localization based on OpenVSLAM</description>
+    <maintainer email="fetullah.atas@nmbu.no">Fetullah Atas</maintainer>
     <license>Apache 2.0</license>
-
     <buildtool_depend>ament_cmake</buildtool_depend>
-
     <depend>image_transport</depend>
     <depend>cv_bridge</depend>
-
     <export>
         <build_type>ament_cmake</build_type>
     </export>

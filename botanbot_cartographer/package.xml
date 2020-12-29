@@ -7,8 +7,8 @@
     ROS 2 launch scripts for cartographer
   </description>
   <license>Apache 2.0</license>
-  <author email="fetulahatas1@gmail.com">Fetullah Atas</author>
-  <maintainer email="fetulahatas1@gmail.com">Fetullah Atas</maintainer>
+  <author email="fetullah.atas@nmbu.no">Fetullah Atas</author>
+  <maintainer email="fetullah.atas@nmbu.no">Fetullah Atas</maintainer>
   <url type="repository">https://github.com/jediofgever/ROS_CB</url>
   <buildtool_depend>ament_cmake</buildtool_depend>
   <exec_depend>cartographer_ros</exec_depend>

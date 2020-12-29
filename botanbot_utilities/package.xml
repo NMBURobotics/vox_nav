@@ -4,7 +4,7 @@
     <name>botanbot_utilities</name>
     <version>0.0.0</version>
     <description>TODO: Package description</description>
-    <maintainer email="fetulahatas1@gmail.com">Fetullah Atas</maintainer>
+    <maintainer email="fetullah.atas@nmbu.no">Fetullah Atas</maintainer>
     <license>Apache-2.0</license>
     <buildtool_depend>ament_cmake</buildtool_depend>
     <depend>tf2_ros</depend>

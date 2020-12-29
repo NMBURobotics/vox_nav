@@ -5,7 +5,7 @@
     <version>0.0.0</version>
     <description>Reads GPS waypoint from a file, converts them to map frame and navigates through the points
                  with FollowWaypoints server from `navigation2`</description>
-    <maintainer email="fetualahatas1@gmail.com">Fetullah Atas</maintainer>
+    <maintainer email="fetullah.atas@nmbu.no">Fetullah Atas</maintainer>
     <license>Apache-2.0</license>
     <buildtool_depend>ament_cmake</buildtool_depend>
     <depend>tf2_ros</depend>

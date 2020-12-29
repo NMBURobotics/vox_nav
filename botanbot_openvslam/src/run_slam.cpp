@@ -75,7 +75,7 @@ RunSlam::RunSlam()
   if (cfg_->camera_->setup_type_ == openvslam::camera::setup_type_t::Monocular) {
     mono_image_subscriber_ = this->create_subscription<sensor_msgs::msg::Image>(
       "camera/color/image_raw", rclcpp::SystemDefaultsQoS(),
-      std::bind(&RunSlam::mono_callback, this, std::placeholders::_1));
+      std::bind(&RunSlam::monoCallback, this, std::placeholders::_1));
   } else if ((cfg_->camera_->setup_type_ == openvslam::camera::setup_type_t::RGBD)) {
     rgbd_color_image_subscriber_.subscribe(
       this, "camera/color/image_raw",
@@ -89,7 +89,7 @@ RunSlam::RunSlam()
         rgbd_depth_image_subscriber_));
     rgbd_approx_time_syncher_->registerCallback(
       std::bind(
-        &RunSlam::rgbd_callback, this, std::placeholders::_1,
+        &RunSlam::rgbdCallback, this, std::placeholders::_1,
         std::placeholders::_2));
   } else {
     throw std::runtime_error("Invalid setup type: " + cfg_->camera_->get_setup_type_string());
@@ -131,7 +131,7 @@ RunSlam::~RunSlam()
   RCLCPP_INFO(get_logger(), "Deconstructed an instance of RunSlam node , bye... ");
 }
 
-void RunSlam::rgbd_callback(
+void RunSlam::rgbdCallback(
   const sensor_msgs::msg::Image::ConstSharedPtr & color,
   const sensor_msgs::msg::Image::ConstSharedPtr & depth)
 {
@@ -151,7 +151,7 @@ void RunSlam::rgbd_callback(
   track_times_.push_back(track_time);
 }
 
-void RunSlam::mono_callback(
+void RunSlam::monoCallback(
   const sensor_msgs::msg::Image::ConstSharedPtr msg)
 {
   const auto tp_1 = std::chrono::steady_clock::now();
@@ -180,9 +180,8 @@ void RunSlam::executeViewerPangolinThread()
 }
 }  // namespace botanbot_openvslam
 
-
 /**
- * @brief
+ * @brief Entry point to slam node
  *
  * @param argc
  * @param argv

@@ -3,8 +3,8 @@
     <version>0.0.0</version>
     <description>botanbot_gui provides a RQT GUI plugin for controling and interacting with botanbot.</description>
     <license>Apache 2.0</license>
-    <author email="fetulahatas1@gmail.com">Fetullah Atas</author>
-    <maintainer email="fetulahatas1@gmail.com">Fetullah Atas</maintainer>
+    <author email="fetullah.atas@nmbu.no">Fetullah Atas</author>
+    <maintainer email="fetullah.atas@nmbu.no">Fetullah Atas</maintainer>
     <url type="repository">https://github.com/jediofgever/OUTDOOR_NAV2</url>
     <buildtool_depend>ament_cmake</buildtool_depend>
     <depend>rclcpp</depend>

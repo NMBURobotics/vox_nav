@@ -190,9 +190,8 @@ void RunLocalization::executeViewerPangolinThread()
 }
 }  // namespace botanbot_openvslam
 
-
 /**
- * @brief
+ * @brief Entry point to localization node
  *
  * @param argc
  * @param argv
