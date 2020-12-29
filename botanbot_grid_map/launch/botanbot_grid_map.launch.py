@@ -1,7 +1,5 @@
 import os
-
 from ament_index_python.packages import get_package_share_directory
-
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
@@ -21,6 +19,12 @@ def generate_launch_description():
         'visualization_config',
         default_value=os.path.join(grid_map_demos_dir, 'config',
                                    'grid_map_visualization_config.yaml'),
+        description='Full path to the Gridmap visualization config file to use'
+    )
+    declare_grid_map_node_config_file_cmd = DeclareLaunchArgument(
+        'visualization_config',
+        default_value=os.path.join(grid_map_demos_dir, 'config',
+                                   'grid_map_node_config.yaml'),
         description='Full path to the Gridmap visualization config file to use'
     )
 
@@ -54,6 +58,7 @@ def generate_launch_description():
 
     # Add launch arguments to the launch description
     ld.add_action(declare_visualization_config_file_cmd)
+    ld.add_action(declare_grid_map_node_config_file_cmd)
     ld.add_action(declare_rviz_config_file_cmd)
 
     # Add node actions to the launch description
