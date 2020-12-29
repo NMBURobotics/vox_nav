@@ -2,9 +2,9 @@
 <sdf version="1.7">
     <world name='tomato_field_world'>
         <include>
-            <uri>model://tomato_field_ground</uri>
-            <name>tomato_field_ground</name>
-            <pose>5.0 5.0 0 0 0 0</pose>
+            <uri>model://grass_plane</uri>
+            <name>grass_plane</name>
+            <pose>0 0 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://sun</uri>
@@ -42,6 +42,41 @@
         <include>
             <pose>-1.5 -3.0 0.25 0.0 0.0 1.57</pose>
             <uri>model://botanbot</uri>
+        </include>
+        <include>
+            <uri>model://lamp_post</uri>
+            <name>lamp_post_0</name>
+            <pose>0.0 23.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://lamp_post</uri>
+            <name>lamp_post_1</name>
+            <pose>10.0 23.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://lamp_post</uri>
+            <name>lamp_post_2</name>
+            <pose>20.0 -26.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://house_1</uri>
+            <name>house_1</name>
+            <pose>16.0 23.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://house_2</uri>
+            <name>house_2</name>
+            <pose>-20.0 23.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://house_3</uri>
+            <name>house_3</name>
+            <pose>-16.0 -23.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://gas_station</uri>
+            <name>gas_station</name>
+            <pose>35.0 20.0 0 0 0 0</pose>
         </include>
         <include>
             <uri>model://tomato_plant_tree</uri>

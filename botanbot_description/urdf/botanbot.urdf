@@ -180,6 +180,8 @@
     <link name="camera_left_ir_optical_frame"></link>
     <link name="camera_right_ir_frame"></link>
     <link name="camera_right_ir_optical_frame"></link>
+    <link name="wide_angle_camera_link"></link>
+
     <!-- END LINKS RELATED TO SENSORS       -->
     <!-- END LINKS                          -->
     <!--////////////////////////////////////-->
@@ -290,6 +292,11 @@
         <parent link="camera_right_ir_frame" />
         <child link="camera_right_ir_optical_frame" />
         <pose xyz="0 0 0 " rpy="-1.57 0 -1.57" />
+    </joint>
+    <joint name="wide_angle_camera_joint" type="fixed">
+        <parent link="base_link" />
+        <child link="wide_angle_camera_link" />
+        <pose xyz="0.3 0.0 0.9" rpy="0 0 0" />
     </joint>
     <!-- END JOINTS RELATED TO SENSORS    -->
     <!--//////////////////////////////////-->

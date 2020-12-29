@@ -542,6 +542,85 @@
                 <visualize>0</visualize>
             </sensor>
         </link>
+        <link name="wide_angle_camera_link">
+            <pose>0.3 0.0 0.9 0 0 0</pose>
+            <visual name="wide_angle_camera_link_visual">
+                <pose>0 0 0 -1.57 0 -1.57</pose>
+                <geometry>
+                    <mesh>
+                        <uri>model://botanbot/meshes/d435.dae</uri>
+                    </mesh>
+                </geometry>
+            </visual>
+            <collision name="wide_angle_camera_link_collision">
+                <pose>0 0 0 -1.57 0 -1.57</pose>
+                <geometry>
+                    <box>
+                        <size>0.02505 0.090 0.025</size>
+                    </box>
+                </geometry>
+            </collision>
+            <inertial>
+                <pose>0 0 0 0 0 0</pose>
+                <inertia>
+                    <ixx>0.001</ixx>
+                    <ixy>0.000</ixy>
+                    <ixz>0.000</ixz>
+                    <iyy>0.001</iyy>
+                    <iyz>0.000</iyz>
+                    <izz>0.001</izz>
+                </inertia>
+                <mass>0.564</mass>
+            </inertial>
+            <sensor name="wide_angle_camera" type="wideanglecamera">
+                <camera>
+                    <horizontal_fov>6.283</horizontal_fov>
+                    <image>
+                        <width>320</width>
+                        <height>240</height>
+                        <format>L_INT8</format>
+                    </image>
+                    <clip>
+                        <near>0.1</near>
+                        <far>100</far>
+                    </clip>
+                    <!-- A new section named `lens`. -->
+                    <lens>
+                        <!-- type element is mandatory -->
+                        <type>custom</type>
+                        <!-- manually defined mapping function r = c1*f*fun(theta/c2 + c3) -->
+                        <!-- More information here: https://en.wikipedia.org/wiki/Fisheye_lens#Mapping_function -->
+                        <custom_function>
+                            <c1>1.05</c1>
+                            <!-- linear scaling -->
+                            <c2>4</c2>
+                            <!-- angle scaling -->
+                            <f>1.0</f>
+                            <!-- one more scaling parameter -->
+                            <fun>tan</fun>
+                            <!-- one of sin,tan,id -->
+                        </custom_function>
+                        <!-- if it is set to `true` your horizontal FOV will ramain as defined -->
+                        <!-- othervise it depends on lens type and custom function, if there is one -->
+                        <scale_to_hfov>true</scale_to_hfov>
+                        <!-- clip everything that is outside of this angle -->
+                        <cutoff_angle>3.1415</cutoff_angle>
+                        <!-- resolution of the cubemap texture, the highter it is - the sharper is your image -->
+                        <env_texture_size>512</env_texture_size>
+                    </lens>
+                    <always_on>1</always_on>
+                    <update_rate>30</update_rate>
+                    <visualize>1</visualize>
+                </camera>
+                <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+                    <cameraName>wide_angle_camera</cameraName>
+                    <imageTopicName>wide_image_raw</imageTopicName>
+                    <cameraInfoTopicName>wide_camera_info</cameraInfoTopicName>
+                    <frameName>wide_angle_camera_link</frameName>
+                    <hackBaseline>0.07</hackBaseline>
+                </plugin>
+            </sensor>
+        </link>
         <link name="gps">
             <pose>0 -0 0.4 0 0 0</pose>
             <collision name="collision">
@@ -677,6 +756,11 @@
         <joint name="realsense_joint" type="fixed">
             <parent>base_link</parent>
             <child>realsense_link</child>
+            <pose>0 0 0 0 0 0</pose>
+        </joint>
+        <joint name="wide_angle_camera_joint" type="fixed">
+            <parent>base_link</parent>
+            <child>wide_angle_camera_link</child>
             <pose>0 0 0 0 0 0</pose>
         </joint>
         <joint name="gps_joint" type="fixed">
