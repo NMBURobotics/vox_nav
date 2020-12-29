@@ -1,4 +1,4 @@
-run_slam:
+run_slam_rclcpp_node:
   ros__parameters:
     vocab_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_openvslam/config/orb_vocab.dbow2
     setting_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_openvslam/config/slam_config.yaml

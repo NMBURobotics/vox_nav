@@ -32,7 +32,7 @@ def generate_launch_description():
     rviz_config_dir = os.path.join(this_package_dir, 'rviz', 'openvslam.rviz')
 
     config_file = os.path.join(this_package_dir, 'config',
-                               'rclcpp_node_config.yaml')
+                               'openvslam_node_params.yaml')
     orb_vocab_file = os.path.join(this_package_dir, 'config',
                                   'orb_vocab.dbow2')
 
@@ -46,7 +46,7 @@ def generate_launch_description():
         Node(
             package='botanbot_openvslam',
             executable='run_slam',
-            name='run_slam',
+            name='run_slam_rclcpp_node',
             remappings=[('camera/color/image_raw', 'camera/color/image_raw'),
                         ('camera/depth/image_raw',
                          'camera/aligned_depth_to_color/image_raw')],

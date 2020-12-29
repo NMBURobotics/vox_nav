@@ -25,7 +25,7 @@ private:
   std::shared_ptr<openvslam::config> cfg_;
 
   rmw_qos_profile_t custom_qos_;
-  std::chrono::steady_clock::time_point tp_0_;
+  std::chrono::steady_clock::time_point initial_time_stamp_;
   cv::Mat mask_;
   std::vector<double> track_times_;
 
