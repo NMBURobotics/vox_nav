@@ -51,6 +51,9 @@ private:
   bool debug_mode_;
   bool eval_log_;
 
+  std::thread thread_;
+  void executePangolinThread();
+
 public:
   RunSlam();
   ~RunSlam();

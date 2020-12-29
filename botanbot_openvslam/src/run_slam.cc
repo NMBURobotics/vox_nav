@@ -4,8 +4,6 @@
 RunSlam::RunSlam()
 :  Node("run_slam")
 {
-  RCLCPP_INFO(get_logger(), "Initializing construtor.. ");
-
   tp_0_ = std::chrono::steady_clock::now();
   custom_qos_ = rmw_qos_profile_default;
   custom_qos_.depth = 1;
@@ -32,16 +30,10 @@ RunSlam::RunSlam()
     std::cerr << e.what() << std::endl;
     return;
   }
-  RCLCPP_INFO(get_logger(), "cfg_ ok.. ");
-
-  rclcpp::sleep_for(std::chrono::seconds(2));
-
   SLAM_ = std::make_shared<openvslam::system>(cfg_, vocab_file_path_.c_str());
   SLAM_->startup();
-
   color_sf_.subscribe(this, "camera/color/image_raw", rmw_qos_profile_sensor_data);
   depth_sf_.subscribe(this, "camera/depth/image_raw", rmw_qos_profile_sensor_data);
-  rclcpp::sleep_for(std::chrono::seconds(2));
 
   // run tracking
   if (cfg_->camera_->setup_type_ == openvslam::camera::setup_type_t::Monocular) {
@@ -52,7 +44,7 @@ RunSlam::RunSlam()
 
     sync_.reset(
       new Syncer_(
-        syncPolicy_(20), color_sf_,
+        syncPolicy_(5), color_sf_,
         depth_sf_));
 
     sync_->registerCallback(
@@ -70,16 +62,9 @@ RunSlam::RunSlam()
     cfg_, SLAM_.get(),
     SLAM_->get_frame_publisher(), SLAM_->get_map_publisher());
 
-  /*std::thread thread([&]() {
-      viewer_->run();
-      if (SLAM_->terminate_is_requested()) {
-        // wait until the loop BA is finished
-        while (SLAM_->loop_BA_is_running()) {
-          std::this_thread::sleep_for(std::chrono::microseconds(5000));
-        }
-        rclcpp::shutdown();
-      }
-    });*/
+  thread_ = std::thread(&RunSlam::executePangolinThread, this);
+  RCLCPP_INFO(get_logger(), "Constructed an instance of RunSlam node ... ");
+
 }
 
 RunSlam::~RunSlam()
@@ -97,72 +82,66 @@ RunSlam::~RunSlam()
       ofs.close();
     }
   }
-
   if (!map_db_path_.empty()) {
     // output the map database
     SLAM_->save_map_database(map_db_path_);
   }
-
   SLAM_->shutdown();
   viewer_->request_terminate();
+  thread_.join();
+  RCLCPP_INFO(get_logger(), "Deconstructed an instance of RunSlam node , bye... ");
 }
 
 void RunSlam::rgbd_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr & color,
   const sensor_msgs::msg::Image::ConstSharedPtr & depth)
 {
-  std::cout << "Entering to rgbd::callback .. " << std::endl;
-
   auto colorcv = cv_bridge::toCvShare(color)->image;
   auto depthcv = cv_bridge::toCvShare(depth)->image;
   if (colorcv.empty() || depthcv.empty()) {
     return;
   }
-
   const auto tp_1 = std::chrono::steady_clock::now();
   const auto timestamp =
     std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - tp_0_).count();
-
   // input the current frame and estimate the camera pose
   SLAM_->feed_RGBD_frame(colorcv, depthcv, timestamp, mask_);
-
   const auto tp_2 = std::chrono::steady_clock::now();
-
   const auto track_time =
     std::chrono::duration_cast<std::chrono::duration<double>>(tp_2 - tp_1).count();
   track_times_.push_back(track_time);
 }
-
 
 void RunSlam::mono_callback(
   const sensor_msgs::msg::Image::ConstSharedPtr msg)
 {
-  std::cout << "Entering to mono::callback .. " << std::endl;
-
   const auto tp_1 = std::chrono::steady_clock::now();
   const auto timestamp =
     std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - tp_0_).count();
-
   // input the current frame and estimate the camera pose
   SLAM_->feed_monocular_frame(cv_bridge::toCvShare(msg)->image, timestamp, mask_);
-
   const auto tp_2 = std::chrono::steady_clock::now();
-
   const auto track_time =
     std::chrono::duration_cast<std::chrono::duration<double>>(tp_2 - tp_1).count();
   track_times_.push_back(track_time);
+}
 
+void RunSlam::executePangolinThread()
+{
+  viewer_->run();
+  if (SLAM_->terminate_is_requested()) {
+    // wait until the loop BA is finished
+    while (SLAM_->loop_BA_is_running()) {
+      std::this_thread::sleep_for(std::chrono::microseconds(5000));
+    }
+  }
 }
 
 int main(int argc, char * argv[])
 {
-
   rclcpp::init(argc, argv);
-
   auto node = std::make_shared<RunSlam>();
-
   rclcpp::spin(node);
   rclcpp::shutdown();
-
   return EXIT_SUCCESS;
 }

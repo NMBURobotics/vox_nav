@@ -29,15 +29,15 @@ grid_map_visualization:
       type: occupancy_grid
       params:
         layer: elevation
-        data_min: 0.08
-        data_max: -0.16
+        data_min: 0.9
+        data_max: -0.9
 
     error_grid:
       type: occupancy_grid
       params:
         layer: error
-        data_min: -0.15
-        data_max: 0.15
+        data_min: -0.9
+        data_max: 0.9
 
     surface_normals:
       type: vectors
@@ -52,8 +52,8 @@ grid_map_visualization:
       type: grid_cells
       params:
         layer: elevation
-        lower_threshold: -0.08
-        upper_threshold: 0.0
+        lower_threshold: -0.9
+        upper_threshold: 0.9
 
 botanbot_grid_map_node:
   ros__parameters:
@@ -62,7 +62,7 @@ botanbot_grid_map_node:
     map_frame: odom
     topic_name: grid_map
     map_publish_fps: 10
-    min_points_in_cell: 4
+    min_points_in_cell: 1
     cloud_transform:
       translation:
         x: 0.0

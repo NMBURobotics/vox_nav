@@ -757,11 +757,11 @@
             <depthOpticalframeName>camera_depth_optical_frame</depthOpticalframeName>
             <infrared1OpticalframeName>camera_left_ir_optical_frame</infrared1OpticalframeName>
             <infrared2OpticalframeName>camera_right_ir_optical_frame</infrared2OpticalframeName>
-            <rangeMinDepth>0.3</rangeMinDepth>
-            <rangeMaxDepth>3.0</rangeMaxDepth>
+            <rangeMinDepth>0.1</rangeMinDepth>
+            <rangeMaxDepth>50.0</rangeMaxDepth>
             <pointCloud>true</pointCloud>
             <pointCloudTopicName>camera/depth/color/points</pointCloudTopicName>
-            <pointCloudCutoff>0.3</pointCloudCutoff>
+            <pointCloudCutoff>0.50</pointCloudCutoff>
         </plugin>
         <plugin name="hector_gps" filename="libgazebo_ros_gps.so">
             <alwaysOn>true</alwaysOn>
