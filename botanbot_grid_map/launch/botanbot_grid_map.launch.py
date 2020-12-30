@@ -48,11 +48,12 @@ def generate_launch_description():
                                        output='screen',
                                        parameters=[visualization_config_file])
 
-    rviz2_node = Node(package='rviz2',
-                      executable='rviz2',
-                      name='rviz2',
-                      output='screen',
-                      arguments=['-d', rviz_config_file])
+    tf = Node(package='tf2_ros',
+              executable='static_transform_publisher',
+              arguments=[
+                  '0.0', '0.0', '0.0', '0.0', '0.0', '1.0', '1', 'odom',
+                  'grid_map'
+              ])
 
     # Create the launch description and populate
     ld = LaunchDescription()
@@ -65,6 +66,6 @@ def generate_launch_description():
     # Add node actions to the launch description
     ld.add_action(tutorial_demo_node)
     ld.add_action(grid_map_visualization_node)
-    ld.add_action(rviz2_node)
+    ld.add_action(tf)
 
     return ld
