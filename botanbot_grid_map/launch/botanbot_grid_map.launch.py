@@ -12,6 +12,7 @@ def generate_launch_description():
 
     # Declare launch configuration variables that can access the launch arguments values
     visualization_config_file = LaunchConfiguration('visualization_config')
+    node_config_file = LaunchConfiguration('node_config')
     rviz_config_file = LaunchConfiguration('rviz_config')
 
     # Declare launch arguments
@@ -22,7 +23,7 @@ def generate_launch_description():
         description='Full path to the Gridmap visualization config file to use'
     )
     declare_grid_map_node_config_file_cmd = DeclareLaunchArgument(
-        'visualization_config',
+        'node_config',
         default_value=os.path.join(grid_map_demos_dir, 'config',
                                    'grid_map_node_config.yaml'),
         description='Full path to the Gridmap visualization config file to use'
@@ -39,7 +40,7 @@ def generate_launch_description():
                               executable='botanbot_grid_map_node',
                               name='botanbot_grid_map_node',
                               output='screen',
-                              parameters=[visualization_config_file])
+                              parameters=[node_config_file])
 
     grid_map_visualization_node = Node(package='grid_map_visualization',
                                        executable='grid_map_visualization',

@@ -20,9 +20,9 @@ Camera.k3: 0.0
 Camera.fps: 30.0
 Camera.cols: 1280
 Camera.rows: 720
-Camera.focal_x_baseline: 640
+Camera.focal_x_baseline: 50
 
-Camera.color_order: "RGB"
+Camera.color_order: "BGR"
 
 #================#
 # ORB Parameters #
@@ -31,12 +31,12 @@ Camera.color_order: "RGB"
 Feature.max_num_keypoints: 1000
 Feature.scale_factor: 1.2
 Feature.num_levels: 8
-Feature.ini_fast_threshold: 20
-Feature.min_fast_threshold: 7
+Feature.ini_fast_threshold: 5
+Feature.min_fast_threshold: 1
 
 #=====================#
 # Tracking Parameters #
 #=====================#
 
-depth_threshold: 2000.0 # depth_threshold * base_line[m] = 10m
+depth_threshold: 50.0
 depthmap_factor: 1000.0

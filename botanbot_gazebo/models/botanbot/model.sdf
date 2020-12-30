@@ -574,10 +574,10 @@
             </inertial>
             <sensor name="wide_angle_camera" type="wideanglecamera">
                 <camera>
-                    <horizontal_fov>6.283</horizontal_fov>
+                    <horizontal_fov>3.1415</horizontal_fov>
                     <image>
-                        <width>320</width>
-                        <height>240</height>
+                        <width>1280</width>
+                        <height>720</height>
                         <format>L_INT8</format>
                     </image>
                     <clip>

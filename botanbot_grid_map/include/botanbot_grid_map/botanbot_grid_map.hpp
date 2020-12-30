@@ -156,6 +156,10 @@ protected:
   // minimum number of points for a cell
   int min_points_in_cell_;
   // optional point cloud transformfrom yaml file
+  double downsample_voxel_size_;
+  int remove_outlier_mean_K_;
+  double remove_outlier_stddev_threshold_;
+
   botanbot_utilities::RigidBodyTransformation pointloud_transform_matrix_;
 };
 }  // namespace botanbot_grid_map

@@ -44,6 +44,9 @@ BotanbotGridMap::BotanbotGridMap()
   this->declare_parameter("cloud_transform.rotation.r", 0.0);
   this->declare_parameter("cloud_transform.rotation.p", 0.0);
   this->declare_parameter("cloud_transform.rotation.y", 0.0);
+  this->declare_parameter("downsample_voxel_size", 0.05);
+  this->declare_parameter("remove_outlier_mean_K", 10);
+  this->declare_parameter("remove_outlier_stddev_threshold", 1.0);
 
   pcd_file_full_path_ = this->get_parameter("pcd_file_full_path").as_string();
   map_frame_ = this->get_parameter("map_frame").as_string();
@@ -66,9 +69,17 @@ BotanbotGridMap::BotanbotGridMap()
   pointloud_transform_matrix_.rpyIntrinsic_.z() =
     this->get_parameter("cloud_transform.rotation.y").as_double();
 
+  downsample_voxel_size_ = this->get_parameter("downsample_voxel_size").as_double();
+  remove_outlier_mean_K_ = this->get_parameter("remove_outlier_mean_K").as_int();
+  remove_outlier_stddev_threshold_ =
+    this->get_parameter("remove_outlier_stddev_threshold").as_double();
+
   pointcloud_ = botanbot_utilities::loadPointcloudFromPcd(pcd_file_full_path_.c_str());
-  pointcloud_ = botanbot_utilities::removeOutliersFromInputCloud(pointcloud_, 2, 1.0);
-  pointcloud_ = botanbot_utilities::downsampleInputCloud(pointcloud_, 0.01);
+  pointcloud_ = botanbot_utilities::downsampleInputCloud(pointcloud_, downsample_voxel_size_);
+  pointcloud_ = botanbot_utilities::removeOutliersFromInputCloud(
+    pointcloud_,
+    remove_outlier_mean_K_,
+    remove_outlier_stddev_threshold_);
 
   pointcloud_ = botanbot_utilities::transformCloud(
     pointcloud_,
