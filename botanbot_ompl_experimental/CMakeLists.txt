@@ -27,6 +27,8 @@ find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 find_package(botanbot_msgs REQUIRED)
+find_package(pcl_ros REQUIRED)
+
 
 include_directories(
   include
@@ -55,6 +57,7 @@ visualization_msgs
 OCTOMAP
 LIBFCL
 ompl
+pcl_ros
 )
 
 ament_target_dependencies(${ompl_exp_executable_name}

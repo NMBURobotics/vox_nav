@@ -20,6 +20,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include "visualization_msgs/msg/marker.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
 // OCTOMAP
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>
@@ -32,12 +33,16 @@
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
+#include <ompl/geometric/planners/rrt/RRTsharp.h>
+
 #include <ompl/geometric/planners/rrt/InformedRRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/objectives/MaximizeMinClearanceObjective.h>
 #include <ompl/base/samplers/MaximizeClearanceValidStateSampler.h>
 #include <ompl/base/objectives/StateCostIntegralObjective.h>
+#include <ompl/base/spaces/DubinsStateSpace.h>
+#include <ompl/base/spaces/ReedsSheppStateSpace.h>
 #include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/geometric/planners/prm/PRM.h>
 #include <ompl/geometric/planners/prm/LazyPRMstar.h>
@@ -52,6 +57,16 @@
 #include "fcl/collision.h"
 #include "fcl/broadphase/broadphase.h"
 #include "fcl/math/transform.h"
+// PCL
+#include <pcl/common/common.h>
+#include <pcl/common/transforms.h>
+#include <pcl/conversions.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+
 /**
  * @brief
  *
@@ -105,10 +120,13 @@ public:
 protected:
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr vis_pub_;
   rclcpp::Publisher<trajectory_msgs::msg::MultiDOFJointTrajectory>::SharedPtr traj_pub_;
+  rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr octomap_pointcloud_pub_;
 
   std::shared_ptr<fcl::CollisionGeometry> robot_collision_geometry_;
   std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
 
+  std::shared_ptr<octomap::OcTree> octomap_octree_;
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
 
