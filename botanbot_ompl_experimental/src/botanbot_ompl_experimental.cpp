@@ -1,58 +1,52 @@
-#include <rclcpp/rclcpp.hpp>
-#include <trajectory_msgs/msg/multi_dof_joint_trajectory.hpp>
-#include <nav_msgs/msg/odometry.hpp>
-#include <geometry_msgs/msg/pose.hpp>
-// OMPL
-#include <octomap_msgs/msg/octomap.hpp>
-#include <octomap_msgs/conversions.h>
-#include <octomap/octomap.h>
-#include <octomap/octomap_utils.h>
-#include <message_filters/subscriber.h>
-#include "visualization_msgs/msg/marker.hpp"
-
-#include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
-#include <ompl/base/spaces/SE3StateSpace.h>
-#include <ompl/base/OptimizationObjective.h>
-#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
-#include <ompl/geometric/planners/rrt/RRTstar.h>
-#include <ompl/geometric/planners/rrt/InformedRRTstar.h>
-#include <ompl/geometric/planners/rrt/RRTConnect.h>
-#include <ompl/geometric/SimpleSetup.h>
-#include <ompl/base/objectives/MaximizeMinClearanceObjective.h>
-#include <ompl/base/samplers/MaximizeClearanceValidStateSampler.h>
-#include <ompl/base/objectives/StateCostIntegralObjective.h>
-#include <ompl/geometric/planners/prm/PRMstar.h>
-#include <ompl/geometric/planners/prm/PRM.h>
-#include <ompl/geometric/planners/prm/LazyPRMstar.h>
-#include "ompl/geometric/planners/cforest/CForest.h"
-#include <ompl/geometric/planners/rrt/TRRT.h>
-#include <ompl/config.h>
-#include <iostream>
-//FCL
-#include "fcl/config.h"
-#include "fcl/octree.h"
-#include "fcl/traversal/traversal_node_octree.h"
-#include "fcl/collision.h"
-#include "fcl/broadphase/broadphase.h"
-#include "fcl/math/transform.h"
-
-double penaliseZ(const ompl::base::State * state);
-ompl::base::OptimizationObjectivePtr get2(const ompl::base::SpaceInformationPtr & si);
-
-rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr vis_pub_;
-rclcpp::Publisher<trajectory_msgs::msg::MultiDOFJointTrajectory>::SharedPtr traj_pub_;
+#include "botanbot_ompl_experimental/botanbot_ompl_experimental.hpp"
 
 
-std::shared_ptr<fcl::CollisionGeometry> robot_bbx_(new fcl::Box(0.3, 0.3, 0.1));
-fcl::OcTree * tree_ = new fcl::OcTree(
-  std::shared_ptr<const octomap::OcTree>(
-    new octomap::OcTree(
-      0.1)));
+namespace botanbot_ompl_experimental
+{
 
-fcl::CollisionObject tree_object_((std::shared_ptr<fcl::CollisionGeometry>(tree_)));
-fcl::CollisionObject robot_object_(robot_bbx_);
+BotanbotOMPLExperimental::BotanbotOMPLExperimental()
+: Node("botanbot_ompl_experimental_rclcpp_node"),
+  robot_collision_geometry_(new fcl::Box(0.1, 0.1, 0.1))
+{
+  robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_collision_geometry_);
 
-bool isStateValid(const ompl::base::State * state)
+  vis_pub_ =
+    this->create_publisher<visualization_msgs::msg::Marker>("visualization_marker", 10);
+  traj_pub_ =
+    this->create_publisher<trajectory_msgs::msg::MultiDOFJointTrajectory>("waypoints", 10);
+
+  /*const std::string filename = "/home/ros2-foxy/fr_campus.bt";
+
+  octomap::OcTree oc_tree_storage(0.1);
+  oc_tree_storage.readBinary(filename);
+
+  fcl_octree_ = std::make_shared<fcl::OcTree>(
+    std::shared_ptr<const octomap::OcTree>(&oc_tree_storage));
+
+  fcl_octree_collision_object_ =
+    std::make_shared<fcl::CollisionObject>(std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));*/
+
+  std::cout << "hi" << std::endl;
+  const std::string filename = "/home/ros2-foxy/minelike.bt";
+
+  octomap::OcTree temp_tree(0.1);
+  temp_tree.readBinary(filename);
+  fcl::OcTree * tree = new fcl::OcTree(std::shared_ptr<const octomap::OcTree>(&temp_tree));
+
+  std::shared_ptr<fcl::CollisionObject> temp = std::make_shared<fcl::CollisionObject>(
+    std::shared_ptr<fcl::CollisionGeometry>(
+      tree));
+  fcl_octree_collision_object_ = temp;
+
+  plan();
+}
+
+BotanbotOMPLExperimental::~BotanbotOMPLExperimental()
+{
+
+}
+
+bool BotanbotOMPLExperimental::isStateValid(const ompl::base::State * state)
 {
   // cast the abstract state type to the type we expect
   const ompl::base::SE3StateSpace::StateType * se3state =
@@ -69,10 +63,12 @@ bool isStateValid(const ompl::base::State * state)
   // check validity of state Fdefined by pos & rot
   fcl::Vec3f translation(pos->values[0], pos->values[1], pos->values[2]);
   fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
-  robot_object_.setTransform(rotation, translation);
+  robot_collision_object_->setTransform(rotation, translation);
   fcl::CollisionRequest requestType(1, false, 1, false);
   fcl::CollisionResult collisionResult;
-  fcl::collide(&robot_object_, &tree_object_, requestType, collisionResult);
+  fcl::collide(
+    robot_collision_object_.get(),
+    fcl_octree_collision_object_.get(), requestType, collisionResult);
 
   return !collisionResult.isCollision();
 }
@@ -105,29 +101,26 @@ public:
   }
 };
 
-ompl::base::OptimizationObjectivePtr get2(const ompl::base::SpaceInformationPtr & si)
+ompl::base::OptimizationObjectivePtr BotanbotOMPLExperimental::get2(
+  const ompl::base::SpaceInformationPtr & si)
 {
   ompl::base::OptimizationObjectivePtr obj = std::make_shared<ChildOptimizationObjective>(si);
   obj->setCostToGoHeuristic(&ompl::base::goalRegionCostToGo);
   return obj;
 }
 
-void plan()
+void BotanbotOMPLExperimental::plan()
 {
   // construct the state space we are planning in
   ompl::base::StateSpacePtr space(new ompl::base::SE3StateSpace());
 
   // set the bounds for the R^3 part of SE(3)
   ompl::base::RealVectorBounds bounds(3);
-  // bounds.setLow(-1);
-  // bounds.setHigh(1);
 
   bounds.setLow(0, -10);
   bounds.setHigh(0, 10);
   bounds.setLow(1, -10);
   bounds.setHigh(1, 10);
-  //bounds.setLow(2,0);
-  //bounds.setHigh(2,1);
   bounds.setLow(2, 0);
   bounds.setHigh(2, 18);
 
@@ -137,19 +130,21 @@ void plan()
   ompl::base::SpaceInformationPtr si(new ompl::base::SpaceInformation(space));
 
   // set state validity checking for this space
-  si->setStateValidityChecker(std::bind(&isStateValid, std::placeholders::_1));
+  si->setStateValidityChecker(
+    std::bind(
+      &BotanbotOMPLExperimental::isStateValid, this,
+      std::placeholders::_1));
 
-  //si->setValidStateSamplerAllocator(allocOBValidStateSampler);
   // create a random start state
   ompl::base::ScopedState<ompl::base::SE3StateSpace> start(space);
 
-  start->setXYZ(6.5, 7.5, 1); // reverse minelike
+  start->setXYZ(0.0, 0.0, 1); // reverse minelike
 
   start->as<ompl::base::SO3StateSpace::StateType>(1)->setIdentity();
 
   // create a random goal state
   ompl::base::ScopedState<ompl::base::SE3StateSpace> goal(space);
-  goal->setXYZ(-5, -5, 10); // reverse minelike
+  goal->setXYZ(5, 5, 1); // reverse minelike
   goal->as<ompl::base::SO3StateSpace::StateType>(1)->setIdentity();
 
   // create a problem instance
@@ -190,7 +185,6 @@ void plan()
       pdef->getSolutionPath()->as<ompl::geometric::PathGeometric>();
     pth->printAsMatrix(std::cout);
     // print the path to screen
-    // path->print(std::cout);
     trajectory_msgs::msg::MultiDOFJointTrajectory msg;
     trajectory_msgs::msg::MultiDOFJointTrajectoryPoint point_msg;
 
@@ -279,7 +273,6 @@ void plan()
       marker.color.g = 1.0;
       marker.color.b = 0.0;
       vis_pub_->publish(marker);
-      // ros::Duration(0.1).sleep();
       std::cout << "Published marker: " << idx << std::endl;
     }
   } else {
@@ -287,50 +280,20 @@ void plan()
   }
 }
 
-void octomapCallback(/*const octomap_msgs::msg::Octomap & msg*/)
-{
-  //loading octree from binary
-  std::cout << "hi" << std::endl;
-  const std::string filename = "/home/abhilesh/minelike.bt";
-
-  octomap::OcTree temp_tree(0.1);
-  temp_tree.readBinary(filename);
-  fcl::OcTree * tree = new fcl::OcTree(std::shared_ptr<const octomap::OcTree>(&temp_tree));
-
-  // convert octree to collision object
-  // octomap::OcTree* tree_oct = dynamic_cast<octomap::OcTree*>(octomap_msgs::msgToMap(msg));
-  // fcl::OcTree* tree = new fcl::OcTree(std::shared_ptr<const octomap::OcTree>(tree_oct));
-  fcl::CollisionObject temp((std::shared_ptr<fcl::CollisionGeometry>(tree)));
-  tree_object_ = temp;
-  plan();
-
-}
+} // namespace botanbot_ompl_experimental
 
 int main(int argc, char ** argv)
 {
-  rclcpp::init(argc, argv);
-
-  auto node = rclcpp::Node::make_shared("minimal_publisher");
-
-  vis_pub_ =
-    node->create_publisher<visualization_msgs::msg::Marker>("visualization_marker", 10);
-  traj_pub_ =
-    node->create_publisher<trajectory_msgs::msg::MultiDOFJointTrajectory>("waypoints", 10);
-
-  //loading octree from binary
-  std::cout << "hi" << std::endl;
-  const std::string filename = "/home/ros2-foxy/minelike.bt";
-
-  octomap::OcTree temp_tree(0.1);
-  temp_tree.readBinary(filename);
-  fcl::OcTree * tree = new fcl::OcTree(std::shared_ptr<const octomap::OcTree>(&temp_tree));
-  fcl::CollisionObject temp((std::shared_ptr<fcl::CollisionGeometry>(tree)));
-  tree_object_ = temp;
-  plan();
-
   std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
 
+  rclcpp::init(argc, argv);
+
+  auto node = std::make_shared
+    <botanbot_ompl_experimental::BotanbotOMPLExperimental>();
+
   rclcpp::spin(node);
+
+  rclcpp::shutdown();
 
   return 0;
 }

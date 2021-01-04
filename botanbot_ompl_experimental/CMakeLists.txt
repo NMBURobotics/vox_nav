@@ -26,6 +26,7 @@ find_package(octomap_msgs REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(trajectory_msgs REQUIRED)
+find_package(botanbot_msgs REQUIRED)
 
 include_directories(
   include
@@ -45,6 +46,7 @@ set(dependencies
 geometry_msgs
 octomap_msgs
 sensor_msgs
+botanbot_msgs
 std_msgs
 tf2_eigen
 tf2_geometry_msgs
