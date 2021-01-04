@@ -27,12 +27,12 @@ find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 
-
 include_directories(
   include
   ${LIBFCL_INCLUDE_DIRS}
   ${THIS_PACKAGE_INCLUDE_DIRS}
   ${OMPL_INCLUDE_DIRS}
+  ${OCTOMAP_INCLUDE_DIRS}
 )
 
 set(ompl_exp_executable_name ompl_exp)
@@ -59,7 +59,7 @@ ament_target_dependencies(${ompl_exp_executable_name}
   ${dependencies}
 )
 
-target_link_libraries(${ompl_exp_executable_name} )
+target_link_libraries(${ompl_exp_executable_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
 install(TARGETS ${ompl_exp_executable_name}
   RUNTIME DESTINATION lib/${PROJECT_NAME}
@@ -70,7 +70,7 @@ install(DIRECTORY include/
 )
 
 install(
-  DIRECTORY launch params 
+  DIRECTORY launch 
   DESTINATION share/${PROJECT_NAME}
 )
 

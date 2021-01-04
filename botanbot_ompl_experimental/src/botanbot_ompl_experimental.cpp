@@ -43,14 +43,14 @@ rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr vis_pub_;
 rclcpp::Publisher<trajectory_msgs::msg::MultiDOFJointTrajectory>::SharedPtr traj_pub_;
 
 
-std::shared_ptr<fcl::CollisionGeometry> RobotBoundingBox_;
-RobotBoundingBox_ = std::make_shared<fcl::OcTree>(fcl::Box(0.3, 0.3, 0.1));
+std::shared_ptr<fcl::CollisionGeometry> robot_bbx_(new fcl::Box(0.3, 0.3, 0.1));
+fcl::OcTree * tree_ = new fcl::OcTree(
+  std::shared_ptr<const octomap::OcTree>(
+    new octomap::OcTree(
+      0.1)));
 
-std::shared_ptr<fcl::OcTree> tree_;
-tree_ = std::make_shared<const octomap::OcTree>(new octomap::OcTree(0.1));
-
-fcl::CollisionObject tree_object_((std::shared_ptr<fcl::CollisionGeometry>(*tree_)));
-fcl::CollisionObject robot_object_(*RobotBoundingBox_);
+fcl::CollisionObject tree_object_((std::shared_ptr<fcl::CollisionGeometry>(tree_)));
+fcl::CollisionObject robot_object_(robot_bbx_);
 
 bool isStateValid(const ompl::base::State * state)
 {
@@ -72,7 +72,7 @@ bool isStateValid(const ompl::base::State * state)
   robot_object_.setTransform(rotation, translation);
   fcl::CollisionRequest requestType(1, false, 1, false);
   fcl::CollisionResult collisionResult;
-  fcl::collide(&robot_object_, &tree_, requestType, collisionResult);
+  fcl::collide(&robot_object_, &tree_object_, requestType, collisionResult);
 
   return !collisionResult.isCollision();
 }
@@ -194,7 +194,7 @@ void plan()
     trajectory_msgs::msg::MultiDOFJointTrajectory msg;
     trajectory_msgs::msg::MultiDOFJointTrajectoryPoint point_msg;
 
-    msg.header.stamp = rclcpp::Clock::now();
+    msg.header.stamp = rclcpp::Clock().now();
     msg.header.frame_id = "map";
     msg.joint_names.clear();
     msg.points.clear();
@@ -212,7 +212,7 @@ void plan()
       const ompl::base::SO3StateSpace::StateType * rot =
         se3state->as<ompl::base::SO3StateSpace::StateType>(1);
 
-      point_msg.time_from_start.nanosec(rclcpp::Clock::now().nanoseconds());
+      //point_msg.time_from_start.sec(rclcpp::Clock().now());
 
       point_msg.transforms.resize(1);
 
@@ -259,11 +259,11 @@ void plan()
 
       //marker.header.frame_id = "world";
       marker.header.frame_id = "map";
-      marker.header.stamp = rclcpp::Clock::now();
+      marker.header.stamp = rclcpp::Clock().now();
       marker.ns = "path";
       marker.id = idx;
-      marker.type = visualization_msgs::Marker::CUBE;
-      marker.action = visualization_msgs::Marker::ADD;
+      marker.type = visualization_msgs::msg::Marker::CUBE;
+      marker.action = visualization_msgs::msg::Marker::ADD;
       marker.pose.position.x = pos->values[0];
       marker.pose.position.y = pos->values[1];
       marker.pose.position.z = pos->values[2];
@@ -301,7 +301,7 @@ void octomapCallback(/*const octomap_msgs::msg::Octomap & msg*/)
   // octomap::OcTree* tree_oct = dynamic_cast<octomap::OcTree*>(octomap_msgs::msgToMap(msg));
   // fcl::OcTree* tree = new fcl::OcTree(std::shared_ptr<const octomap::OcTree>(tree_oct));
   fcl::CollisionObject temp((std::shared_ptr<fcl::CollisionGeometry>(tree)));
-  treeObj = temp;
+  tree_object_ = temp;
   plan();
 
 }
@@ -324,14 +324,13 @@ int main(int argc, char ** argv)
   octomap::OcTree temp_tree(0.1);
   temp_tree.readBinary(filename);
   fcl::OcTree * tree = new fcl::OcTree(std::shared_ptr<const octomap::OcTree>(&temp_tree));
-
-  fcl::CollisionObject temp((std::shared_ptr<fcl::CollisionGeometry>(tree_)));
-  treeObj = temp;
+  fcl::CollisionObject temp((std::shared_ptr<fcl::CollisionGeometry>(tree)));
+  tree_object_ = temp;
   plan();
 
   std::cout << "OMPL version: " << OMPL_VERSION << std::endl;
 
-  rclcpp::spin();
+  rclcpp::spin(node);
 
   return 0;
 }
