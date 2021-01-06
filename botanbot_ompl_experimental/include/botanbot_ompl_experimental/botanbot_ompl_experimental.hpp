@@ -19,7 +19,7 @@
 #include <trajectory_msgs/msg/multi_dof_joint_trajectory.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/pose.hpp>
-#include "visualization_msgs/msg/marker.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 // OCTOMAP
 #include <octomap_msgs/msg/octomap.hpp>
@@ -32,9 +32,10 @@
 #include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
+#include <ompl/geometric/planners/kpiece/KPIECE1.h>
+#include <ompl/geometric/planners/rrt/RRT.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTsharp.h>
-
 #include <ompl/geometric/planners/rrt/InformedRRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 #include <ompl/geometric/SimpleSetup.h>
@@ -73,7 +74,6 @@
  */
 namespace botanbot_ompl_experimental
 {
-
 
 /**
  * @brief
@@ -118,7 +118,7 @@ public:
   void plan();
 
 protected:
-  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr vis_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr vis_pub_;
   rclcpp::Publisher<trajectory_msgs::msg::MultiDOFJointTrajectory>::SharedPtr traj_pub_;
   rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr octomap_pointcloud_pub_;

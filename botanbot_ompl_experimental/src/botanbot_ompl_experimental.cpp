@@ -3,6 +3,7 @@
 
 namespace botanbot_ompl_experimental
 {
+using namespace std::chrono_literals;
 
 BotanbotOMPLExperimental::BotanbotOMPLExperimental()
 : Node("botanbot_ompl_experimental_rclcpp_node"),
@@ -11,7 +12,7 @@ BotanbotOMPLExperimental::BotanbotOMPLExperimental()
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_collision_geometry_);
 
   vis_pub_ =
-    this->create_publisher<visualization_msgs::msg::Marker>("visualization_marker", 10);
+    this->create_publisher<visualization_msgs::msg::MarkerArray>("visualization_marker", 10);
   traj_pub_ =
     this->create_publisher<trajectory_msgs::msg::MultiDOFJointTrajectory>("waypoints", 10);
   octomap_pub_ =
@@ -93,7 +94,7 @@ public:
       Cstate3D->as<ompl::base::RealVectorStateSpace::StateType>(0);
     double z = state3D->values[2];
     double y = state3D->values[1];
-    return ompl::base::Cost(100 * z);
+    return ompl::base::Cost(1);
   }
 };
 
@@ -113,10 +114,10 @@ void BotanbotOMPLExperimental::plan()
   // set the bounds for the R^3 part of SE(3)
   ompl::base::RealVectorBounds bounds(3);
 
-  bounds.setLow(0, -30);
-  bounds.setHigh(0, 30);
-  bounds.setLow(1, -30);
-  bounds.setHigh(1, 30);
+  bounds.setLow(0, -100);
+  bounds.setHigh(0, 100);
+  bounds.setLow(1, -100);
+  bounds.setHigh(1, 100);
   bounds.setLow(2, 0);
   bounds.setHigh(2, 2);
 
@@ -140,22 +141,19 @@ void BotanbotOMPLExperimental::plan()
 
   // create a random goal state
   ompl::base::ScopedState<ompl::base::SE3StateSpace> goal(space);
-  goal->setXYZ(20, 20.0, 1.0);   // reverse minelike
+  goal->setXYZ(80, -5.0, 1.0);   // reverse minelike
   goal->as<ompl::base::SO3StateSpace::StateType>(1)->setIdentity();
 
   // create a problem instance
   ompl::base::ProblemDefinitionPtr pdef(new ompl::base::ProblemDefinition(si));
 
-
   // set the start and goal states
   pdef->setStartAndGoalStates(start, goal);
-
   pdef->setOptimizationObjective(get2(si));
-
 
   // create a planner for the defined space
   //ompl::base::PlannerPtr planner(new ompl::geometric::RRTConnect(si));
-  ompl::base::PlannerPtr planner(new ompl::geometric::RRTsharp(si));
+  ompl::base::PlannerPtr planner(new ompl::geometric::RRTstar(si));
   //ompl::base::PlannerPtr planner(new ompl::geometric::PRMstar(si));
 
   // set the problem we are trying to solve for the planner
@@ -182,6 +180,15 @@ void BotanbotOMPLExperimental::plan()
     ompl::geometric::PathGeometric * pth =
       pdef->getSolutionPath()->as<ompl::geometric::PathGeometric>();
     pth->printAsMatrix(std::cout);
+
+
+    //Path smoothing using bspline
+    ompl::geometric::PathSimplifier * pathBSpline = new ompl::geometric::PathSimplifier(si);
+    ompl::geometric::PathGeometric path_smooth(
+      dynamic_cast<const ompl::geometric::PathGeometric &>(*pdef->getSolutionPath()));
+    pathBSpline->smoothBSpline(path_smooth, 3);
+    std::cout << "Smoothed Path" << std::endl;
+    path_smooth.print(std::cout);
     // print the path to screen
     trajectory_msgs::msg::MultiDOFJointTrajectory msg;
     trajectory_msgs::msg::MultiDOFJointTrajectoryPoint point_msg;
@@ -193,13 +200,11 @@ void BotanbotOMPLExperimental::plan()
     msg.joint_names.push_back("base_link");
 
     //Publish path as markers
-    visualization_msgs::msg::Marker marker;
-    marker.action = visualization_msgs::msg::Marker::DELETEALL;
-    vis_pub_->publish(marker);
+    visualization_msgs::msg::MarkerArray marker_array;
 
-    for (std::size_t path_idx = 0; path_idx < pth->getStateCount(); path_idx++) {
+    for (std::size_t path_idx = 0; path_idx < path_smooth.getStateCount(); path_idx++) {
       const ompl::base::SE3StateSpace::StateType * se3state =
-        pth->getState(path_idx)->as<ompl::base::SE3StateSpace::StateType>();
+        path_smooth.getState(path_idx)->as<ompl::base::SE3StateSpace::StateType>();
 
       // extract the first component of the state and cast it to what we expect
       const ompl::base::RealVectorStateSpace::StateType * pos =
@@ -224,14 +229,15 @@ void BotanbotOMPLExperimental::plan()
 
       msg.points.push_back(point_msg);
 
-
       //marker.header.frame_id = "world";
+      visualization_msgs::msg::Marker marker;
       marker.header.frame_id = "map";
       marker.header.stamp = rclcpp::Clock().now();
       marker.ns = "path";
       marker.id = path_idx;
       marker.type = visualization_msgs::msg::Marker::CUBE;
       marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.lifetime = rclcpp::Duration::from_seconds(0);
       marker.pose.position.x = pos->values[0];
       marker.pose.position.y = pos->values[1];
       marker.pose.position.z = pos->values[2];
@@ -246,19 +252,11 @@ void BotanbotOMPLExperimental::plan()
       marker.color.r = 0.0;
       marker.color.g = 1.0;
       marker.color.b = 0.0;
-      vis_pub_->publish(marker);
+      marker_array.markers.push_back(marker);
       std::cout << "Published marker: " << path_idx << std::endl;
-
     }
+    vis_pub_->publish(marker_array);
     traj_pub_->publish(msg);
-
-    //Path smoothing using bspline
-    ompl::geometric::PathSimplifier * pathBSpline = new ompl::geometric::PathSimplifier(si);
-    ompl::geometric::PathGeometric path_smooth(
-      dynamic_cast<const ompl::geometric::PathGeometric &>(*pdef->getSolutionPath()));
-    pathBSpline->smoothBSpline(path_smooth, 3);
-    std::cout << "Smoothed Path" << std::endl;
-    path_smooth.print(std::cout);
 
   } else {
     std::cout << "No solution found" << std::endl;
@@ -323,7 +321,6 @@ void BotanbotOMPLExperimental::plan()
   octomap_pointcloud_pub_->publish(cloud);
   octomap_pointcloud_pub_->publish(cloud);
   octomap_pointcloud_pub_->publish(cloud);
-
 }
 
 } // namespace botanbot_ompl_experimental
