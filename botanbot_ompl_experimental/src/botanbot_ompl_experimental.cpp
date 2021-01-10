@@ -22,7 +22,7 @@ BotanbotOMPLExperimental::BotanbotOMPLExperimental()
     "pointcloud2_octomap",
     rclcpp::SystemDefaultsQoS());
 
-  const std::string filename = "/home/ros2-foxy/fr_campus.bt";
+  const std::string filename = "/home/ros2-foxy/labak-rgbd.bt";
 
   octomap_octree_ = std::make_shared<octomap::OcTree>(0.1);
   octomap_octree_->readBinary(filename);
