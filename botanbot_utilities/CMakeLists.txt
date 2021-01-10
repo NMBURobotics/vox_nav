@@ -59,21 +59,24 @@ add_executable(gps_waypoint_collector src/gps_waypoint_collector.cpp)
 target_link_libraries(gps_waypoint_collector)
 ament_target_dependencies(gps_waypoint_collector ${dependencies})
 
-add_executable(pcl2octomap_converter src/pcl2octomap_converter.cpp)
+add_executable(pcl2octomap_converter  src/pcl_helpers.cpp
+                                      src/pcl2octomap_converter.cpp)
 target_link_libraries(pcl2octomap_converter ${PCL_LIBRARIES} ${OCTOMAP_LIBRARIES})
 ament_target_dependencies(pcl2octomap_converter ${dependencies})
 
 install(TARGETS tf_helpers
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
-        RUNTIME DESTINATION bin
-)
+        RUNTIME DESTINATION bin)
+
 install(TARGETS gps_waypoint_collector pcl2octomap_converter
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
-        DESTINATION include/
-)
+        DESTINATION include/)
+
+install(DIRECTORY config launch 
+        DESTINATION share/${PROJECT_NAME})
 
 ament_export_include_directories(include ${EIGEN3_INCLUDE_DIR})
 ament_export_libraries(tf_helpers)

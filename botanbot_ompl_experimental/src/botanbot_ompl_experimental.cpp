@@ -22,7 +22,7 @@ BotanbotOMPLExperimental::BotanbotOMPLExperimental()
     "pointcloud2_octomap",
     rclcpp::SystemDefaultsQoS());
 
-  const std::string filename = "/home/ros2-foxy/labak-rgbd.bt";
+  const std::string filename = "/home/ros2-foxy/f.bt";
 
   octomap_octree_ = std::make_shared<octomap::OcTree>(0.1);
   octomap_octree_->readBinary(filename);
@@ -135,13 +135,13 @@ void BotanbotOMPLExperimental::plan()
   // create a random start state
   ompl::base::ScopedState<ompl::base::SE3StateSpace> start(space);
 
-  start->setXYZ(0.0, 0.0, 1.0);   // reverse minelike
+  start->setXYZ(0.0, 0.0, 0);   // reverse minelike
 
   start->as<ompl::base::SO3StateSpace::StateType>(1)->setIdentity();
 
   // create a random goal state
   ompl::base::ScopedState<ompl::base::SE3StateSpace> goal(space);
-  goal->setXYZ(80, -5.0, 1.0);   // reverse minelike
+  goal->setXYZ(15, -20.0, 1.0);   // reverse minelike
   goal->as<ompl::base::SO3StateSpace::StateType>(1)->setIdentity();
 
   // create a problem instance
