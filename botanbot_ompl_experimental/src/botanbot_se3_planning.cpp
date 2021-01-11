@@ -1,11 +1,11 @@
-#include "botanbot_ompl_experimental/botanbot_ompl_experimental.hpp"
+#include "botanbot_ompl_experimental/botanbot_se3_planning.hpp"
 
 
 namespace botanbot_ompl_experimental
 {
 using namespace std::chrono_literals;
 
-BotanbotOMPLExperimental::BotanbotOMPLExperimental()
+BotanbotSE3Planning::BotanbotSE3Planning()
 : Node("botanbot_ompl_experimental_rclcpp_node"),
   robot_collision_geometry_(new fcl::Box(1.0, 1.0, 0.8))
 {
@@ -39,12 +39,12 @@ BotanbotOMPLExperimental::BotanbotOMPLExperimental()
   plan();
 }
 
-BotanbotOMPLExperimental::~BotanbotOMPLExperimental()
+BotanbotSE3Planning::~BotanbotSE3Planning()
 {
 
 }
 
-bool BotanbotOMPLExperimental::isStateValid(const ompl::base::State * state)
+bool BotanbotSE3Planning::isStateValid(const ompl::base::State * state)
 {
   // cast the abstract state type to the type we expect
   const ompl::base::SE3StateSpace::StateType * se3state =
@@ -99,7 +99,7 @@ public:
   }
 };
 
-ompl::base::OptimizationObjectivePtr BotanbotOMPLExperimental::get2(
+ompl::base::OptimizationObjectivePtr BotanbotSE3Planning::get2(
   const ompl::base::SpaceInformationPtr & si)
 {
   ompl::base::OptimizationObjectivePtr obj = std::make_shared<ChildOptimizationObjective>(si);
@@ -107,7 +107,7 @@ ompl::base::OptimizationObjectivePtr BotanbotOMPLExperimental::get2(
   return obj;
 }
 
-void BotanbotOMPLExperimental::plan()
+void BotanbotSE3Planning::plan()
 {
   // construct the state space we are planning in
   ompl::base::StateSpacePtr space(new ompl::base::SE3StateSpace());
@@ -130,7 +130,7 @@ void BotanbotOMPLExperimental::plan()
   // set state validity checking for this space
   si->setStateValidityChecker(
     std::bind(
-      &BotanbotOMPLExperimental::isStateValid, this,
+      &BotanbotSE3Planning::isStateValid, this,
       std::placeholders::_1));
 
   // create a random start state
@@ -333,7 +333,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
 
   auto node = std::make_shared
-    <botanbot_ompl_experimental::BotanbotOMPLExperimental>();
+    <botanbot_ompl_experimental::BotanbotSE3Planning>();
 
   rclcpp::spin(node);
 

@@ -53,6 +53,18 @@
 #include <ompl/geometric/planners/prm/LazyPRMstar.h>
 #include "ompl/geometric/planners/cforest/CForest.h"
 #include <ompl/geometric/planners/rrt/TRRT.h>
+#include <ompl/control/SpaceInformation.h>
+#include <ompl/base/goals/GoalState.h>
+#include <ompl/base/spaces/SE2StateSpace.h>
+#include <ompl/control/spaces/RealVectorControlSpace.h>
+#include <ompl/control/planners/kpiece/KPIECE1.h>
+#include <ompl/control/planners/rrt/RRT.h>
+#include <ompl/control/planners/est/EST.h>
+#include <ompl/control/planners/syclop/SyclopRRT.h>
+#include <ompl/control/planners/syclop/SyclopEST.h>
+#include <ompl/control/planners/pdst/PDST.h>
+#include <ompl/control/planners/syclop/GridDecomposition.h>
+#include <ompl/control/SimpleSetup.h>
 #include <ompl/config.h>
 #include <iostream>
 //FCL
@@ -83,20 +95,20 @@ namespace botanbot_ompl_experimental
  * @brief
  *
  */
-class BotanbotSE2Planning : public rclcpp::Node
+class BotanbotSE2PlanningControlSpace : public rclcpp::Node
 {
 public:
 /**
  * @brief Construct a new Botanbot O M P L Experimental object
  *
  */
-  BotanbotSE2Planning();
+  BotanbotSE2PlanningControlSpace();
 
 /**
  * @brief Destroy the Botanbot O M P L Experimental object
  *
  */
-  ~BotanbotSE2Planning();
+  ~BotanbotSE2PlanningControlSpace();
 
   /**
    * @brief
@@ -113,6 +125,14 @@ public:
    */
   void plan();
 
+  /**
+   * @brief
+   *
+   */
+  static void propagate(
+    const ompl::base::State * start, const ompl::control::Control * control, const double duration,
+    ompl::base::State * result);
+
 protected:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr vis_pub_;
   rclcpp::Publisher<trajectory_msgs::msg::MultiDOFJointTrajectory>::SharedPtr traj_pub_;
@@ -124,7 +144,6 @@ protected:
   std::shared_ptr<octomap::OcTree> octomap_octree_;
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
-
 };
 }  // namespace botanbot_ompl_experimental
 

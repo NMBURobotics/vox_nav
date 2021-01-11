@@ -58,26 +58,22 @@ LIBFCL
 ompl
 pcl_ros)
 
-set(ompl_exp_executable_name ompl_exp)
+set(botanbot_se3_planner_exc_name botanbot_se3_planner)
+add_executable(${botanbot_se3_planner_exc_name} src/botanbot_se3_planning.cpp)
+ament_target_dependencies(${botanbot_se3_planner_exc_name} ${dependencies})
+target_link_libraries(${botanbot_se3_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
-add_executable(${ompl_exp_executable_name}
-  src/botanbot_ompl_experimental.cpp)
- 
-ament_target_dependencies(${ompl_exp_executable_name}
-  ${dependencies})
+set(botanbot_se2_planner_exc_name botanbot_se2_planner)
+add_executable(${botanbot_se2_planner_exc_name} src/botanbot_se2_planning.cpp)
+ament_target_dependencies(${botanbot_se2_planner_exc_name} ${dependencies})
+target_link_libraries(${botanbot_se2_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
-target_link_libraries(${ompl_exp_executable_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
+set(botanbot_se2_planner_control_space_exc_name botanbot_se2_planner_control_space)
+add_executable(${botanbot_se2_planner_control_space_exc_name} src/botanbot_se2_control_space_planner.cpp)
+ament_target_dependencies(${botanbot_se2_planner_control_space_exc_name} ${dependencies})
+target_link_libraries(${botanbot_se2_planner_control_space_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
-set(ode_rigidbody_exc_name ode_rigidbody)
-
-add_executable(${ode_rigidbody_exc_name}
-  src/botanbot_se2_planning.cpp)
- 
-ament_target_dependencies(${ode_rigidbody_exc_name} ${dependencies})
-
-target_link_libraries(${ode_rigidbody_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
-
-install(TARGETS ${ompl_exp_executable_name} ${ode_rigidbody_exc_name}
+install(TARGETS ${botanbot_se3_planner_exc_name} ${botanbot_se2_planner_exc_name} ${botanbot_se2_planner_control_space_exc_name}
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

@@ -79,20 +79,20 @@ namespace botanbot_ompl_experimental
  * @brief
  *
  */
-class BotanbotOMPLExperimental : public rclcpp::Node
+class BotanbotSE3Planning : public rclcpp::Node
 {
 public:
 /**
  * @brief Construct a new Botanbot O M P L Experimental object
  *
  */
-  BotanbotOMPLExperimental();
+  BotanbotSE3Planning();
 
 /**
  * @brief Destroy the Botanbot O M P L Experimental object
  *
  */
-  ~BotanbotOMPLExperimental();
+  ~BotanbotSE3Planning();
 
   /**
    * @brief
@@ -125,12 +125,9 @@ protected:
 
   std::shared_ptr<fcl::CollisionGeometry> robot_collision_geometry_;
   std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-
   std::shared_ptr<octomap::OcTree> octomap_octree_;
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
-
-
 };
 }  // namespace botanbot_ompl_experimental
 
