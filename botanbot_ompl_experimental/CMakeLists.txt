@@ -29,26 +29,20 @@ find_package(OCTOMAP REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 find_package(botanbot_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
-
 
 include_directories(
   include
   ${LIBFCL_INCLUDE_DIRS}
   ${THIS_PACKAGE_INCLUDE_DIRS}
   ${OMPL_INCLUDE_DIRS}
-  ${OCTOMAP_INCLUDE_DIRS}
-)
+  ${OCTOMAP_INCLUDE_DIRS})
 
-set(ompl_exp_executable_name ompl_exp)
-
-add_executable(${ompl_exp_executable_name}
-  src/botanbot_ompl_experimental.cpp
-)
- 
 set(dependencies
+rclcpp
 geometry_msgs
 octomap_msgs
 sensor_msgs
@@ -56,23 +50,35 @@ botanbot_msgs
 std_msgs
 tf2_eigen
 tf2_geometry_msgs
+tf2_ros
 trajectory_msgs
 visualization_msgs
 OCTOMAP
 LIBFCL
 ompl
-pcl_ros
-)
+pcl_ros)
 
+set(ompl_exp_executable_name ompl_exp)
+
+add_executable(${ompl_exp_executable_name}
+  src/botanbot_ompl_experimental.cpp)
+ 
 ament_target_dependencies(${ompl_exp_executable_name}
-  ${dependencies}
-)
+  ${dependencies})
 
 target_link_libraries(${ompl_exp_executable_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
-install(TARGETS ${ompl_exp_executable_name}
-  RUNTIME DESTINATION lib/${PROJECT_NAME}
-)
+set(ode_rigidbody_exc_name ode_rigidbody)
+
+add_executable(${ode_rigidbody_exc_name}
+  src/botanbot_se2_planning.cpp)
+ 
+ament_target_dependencies(${ode_rigidbody_exc_name} ${dependencies})
+
+target_link_libraries(${ode_rigidbody_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
+
+install(TARGETS ${ompl_exp_executable_name} ${ode_rigidbody_exc_name}
+  RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
   DESTINATION include/

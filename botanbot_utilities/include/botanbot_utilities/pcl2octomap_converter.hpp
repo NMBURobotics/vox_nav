@@ -47,6 +47,8 @@ private:
   double downsample_voxel_size_;
   int remove_outlier_mean_K_;
   double remove_outlier_stddev_threshold_;
+  double remove_outlier_radius_search_;
+  int remove_outlier_min_neighbors_in_radius_;
   pcl::PointCloud<pcl::PointXYZ>::Ptr pointcloud_;
 
 public:

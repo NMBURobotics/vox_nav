@@ -79,7 +79,8 @@ BotanbotGridMap::BotanbotGridMap()
   pointcloud_ = botanbot_utilities::removeOutliersFromInputCloud(
     pointcloud_,
     remove_outlier_mean_K_,
-    remove_outlier_stddev_threshold_);
+    remove_outlier_stddev_threshold_,
+    botanbot_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
 
   pointcloud_ = botanbot_utilities::transformCloud(
     pointcloud_,

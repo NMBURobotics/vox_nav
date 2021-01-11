@@ -14,3 +14,5 @@ pcl2octomap_converter_rclcpp_node:
     downsample_voxel_size: 0.1
     remove_outlier_mean_K: 50
     remove_outlier_stddev_threshold: 0.1
+    remove_outlier_radius_search: 0.1
+    remove_outlier_min_neighbors_in_radius: 1

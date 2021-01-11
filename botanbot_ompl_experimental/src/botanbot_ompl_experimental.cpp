@@ -7,7 +7,7 @@ using namespace std::chrono_literals;
 
 BotanbotOMPLExperimental::BotanbotOMPLExperimental()
 : Node("botanbot_ompl_experimental_rclcpp_node"),
-  robot_collision_geometry_(new fcl::Box(1.0, 1.0, 0.5))
+  robot_collision_geometry_(new fcl::Box(1.0, 1.0, 0.8))
 {
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_collision_geometry_);
 
@@ -28,7 +28,8 @@ BotanbotOMPLExperimental::BotanbotOMPLExperimental()
   octomap_octree_->readBinary(filename);
 
   fcl_octree_ = std::make_shared<fcl::OcTree>(
-    std::shared_ptr<const octomap::OcTree>(octomap_octree_));
+    std::shared_ptr<const octomap::OcTree>(
+      octomap_octree_));
 
   fcl_octree_collision_object_ =
     std::make_shared<fcl::CollisionObject>(std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
@@ -135,7 +136,7 @@ void BotanbotOMPLExperimental::plan()
   // create a random start state
   ompl::base::ScopedState<ompl::base::SE3StateSpace> start(space);
 
-  start->setXYZ(0.0, 0.0, 0);   // reverse minelike
+  start->setXYZ(0.0, 0.0, 1.0);   // reverse minelike
 
   start->as<ompl::base::SO3StateSpace::StateType>(1)->setIdentity();
 
@@ -245,9 +246,9 @@ void BotanbotOMPLExperimental::plan()
       marker.pose.orientation.y = rot->y;
       marker.pose.orientation.z = rot->z;
       marker.pose.orientation.w = rot->w;
-      marker.scale.x = 0.5;
-      marker.scale.y = 0.5;
-      marker.scale.z = 0.5;
+      marker.scale.x = 1.0;
+      marker.scale.y = 1.0;
+      marker.scale.z = 0.8;
       marker.color.a = 1.0;
       marker.color.r = 0.0;
       marker.color.g = 1.0;

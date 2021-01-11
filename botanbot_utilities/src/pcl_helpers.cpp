@@ -139,14 +139,25 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr downsampleInputCloud(
 }
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int mean_K, double stddev_thres)
+  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int mean_K, double stddev_thres,
+  OutlierRemovalType outlier_removal_type)
 {
-  pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-  sor.setInputCloud(inputCloud);
-  sor.setMeanK(mean_K);
-  sor.setStddevMulThresh(stddev_thres);
   pcl::PointCloud<pcl::PointXYZ>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZ>());
-  sor.filter(*filteredCloud);
+
+  if (outlier_removal_type == OutlierRemovalType::StatisticalOutlierRemoval) {
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+    sor.setInputCloud(inputCloud);
+    sor.setMeanK(mean_K);
+    sor.setStddevMulThresh(stddev_thres);
+    sor.filter(*filteredCloud);
+  } else {
+    pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
+    outrem.setInputCloud(inputCloud);
+    outrem.setRadiusSearch(stddev_thres);
+    outrem.setMinNeighborsInRadius(mean_K);
+    outrem.setKeepOrganized(true);
+    outrem.filter(*filteredCloud);
+  }
   return filteredCloud;
 }
 

@@ -29,6 +29,8 @@
 #include <pcl/conversions.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/radius_outlier_removal.h>
+#include <pcl/filters/conditional_removal.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/kdtree/kdtree_flann.h>
@@ -55,6 +57,8 @@ struct RigidBodyTransformation
   Eigen::Vector3d rpyIntrinsic_ {0.0, 0.0, 0.0};
 };
 enum class XYZ: int {X, Y, Z};
+
+enum class OutlierRemovalType: int {RadiusOutlierRemoval, StatisticalOutlierRemoval};
 
 /**
  * @brief
@@ -138,7 +142,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr downsampleInputCloud(
 * @return Point cloud where outliers have been removed.
 */
 pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int mean_K, double stddev_thres);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int mean_K, double stddev_thres,
+  OutlierRemovalType outlier_removal_type);
 
 }  // namespace botanbot_utilities
 
