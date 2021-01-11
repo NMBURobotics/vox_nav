@@ -107,8 +107,8 @@ void BotanbotSE2Planning::plan()
   ss.print();
 
   // attempt to solve the problem within 30 seconds of planning time
-  ompl::base::PlannerPtr planner(new ompl::geometric::RRTstar(ss.getSpaceInformation()));
-  //ss.setPlanner(planner);
+  ompl::base::PlannerPtr planner(new ompl::geometric::PRMstar(ss.getSpaceInformation()));
+  ss.setPlanner(planner);
   ob::PlannerStatus solved = ss.solve(1);
 
   if (solved) {
