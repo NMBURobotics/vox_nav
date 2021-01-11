@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef botanbot_ompl_experimental__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
-#define botanbot_ompl_experimental__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#ifndef botanbot_planner__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#define botanbot_planner__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
 // ROS
 #include <rclcpp/rclcpp.hpp>
 #include <trajectory_msgs/msg/multi_dof_joint_trajectory.hpp>
@@ -28,10 +28,6 @@
 #include <octomap/octomap_utils.h>
 #include <message_filters/subscriber.h>
 // OMPL
-#include <ompl/base/spaces/DubinsStateSpace.h>
-#include <ompl/base/spaces/ReedsSheppStateSpace.h>
-#include <ompl/base/ScopedState.h>
-#include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/base/OptimizationObjective.h>
@@ -76,27 +72,35 @@
  * @brief
  *
  */
-namespace botanbot_ompl_experimental
+namespace botanbot_planner
 {
 
 /**
  * @brief
  *
  */
-class BotanbotSE2Planning : public rclcpp::Node
+class BotanbotSE3Planning : public rclcpp::Node
 {
 public:
 /**
  * @brief Construct a new Botanbot O M P L Experimental object
  *
  */
-  BotanbotSE2Planning();
+  BotanbotSE3Planning();
 
 /**
  * @brief Destroy the Botanbot O M P L Experimental object
  *
  */
-  ~BotanbotSE2Planning();
+  ~BotanbotSE3Planning();
+
+  /**
+   * @brief
+   *
+   * @param si
+   * @return ompl::base::OptimizationObjectivePtr
+   */
+  ompl::base::OptimizationObjectivePtr get2(const ompl::base::SpaceInformationPtr & si);
 
   /**
    * @brief
@@ -124,8 +128,7 @@ protected:
   std::shared_ptr<octomap::OcTree> octomap_octree_;
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
-
 };
-}  // namespace botanbot_ompl_experimental
+}  // namespace botanbot_planner
 
-#endif  // botanbot_ompl_experimental__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#endif  // botanbot_planner__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_

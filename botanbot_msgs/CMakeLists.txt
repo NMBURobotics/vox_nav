@@ -14,8 +14,7 @@ find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED) 
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "srv/LoadMap.srv"
-  "srv/SaveMap.srv"
+  "action/ComputePathToPose.action"
   DEPENDENCIES 
     builtin_interfaces 
     geometry_msgs 

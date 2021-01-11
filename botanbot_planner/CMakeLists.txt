@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(botanbot_ompl_experimental)
+project(botanbot_planner)
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
