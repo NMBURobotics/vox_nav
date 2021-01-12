@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(botanbot_planner)
+project(botanbot_planning)
 
 # Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
@@ -59,17 +59,17 @@ ompl
 pcl_ros)
 
 set(botanbot_se3_planner_exc_name botanbot_se3_planner)
-add_executable(${botanbot_se3_planner_exc_name} src/botanbot_se3_planning.cpp)
+add_executable(${botanbot_se3_planner_exc_name} src/plugins/botanbot_se3_planning.cpp)
 ament_target_dependencies(${botanbot_se3_planner_exc_name} ${dependencies})
 target_link_libraries(${botanbot_se3_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
 set(botanbot_se2_planner_exc_name botanbot_se2_planner)
-add_executable(${botanbot_se2_planner_exc_name} src/botanbot_se2_planning.cpp)
+add_executable(${botanbot_se2_planner_exc_name} src/plugins/botanbot_se2_planning.cpp)
 ament_target_dependencies(${botanbot_se2_planner_exc_name} ${dependencies})
 target_link_libraries(${botanbot_se2_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
 set(botanbot_se2_planner_control_space_exc_name botanbot_se2_planner_control_space)
-add_executable(${botanbot_se2_planner_control_space_exc_name} src/botanbot_se2_control_space_planner.cpp)
+add_executable(${botanbot_se2_planner_control_space_exc_name} src/plugins/botanbot_se2_control_space_planner.cpp)
 ament_target_dependencies(${botanbot_se2_planner_control_space_exc_name} ${dependencies})
 target_link_libraries(${botanbot_se2_planner_control_space_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 

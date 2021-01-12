@@ -1,12 +1,12 @@
-#include "botanbot_planner/botanbot_se3_planning.hpp"
+#include "botanbot_planning/plugins/botanbot_se3_planning.hpp"
 
 
-namespace botanbot_planner
+namespace botanbot_planning
 {
 using namespace std::chrono_literals;
 
 BotanbotSE3Planning::BotanbotSE3Planning()
-: Node("botanbot_planner_rclcpp_node"),
+: Node("botanbot_planning_rclcpp_node"),
   robot_collision_geometry_(new fcl::Box(1.0, 1.0, 0.8))
 {
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_collision_geometry_);
@@ -324,7 +324,7 @@ void BotanbotSE3Planning::plan()
   octomap_pointcloud_pub_->publish(cloud);
 }
 
-} // namespace botanbot_planner
+} // namespace botanbot_planning
 
 int main(int argc, char ** argv)
 {
@@ -333,7 +333,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
 
   auto node = std::make_shared
-    <botanbot_planner::BotanbotSE3Planning>();
+    <botanbot_planning::BotanbotSE3Planning>();
 
   rclcpp::spin(node);
 

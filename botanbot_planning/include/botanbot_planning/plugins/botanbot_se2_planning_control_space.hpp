@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef botanbot_planner__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
-#define botanbot_planner__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#ifndef botanbot_planning__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#define botanbot_planning__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
 // ROS
 #include <rclcpp/rclcpp.hpp>
 #include <trajectory_msgs/msg/multi_dof_joint_trajectory.hpp>
@@ -88,7 +88,7 @@
  * @brief
  *
  */
-namespace botanbot_planner
+namespace botanbot_planning
 {
 
 /**
@@ -145,6 +145,6 @@ protected:
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
 };
-}  // namespace botanbot_planner
+}  // namespace botanbot_planning
 
-#endif  // botanbot_planner__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#endif  // botanbot_planning__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
