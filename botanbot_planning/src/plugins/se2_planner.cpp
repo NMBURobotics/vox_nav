@@ -103,8 +103,8 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
     return std::vector<geometry_msgs::msg::PoseStamped>();
   }
 
-  ompl::base::ScopedState<> se2_start(state_space_), se2_goal(state_space_);
-
+  ompl::base::ScopedState<ompl::base::SE2StateSpace> se2_start(state_space_),
+  se2_goal(state_space_);
   // set the start and goal states
   tf2::Quaternion start_quat, goal_quat;
   tf2::fromMsg(start.pose.orientation, start_quat);

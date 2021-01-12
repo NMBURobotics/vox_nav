@@ -2,30 +2,6 @@
 
 namespace botanbot_planning
 {
-// a decomposition is only needed for SyclopRRT and SyclopEST
-class MyDecomposition : public ompl::control::GridDecomposition
-{
-public:
-  MyDecomposition(const int length, const ompl::base::RealVectorBounds & bounds)
-  : GridDecomposition(length, 2, bounds)
-  {
-  }
-  void project(const ompl::base::State * s, std::vector<double> & coord) const override
-  {
-    coord.resize(2);
-    coord[0] = s->as<ompl::base::SE2StateSpace::StateType>()->getX();
-    coord[1] = s->as<ompl::base::SE2StateSpace::StateType>()->getY();
-  }
-
-  void sampleFullState(
-    const ompl::base::StateSamplerPtr & sampler, const std::vector<double> & coord,
-    ompl::base::State * s) const override
-  {
-    sampler->sampleUniform(s);
-    s->as<ompl::base::SE2StateSpace::StateType>()->setXY(coord[0], coord[1]);
-  }
-};
-
 
 SE2PlannerControlSpace::SE2PlannerControlSpace()
 : Node("botanbot_planning_rclcpp_node"),

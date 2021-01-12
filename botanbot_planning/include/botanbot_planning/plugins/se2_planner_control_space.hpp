@@ -72,24 +72,20 @@ public:
   bool isStateValid(const ompl::base::State * state) override;
 
   /**
- * @brief Get the Selected Planner object
- *
- * @param planner_name
- * @return ompl::base::PlannerPtr
- */
-  ompl::base::PlannerPtr getSelectedPlanner(
+   * @brief Get the Selected Planner object
+   *
+   * @param planner_name
+   * @param state_space_information
+   * @param planner
+   * @return true
+   * @return false
+   */
+  bool getSelectedPlanner(
     const std::string & planner_name,
-    const ompl::base::SpaceInformationPtr & state_space_information) override;
+    const ompl::base::SpaceInformationPtr & state_space_information,
+    ompl::base::PlannerPtr planner) override;
 
 protected:
-  /**
-   * @brief
-   *
-   * @param si
-   * @return ompl::base::OptimizationObjectivePtr
-   */
-  ompl::base::OptimizationObjectivePtr get2(const ompl::base::SpaceInformationPtr & si);
-
   /**
    * @brief
    *

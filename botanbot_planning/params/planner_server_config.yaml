@@ -1,0 +1,9 @@
+botanbot_planner_server_rclcpp_node:
+  ros__parameters:
+    planner_plugins: ["SE2Planner"]
+    expected_planner_frequency: 1.0
+    SE2Planner:
+      plugin: "botanbot_planner/SE2Planner"
+      tolerance: 0.5
+      use_astar: false
+      allow_unknown: true

@@ -30,12 +30,11 @@ using namespace std::chrono_literals;
 
 namespace botanbot_planning
 {
-
 PlannerServer::PlannerServer()
 : Node("botanbot_planning_server_rclcpp_node"),
   pc_loader_("botanbot_planning", "botanbot_planning::PlannerCore"),
-  default_ids_{"GridBased"},
-  default_types_{"nav2_navfn_planner/NavfnPlanner"}
+  default_ids_{"SE2Planner"},
+  default_types_{"botanbot_planner/SE2Planner"}
 {
   RCLCPP_INFO(get_logger(), "Creating");
 
@@ -51,7 +50,6 @@ PlannerServer::PlannerServer()
   }
   planner_types_.resize(planner_ids_.size());
   auto node = shared_from_this();
-
   for (size_t i = 0; i != planner_ids_.size(); i++) {
     try {
       planner_types_[i] =
@@ -76,7 +74,6 @@ PlannerServer::PlannerServer()
   RCLCPP_INFO(
     get_logger(),
     "Planner Server has %s planners available.", planner_ids_concat_.c_str());
-
   double expected_planner_frequency;
   get_parameter("expected_planner_frequency", expected_planner_frequency);
   if (expected_planner_frequency > 0) {
@@ -141,34 +138,43 @@ void
 PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle)
 {
   auto start_time = steady_clock_.now();
-  RCLCPP_INFO(this->get_logger(), "Executing goal");
-  rclcpp::Rate loop_rate(1);
+  rclcpp::Rate loop_rate(1.0);
+
   const auto goal = goal_handle->get_goal();
   auto feedback = std::make_shared<ComputePathToPose::Feedback>();
-  /*auto & sequence = feedback->sequence;
-  sequence.push_back(0);
-  sequence.push_back(1);*/
   auto result = std::make_shared<ComputePathToPose::Result>();
 
-  //result->path = getPlan(start, goal->pose, goal->planner_id);
+  geometry_msgs::msg::PoseStamped start_pose;
+  result->path = getPlan(start_pose, goal->pose, goal->planner_id);
 
-  if (result->path.poses.size() == 0) {
+  if (result->path.size() == 0) {
     RCLCPP_WARN(
       get_logger(), "Planning algorithm %s failed to generate a valid"
       " path to (%.2f, %.2f)", goal->planner_id.c_str(),
       goal->pose.pose.position.x, goal->pose.pose.position.y);
-    //action_server_->terminate_current();
     return;
   }
+
+  // Check if there is a cancel request
+  if (goal_handle->is_canceling()) {
+    result->path = std::vector<geometry_msgs::msg::PoseStamped>();
+    goal_handle->canceled(result);
+    RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
+    return;
+  }
+  // Update sequence
+  auto elapsed_time = steady_clock_.now() - start_time;
+  feedback->elapsed_time = elapsed_time;
+  goal_handle->publish_feedback(feedback);
 
   RCLCPP_DEBUG(
     get_logger(),
     "Found valid path of size %u to (%.2f, %.2f)",
-    result->path.poses.size(), goal->pose.pose.position.x,
+    result->path.size(), goal->pose.pose.position.x,
     goal->pose.pose.position.y);
 
   // Publish the plan for visualization purposes
-  //publishPlan(result->path);
+  publishPlan(result->path);
 
   auto cycle_duration = steady_clock_.now() - start_time;
   result->planning_time = cycle_duration;
@@ -179,16 +185,7 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
       "Planner loop missed its desired rate of %.4f Hz. Current loop rate is %.4f Hz",
       1 / max_planner_duration_, 1 / cycle_duration.seconds());
   }
-
-  /*/catch (std::exception & ex) {
-     RCLCPP_WARN(
-       get_logger(), "%s plugin failed to plan calculation to (%.2f, %.2f): \"%s\"",
-       goal->planner_id.c_str(), goal->pose.pose.position.x,
-       goal->pose.pose.position.y, ex.what());
-     // TODO(orduno): provide information about fail error to parent task,
-     //               for example: couldn't get costmap update
-     //action_server_->terminate_current();
-   }*/
+  loop_rate.sleep();
 }
 
 std::vector<geometry_msgs::msg::PoseStamped>

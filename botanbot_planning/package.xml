@@ -28,5 +28,6 @@
     <test_depend>ament_lint_auto</test_depend>
     <export>
         <build_type>ament_cmake</build_type>
+        <nav2_waypoint_follower plugin="${prefix}/plugins.xml" />
     </export>
 </package>

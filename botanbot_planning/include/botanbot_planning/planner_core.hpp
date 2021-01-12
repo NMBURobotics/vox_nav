@@ -36,13 +36,6 @@
 #include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
-#include <ompl/geometric/planners/kpiece/KPIECE1.h>
-#include <ompl/geometric/planners/rrt/RRT.h>
-#include <ompl/geometric/planners/rrt/RRTstar.h>
-#include <ompl/geometric/planners/rrt/RRTsharp.h>
-#include <ompl/geometric/planners/rrt/InformedRRTstar.h>
-#include <ompl/geometric/planners/rrt/RRTConnect.h>
-#include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/objectives/MaximizeMinClearanceObjective.h>
 #include <ompl/base/samplers/MaximizeClearanceValidStateSampler.h>
 #include <ompl/base/objectives/StateCostIntegralObjective.h>
@@ -53,6 +46,22 @@
 #include <ompl/geometric/planners/prm/LazyPRMstar.h>
 #include "ompl/geometric/planners/cforest/CForest.h"
 #include <ompl/geometric/planners/rrt/TRRT.h>
+#include <ompl/geometric/planners/kpiece/KPIECE1.h>
+#include <ompl/geometric/planners/rrt/RRT.h>
+#include <ompl/geometric/planners/rrt/RRTstar.h>
+#include <ompl/geometric/planners/rrt/RRTsharp.h>
+#include <ompl/geometric/planners/rrt/InformedRRTstar.h>
+#include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/geometric/SimpleSetup.h>
+#include <ompl/control/spaces/RealVectorControlSpace.h>
+#include <ompl/control/planners/kpiece/KPIECE1.h>
+#include <ompl/control/planners/rrt/RRT.h>
+#include <ompl/control/planners/est/EST.h>
+#include <ompl/control/planners/syclop/SyclopRRT.h>
+#include <ompl/control/planners/syclop/SyclopEST.h>
+#include <ompl/control/planners/pdst/PDST.h>
+#include <ompl/control/planners/syclop/GridDecomposition.h>
+#include <ompl/control/SimpleSetup.h>
 //FCL
 #include "fcl/config.h"
 #include "fcl/octree.h"
