@@ -48,10 +48,8 @@ public:
   }
 };
 
-
 SE3Planner::SE3Planner()
 {
-
 }
 
 SE3Planner::~SE3Planner()
@@ -110,7 +108,7 @@ void SE3Planner::initialize(
 
   if (!is_enabled_) {
     RCLCPP_INFO(
-      node_->get_logger(), "Photo at waypoint plugin is disabled.");
+      node_->get_logger(), "SE3Planner plugin is disabled.");
   } else {
     RCLCPP_INFO(
       node_->get_logger(), "Initializing SE3Planner plugin, selected planner is; %s",
@@ -156,10 +154,14 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   pdef->setOptimizationObjective(getOptObjective(state_space_information_));
 
   // create a planner for the defined space
-  ompl::base::PlannerPtr planner(new ompl::geometric::PRMstar(state_space_information_));
-  //ompl::base::PlannerPtr planner(new ompl::geometric::PRMstar(si));
-  //ompl::base::PlannerPtr planner(new ompl::geometric::RRTStar(si));
-  //ompl::base::PlannerPtr planner(new ompl::geometric::RRTConnect(si));
+  ompl::base::PlannerPtr planner;
+  if (!getSelectedPlanner(planner_name_, state_space_information_, planner)) {
+    RCLCPP_WARN(
+      node_->get_logger(), "Selected planner name: %s is not valid planner "
+      "make sure you to set a valid planner name, Selecting a PRMStar as default planner",
+      planner_name_.c_str());
+    planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(state_space_information_));
+  }
 
   // set the problem we are trying to solve for the planner
   planner->setProblemDefinition(pdef);
@@ -251,6 +253,27 @@ ompl::base::OptimizationObjectivePtr SE3Planner::getOptObjective(
   ompl::base::OptimizationObjectivePtr obj = std::make_shared<ChildOptimizationObjective>(si);
   obj->setCostToGoHeuristic(&ompl::base::goalRegionCostToGo);
   return obj;
+}
+
+bool SE3Planner::getSelectedPlanner(
+  const std::string & planner_name,
+  const ompl::base::SpaceInformationPtr & state_space_information,
+  ompl::base::PlannerPtr planner)
+{
+  bool found_a_valid_planner = false;
+  if (planner_name.c_str() == "PRMStar") {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(state_space_information));
+    found_a_valid_planner = true;
+  } else if (planner_name.c_str() == "RRTStar") {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(state_space_information));
+    found_a_valid_planner = true;
+  } else if (planner_name.c_str() == "RRTConnect") {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTConnect(state_space_information));
+    found_a_valid_planner = true;
+  } else {
+    found_a_valid_planner = false;
+  }
+  return found_a_valid_planner;
 }
 
 }  // namespace botanbot_planning

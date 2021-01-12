@@ -71,6 +71,16 @@ public:
   */
   bool isStateValid(const ompl::base::State * state) override;
 
+  /**
+ * @brief Get the Selected Planner object
+ *
+ * @param planner_name
+ * @return ompl::base::PlannerPtr
+ */
+  ompl::base::PlannerPtr getSelectedPlanner(
+    const std::string & planner_name,
+    const ompl::base::SpaceInformationPtr & state_space_information) override;
+
 protected:
   /**
    * @brief
