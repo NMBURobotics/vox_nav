@@ -27,7 +27,7 @@ public:
 };
 
 
-BotanbotSE2PlanningControlSpace::BotanbotSE2PlanningControlSpace()
+SE2PlannerControlSpace::SE2PlannerControlSpace()
 : Node("botanbot_planning_rclcpp_node"),
   robot_collision_geometry_(new fcl::Box(1.0, 1.0, 0.8))
 {
@@ -61,11 +61,11 @@ BotanbotSE2PlanningControlSpace::BotanbotSE2PlanningControlSpace()
   plan();
 }
 
-BotanbotSE2PlanningControlSpace::~BotanbotSE2PlanningControlSpace()
+SE2PlannerControlSpace::~SE2PlannerControlSpace()
 {
 }
 
-void BotanbotSE2PlanningControlSpace::propagate(
+void SE2PlannerControlSpace::propagate(
   const ompl::base::State * start, const ompl::control::Control * control, const double duration,
   ompl::base::State * result)
 {
@@ -81,7 +81,7 @@ void BotanbotSE2PlanningControlSpace::propagate(
     rot + ctrl[1] * duration);
 }
 
-bool BotanbotSE2PlanningControlSpace::isStateValid(const ompl::base::State * state)
+bool SE2PlannerControlSpace::isStateValid(const ompl::base::State * state)
 {
   // cast the abstract state type to the type we expect
   const ompl::base::ReedsSheppStateSpace::StateType * red_state =
@@ -104,7 +104,7 @@ bool BotanbotSE2PlanningControlSpace::isStateValid(const ompl::base::State * sta
   return !collisionResult.isCollision();
 }
 
-void BotanbotSE2PlanningControlSpace::plan()
+void SE2PlannerControlSpace::plan()
 {
   // construct the state space we are planning in
   auto space(std::make_shared<ompl::base::SE2StateSpace>());
@@ -308,7 +308,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
 
   auto node = std::make_shared
-    <botanbot_planning::BotanbotSE2PlanningControlSpace>();
+    <botanbot_planning::SE2PlannerControlSpace>();
 
   rclcpp::spin(node);
 

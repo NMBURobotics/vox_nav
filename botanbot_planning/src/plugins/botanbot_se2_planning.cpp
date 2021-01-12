@@ -4,7 +4,7 @@ namespace botanbot_planning
 {
 namespace ob = ompl::base;
 namespace og = ompl::geometric;
-BotanbotSE2Planning::BotanbotSE2Planning()
+SE2Planner::SE2Planner()
 : Node("botanbot_planning_rclcpp_node"),
   robot_collision_geometry_(new fcl::Box(1.0, 1.0, 0.8))
 {
@@ -38,11 +38,11 @@ BotanbotSE2Planning::BotanbotSE2Planning()
   plan();
 }
 
-BotanbotSE2Planning::~BotanbotSE2Planning()
+SE2Planner::~SE2Planner()
 {
 }
 
-bool BotanbotSE2Planning::isStateValid(const ompl::base::State * state)
+bool SE2Planner::isStateValid(const ompl::base::State * state)
 {
   // cast the abstract state type to the type we expect
   const ompl::base::ReedsSheppStateSpace::StateType * red_state =
@@ -65,7 +65,7 @@ bool BotanbotSE2Planning::isStateValid(const ompl::base::State * state)
   return !collisionResult.isCollision();
 }
 
-void BotanbotSE2Planning::plan()
+void SE2Planner::plan()
 {
   ob::StateSpacePtr space(std::make_shared<ob::ReedsSheppStateSpace>());
 
@@ -242,7 +242,7 @@ int main(int argc, char ** argv)
   rclcpp::init(argc, argv);
 
   auto node = std::make_shared
-    <botanbot_planning::BotanbotSE2Planning>();
+    <botanbot_planning::SE2Planner>();
 
   rclcpp::spin(node);
 

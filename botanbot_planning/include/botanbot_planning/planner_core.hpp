@@ -12,19 +12,66 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef BOTANBOT_PLANNING__PLANNER_CORE_HPP_
 #define BOTANBOT_PLANNING__PLANNER_CORE_HPP_
 #pragma once
 
+// STL
 #include <string>
-
-#include "rclcpp/rclcpp.hpp"
-#include "rclcpp_lifecycle/lifecycle_node.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
+#include <iostream>
+// ROS
+#include <rclcpp/rclcpp.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <geometry_msgs/msg/pose.hpp>
+#include "sensor_msgs/msg/point_cloud2.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
+// OCTOMAP
+#include <octomap_msgs/msg/octomap.hpp>
+#include <octomap_msgs/conversions.h>
+#include <octomap/octomap.h>
+#include <octomap/octomap_utils.h>
+// OMPL
+#include <ompl/config.h>
+#include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
+#include <ompl/base/spaces/SE3StateSpace.h>
+#include <ompl/base/OptimizationObjective.h>
+#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
+#include <ompl/geometric/planners/kpiece/KPIECE1.h>
+#include <ompl/geometric/planners/rrt/RRT.h>
+#include <ompl/geometric/planners/rrt/RRTstar.h>
+#include <ompl/geometric/planners/rrt/RRTsharp.h>
+#include <ompl/geometric/planners/rrt/InformedRRTstar.h>
+#include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/geometric/SimpleSetup.h>
+#include <ompl/base/objectives/MaximizeMinClearanceObjective.h>
+#include <ompl/base/samplers/MaximizeClearanceValidStateSampler.h>
+#include <ompl/base/objectives/StateCostIntegralObjective.h>
+#include <ompl/base/spaces/DubinsStateSpace.h>
+#include <ompl/base/spaces/ReedsSheppStateSpace.h>
+#include <ompl/geometric/planners/prm/PRMstar.h>
+#include <ompl/geometric/planners/prm/PRM.h>
+#include <ompl/geometric/planners/prm/LazyPRMstar.h>
+#include "ompl/geometric/planners/cforest/CForest.h"
+#include <ompl/geometric/planners/rrt/TRRT.h>
+//FCL
+#include "fcl/config.h"
+#include "fcl/octree.h"
+#include "fcl/traversal/traversal_node_octree.h"
+#include "fcl/collision.h"
+#include "fcl/broadphase/broadphase.h"
+#include "fcl/math/transform.h"
+// PCL
+#include <pcl/common/common.h>
+#include <pcl/common/transforms.h>
+#include <pcl/conversions.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 namespace botanbot_planning
 {
+
 /**
  * @brief Base class for creating a plugin in order to perform a specific task at waypoint arrivals.
  *
@@ -46,13 +93,13 @@ public:
   virtual ~PlannerCore() {}
 
   /**
-   * @brief Override this to setup your pub, sub or any ros services that you will use in the plugin.
+   * @brief
    *
-   * @param parent parent node that plugin will be created within(for an example see nav_waypoint_follower)
-   * @param plugin_name plugin name comes from parameters in yaml file
+   * @param parent
+   * @param plugin_name
    */
   virtual void initialize(
-    const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent,
+    const rclcpp::Node::SharedPtr & parent,
     const std::string & plugin_name) = 0;
 
   /**
@@ -65,6 +112,15 @@ public:
   virtual std::vector<geometry_msgs::msg::PoseStamped> createPlan(
     const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal) = 0;
+
+  /**
+  * @brief
+  *
+  * @param state
+  * @return true
+  * @return false
+  */
+  virtual bool isStateValid(const ompl::base::State * state) = 0;
 };
 }  // namespace botanbot_planning
 #endif  // BOTANBOT_PLANNING__PLANNER_CORE_HPP_

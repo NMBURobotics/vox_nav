@@ -33,6 +33,7 @@ find_package(tf2_ros REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 find_package(botanbot_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
+find_package(pluginlib REQUIRED)
 
 include_directories(
   include
@@ -43,6 +44,7 @@ include_directories(
 
 set(dependencies
 rclcpp
+pluginlib
 geometry_msgs
 octomap_msgs
 sensor_msgs
@@ -58,22 +60,27 @@ LIBFCL
 ompl
 pcl_ros)
 
+set(botanbot_planner_server_exc_name botanbot_planner_server)
+add_executable(${botanbot_planner_server_exc_name} src/planner_server.cpp)
+ament_target_dependencies(${botanbot_planner_server_exc_name} ${dependencies})
+target_link_libraries(${botanbot_planner_server_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
+
 set(botanbot_se3_planner_exc_name botanbot_se3_planner)
-add_executable(${botanbot_se3_planner_exc_name} src/plugins/botanbot_se3_planning.cpp)
+add_library(${botanbot_se3_planner_exc_name} src/plugins/se3_planner.cpp)
 ament_target_dependencies(${botanbot_se3_planner_exc_name} ${dependencies})
 target_link_libraries(${botanbot_se3_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
-set(botanbot_se2_planner_exc_name botanbot_se2_planner)
-add_executable(${botanbot_se2_planner_exc_name} src/plugins/botanbot_se2_planning.cpp)
-ament_target_dependencies(${botanbot_se2_planner_exc_name} ${dependencies})
-target_link_libraries(${botanbot_se2_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
+#set(botanbot_se2_planner_exc_name botanbot_se2_planner)
+#add_library(${botanbot_se2_planner_exc_name} src/plugins/se2_planner.cpp)
+#ament_target_dependencies(${botanbot_se2_planner_exc_name} ${dependencies})
+#target_link_libraries(${botanbot_se2_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
-set(botanbot_se2_planner_control_space_exc_name botanbot_se2_planner_control_space)
-add_executable(${botanbot_se2_planner_control_space_exc_name} src/plugins/botanbot_se2_control_space_planner.cpp)
-ament_target_dependencies(${botanbot_se2_planner_control_space_exc_name} ${dependencies})
-target_link_libraries(${botanbot_se2_planner_control_space_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
+#set(botanbot_se2_planner_control_space_exc_name botanbot_se2_planner_control_space)
+#add_library(${botanbot_se2_planner_control_space_exc_name} src/plugins/se2_planner_control_space.cpp)
+#ament_target_dependencies(${botanbot_se2_planner_control_space_exc_name} ${dependencies})
+#target_link_libraries(${botanbot_se2_planner_control_space_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
-install(TARGETS ${botanbot_se3_planner_exc_name} ${botanbot_se2_planner_exc_name} ${botanbot_se2_planner_control_space_exc_name}
+install(TARGETS ${botanbot_planner_server_exc_name}
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
@@ -91,5 +98,6 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_include_directories(include)
+ament_export_libraries(${botanbot_se3_planner_exc_name})
 
 ament_package()

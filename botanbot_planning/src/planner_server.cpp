@@ -92,17 +92,15 @@ PlannerServer::PlannerServer()
   // Initialize pubs & subs
   plan_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("plan", 1);
 
-  using namespace std::placeholders;
-
   this->action_server_ = rclcpp_action::create_server<ComputePathToPose>(
     this->get_node_base_interface(),
     this->get_node_clock_interface(),
     this->get_node_logging_interface(),
     this->get_node_waitables_interface(),
     "compute_path_to_pose",
-    std::bind(&PlannerServer::handle_goal, this, _1, _2),
-    std::bind(&PlannerServer::handle_cancel, this, _1),
-    std::bind(&PlannerServer::handle_accepted, this, _1));
+    std::bind(&PlannerServer::handle_goal, this, std::placeholders::_1, std::placeholders::_2),
+    std::bind(&PlannerServer::handle_cancel, this, std::placeholders::_1),
+    std::bind(&PlannerServer::handle_accepted, this, std::placeholders::_1));
 }
 
 PlannerServer::~PlannerServer()
@@ -134,9 +132,9 @@ rclcpp_action::CancelResponse PlannerServer::handle_cancel(
 
 void PlannerServer::handle_accepted(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle)
 {
-  using namespace std::placeholders;
   // this needs to return quickly to avoid blocking the executor, so spin up a new thread
-  std::thread{std::bind(&PlannerServer::computePlan, this, _1), goal_handle}.detach();
+  std::thread{std::bind(&PlannerServer::computePlan, this, std::placeholders::_1),
+    goal_handle}.detach();
 }
 
 void
@@ -226,12 +224,18 @@ PlannerServer::getPlan(
 void
 PlannerServer::publishPlan(const std::vector<geometry_msgs::msg::PoseStamped> & path)
 {
-  auto msg = std::make_unique<nav_msgs::msg::Path>(path);
-  if (
-    this->count_subscribers(plan_publisher_->get_topic_name()) > 0)
-  {
+  if (this->count_subscribers(plan_publisher_->get_topic_name()) > 0) {
     //plan_publisher_->publish(std::move(msg));
   }
 }
-
 }  // namespace botanbot_planning
+
+
+int main(int argc, char ** argv)
+{
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<botanbot_planning::PlannerServer>();
+  rclcpp::spin(node->get_node_base_interface());
+  rclcpp::shutdown();
+  return 0;
+}
