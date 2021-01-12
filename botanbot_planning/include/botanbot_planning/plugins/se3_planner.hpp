@@ -80,7 +80,7 @@ public:
    * @return true
    * @return false
    */
-  virtual bool getSelectedPlanner(
+  bool getSelectedPlanner(
     const std::string & planner_name,
     const ompl::base::SpaceInformationPtr & state_space_information,
     ompl::base::PlannerPtr planner) override;

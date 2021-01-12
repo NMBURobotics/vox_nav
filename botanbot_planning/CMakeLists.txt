@@ -70,10 +70,10 @@ add_library(${botanbot_se3_planner_exc_name} src/plugins/se3_planner.cpp)
 ament_target_dependencies(${botanbot_se3_planner_exc_name} ${dependencies})
 target_link_libraries(${botanbot_se3_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
-#set(botanbot_se2_planner_exc_name botanbot_se2_planner)
-#add_library(${botanbot_se2_planner_exc_name} src/plugins/se2_planner.cpp)
-#ament_target_dependencies(${botanbot_se2_planner_exc_name} ${dependencies})
-#target_link_libraries(${botanbot_se2_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
+set(botanbot_se2_planner_exc_name botanbot_se2_planner)
+add_library(${botanbot_se2_planner_exc_name} src/plugins/se2_planner.cpp)
+ament_target_dependencies(${botanbot_se2_planner_exc_name} ${dependencies})
+target_link_libraries(${botanbot_se2_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
 
 #set(botanbot_se2_planner_control_space_exc_name botanbot_se2_planner_control_space)
 #add_library(${botanbot_se2_planner_control_space_exc_name} src/plugins/se2_planner_control_space.cpp)
@@ -98,6 +98,6 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_include_directories(include)
-ament_export_libraries(${botanbot_se3_planner_exc_name})
+ament_export_libraries(${botanbot_se3_planner_exc_name} ${botanbot_se2_planner_exc_name})
 
 ament_package()
