@@ -130,14 +130,16 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
       logger_, "Selected planner name: %s is not valid planner "
       "make sure you to set a valid planner name, Selecting a PRMStar as default planner",
       planner_name_.c_str());
-    planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(state_space_information_));
+    planner = ompl::base::PlannerPtr(
+      new ompl::geometric::PRMstar(
+        simple_setup.getSpaceInformation()));
   }
-
+  simple_setup.setPlanner(planner);
   // print the settings for this space
   state_space_information_->printSettings(std::cout);
 
   // attempt to solve the problem within one second of planning time
-  ompl::base::PlannerStatus solved = planner->solve(planner_timeout_);
+  ompl::base::PlannerStatus solved = simple_setup.solve(planner_timeout_);
   std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
 
   if (solved) {
@@ -200,13 +202,13 @@ bool SE2Planner::getSelectedPlanner(
   ompl::base::PlannerPtr planner)
 {
   bool found_a_valid_planner = false;
-  if (planner_name.c_str() == "PRMStar") {
+  if (planner_name == "PRMStar") {
     planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(state_space_information));
     found_a_valid_planner = true;
-  } else if (planner_name.c_str() == "RRTStar") {
+  } else if (planner_name == "RRTStar") {
     planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(state_space_information));
     found_a_valid_planner = true;
-  } else if (planner_name.c_str() == "RRTConnect") {
+  } else if (planner_name == "RRTConnect") {
     planner = ompl::base::PlannerPtr(new ompl::geometric::RRTConnect(state_space_information));
     found_a_valid_planner = true;
   } else {

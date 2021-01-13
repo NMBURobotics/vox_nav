@@ -62,7 +62,6 @@ PlannerServer::PlannerServer()
 
   planner_ids_concat_ += planner_id_ + std::string(" ");
 
-
   RCLCPP_INFO(
     get_logger(),
     "Planner Server has %s planners available.", planner_ids_concat_.c_str());
@@ -169,7 +168,6 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
   publishPlan(result->path);
 
   auto cycle_duration = steady_clock_.now() - start_time;
-  result->planning_time = cycle_duration;
 
   if (max_planner_duration_ && cycle_duration.seconds() > max_planner_duration_) {
     RCLCPP_WARN(
@@ -178,6 +176,13 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
       1 / max_planner_duration_, 1 / cycle_duration.seconds());
   }
   loop_rate.sleep();
+  // Check if goal is done
+  if (rclcpp::ok()) {
+    cycle_duration = steady_clock_.now() - start_time;
+    result->planning_time = cycle_duration;
+    goal_handle->succeed(result);
+    RCLCPP_INFO(this->get_logger(), "Goal Succeeded");
+  }
 }
 
 std::vector<geometry_msgs::msg::PoseStamped>
