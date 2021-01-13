@@ -1,5 +1,5 @@
 # Copyright (c) 2018 Intel Corporation
-# Copyright (c) 2020 Fetullah Atas
+# Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -38,21 +38,19 @@ def generate_launch_description():
         default_value='false',
         description='Whether to apply a namespace to the navigation stack')
 
-
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         'rviz_config',
-        default_value=os.path.join(bringup_dir, 'rviz', 'nav2_default_view.rviz'),
+        default_value=os.path.join(bringup_dir, 'rviz',
+                                   'nav2_default_view.rviz'),
         description='Full path to the RVIZ config file to use')
 
     # Launch rviz
-    start_rviz_cmd = Node(
-        condition=UnlessCondition(use_namespace),
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        arguments=['-d', rviz_config_file],
-        output={'both': 'log'}
-      )
+    start_rviz_cmd = Node(condition=UnlessCondition(use_namespace),
+                          package='rviz2',
+                          executable='rviz2',
+                          name='rviz2',
+                          arguments=['-d', rviz_config_file],
+                          output={'both': 'log'})
 
     exit_event_handler = RegisterEventHandler(
         condition=UnlessCondition(use_namespace),

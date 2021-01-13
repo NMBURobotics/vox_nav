@@ -237,9 +237,9 @@ PlannerServer::publishPlan(const std::vector<geometry_msgs::msg::PoseStamped> & 
     marker.pose.orientation.z = i.pose.orientation.z;
     marker.pose.orientation.w = i.pose.orientation.w;
     marker.scale.x = 1.0;
-    marker.scale.y = 1.0;
-    marker.scale.z = 0.8;
-    marker.color.a = 1.0;
+    marker.scale.y = 0.7;
+    marker.scale.z = 0.4;
+    marker.color.a = 0.6;
     marker.color.r = 0.0;
     marker.color.g = 1.0;
     marker.color.b = 0.0;

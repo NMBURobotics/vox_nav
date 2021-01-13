@@ -19,7 +19,6 @@
  */
 
 #include "botanbot_openvslam/run_slam.hpp"
-
 #include <memory>
 
 namespace botanbot_openvslam

@@ -1,5 +1,5 @@
 '''
- * Copyright (c) 2020, Fetullah Atas
+ * Copyright (c) 2020, Fetullah Atas, Norwegian University of Life Sciences
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -46,30 +46,25 @@ def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('chiconybot_ui')
 
-    config = os.path.join(
-    bringup_dir,
-    'config',
-    'tasks.yaml'
-    )
+    config = os.path.join(bringup_dir, 'config', 'tasks.yaml')
 
     declare_params_file_cmd = DeclareLaunchArgument(
-    'params_file',
-    default_value=os.path.join(bringup_dir, 'config', 'tasks.yaml'),
-    description='Full path to the ROS2 parameters file to use for all launched nodes')
+        'params_file',
+        default_value=os.path.join(bringup_dir, 'config', 'tasks.yaml'),
+        description=
+        'Full path to the ROS2 parameters file to use for all launched nodes')
 
     # Launch rviz
-    start_rviz_cmd = Node(
-        package='rqt_gui',
-        executable='rqt_gui',
-        name='rqt_gui',
-        parameters=[config],
-        output='screen')
+    start_rviz_cmd = Node(package='rqt_gui',
+                          executable='rqt_gui',
+                          name='rqt_gui',
+                          parameters=[config],
+                          output='screen')
 
     # Create the launch description and populate
     ld = LaunchDescription()
 
     # Add any conditioned actions
     ld.add_action(start_rviz_cmd)
- 
 
     return ld

@@ -1,4 +1,4 @@
-# Copyright (c) 2020 Fetullah Atas
+# Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -31,23 +31,24 @@ import os
 
 
 def generate_launch_description():
-    share_dir = get_package_share_directory(
-        'botanbot_gps_waypoint_follower')
+    share_dir = get_package_share_directory('botanbot_gps_waypoint_follower')
     parameter_file = LaunchConfiguration('params_file')
     node_name = 'gps_waypoint_follower_client'
 
-    params_declare = DeclareLaunchArgument('params_file',
-                                           default_value=os.path.join(
-                                               share_dir, 'params', 'city_world_gps_waypoints.yaml'),
-                                           description='FPath to the ROS2 parameters file to use.')
+    params_declare = DeclareLaunchArgument(
+        'params_file',
+        default_value=os.path.join(share_dir, 'params',
+                                   'city_world_gps_waypoints.yaml'),
+        description='FPath to the ROS2 parameters file to use.')
 
-    driver_node = LifecycleNode(package='botanbot_gps_waypoint_follower',
-                                executable='gps_waypoint_follower_client',
-                                name=node_name,
-                                namespace='',
-                                output='screen',
-                                parameters=[parameter_file],
-                                )
+    driver_node = LifecycleNode(
+        package='botanbot_gps_waypoint_follower',
+        executable='gps_waypoint_follower_client',
+        name=node_name,
+        namespace='',
+        output='screen',
+        parameters=[parameter_file],
+    )
 
     return LaunchDescription([
         params_declare,

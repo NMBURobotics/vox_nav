@@ -1,5 +1,4 @@
-# Copyright (c) 2018 Intel Corporation
-# Copyright (c) 2020 Fetullah Atas
+# Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -27,22 +26,20 @@ def generate_launch_description():
 
     print('urdf_file_name : {}'.format(urdf_file_name))
 
-    urdf = os.path.join(
-        get_package_share_directory('botanbot_cartographer'),
-        'urdf',
-        urdf_file_name)
+    urdf = os.path.join(get_package_share_directory('botanbot_cartographer'),
+                        'urdf', urdf_file_name)
 
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time',
             default_value='true',
             description='Use simulation (Gazebo) clock if true'),
-
-        Node(
-            package='robot_state_publisher',
-            executable='robot_state_publisher',
-            name='robot_state_publisher',
-            output='screen',
-            parameters=[{'use_sim_time': use_sim_time}],
-            arguments=[urdf]),
+        Node(package='robot_state_publisher',
+             executable='robot_state_publisher',
+             name='robot_state_publisher',
+             output='screen',
+             parameters=[{
+                 'use_sim_time': use_sim_time
+             }],
+             arguments=[urdf]),
     ])
