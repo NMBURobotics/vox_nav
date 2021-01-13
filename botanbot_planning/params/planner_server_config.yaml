@@ -1,9 +1,58 @@
 botanbot_planner_server_rclcpp_node:
   ros__parameters:
-    planner_plugins: ["SE2Planner"]
+    planner_plugin: "SE2PlannerControlSpace" # "SE2Planner", "SE3Planner" ,"SE2PlannerControlSpace"
     expected_planner_frequency: 1.0
     SE2Planner:
       plugin: "botanbot_planning::SE2Planner"
-      tolerance: 0.5
-      use_astar: false
-      allow_unknown: true
+      planner_name: "PRMStar"
+      planner_timeout: 5.0
+      interpolation_parameter: 50
+      octomap_filename: "/home/ros2-foxy/f.bt"
+      octomap_voxel_size: 0.1
+      state_space_boundries:
+        minx: -50.0
+        maxx: 50.0
+        miny: -50.0
+        maxy: 50.0
+        minz: 0.0
+        maxz: 3.0
+      robot_body_dimens:
+        x: 1.0
+        y: 0.5
+        z: 0.4
+    SE3Planner:
+      plugin: "botanbot_planning::SE3Planner"
+      planner_name: "RRTStar"
+      planner_timeout: 5.0
+      interpolation_parameter: 50
+      octomap_filename: "/home/ros2-foxy/f.bt"
+      octomap_voxel_size: 0.1
+      state_space_boundries:
+        minx: -50.0
+        maxx: 50.0
+        miny: -50.0
+        maxy: 50.0
+        minz: 0.0
+        maxz: 3.0
+      robot_body_dimens:
+        x: 1.0
+        y: 0.5
+        z: 0.4    
+    SE2PlannerControlSpace:
+      plugin: "botanbot_planning::SE2PlannerControlSpace"
+      planner_name: "RRTStar"
+      planner_timeout: 5.0
+      interpolation_parameter: 50
+      octomap_filename: "/home/ros2-foxy/f.bt"
+      octomap_voxel_size: 0.1
+      state_space_boundries:
+        minx: -50.0
+        maxx: 50.0
+        miny: -50.0
+        maxy: 50.0
+        minz: 0.0
+        maxz: 3.0
+      robot_body_dimens:
+        x: 1.0
+        y: 0.5
+        z: 0.4      

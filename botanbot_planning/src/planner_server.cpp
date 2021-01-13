@@ -33,44 +33,35 @@ namespace botanbot_planning
 PlannerServer::PlannerServer()
 : Node("botanbot_planning_server_rclcpp_node"),
   pc_loader_("botanbot_planning", "botanbot_planning::PlannerCore"),
-  default_ids_{"SE2Planner"},
-  default_types_{"botanbot_planning::SE2Planner"}
+  planner_id_("SE2Planner"),
+  planner_type_("botanbot_planning::SE2Planner")
 {
   RCLCPP_INFO(get_logger(), "Creating");
 
   // Declare this node's parameters
-  declare_parameter("planner_plugins", default_ids_);
+  declare_parameter("planner_plugin", planner_id_);
   declare_parameter("expected_planner_frequency", 1.0);
-  get_parameter("planner_plugins", planner_ids_);
 
-  if (planner_ids_ == default_ids_) {
-    for (size_t i = 0; i < default_ids_.size(); ++i) {
-      declare_parameter(default_ids_[i] + ".plugin", default_types_[i]);
-    }
-  }
-  planner_types_.resize(planner_ids_.size());
+  get_parameter("planner_plugin", planner_id_);
+  get_parameter(planner_id_ + "plugin", planner_type_);
 
-  for (size_t i = 0; i != planner_ids_.size(); i++) {
-    try {
-      planner_types_[i] =
-        this->get_parameter(default_ids_[i] + ".plugin").as_string();
-      botanbot_planning::PlannerCore::Ptr planner =
-        pc_loader_.createSharedInstance(planner_types_[i]);
-      planner->initialize(this, planner_types_[i]);
-      RCLCPP_INFO(
-        get_logger(), "Created planner plugin %s of type %s",
-        planner_ids_[i].c_str(), planner_types_[i].c_str());
-      planners_.insert({planner_ids_[i], planner});
-    } catch (const pluginlib::PluginlibException & ex) {
-      RCLCPP_FATAL(
-        get_logger(), "Failed to create planner. Exception: %s",
-        ex.what());
-    }
+  try {
+
+    botanbot_planning::PlannerCore::Ptr planner =
+      pc_loader_.createSharedInstance(planner_type_);
+    planner->initialize(this, planner_id_);
+    RCLCPP_INFO(
+      get_logger(), "Created planner plugin %s of type %s",
+      planner_id_.c_str(), planner_type_.c_str());
+    planners_.insert({planner_id_, planner});
+  } catch (const pluginlib::PluginlibException & ex) {
+    RCLCPP_FATAL(
+      get_logger(), "Failed to create planner. Exception: %s",
+      ex.what());
   }
 
-  for (size_t i = 0; i != planner_ids_.size(); i++) {
-    planner_ids_concat_ += planner_ids_[i] + std::string(" ");
-  }
+  planner_ids_concat_ += planner_id_ + std::string(" ");
+
 
   RCLCPP_INFO(
     get_logger(),

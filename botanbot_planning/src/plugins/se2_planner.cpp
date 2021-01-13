@@ -74,8 +74,8 @@ void SE2Planner::initialize(
       logger_, "SE2Planner plugin is disabled.");
   } else {
     RCLCPP_INFO(
-      logger_, "Initializing SE2Planner plugin, selected planner is; %s",
-      planner_name_.c_str());
+      logger_, "Initializing plugin named %s, selected planner is; %s",
+      plugin_name.c_str(), planner_name_.c_str());
   }
 
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_collision_geometry);
