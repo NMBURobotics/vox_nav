@@ -71,7 +71,6 @@ void SE2Planner::initialize(
     RCLCPP_INFO(
       logger_, "Initializing plugin named %s, selected planner is; %s",
       plugin_name.c_str(), planner_name_.c_str());
-
   }
 
   typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
@@ -126,11 +125,11 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
   // create a problem instance
   // define a simple setup class
   ompl::geometric::SimpleSetup simple_setup(state_space_);
-  /*simple_setup.setStateValidityChecker(
+  simple_setup.setStateValidityChecker(
     [this](const ompl::base::State * state)
     {
       return isStateValid(state);
-    });*/
+    });
   simple_setup.setStartAndGoalStates(se2_start, se2_goal);
   simple_setup.setup();
 
