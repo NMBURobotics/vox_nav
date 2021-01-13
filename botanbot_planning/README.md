@@ -1,4 +1,4 @@
-Refer to params/planner_server_config.yml for configurin planner server. 
+Refer to params/planner_server_config.yaml for configuring planner server. 
 
 ```yaml
 botanbot_planner_server_rclcpp_node:
