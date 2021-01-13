@@ -43,10 +43,9 @@ PlannerServer::PlannerServer()
   declare_parameter("expected_planner_frequency", 1.0);
 
   get_parameter("planner_plugin", planner_id_);
-  get_parameter(planner_id_ + "plugin", planner_type_);
+  get_parameter(planner_id_ + ".plugin", planner_type_);
 
   try {
-
     botanbot_planning::PlannerCore::Ptr planner =
       pc_loader_.createSharedInstance(planner_type_);
     planner->initialize(this, planner_id_);
@@ -136,7 +135,7 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
   auto result = std::make_shared<ComputePathToPose::Result>();
 
   geometry_msgs::msg::PoseStamped start_pose;
-  result->path = getPlan(start_pose, goal->pose, goal->planner_id);
+  result->path = getPlan(start_pose, goal->pose, planner_id_);
 
   if (result->path.size() == 0) {
     RCLCPP_WARN(

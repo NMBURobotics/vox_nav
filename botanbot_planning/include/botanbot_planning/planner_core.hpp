@@ -56,6 +56,7 @@
 #include <ompl/control/spaces/RealVectorControlSpace.h>
 #include <ompl/control/planners/kpiece/KPIECE1.h>
 #include <ompl/control/planners/rrt/RRT.h>
+#include <ompl/control/planners/sst/SST.h>
 #include <ompl/control/planners/est/EST.h>
 #include <ompl/control/planners/syclop/SyclopRRT.h>
 #include <ompl/control/planners/syclop/SyclopEST.h>

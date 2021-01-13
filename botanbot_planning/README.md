@@ -1,3 +1,6 @@
+Refer to params/planner_server_config.yml for configurin planner server. 
+
+```yaml
 botanbot_planner_server_rclcpp_node:
   ros__parameters:
     planner_plugin: "SE3Planner" # "SE2Planner", "SE3Planner" ,"SE2PlannerControlSpace"
@@ -56,3 +59,18 @@ botanbot_planner_server_rclcpp_node:
         x: 1.0
         y: 0.5
         z: 0.4      
+```
+
+Select a plugin out of 3 available plugins listed as ; SE2Planner, SE3Planner, SE2PlannerControlSpace. 
+
+Launch the planner server with; 
+
+```bash
+ros2 launch botanbot_planning planner_server.launch.py
+```
+
+Test the planner by sending an all zeros goal with ;
+ 
+```bash
+ros2 action send_goal /compute_path_to_pose botanbot_msgs/action/ComputePathToPose "{}"
+``` 
