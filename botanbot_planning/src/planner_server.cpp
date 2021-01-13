@@ -34,7 +34,7 @@ PlannerServer::PlannerServer()
 : Node("botanbot_planning_server_rclcpp_node"),
   pc_loader_("botanbot_planning", "botanbot_planning::PlannerCore"),
   default_ids_{"SE2Planner"},
-  default_types_{"botanbot_planner/SE2Planner"}
+  default_types_{"botanbot_planning::SE2Planner"}
 {
   RCLCPP_INFO(get_logger(), "Creating");
 
@@ -49,7 +49,7 @@ PlannerServer::PlannerServer()
     }
   }
   planner_types_.resize(planner_ids_.size());
-  auto node = shared_from_this();
+
   for (size_t i = 0; i != planner_ids_.size(); i++) {
     try {
       planner_types_[i] =
@@ -57,12 +57,12 @@ PlannerServer::PlannerServer()
       botanbot_planning::PlannerCore::Ptr planner =
         pc_loader_.createUniqueInstance(planner_types_[i]);
       RCLCPP_INFO(
-        get_logger(), "Created global planner plugin %s of type %s",
+        get_logger(), "Created planner plugin %s of type %s",
         planner_ids_[i].c_str(), planner_types_[i].c_str());
       planners_.insert({planner_ids_[i], planner});
     } catch (const pluginlib::PluginlibException & ex) {
       RCLCPP_FATAL(
-        get_logger(), "Failed to create global planner. Exception: %s",
+        get_logger(), "Failed to create planner. Exception: %s",
         ex.what());
     }
   }

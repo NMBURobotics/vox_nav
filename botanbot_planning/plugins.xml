@@ -1,16 +1,16 @@
 <class_libraries>
   <library path="botanbot_se3_planner">
-    <class type="botnbot_planning::SE3Planner" base_class_type="botnbot_planning::PlannerCore">
+    <class type="botanbot_planning::SE3Planner" base_class_type="botanbot_planning::PlannerCore">
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
   <library path="botanbot_se2_planner">
-    <class type="botnbot_planning::SE2Planner" base_class_type="botnbot_planning::PlannerCore">
+    <class type="botanbot_planning::SE2Planner" base_class_type="botanbot_planning::PlannerCore">
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
   <library path="botanbot_se2_planner_control_space">
-    <class type="botnbot_planning::SE2PlannerControlSpace" base_class_type="botnbot_planning::PlannerCore">
+    <class type="botanbot_planning::SE2PlannerControlSpace" base_class_type="botanbot_planning::PlannerCore">
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>

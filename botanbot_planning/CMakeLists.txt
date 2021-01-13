@@ -94,7 +94,7 @@ install(DIRECTORY include/
 )
 
 install(
-  DIRECTORY launch 
+  DIRECTORY launch params
   DESTINATION share/${PROJECT_NAME}
 )
 
@@ -107,5 +107,6 @@ ament_export_include_directories(include)
 ament_export_libraries(${botanbot_se3_planner_exc_name} 
                        ${botanbot_se2_planner_exc_name}
                        ${botanbot_se2_planner_control_space_exc_name})
+pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 
 ament_package()
