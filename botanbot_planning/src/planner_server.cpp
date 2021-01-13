@@ -39,10 +39,13 @@ PlannerServer::PlannerServer()
   RCLCPP_INFO(get_logger(), "Creating");
 
   // Declare this node's parameters
-  declare_parameter("planner_plugin", planner_id_);
-  declare_parameter("expected_planner_frequency", 1.0);
+  declare_parameter("expected_planner_frequency", expected_planner_frequency_);
+  get_parameter("expected_planner_frequency", expected_planner_frequency_);
 
+  declare_parameter("planner_plugin", planner_id_);
   get_parameter("planner_plugin", planner_id_);
+
+  declare_parameter(planner_id_ + ".plugin", planner_type_);
   get_parameter(planner_id_ + ".plugin", planner_type_);
 
   try {
@@ -64,15 +67,13 @@ PlannerServer::PlannerServer()
   RCLCPP_INFO(
     get_logger(),
     "Planner Server has %s planners available.", planner_ids_concat_.c_str());
-  double expected_planner_frequency;
-  get_parameter("expected_planner_frequency", expected_planner_frequency);
-  if (expected_planner_frequency > 0) {
-    max_planner_duration_ = 1 / expected_planner_frequency;
+  if (expected_planner_frequency_ > 0) {
+    max_planner_duration_ = 1 / expected_planner_frequency_;
   } else {
     RCLCPP_WARN(
       get_logger(),
       "The expected planner frequency parameter is %.4f Hz. The value should to be greater"
-      " than 0.0 to turn on duration overrrun warning messages", expected_planner_frequency);
+      " than 0.0 to turn on duration overrrun warning messages", expected_planner_frequency_);
     max_planner_duration_ = 0.0;
   }
 
@@ -128,7 +129,7 @@ void
 PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle)
 {
   auto start_time = steady_clock_.now();
-  rclcpp::Rate loop_rate(1.0);
+  rclcpp::Rate loop_rate(expected_planner_frequency_);
 
   const auto goal = goal_handle->get_goal();
   auto feedback = std::make_shared<ComputePathToPose::Feedback>();
@@ -163,11 +164,18 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
     result->path.size(), goal->pose.pose.position.x,
     goal->pose.pose.position.y);
 
-  // Publish the plan for visualization purposes
-  publishPlan(result->path);
-
   auto cycle_duration = steady_clock_.now() - start_time;
 
+  // Check if goal is done
+  if (rclcpp::ok()) {
+    cycle_duration = steady_clock_.now() - start_time;
+    result->planning_time = cycle_duration;
+    goal_handle->succeed(result);
+    RCLCPP_INFO(this->get_logger(), "Goal Succeeded");
+    // Publish the plan for visualization purposes
+    publishPlan(result->path);
+  }
+  cycle_duration = steady_clock_.now() - start_time;
   if (max_planner_duration_ && cycle_duration.seconds() > max_planner_duration_) {
     RCLCPP_WARN(
       get_logger(),
@@ -175,13 +183,6 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
       1 / max_planner_duration_, 1 / cycle_duration.seconds());
   }
   loop_rate.sleep();
-  // Check if goal is done
-  if (rclcpp::ok()) {
-    cycle_duration = steady_clock_.now() - start_time;
-    result->planning_time = cycle_duration;
-    goal_handle->succeed(result);
-    RCLCPP_INFO(this->get_logger(), "Goal Succeeded");
-  }
 }
 
 std::vector<geometry_msgs::msg::PoseStamped>
@@ -217,12 +218,37 @@ PlannerServer::getPlan(
 void
 PlannerServer::publishPlan(const std::vector<geometry_msgs::msg::PoseStamped> & path)
 {
-  if (this->count_subscribers(plan_publisher_->get_topic_name()) > 0) {
-    //plan_publisher_->publish(std::move(msg));
+  visualization_msgs::msg::MarkerArray marker_array;
+  auto path_idx = 0;
+  for (auto && i : path) {
+    visualization_msgs::msg::Marker marker;
+    marker.header.frame_id = "map";
+    marker.header.stamp = rclcpp::Clock().now();
+    marker.ns = "path";
+    marker.id = path_idx;
+    marker.type = visualization_msgs::msg::Marker::CUBE;
+    marker.action = visualization_msgs::msg::Marker::ADD;
+    marker.lifetime = rclcpp::Duration::from_seconds(0);
+    marker.pose.position.x = i.pose.position.x;
+    marker.pose.position.y = i.pose.position.y;
+    marker.pose.position.z = i.pose.position.z;
+    marker.pose.orientation.x = i.pose.orientation.x;
+    marker.pose.orientation.y = i.pose.orientation.y;
+    marker.pose.orientation.z = i.pose.orientation.z;
+    marker.pose.orientation.w = i.pose.orientation.w;
+    marker.scale.x = 1.0;
+    marker.scale.y = 1.0;
+    marker.scale.z = 0.8;
+    marker.color.a = 1.0;
+    marker.color.r = 0.0;
+    marker.color.g = 1.0;
+    marker.color.b = 0.0;
+    marker_array.markers.push_back(marker);
+    path_idx++;
   }
+  plan_publisher_->publish(marker_array);
 }
 }  // namespace botanbot_planning
-
 
 int main(int argc, char ** argv)
 {

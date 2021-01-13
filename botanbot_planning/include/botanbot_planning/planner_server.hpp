@@ -116,6 +116,7 @@ protected:
   std::string planner_type_;
   double max_planner_duration_;
   std::string planner_ids_concat_;
+  double expected_planner_frequency_;
 
   // Clock
   rclcpp::Clock steady_clock_{RCL_STEADY_TIME};

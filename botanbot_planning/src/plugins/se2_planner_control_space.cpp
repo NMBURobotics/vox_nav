@@ -63,11 +63,6 @@ void SE2PlannerControlSpace::initialize(
   state_space_bounds_->setHigh(
     parent->get_parameter(plugin_name + ".state_space_boundries.maxx").as_double());
 
-  std::shared_ptr<fcl::CollisionGeometry> robot_collision_geometry(new fcl::Box(
-      parent->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
-      parent->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
-      parent->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
-
   if (!is_enabled_) {
     RCLCPP_INFO(
       logger_, "SE2PlannerControlSpace plugin is disabled.");
@@ -77,9 +72,23 @@ void SE2PlannerControlSpace::initialize(
       planner_name_.c_str());
   }
 
-  robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_collision_geometry);
+  typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
+  CollisionGeometryPtr_t robot_body_box(new fcl::Box(
+      parent->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
+      parent->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
+      parent->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
+  fcl::Transform3f tf2;
+  fcl::CollisionObject robot_body_box_object(robot_body_box, tf2);
+
+  robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
   octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
   octomap_octree_->readBinary(octomap_filename_);
+  fcl_octree_ = std::make_shared<fcl::OcTree>(
+    std::shared_ptr<const octomap::OcTree>(
+      octomap_octree_));
+  fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
+    std::shared_ptr<fcl::CollisionGeometry>(
+      fcl_octree_));
 
   state_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>();
   state_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds_);
