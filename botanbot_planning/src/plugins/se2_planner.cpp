@@ -31,52 +31,50 @@ SE2Planner::~SE2Planner()
 }
 
 void SE2Planner::initialize(
-  const rclcpp::Node::SharedPtr & parent,
+  rclcpp::Node * parent,
   const std::string & plugin_name)
 {
-  node_ = parent;
-
   state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
 
-  node_->declare_parameter(plugin_name + ".enabled", true);
-  node_->declare_parameter(plugin_name + ".planner_name", "PRMStar");
-  node_->declare_parameter(plugin_name + ".planner_timeout", 5.0);
-  node_->declare_parameter(plugin_name + ".interpolation_parameter", 50);
-  node_->declare_parameter(plugin_name + ".octomap_filename", "/home/ros2-foxy/f.bt");
-  node_->declare_parameter(plugin_name + ".octomap_voxel_size", 0.1);
-  node_->declare_parameter(plugin_name + ".state_space_boundries.minx", -50.0);
-  node_->declare_parameter(plugin_name + ".state_space_boundries.maxx", 50.0);
-  node_->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
-  node_->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
-  node_->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
-  node_->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
-  node_->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.0);
-  node_->declare_parameter(plugin_name + ".robot_body_dimens.y", 0.8);
-  node_->declare_parameter(plugin_name + ".robot_body_dimens.z", 0.6);
+  parent->declare_parameter(plugin_name + ".enabled", true);
+  parent->declare_parameter(plugin_name + ".planner_name", "PRMStar");
+  parent->declare_parameter(plugin_name + ".planner_timeout", 5.0);
+  parent->declare_parameter(plugin_name + ".interpolation_parameter", 50);
+  parent->declare_parameter(plugin_name + ".octomap_filename", "/home/ros2-foxy/f.bt");
+  parent->declare_parameter(plugin_name + ".octomap_voxel_size", 0.1);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -50.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 50.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
+  parent->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.0);
+  parent->declare_parameter(plugin_name + ".robot_body_dimens.y", 0.8);
+  parent->declare_parameter(plugin_name + ".robot_body_dimens.z", 0.6);
 
-  node_->get_parameter(plugin_name + ".enabled", is_enabled_);
-  node_->get_parameter(plugin_name + ".planner_name", planner_name_);
-  node_->get_parameter(plugin_name + ".planner_timeout", planner_timeout_);
-  node_->get_parameter(plugin_name + ".interpolation_parameter", interpolation_parameter_);
-  node_->get_parameter(plugin_name + ".octomap_filename", octomap_filename_);
-  node_->get_parameter(plugin_name + ".octomap_voxel_size", octomap_voxel_size_);
+  parent->get_parameter(plugin_name + ".enabled", is_enabled_);
+  parent->get_parameter(plugin_name + ".planner_name", planner_name_);
+  parent->get_parameter(plugin_name + ".planner_timeout", planner_timeout_);
+  parent->get_parameter(plugin_name + ".interpolation_parameter", interpolation_parameter_);
+  parent->get_parameter(plugin_name + ".octomap_filename", octomap_filename_);
+  parent->get_parameter(plugin_name + ".octomap_voxel_size", octomap_voxel_size_);
 
   state_space_bounds_->setLow(
-    node_->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
+    parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
   state_space_bounds_->setHigh(
-    node_->get_parameter(plugin_name + ".state_space_boundries.maxx").as_double());
+    parent->get_parameter(plugin_name + ".state_space_boundries.maxx").as_double());
 
   std::shared_ptr<fcl::CollisionGeometry> robot_collision_geometry(new fcl::Box(
-      node_->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
-      node_->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
-      node_->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
+      parent->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
+      parent->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
+      parent->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
 
   if (!is_enabled_) {
     RCLCPP_INFO(
-      node_->get_logger(), "SE2Planner plugin is disabled.");
+      logger_, "SE2Planner plugin is disabled.");
   } else {
     RCLCPP_INFO(
-      node_->get_logger(), "Initializing SE2Planner plugin, selected planner is; %s",
+      logger_, "Initializing SE2Planner plugin, selected planner is; %s",
       planner_name_.c_str());
   }
 
@@ -97,7 +95,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
 {
   if (!is_enabled_) {
     RCLCPP_WARN(
-      node_->get_logger(),
+      logger_,
       "SE2Planner plugin is disabled. Not performing anything returning an empty path"
     );
     return std::vector<geometry_msgs::msg::PoseStamped>();
@@ -129,7 +127,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
   ompl::base::PlannerPtr planner;
   if (!getSelectedPlanner(planner_name_, state_space_information_, planner)) {
     RCLCPP_WARN(
-      node_->get_logger(), "Selected planner name: %s is not valid planner "
+      logger_, "Selected planner name: %s is not valid planner "
       "make sure you to set a valid planner name, Selecting a PRMStar as default planner",
       planner_name_.c_str());
     planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(state_space_information_));
@@ -168,10 +166,10 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
       plan_poses.push_back(pose);
     }
     RCLCPP_INFO(
-      node_->get_logger(), "Found A plan with %i poses", plan_poses.size());
+      logger_, "Found A plan with %i poses", plan_poses.size());
   } else {
     RCLCPP_WARN(
-      node_->get_logger(), "No solution for requested path planning !");
+      logger_, "No solution for requested path planning !");
   }
   return plan_poses;
 }

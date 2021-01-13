@@ -55,7 +55,8 @@ PlannerServer::PlannerServer()
       planner_types_[i] =
         this->get_parameter(default_ids_[i] + ".plugin").as_string();
       botanbot_planning::PlannerCore::Ptr planner =
-        pc_loader_.createUniqueInstance(planner_types_[i]);
+        pc_loader_.createSharedInstance(planner_types_[i]);
+      planner->initialize(this, planner_types_[i]);
       RCLCPP_INFO(
         get_logger(), "Created planner plugin %s of type %s",
         planner_ids_[i].c_str(), planner_types_[i].c_str());

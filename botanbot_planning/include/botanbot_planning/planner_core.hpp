@@ -108,7 +108,7 @@ public:
    * @param plugin_name
    */
   virtual void initialize(
-    const rclcpp::Node::SharedPtr & parent,
+    rclcpp::Node * parent,
     const std::string & plugin_name) = 0;
 
   /**

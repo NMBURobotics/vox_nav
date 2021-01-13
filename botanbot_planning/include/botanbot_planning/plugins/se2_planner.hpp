@@ -47,7 +47,7 @@ public:
    *
    */
   void initialize(
-    const rclcpp::Node::SharedPtr & parent,
+    rclcpp::Node * parent,
     const std::string & plugin_name) override;
 
   /**
@@ -86,6 +86,7 @@ public:
 
 protected:
   rclcpp::Node::SharedPtr node_;
+  rclcpp::Logger logger_{rclcpp::get_logger("se2_planner")};
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr vis_pub_;
   rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr octomap_pointcloud_pub_;
