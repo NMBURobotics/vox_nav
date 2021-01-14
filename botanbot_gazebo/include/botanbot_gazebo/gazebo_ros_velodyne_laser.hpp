@@ -32,8 +32,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
 
-#ifndef BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_VELODYNE_LASER_HPP_
-#define BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_VELODYNE_LASER_HPP_
+#ifndef BOTANBOT_GAZEBO__GAZEBO_ROS_VELODYNE_LASER_HPP_
+#define BOTANBOT_GAZEBO__GAZEBO_ROS_VELODYNE_LASER_HPP_
 
 
 #include <sdf/Param.hh>
@@ -205,4 +205,4 @@ private:
 
 }  // namespace gazebo
 
-#endif  // BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_VELODYNE_LASER_HPP_
+#endif  // BOTANBOT_GAZEBO__GAZEBO_ROS_VELODYNE_LASER_HPP_

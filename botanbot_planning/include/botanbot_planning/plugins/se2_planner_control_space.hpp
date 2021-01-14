@@ -15,6 +15,10 @@
 #ifndef BOTANBOT_PLANNING__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
 #define BOTANBOT_PLANNING__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
 
+#include <vector>
+#include <string>
+#include <memory>
+
 #include "botanbot_planning/planner_core.hpp"
 
 /**

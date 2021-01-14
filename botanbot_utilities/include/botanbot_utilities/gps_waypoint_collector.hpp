@@ -16,6 +16,9 @@
 #define BOTANBOT_UTILITIES__GPS_WAYPOINT_COLLECTOR_HPP_
 
 #include <mutex>
+#include <utility>
+#include <memory>
+
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/subscription.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"

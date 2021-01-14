@@ -14,8 +14,8 @@
 // limitations under the License.
 */
 
-#ifndef BOTANBOT_GAZEBO__PLUGINS__REALSENSEPLUGIN_HPP_
-#define BOTANBOT_GAZEBO__PLUGINS__REALSENSEPLUGIN_HPP_
+#ifndef BOTANBOT_GAZEBO__REALSENSEPLUGIN_HPP_
+#define BOTANBOT_GAZEBO__REALSENSEPLUGIN_HPP_
 
 #include <gazebo/common/Plugin.hh>
 #include <gazebo/common/common.hh>
@@ -143,4 +143,4 @@ protected:
   float rangeMaxDepth_;
 };
 }  // namespace gazebo
-#endif  // BOTANBOT_GAZEBO__PLUGINS__REALSENSEPLUGIN_HPP_
+#endif  // BOTANBOT_GAZEBO__REALSENSEPLUGIN_HPP_

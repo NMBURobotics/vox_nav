@@ -14,6 +14,8 @@
 
 #include <iostream>
 #include <memory>
+#include <utility>
+
 #include "botanbot_utilities/gps_waypoint_collector.hpp"
 
 namespace botanbot_utilities

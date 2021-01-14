@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BOTANBOT_PLANNING__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
-#define BOTANBOT_PLANNING__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#ifndef BOTANBOT_PLANNING__PLUGINS__SE3_PLANNER_HPP_
+#define BOTANBOT_PLANNING__PLUGINS__SE3_PLANNER_HPP_
+
+#include <vector>
+#include <string>
+#include <memory>
 
 #include "botanbot_planning/planner_core.hpp"
 
@@ -122,8 +126,7 @@ protected:
   int interpolation_parameter_;
   //
   double planner_timeout_;
-
 };
 }  // namespace botanbot_planning
 
-#endif  // BOTANBOT_PLANNING__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#endif  // BOTANBOT_PLANNING__PLUGINS__SE3_PLANNER_HPP_

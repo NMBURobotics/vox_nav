@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_REALSENSE_HPP_
-#define BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_REALSENSE_HPP_
+#ifndef BOTANBOT_GAZEBO__GAZEBO_ROS_REALSENSE_HPP_
+#define BOTANBOT_GAZEBO__GAZEBO_ROS_REALSENSE_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
@@ -92,4 +92,4 @@ protected:
   sensor_msgs::msg::PointCloud2 pointcloud_msg_;
 };
 }
-#endif  // BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_REALSENSE_HPP_
+#endif  // BOTANBOT_GAZEBO__GAZEBO_ROS_REALSENSE_HPP_

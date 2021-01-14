@@ -177,38 +177,12 @@ void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   Reset();
   this->updateConnection_ =
     event::Events::ConnectWorldUpdateBegin(std::bind(&GazeboRosGps::OnUpdate, this));
-
 }
 
 void GazeboRosGps::Reset()
 {
   last_update_time_ = world_->SimTime();
 }
-
-/*void GazeboRosGps::dynamicReconfigureCallback(GNSSConfig & config, uint32_t level)
-{
-  using sensor_msgs::msg::NavSatStatus;
-  if (level == 1) {
-    if (!config.STATUS_FIX) {
-      fix_.status.status = NavSatStatus::STATUS_NO_FIX;
-    } else {
-      fix_.status.status = (config.STATUS_SBAS_FIX ? NavSatStatus::STATUS_SBAS_FIX : 0) |
-        (config.STATUS_GBAS_FIX ? NavSatStatus::STATUS_GBAS_FIX : 0);
-    }
-    fix_.status.service = (config.SERVICE_GPS ? NavSatStatus::SERVICE_GPS : 0) |
-      (config.SERVICE_GLONASS ? NavSatStatus::SERVICE_GLONASS : 0) |
-      (config.SERVICE_COMPASS ? NavSatStatus::SERVICE_COMPASS : 0) |
-      (config.SERVICE_GALILEO ? NavSatStatus::SERVICE_GALILEO : 0);
-  } else {
-    config.STATUS_FIX = (fix_.status.status != NavSatStatus::STATUS_NO_FIX);
-    config.STATUS_SBAS_FIX = (fix_.status.status & NavSatStatus::STATUS_SBAS_FIX);
-    config.STATUS_GBAS_FIX = (fix_.status.status & NavSatStatus::STATUS_GBAS_FIX);
-    config.SERVICE_GPS = (fix_.status.service & NavSatStatus::SERVICE_GPS);
-    config.SERVICE_GLONASS = (fix_.status.service & NavSatStatus::SERVICE_GLONASS);
-    config.SERVICE_COMPASS = (fix_.status.service & NavSatStatus::SERVICE_COMPASS);
-    config.SERVICE_GALILEO = (fix_.status.service & NavSatStatus::SERVICE_GALILEO);
-  }
-}*/
 
 ////////////////////////////////////////////////////////////////////////////////
 // Update the controller

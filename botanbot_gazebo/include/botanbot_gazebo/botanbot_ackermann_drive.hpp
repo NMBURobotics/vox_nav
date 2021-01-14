@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BOTANBOT_GAZEBO__PLUGINS__BOTANBOT_ACKERMANN_DRIVE_HPP_
-#define BOTANBOT_GAZEBO__PLUGINS__BOTANBOT_ACKERMANN_DRIVE_HPP_
+#ifndef BOTANBOT_GAZEBO__BOTANBOT_ACKERMANN_DRIVE_HPP_
+#define BOTANBOT_GAZEBO__BOTANBOT_ACKERMANN_DRIVE_HPP_
 
 #include <gazebo/common/Plugin.hh>
 #include <memory>
@@ -82,4 +82,4 @@ private:
 };
 }  // namespace gazebo_plugins
 
-#endif  // BOTANBOT_GAZEBO__PLUGINS__BOTANBOT_ACKERMANN_DRIVE_HPP_
+#endif  // BOTANBOT_GAZEBO__BOTANBOT_ACKERMANN_DRIVE_HPP_

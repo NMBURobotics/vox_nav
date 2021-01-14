@@ -27,6 +27,7 @@
 #include <iostream>
 #include <limits>
 #include <exception>
+#include <string>
 
 #include "rclcpp/rclcpp.hpp"
 #include "botanbot_utilities/pcl_helpers.hpp"
@@ -38,7 +39,7 @@ namespace botanbot_utilities
 class PCL2OctomapConverter : public rclcpp::Node
 {
 private:
-  //Optional rigid body transform to apply o the cloud, if cloud
+  // Optional rigid body transform to apply o the cloud, if cloud
   // is depth camera frames we need to pull cloud back to conventional ROS frames
   botanbot_utilities::RigidBodyTransformation pointloud_transform_matrix_;
   std::string input_pcd_filename_;

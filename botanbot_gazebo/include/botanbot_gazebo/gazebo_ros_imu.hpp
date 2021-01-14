@@ -26,10 +26,11 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //=================================================================================================
 
-#ifndef HECTOR_GAZEBO_PLUGINS_GAZEBO_ROS_IMU_H
-#define HECTOR_GAZEBO_PLUGINS_GAZEBO_ROS_IMU_H
+#ifndef BOTANBOT_GAZEBO__GAZEBO_ROS_IMU_HPP_
+#define BOTANBOT_GAZEBO__GAZEBO_ROS_IMU_HPP_
 
 #include <mutex>
+#include <string>
 
 #include "gazebo-11/gazebo/common/Plugin.hh"
 #include "rclcpp/rclcpp.hpp"
@@ -101,6 +102,6 @@ private:
 
 
 };
-}
+}  // namespace gazebo
 
-#endif // HECTOR_GAZEBO_PLUGINS_GAZEBO_ROS_IMU_H
+#endif  // BOTANBOT_GAZEBO__GAZEBO_ROS_IMU_HPP_

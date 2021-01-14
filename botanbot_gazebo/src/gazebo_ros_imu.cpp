@@ -214,10 +214,10 @@ void GazeboRosIMU::Update()
   ignition::math::Vector3d accelDrift = pose.Rot().RotateVector(accelModel_.getCurrentBias());
   double yawError = yawModel_.getCurrentBias();
   ignition::math::Quaterniond orientationError(
-    ignition::math::Quaterniond(cos(yawError / 2), 0.0, 0.0, sin(yawError / 2)) *                                         // yaw error
+    ignition::math::Quaterniond(cos(yawError / 2), 0.0, 0.0, sin(yawError / 2)) *
     ignition::math::Quaterniond(
       1.0, 0.5 * accelDrift.Y() / gravity_length,
-      0.5 * -accelDrift.X() / gravity_length, 0.0)                                                                        // roll and pitch error
+      0.5 * -accelDrift.X() / gravity_length, 0.0)
   );
 
   orientationError.Normalize();
