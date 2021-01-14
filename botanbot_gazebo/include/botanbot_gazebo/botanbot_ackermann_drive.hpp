@@ -16,7 +16,6 @@
 #define BOTANBOT_GAZEBO__PLUGINS__BOTANBOT_ACKERMANN_DRIVE_HPP_
 
 #include <gazebo/common/Plugin.hh>
-
 #include <memory>
 
 namespace gazebo_plugins

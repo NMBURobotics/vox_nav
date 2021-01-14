@@ -181,7 +181,6 @@
     <link name="camera_right_ir_frame"></link>
     <link name="camera_right_ir_optical_frame"></link>
     <link name="wide_angle_camera_link"></link>
-
     <!-- END LINKS RELATED TO SENSORS       -->
     <!-- END LINKS                          -->
     <!--////////////////////////////////////-->

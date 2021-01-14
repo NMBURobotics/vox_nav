@@ -54,6 +54,13 @@ void GazeboRosIMU::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   // Get the world name.
   world_ = _model->GetWorld();
+  // default parameters
+  frame_id_ = link_name_;
+  topic_ = "imu/data";
+
+  accelModel_.Load(_sdf, "accel");
+  rateModel_.Load(_sdf, "rate");
+  yawModel_.Load(_sdf, "yaw");
 
   // load parameters
   if (_sdf->HasElement("robotNamespace")) {
@@ -70,17 +77,12 @@ void GazeboRosIMU::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
     link_name_ = link_->GetName();
   }
 
-  // assert that the body by link_name_ exists
   if (!link_) {
     RCLCPP_ERROR(
       node_->get_logger(), "GazeboRosIMU plugin error: bodyName: %s does not exist\n",
       link_name_.c_str());
     return;
   }
-
-  // default parameters
-  frame_id_ = link_name_;
-  topic_ = "imu/data";
 
   if (_sdf->HasElement("frameId")) {
     frame_id_ = _sdf->GetElement("frameId")->GetValue()->GetAsString();
@@ -89,10 +91,6 @@ void GazeboRosIMU::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   if (_sdf->HasElement("topicName")) {
     topic_ = _sdf->GetElement("topicName")->GetValue()->GetAsString();
   }
-
-  accelModel_.Load(_sdf, "accel");
-  rateModel_.Load(_sdf, "rate");
-  yawModel_.Load(_sdf, "yaw");
 
   // also use old configuration variables from gazebo_ros_imu
   if (_sdf->HasElement("gaussianNoise")) {
@@ -149,7 +147,6 @@ void GazeboRosIMU::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   Reset();
   last_update_time_ = world_->SimTime();
-
   this->updateConnection_ =
     event::Events::ConnectWorldUpdateBegin(std::bind(&GazeboRosIMU::Update, this));
 }
@@ -213,7 +210,6 @@ void GazeboRosIMU::Update()
   rate_ = rateModel_(rate_, dt);
   yawModel_.update(dt);
 
-
   // apply accelerometer and yaw drift error to orientation (pseudo AHRS)
   ignition::math::Vector3d accelDrift = pose.Rot().RotateVector(accelModel_.getCurrentBias());
   double yawError = yawModel_.getCurrentBias();
@@ -232,7 +228,6 @@ void GazeboRosIMU::Update()
   imuMsg_.header.stamp.sec = cur_time.sec;
   imuMsg_.header.stamp.nanosec = cur_time.nsec;
 
-
   imuMsg_.orientation.x = rot.X();
   imuMsg_.orientation.y = rot.Y();
   imuMsg_.orientation.z = rot.Z();
@@ -246,7 +241,6 @@ void GazeboRosIMU::Update()
   imuMsg_.linear_acceleration.y = accel_.Y();
   imuMsg_.linear_acceleration.z = accel_.Z();
 
-
   // fill in covariance matrix
   imuMsg_.orientation_covariance[8] = yawModel_.gaussian_noise * yawModel_.gaussian_noise;
   if (gravity_length > 0.0) {
@@ -259,10 +253,8 @@ void GazeboRosIMU::Update()
     imuMsg_.orientation_covariance[0] = -1;
     imuMsg_.orientation_covariance[4] = -1;
   }
-
   // publish to ros
   imu_publisher_->publish(imuMsg_);
-
 }
 
 // Register this plugin with the simulator

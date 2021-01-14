@@ -86,23 +86,14 @@ private:
   /// \brief A mutex to lock access to fields that are used in message callbacks
   boost::mutex lock;
 
-
   ignition::math::Quaterniond orientation_;
   ignition::math::Vector3d velocity_;
   ignition::math::Vector3d accel_;
   ignition::math::Vector3d rate_;
   ignition::math::Vector3d gravity_;
 
-  /// \brief Gaussian noise generator
-  double GaussianKernel(double mu, double sigma);
-
   /// \brief for setting ROS name space
   std::string namespace_;
-
-  /// \brief call back when using service
-  bool ServiceCallback(
-    std_srvs::srv::Empty::Request & req,
-    std_srvs::srv::Empty::Response & res);
 
   // UpdateTimer updateTimer;
   gazebo::event::ConnectionPtr updateConnection_;

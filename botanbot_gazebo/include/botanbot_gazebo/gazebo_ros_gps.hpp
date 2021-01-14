@@ -59,7 +59,6 @@ public:
     bool STATUS_FIX = true;
     bool STATUS_SBAS_FIX = false;
     bool STATUS_GBAS_FIX = false;
-
     bool SERVICE_GPS = true;
     bool SERVICE_GLONASS = true;
     bool SERVICE_COMPASS = true;
@@ -87,6 +86,8 @@ protected:
 private:
   gazebo::physics::WorldPtr world_;
   gazebo::physics::LinkPtr link_;
+  gazebo::SensorModel3 position_error_model_;
+  gazebo::SensorModel3 velocity_error_model_;
 
   rclcpp::Node::SharedPtr node_;
   rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr fix_publisher_;
@@ -105,16 +106,11 @@ private:
   double reference_longitude_;
   double reference_heading_;
   double reference_altitude_;
-
   double radius_north_;
   double radius_east_;
 
-  gazebo::SensorModel3 position_error_model_;
-  gazebo::SensorModel3 velocity_error_model_;
-
   // UpdateTimer updateTimer;
   gazebo::event::ConnectionPtr updateConnection_;
-
   // Last update time.
   gazebo::common::Time last_update_time_;
 };
