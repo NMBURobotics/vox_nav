@@ -37,6 +37,7 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include "botanbot_utilities/gps_waypoint_collector.hpp"
+#include "botanbot_openvslam/gps_data_handler.hpp"
 #include "yaml-cpp/emitter.h"
 
 #include <iostream>
@@ -141,6 +142,10 @@ private:
   bool debug_mode_;
   // if true evalution file will be dumped
   bool eval_log_;
+  // whether or not write ap info yaml
+  bool write_map_info_;
+  // full path which the map info yaml will be dumped
+  std::string map_info_path_;
 };
 
 }  // namespace botanbot_openvslam

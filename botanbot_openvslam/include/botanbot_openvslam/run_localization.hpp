@@ -31,6 +31,8 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
+#include "botanbot_openvslam/gps_data_handler.hpp"
+
 #include <image_transport/image_transport.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core/core.hpp>

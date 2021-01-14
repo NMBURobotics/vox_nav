@@ -68,7 +68,6 @@ void GPSWaypointCollector::sensorDataCallback(
   const sensor_msgs::msg::NavSatFix::ConstSharedPtr & gps,
   const sensor_msgs::msg::Imu::ConstSharedPtr & imu)
 {
-  RCLCPP_INFO(this->get_logger(), "Recieved a new pair of gps and imu data");
   std::lock_guard<std::mutex> guard(global_mutex_);
   reusable_navsat_msg_ = *gps;
   reusable_imu_msg_ = *imu;

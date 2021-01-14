@@ -35,6 +35,8 @@ RunSlam::RunSlam()
   this->declare_parameter("map_db_path", "");
   this->declare_parameter("debug_mode", true);
   this->declare_parameter("eval_log", true);
+  this->declare_parameter("write_map_info", true);
+  this->declare_parameter("map_info_path", "");
 
   vocab_file_path_ = this->get_parameter("vocab_file_path").as_string();
   setting_file_path_ = this->get_parameter("setting_file_path").as_string();
@@ -42,6 +44,8 @@ RunSlam::RunSlam()
   map_db_path_ = this->get_parameter("map_db_path").as_string();
   debug_mode_ = this->get_parameter("debug_mode").as_bool();
   eval_log_ = this->get_parameter("eval_log").as_bool();
+  write_map_info_ = this->get_parameter("write_map_info").as_bool();
+  map_info_path_ = this->get_parameter("map_info_path").as_string();
 
   mask_ = std::make_shared<cv::Mat>();
   if (!mask_img_path_.empty()) {
@@ -136,52 +140,30 @@ void RunSlam::rgbdCallback(
   const sensor_msgs::msg::Image::ConstSharedPtr & color,
   const sensor_msgs::msg::Image::ConstSharedPtr & depth)
 {
-  std::pair<sensor_msgs::msg::NavSatFix,
-    sensor_msgs::msg::Imu> initial_map_gps_coordinates;
   if (!gps_waypoint_collector_node_->isOrientedGPSDataReady()) {
     RCLCPP_WARN(
       get_logger(),
-      "Oriented GPS coordinates are not recieved yet, the initial pose of map is unknown!");
+      "Oriented GPS coordinates are not recieved yet, the initial pose of map is unknown!, "
+      "spinning gps waypoint collector node and trying again ...");
+    rclcpp::spin_some(gps_waypoint_collector_node_);
+    rclcpp::sleep_for(std::chrono::seconds(1));
     return;
   } else {
     std::call_once(
-      gps_data_recieved_flag_, [this, &initial_map_gps_coordinates]() {
-        RCLCPP_INFO(
-          get_logger(),
-          "Oriented GPS data is ready, setting the initial pose of map accordingly!");
-        initial_map_gps_coordinates =
-        std::make_pair(
-          gps_waypoint_collector_node_->getLatestOrientedGPSCoordinates().first,
-          gps_waypoint_collector_node_->getLatestOrientedGPSCoordinates().second);
-        std::time_t current_time = std::time(0);
-        YAML::Emitter map_info_yaml;
-        map_info_yaml << YAML::BeginMap;
-        map_info_yaml << YAML::Key << "map_built_with"; map_info_yaml << YAML::Value << "rgbd";
-        map_info_yaml << YAML::Key << "map_path"; map_info_yaml << YAML::Value << "/sf";
-        map_info_yaml << YAML::Key << "creation_date";
-        map_info_yaml << YAML::Value << std::string(
-          ctime(
-            &current_time));
-        map_info_yaml << YAML::Key << "map_coordinates";
-        map_info_yaml << YAML::BeginMap;
-        map_info_yaml << YAML::Key << "latitude"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.first.latitude;
-        map_info_yaml << YAML::Key << "longitude"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.first.longitude;
-        map_info_yaml << YAML::Key << "altitude"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.first.altitude;
-        map_info_yaml << YAML::Key << "quaternion";
-        map_info_yaml << YAML::BeginMap;
-        map_info_yaml << YAML::Key << "x"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.second.orientation.x;
-        map_info_yaml << YAML::Key << "y"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.second.orientation.y;
-        map_info_yaml << YAML::Key << "z"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.second.orientation.z;
-        map_info_yaml << YAML::Key << "w"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.second.orientation.w;
-        map_info_yaml << YAML::EndMap;
-        map_info_yaml << YAML::EndMap;
-        map_info_yaml << YAML::EndMap;
-        std::ofstream fout("/home/ros2-foxy/map_info.yaml");
-        fout << map_info_yaml.c_str();
-
-        RCLCPP_INFO(
-          get_logger(),
-          "GPS lat %.8f", initial_map_gps_coordinates.first.latitude);
+      gps_data_recieved_flag_, [this]() {
+        if (write_map_info_) {
+          RCLCPP_WARN(
+            get_logger(),
+            "Recieved a pair of gps and imu data, data will be recieved and dumped to yaml file once"
+            "additional map related information will be dumped yaml file here %s ",
+            map_info_path_.c_str()
+          );
+          botanbot_openvslam::writeMapInfotoYAML(
+            map_info_path_,
+            map_db_path_,
+            std::string("rgbd"),
+            gps_waypoint_collector_node_);
+        }
       });
   }
   // At this point we do have initial pose of map to be created

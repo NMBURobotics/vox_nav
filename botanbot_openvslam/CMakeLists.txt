@@ -210,10 +210,10 @@ endif()
 
 set(EXECUTABLE_TARGETS "")
 
-add_executable(run_slam src/run_slam.cpp )
+add_executable(run_slam src/run_slam.cpp src/gps_data_handler.cpp)
 list(APPEND EXECUTABLE_TARGETS run_slam)
 
-add_executable(run_localization src/run_localization.cpp)
+add_executable(run_localization src/run_localization.cpp src/gps_data_handler.cpp)
 list(APPEND EXECUTABLE_TARGETS run_localization)
 
 foreach(EXECUTABLE_TARGET IN LISTS EXECUTABLE_TARGETS)
