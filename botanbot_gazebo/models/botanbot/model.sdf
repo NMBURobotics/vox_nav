@@ -710,6 +710,22 @@
         </link>
         <link name="imu_link">
             <pose>0 0 1.2 0 0 0</pose>
+            <collision name="collision">
+                <geometry>
+                    <mesh>
+                        <uri>model://botanbot/meshes/gps.stl</uri>
+                        <scale>0.0005 0.0005 0.001</scale>
+                    </mesh>
+                </geometry>
+            </collision>
+            <visual name="visual">
+                <geometry>
+                    <mesh>
+                        <uri>model://botanbot/meshes/gps.stl</uri>
+                        <scale>0.0005 0.0005 0.001</scale>
+                    </mesh>
+                </geometry>
+            </visual>
             <inertial>
                 <inertia>
                     <ixx>0.001</ixx>
@@ -721,34 +737,6 @@
                 </inertia>
                 <mass>0.035</mass>
             </inertial>
-            <gravity>true</gravity>
-            <sensor name="imu" type="imu">
-                <always_on>true</always_on>
-                <update_rate>30</update_rate>
-                <imu>
-                    <angular_velocity>
-                        <x>
-                        </x>
-                        <y>
-                        </y>
-                        <z>
-                        </z>
-                    </angular_velocity>
-                    <linear_acceleration>
-                        <x>
-                        </x>
-                        <y>
-                        </y>
-                        <z>
-                        </z>
-                    </linear_acceleration>
-                </imu>
-                <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
-                    <ros>
-                        <remapping>~/out:=imu/data</remapping>
-                    </ros>
-                </plugin>
-            </sensor>
         </link>
         <!-- END LINKS RELATED TO SENSORS       -->
         <!-- ////////////////////////////////   -->
@@ -849,7 +837,7 @@
         </plugin>
         <plugin name="hector_gps" filename="libgazebo_ros_gps.so">
             <alwaysOn>true</alwaysOn>
-            <updateRate>4.0</updateRate>
+            <updateRate>30.0</updateRate>
             <bodyName>gps</bodyName>
             <topicName>gps/fix</topicName>
             <velocityTopicName>gps/fix_vel</velocityTopicName>
@@ -857,6 +845,16 @@
             <gaussianNoise>0.1 0.1 0.1</gaussianNoise>
             <velocityDrift>0 0 0</velocityDrift>
             <velocityGaussianNoise>0.1 0.1 0.1</velocityGaussianNoise>
+        </plugin>
+        <plugin name="hector_imu" filename="libgazebo_ros_imu.so">
+            <alwaysOn>true</alwaysOn>
+            <updateRate>30.0</updateRate>
+            <frameId>imu_link</frameId>
+            <bodyName>imu_link</bodyName>
+            <topicName>imu/data</topicName>
+            <gaussianNoise>0.0 0.0 0.0</gaussianNoise>
+            <xyzOffset>0.0 0.0 0.0</xyzOffset>
+            <rpyOffset>0.0 0.0 0.0</rpyOffset>
         </plugin>
         <!-- END BOTANBOT PLUGINS              -->
     </model>

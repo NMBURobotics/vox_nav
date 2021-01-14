@@ -171,9 +171,10 @@ void GazeboRosGps::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
     node_->create_publisher<sensor_msgs::msg::NavSatFix>(fix_topic_, 10);
   velocity_publisher_ = node_->create_publisher<geometry_msgs::msg::Vector3Stamped>(
     velocity_topic_,
-    10);
-  Reset();
+    rclcpp::SensorDataQoS());
 
+
+  Reset();
   this->updateConnection_ =
     event::Events::ConnectWorldUpdateBegin(std::bind(&GazeboRosGps::OnUpdate, this));
 
@@ -226,7 +227,9 @@ void GazeboRosGps::OnUpdate()
   position_error_model_.setCurrentDrift(
     position_error_model_.getCurrentDrift() + dt * velocity_error_model_.getCurrentDrift());
 
-  fix_.header.stamp = node_->now();
+  fix_.header.stamp.sec = sim_time.sec;
+  fix_.header.stamp.nanosec = sim_time.nsec;
+
   velocity_.header.stamp = fix_.header.stamp;
 
   fix_.latitude = reference_latitude_ +

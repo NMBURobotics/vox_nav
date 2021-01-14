@@ -125,42 +125,34 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
-
-# thread library
+find_package(botanbot_utilities REQUIRED)
+find_package( yaml-cpp REQUIRED )
 find_package(Threads REQUIRED)
-
-# OpenVSLAM
 find_library(OpenVSLAM_LIB openvslam HINTS ${OpenVSLAM_LIB_DIR})
-
-# OpenCV
-find_package(OpenCV 3.3.1 QUIET)
-if(NOT OpenCV_FOUND)
-    find_package(OpenCV 4.0)
-    if(NOT OpenCV_FOUND)
-        message(FATAL_ERROR "OpenCV >= 3.3.1 not found")
-    endif()
-endif()
-message(STATUS "Use OpenCV ${OpenCV_VERSION}")
-include_directories(${OpenCV_INCLUDE_DIRS})
-
-# THis package include
-include_directories(include)
-
-# Eigen
+find_package(OpenCV REQUIRED)
 find_package(Eigen3 3.3 REQUIRED)
-include_directories(${EIGEN3_INCLUDE_DIR})
 
-# spdlog
 set(spdlog_INCLUDE_DIR ${OpenVSLAM_ROOT}/3rd/spdlog/include)
-include_directories(${spdlog_INCLUDE_DIR})
-
-# popl
 set(popl_INCLUDE_DIR ${OpenVSLAM_ROOT}/3rd/popl/include)
-include_directories(${popl_INCLUDE_DIR})
-
-# json
 set(json_INCLUDE_DIR ${OpenVSLAM_ROOT}/3rd/json/include)
-include_directories(${json_INCLUDE_DIR})
+ 
+include_directories(include
+                    ${OpenVSLAM_SRC_DIR}
+                    ${rclcpp_INCLUDE_DIRS}
+                    ${EIGEN3_INCLUDE_DIR}
+                    ${spdlog_INCLUDE_DIR}
+                    ${popl_INCLUDE_DIR}
+                    ${json_INCLUDE_DIR}
+                    ${OpenCV_INCLUDE_DIRS}
+                    ${YAML_CPP_INCLUDE_DIR})
+
+set(dependencies
+rclcpp 
+cv_bridge 
+image_transport
+rcutils 
+botanbot_utilities
+)
 
 # pangolin viewer
 set(USE_PANGOLIN_VIEWER ON CACHE BOOL "Enable Pangolin Viewer")
@@ -258,13 +250,9 @@ foreach(EXECUTABLE_TARGET IN LISTS EXECUTABLE_TARGETS)
                 ${GPERFTOOLS_LIBRARIES})
     endif()
 
-    # build
-    target_include_directories(${EXECUTABLE_TARGET}
-                               PRIVATE ${OpenVSLAM_SRC_DIR} ${rclcpp_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
     target_link_libraries(${EXECUTABLE_TARGET}
-                          PRIVATE ${OpenVSLAM_LIB} ${rclcpp_LIBRARIES} ${OpenCV_LIBRARIES})
-    ament_target_dependencies(${EXECUTABLE_TARGET}
-                              PUBLIC rclcpp cv_bridge image_transport rcutils)
+                          PRIVATE ${OpenVSLAM_LIB} ${rclcpp_LIBRARIES} ${OpenCV_LIBRARIES} ${YAML_CPP_LIBRARIES})
+    ament_target_dependencies(${EXECUTABLE_TARGET} PUBLIC ${dependencies})
     install(TARGETS ${EXECUTABLE_TARGET}
             DESTINATION lib/${PROJECT_NAME})
 endforeach()

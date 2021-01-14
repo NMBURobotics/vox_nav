@@ -30,12 +30,14 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
-
 #include <image_transport/image_transport.hpp>
 #include <cv_bridge/cv_bridge.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/highgui/highgui.hpp>
+
+#include "botanbot_utilities/gps_waypoint_collector.hpp"
+#include "yaml-cpp/emitter.h"
 
 #include <iostream>
 #include <chrono>
@@ -43,6 +45,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <mutex>
 
 namespace botanbot_openvslam
 {
@@ -112,6 +115,10 @@ private:
   std::shared_ptr<pangolin_viewer::viewer> pangolin_viewer_;
   // shared ptr to dedicated thread for pagolin viewer
   std::shared_ptr<std::thread> pangolin_viewer_thread_;
+  // We will get the GPS coordinates before starting the Mapping.
+  std::shared_ptr<botanbot_utilities::GPSWaypointCollector> gps_waypoint_collector_node_;
+  // we will recieve gp data once and that is it , weonly need this to precisely define start location of map
+  std::once_flag gps_data_recieved_flag_;
   // keep a copy initial time stamp
   std::chrono::steady_clock::time_point initial_time_stamp_;
   //

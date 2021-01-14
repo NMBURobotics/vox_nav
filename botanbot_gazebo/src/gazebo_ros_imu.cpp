@@ -50,7 +50,7 @@ GazeboRosIMU::~GazeboRosIMU()
 // Load the controller
 void GazeboRosIMU::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 {
-  node_ = rclcpp::Node::make_shared("GazeboGPSNode");
+  node_ = rclcpp::Node::make_shared("GazeboIMUNode");
 
   // Get the world name.
   world_ = _model->GetWorld();
@@ -140,10 +140,11 @@ void GazeboRosIMU::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
     return;
   }
 
-
   // if topic name specified as empty, do not publish (then what is this plugin good for?)
   if (!topic_.empty()) {
-    imu_publisher_ = node_->create_publisher<sensor_msgs::msg::Imu>(topic_, 10);
+    imu_publisher_ = node_->create_publisher<sensor_msgs::msg::Imu>(
+      topic_,
+      rclcpp::SensorDataQoS());
   }
 
   Reset();

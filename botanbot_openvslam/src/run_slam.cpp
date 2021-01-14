@@ -20,6 +20,7 @@
 
 #include "botanbot_openvslam/run_slam.hpp"
 #include <memory>
+#include <chrono>
 
 namespace botanbot_openvslam
 {
@@ -65,6 +66,7 @@ RunSlam::RunSlam()
       ex.what());
     return;
   }
+  gps_waypoint_collector_node_ = std::make_shared<botanbot_utilities::GPSWaypointCollector>();
 
   initial_time_stamp_ = std::chrono::steady_clock::now();
   SLAM_ = std::make_shared<openvslam::system>(cfg_, vocab_file_path_.c_str());
@@ -134,6 +136,55 @@ void RunSlam::rgbdCallback(
   const sensor_msgs::msg::Image::ConstSharedPtr & color,
   const sensor_msgs::msg::Image::ConstSharedPtr & depth)
 {
+  std::pair<sensor_msgs::msg::NavSatFix,
+    sensor_msgs::msg::Imu> initial_map_gps_coordinates;
+  if (!gps_waypoint_collector_node_->isOrientedGPSDataReady()) {
+    RCLCPP_WARN(
+      get_logger(),
+      "Oriented GPS coordinates are not recieved yet, the initial pose of map is unknown!");
+    return;
+  } else {
+    std::call_once(
+      gps_data_recieved_flag_, [this, &initial_map_gps_coordinates]() {
+        RCLCPP_INFO(
+          get_logger(),
+          "Oriented GPS data is ready, setting the initial pose of map accordingly!");
+        initial_map_gps_coordinates =
+        std::make_pair(
+          gps_waypoint_collector_node_->getLatestOrientedGPSCoordinates().first,
+          gps_waypoint_collector_node_->getLatestOrientedGPSCoordinates().second);
+        std::time_t current_time = std::time(0);
+        YAML::Emitter map_info_yaml;
+        map_info_yaml << YAML::BeginMap;
+        map_info_yaml << YAML::Key << "map_built_with"; map_info_yaml << YAML::Value << "rgbd";
+        map_info_yaml << YAML::Key << "map_path"; map_info_yaml << YAML::Value << "/sf";
+        map_info_yaml << YAML::Key << "creation_date";
+        map_info_yaml << YAML::Value << std::string(
+          ctime(
+            &current_time));
+        map_info_yaml << YAML::Key << "map_coordinates";
+        map_info_yaml << YAML::BeginMap;
+        map_info_yaml << YAML::Key << "latitude"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.first.latitude;
+        map_info_yaml << YAML::Key << "longitude"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.first.longitude;
+        map_info_yaml << YAML::Key << "altitude"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.first.altitude;
+        map_info_yaml << YAML::Key << "quaternion";
+        map_info_yaml << YAML::BeginMap;
+        map_info_yaml << YAML::Key << "x"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.second.orientation.x;
+        map_info_yaml << YAML::Key << "y"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.second.orientation.y;
+        map_info_yaml << YAML::Key << "z"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.second.orientation.z;
+        map_info_yaml << YAML::Key << "w"; map_info_yaml << YAML::Value << initial_map_gps_coordinates.second.orientation.w;
+        map_info_yaml << YAML::EndMap;
+        map_info_yaml << YAML::EndMap;
+        map_info_yaml << YAML::EndMap;
+        std::ofstream fout("/home/ros2-foxy/map_info.yaml");
+        fout << map_info_yaml.c_str();
+
+        RCLCPP_INFO(
+          get_logger(),
+          "GPS lat %.8f", initial_map_gps_coordinates.first.latitude);
+      });
+  }
+  // At this point we do have initial pose of map to be created
   auto colorcv = cv_bridge::toCvShare(color)->image;
   auto depthcv = cv_bridge::toCvShare(depth)->image;
   if (colorcv.empty() || depthcv.empty()) {
