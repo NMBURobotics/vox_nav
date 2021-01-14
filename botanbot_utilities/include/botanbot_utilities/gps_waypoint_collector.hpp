@@ -102,7 +102,6 @@ private:
   // to ensure safety when accessing global
   std::mutex global_mutex_;
   bool is_first_msg_recieved_;
-
 };
 
 }  // namespace botanbot_utilities

@@ -17,6 +17,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 
 namespace botanbot_planning
 {
@@ -193,7 +194,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
     path->interpolate(interpolation_parameter_);
 
     for (std::size_t path_idx = 0; path_idx < path->getStateCount(); path_idx++) {
-
       // cast the abstract state type to the type we expect
       const ompl::base::SE2StateSpace::StateType * se2state =
         path->getState(path_idx)->as<ompl::base::SE2StateSpace::StateType>();

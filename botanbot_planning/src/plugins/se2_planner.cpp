@@ -17,6 +17,7 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 
 namespace botanbot_planning
 {

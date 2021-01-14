@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BOTANBOT_PLANNING__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
-#define BOTANBOT_PLANNING__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#ifndef BOTANBOT_PLANNING__PLUGINS__SE2_PLANNER_HPP_
+#define BOTANBOT_PLANNING__PLUGINS__SE2_PLANNER_HPP_
 
 #include <vector>
 #include <string>
@@ -120,4 +120,4 @@ protected:
 };
 }  // namespace botanbot_planning
 
-#endif  // BOTANBOT_PLANNING__GPS_WAYPOINT_FOLLOWER_CLIENT_HPP_
+#endif  // BOTANBOT_PLANNING__PLUGINS__SE2_PLANNER_HPP_

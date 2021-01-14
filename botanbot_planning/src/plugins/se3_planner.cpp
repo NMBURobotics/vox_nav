@@ -17,11 +17,13 @@
 
 #include <string>
 #include <memory>
+#include <vector>
 
 namespace botanbot_planning
 {
 class ChildOptimizationObjective : public ompl::base::OptimizationObjective
 {
+
 public:
   ChildOptimizationObjective(const ompl::base::SpaceInformationPtr & si)
   : ompl::base::OptimizationObjective(si)
@@ -54,7 +56,6 @@ SE3Planner::SE3Planner()
 
 SE3Planner::~SE3Planner()
 {
-
 }
 
 void SE3Planner::initialize(
@@ -206,7 +207,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     ompl::geometric::PathGeometric * pth =
       pdef->getSolutionPath()->as<ompl::geometric::PathGeometric>();
 
-    //Path smoothing using bspline
+    // Path smoothing using bspline
     ompl::geometric::PathSimplifier * pathBSpline = new ompl::geometric::PathSimplifier(
       state_space_information_);
     ompl::geometric::PathGeometric path_smooth(
