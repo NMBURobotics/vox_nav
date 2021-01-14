@@ -16,8 +16,8 @@
 #define BOTANBOT_OPENVSLAM__GPS_DATA_HANDLER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
-#include "botanbot_utilities/gps_waypoint_collector.hpp"
-#include "yaml-cpp/emitter.h"
+#include <botanbot_utilities/gps_waypoint_collector.hpp>
+#include <yaml-cpp/emitter.h>
 
 #include <iostream>
 #include <chrono>
@@ -45,6 +45,6 @@ bool writeMapInfotoYAML(
   const std::string & map_db_path,
   const std::string & sensor_type,
   const std::shared_ptr<botanbot_utilities::GPSWaypointCollector> & gps_waypoint_collector);
-} // namespace botanbot_openvslam
+}  // namespace botanbot_openvslam
 
 #endif    // BOTANBOT_OPENVSLAM__GPS_DATA_HANDLER_HPP_

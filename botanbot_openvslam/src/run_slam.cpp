@@ -19,8 +19,10 @@
  */
 
 #include "botanbot_openvslam/run_slam.hpp"
+
 #include <memory>
 #include <chrono>
+#include <string>
 
 namespace botanbot_openvslam
 {
@@ -154,8 +156,8 @@ void RunSlam::rgbdCallback(
         if (write_map_info_) {
           RCLCPP_WARN(
             get_logger(),
-            "Recieved a pair of gps and imu data, data will be recieved and dumped to yaml file once"
-            "additional map related information will be dumped yaml file here %s ",
+            "Recieved a pair of gps and imu data, data will be recieved and dumped "
+            "to yaml file once additional map related information will be dumped yaml file: %s ",
             map_info_path_.c_str()
           );
           botanbot_openvslam::writeMapInfotoYAML(

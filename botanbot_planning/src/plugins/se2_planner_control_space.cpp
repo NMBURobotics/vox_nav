@@ -188,7 +188,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
   std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
 
   if (solved) {
-
     ompl::geometric::PathGeometric * path =
       pdef->getSolutionPath()->as<ompl::geometric::PathGeometric>();
     path->interpolate(interpolation_parameter_);

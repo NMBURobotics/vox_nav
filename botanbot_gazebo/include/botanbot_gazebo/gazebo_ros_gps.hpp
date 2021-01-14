@@ -27,8 +27,8 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //=================================================================================================
 
-#ifndef BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_GPS_HPP_
-#define BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_GPS_HPP_
+#ifndef BOTANBOT_GAZEBO__GAZEBO_ROS_GPS_HPP_
+#define BOTANBOT_GAZEBO__GAZEBO_ROS_GPS_HPP_
 
 #include <string>
 
@@ -117,4 +117,4 @@ private:
 
 }  // namespace gazebo
 
-#endif  // BOTANBOT_GAZEBO__PLUGINS__GAZEBO_ROS_GPS_HPP_
+#endif  // BOTANBOT_GAZEBO__GAZEBO_ROS_GPS_HPP_

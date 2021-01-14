@@ -23,7 +23,6 @@ namespace botanbot_planning
 {
 class ChildOptimizationObjective : public ompl::base::OptimizationObjective
 {
-
 public:
   ChildOptimizationObjective(const ompl::base::SpaceInformationPtr & si)
   : ompl::base::OptimizationObjective(si)
@@ -154,7 +153,8 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->setIdentity();
 
   // create a problem instance
-  ompl::base::ProblemDefinitionPtr pdef(new ompl::base::ProblemDefinition(state_space_information_));
+  ompl::base::ProblemDefinitionPtr
+    pdef(new ompl::base::ProblemDefinition(state_space_information_));
 
   // set the start and goal states
   pdef->setStartAndGoalStates(se3_start, se3_goal);

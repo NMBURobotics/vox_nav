@@ -13,6 +13,9 @@
 // limitations under the License.
 
 #include "botanbot_openvslam/gps_data_handler.hpp"
+
+#include <string>
+#include <utility>
 #include <fstream>
 #include <ostream>
 #include <memory>

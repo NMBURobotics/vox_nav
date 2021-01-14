@@ -99,8 +99,6 @@ private:
   // UpdateTimer updateTimer;
   gazebo::event::ConnectionPtr updateConnection_;
   gazebo::common::Time last_update_time_;
-
-
 };
 }  // namespace gazebo
 

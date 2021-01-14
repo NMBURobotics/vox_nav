@@ -12,12 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BOTANBOT_GUI__ROBOTCONTROLLER_HPP_
-#define BOTANBOT_GUI__ROBOTCONTROLLER_HPP_
+#ifndef BOTANBOT_GUI__ROBOT_CONTROLLER_HPP_
+#define BOTANBOT_GUI__ROBOT_CONTROLLER_HPP_
 
-// STL headers
-#include <vector>
-#include <memory>
 // Navigation2 headers
 #include <nav2_behavior_tree/plugins/action/navigate_to_pose_action.hpp>
 #include <nav2_lifecycle_manager/lifecycle_manager_client.hpp>
@@ -34,7 +31,9 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_ros/create_timer_interface.h>
-
+// STL headers
+#include <vector>
+#include <memory>
 
 namespace botanbot_gui
 {
@@ -106,4 +105,4 @@ private:
 };
 }  // namespace botanbot_gui
 
-#endif  // BOTANBOT_GUI__ROBOTCONTROLLER_HPP_
+#endif  // BOTANBOT_GUI__ROBOT_CONTROLLER_HPP_

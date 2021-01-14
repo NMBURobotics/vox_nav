@@ -30,6 +30,8 @@
 #include "gazebo/common/Events.hh"
 #include "gazebo/physics/physics.hh"
 
+#include <algorithm>
+
 
 namespace gazebo
 {
@@ -113,7 +115,6 @@ void GazeboRosIMU::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   } else {
     RCLCPP_INFO(node_->get_logger(), "imu plugin missing <rpyOffset>, defaults to 0s");
     this->offset_.Rot() = ignition::math::Quaterniond(0, 0, 0);
-
   }
 
   imuMsg_.angular_velocity_covariance[0] = rateModel_.gaussian_noise.X() *
@@ -167,13 +168,9 @@ void GazeboRosIMU::Reset()
 // Update the controller
 void GazeboRosIMU::Update()
 {
-
   common::Time cur_time = world_->SimTime();
 
   double dt = (world_->SimTime() - last_update_time_).Double();
-
-  //boost::mutex::scoped_lock scoped_lock(lock);
-
 
   ignition::math::Pose3d pose = link_->WorldPose();
   // ignition::math::Vector3d pos = pose.pos + this->offset_.pos;
@@ -202,7 +199,6 @@ void GazeboRosIMU::Update()
         std::max(
           std::min(delta.W(), 1.0),
           -1.0)) * ignition::math::Vector3d(delta.X(), delta.Y(), delta.Z()).Normalize() / dt);
-
   }
 
   // update sensor models
@@ -260,4 +256,4 @@ void GazeboRosIMU::Update()
 // Register this plugin with the simulator
 GZ_REGISTER_MODEL_PLUGIN(GazeboRosIMU)
 
-} // namespace gazebo
+}  // namespace gazebo

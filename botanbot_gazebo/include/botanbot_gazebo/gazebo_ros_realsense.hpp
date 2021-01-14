@@ -91,5 +91,5 @@ protected:
   sensor_msgs::msg::Image image_msg_, depth_msg_;
   sensor_msgs::msg::PointCloud2 pointcloud_msg_;
 };
-}
+}  // namespace gazebo
 #endif  // BOTANBOT_GAZEBO__GAZEBO_ROS_REALSENSE_HPP_

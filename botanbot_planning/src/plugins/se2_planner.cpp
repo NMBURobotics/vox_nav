@@ -28,7 +28,6 @@ SE2Planner::SE2Planner()
 
 SE2Planner::~SE2Planner()
 {
-
 }
 
 void SE2Planner::initialize(
