@@ -51,13 +51,14 @@ landmark_points_color = []
 for lm in landmarks.values():
     landmark_points.append(lm["pos_w"])
     landmark_points_color.append([
-        abs(lm["pos_w"][1]) * 4,
-        abs(lm["pos_w"][1]) * 2,
+        abs(lm["pos_w"][1]) * 1,
+        abs(lm["pos_w"][1]) * 1,
         abs(lm["pos_w"][1]) * 3
     ])
-
 landmark_points = np.array(landmark_points)
-landmark_points_color = np.array(landmark_points_color)
+landmark_points_color = np.repeat(np.array([[1., 0.1, 0.1]]),
+                                  landmark_points.shape[0],
+                                  axis=0)
 
 # CONSTRUCT KEYFRAME(ODOMETRY) FOR VISUALIZTION
 keyframe_points_pointcloud = o3d.geometry.PointCloud()

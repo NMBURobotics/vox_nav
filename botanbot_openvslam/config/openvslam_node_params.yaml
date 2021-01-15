@@ -7,7 +7,7 @@ run_slam_rclcpp_node:
     debug_mode: true
     eval_log: true
     write_map_info: true
-    map_info_path: "/home/ros2-foxy/map_info.yaml"
+    map_info_path: "/home/ros2-foxy/f_map_info.yaml"
 run_localization_rclcpp_node:
   ros__parameters:
     vocab_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_openvslam/config/orb_vocab.dbow2
