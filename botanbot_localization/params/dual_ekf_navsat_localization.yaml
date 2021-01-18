@@ -8,10 +8,10 @@ ekf_local_filter_node:
     sensor_timeout: 0.1
     odom0: /odometry/wheel
     imu0: /imu/data
-    odom_frame: odom
     base_link_frame: base_link
-    world_frame: odom
+    odom_frame: odom
     map_frame: map
+    world_frame: odom
     odom0_config: [false,  false, false, # X , Y , Z
                     false, false, false, # roll , pitch ,yaw
                     true,  true,  true,  # dX , dY , dZ
@@ -56,9 +56,9 @@ ekf_global_filter_node:
     odom0: /odometry/wheel
     odom1: /odometry/gps
     imu0: /imu/data
-    map_frame: map
-    odom_frame: odom
     base_link_frame: base_link
+    odom_frame: odom
+    map_frame: map
     world_frame: map
     odom0_config: [false,  false,  false, # X , Y , Z
                     false, false, false,  # roll , pitch ,yaw

@@ -25,6 +25,7 @@ from launch_ros.actions import Node
 
 GAZEBO_WORLD = os.environ['GAZEBO_WORLD']
 
+
 def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('botanbot_navigation2')
@@ -51,24 +52,20 @@ def generate_launch_description():
     headless = LaunchConfiguration('headless')
     world = LaunchConfiguration('world')
 
-    remappings = [('/tf', 'tf'),
-                  ('/tf_static', 'tf_static')]
+    remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
 
     # Declare the launch arguments
     declare_namespace_cmd = DeclareLaunchArgument(
-        'namespace',
-        default_value='',
-        description='Top-level namespace')
+        'namespace', default_value='', description='Top-level namespace')
 
     declare_use_namespace_cmd = DeclareLaunchArgument(
         'use_namespace',
         default_value='false',
         description='Whether to apply a namespace to the navigation stack')
 
-    declare_slam_cmd = DeclareLaunchArgument(
-        'slam',
-        default_value='False',
-        description='Whether run a SLAM')
+    declare_slam_cmd = DeclareLaunchArgument('slam',
+                                             default_value='False',
+                                             description='Whether run a SLAM')
 
     declare_map_yaml_cmd = DeclareLaunchArgument(
         'map',
@@ -83,20 +80,24 @@ def generate_launch_description():
     declare_params_file_cmd = DeclareLaunchArgument(
         'params_file',
         default_value=os.path.join(params_dir, 'nav2_params.yaml'),
-        description='Full path to the ROS2 parameters file to use for all launched nodes')
+        description=
+        'Full path to the ROS2 parameters file to use for all launched nodes')
 
     declare_bt_xml_cmd = DeclareLaunchArgument(
         'default_bt_xml_filename',
-        default_value=os.path.join(params_dir, 'navigate_w_replanning_distance.xml'),
+        default_value=os.path.join(params_dir,
+                                   'navigate_w_replanning_distance.xml'),
         description='Full path to the behavior tree xml file to use')
 
     declare_autostart_cmd = DeclareLaunchArgument(
-        'autostart', default_value='true',
+        'autostart',
+        default_value='true',
         description='Automatically startup the nav2 stack')
 
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         'rviz_config_file',
-        default_value=os.path.join(bringup_dir, 'rviz', 'nav2_default_view.rviz'),
+        default_value=os.path.join(bringup_dir, 'rviz',
+                                   'nav2_default_view.rviz'),
         description='Full path to the RVIZ config file to use')
 
     declare_use_simulator_cmd = DeclareLaunchArgument(
@@ -110,9 +111,7 @@ def generate_launch_description():
         description='Whether to start the robot state publisher')
 
     declare_use_rviz_cmd = DeclareLaunchArgument(
-        'use_rviz',
-        default_value='True',
-        description='Whether to start RVIZ')
+        'use_rviz', default_value='True', description='Whether to start RVIZ')
 
     declare_simulator_cmd = DeclareLaunchArgument(
         'headless',
@@ -122,28 +121,31 @@ def generate_launch_description():
         'world',
         # TODO(orduno) Switch back once ROS argument passing has been fixed upstream
         #              https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/91
-        default_value=os.path.join(get_package_share_directory('botanbot_gazebo'),
-                                    'worlds/',GAZEBO_WORLD,GAZEBO_WORLD+'.model'),
+        default_value=os.path.join(
+            get_package_share_directory('botanbot_gazebo'), 'worlds/',
+            GAZEBO_WORLD, GAZEBO_WORLD + '.model'),
         #default_value=os.path.join(bringup_dir, 'worlds', 'waffle.model'),
         description='Full path to world model file to load')
-    print(os.path.join(get_package_share_directory('botanbot_gazebo'),
-                                    'worlds/',GAZEBO_WORLD,GAZEBO_WORLD+'.model'))
+    print(
+        os.path.join(get_package_share_directory('botanbot_gazebo'), 'worlds/',
+                     GAZEBO_WORLD, GAZEBO_WORLD + '.model'))
     # Specify the actions
     start_gazebo_server_cmd = ExecuteProcess(
         condition=IfCondition(use_simulator),
         cmd=['gzserver', '-s', 'libgazebo_ros_init.so', world],
-        cwd=[launch_dir], output='screen')
+        cwd=[launch_dir],
+        output='screen')
 
-    start_gazebo_client_cmd = ExecuteProcess(
-        condition=IfCondition(PythonExpression([use_simulator, ' and not ', headless])),
-        cmd=['gzclient'],
-        cwd=[launch_dir], output='screen')
+    start_gazebo_client_cmd = ExecuteProcess(condition=IfCondition(
+        PythonExpression([use_simulator, ' and not ', headless])),
+                                             cmd=['gzclient'],
+                                             cwd=[launch_dir],
+                                             output='screen')
 
     #urdf = os.path.join(bringup_dir, 'urdf', 'turtlebot3_waffle.urdf')
     urdf = os.path.join(get_package_share_directory('botanbot_description'),
-                                    'urdf/botanbot.urdf')
+                        'urdf/botanbot.urdf')
 
-     
     start_robot_state_publisher_cmd = Node(
         condition=IfCondition(use_robot_state_pub),
         package='robot_state_publisher',
@@ -151,37 +153,47 @@ def generate_launch_description():
         name='robot_state_publisher',
         namespace=namespace,
         output='screen',
-        parameters=[{'use_sim_time': use_sim_time}],
+        parameters=[{
+            'use_sim_time': use_sim_time
+        }],
         remappings=remappings,
         arguments=[urdf])
 
-    rviz_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(launch_dir, 'rviz_launch.py')),
-        condition=IfCondition(use_rviz),
-        launch_arguments={'namespace': '',
-                          'use_namespace': 'False',
-                          'rviz_config': rviz_config_file}.items()) 
-                          
+    rviz_cmd = IncludeLaunchDescription(PythonLaunchDescriptionSource(
+        os.path.join(launch_dir, 'rviz_launch.py')),
+                                        condition=IfCondition(use_rviz),
+                                        launch_arguments={
+                                            'namespace': '',
+                                            'use_namespace': 'False',
+                                            'rviz_config': rviz_config_file
+                                        }.items())
 
-    bringup_cmd = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(launch_dir, 'bringup_launch.py')),
-        launch_arguments={'namespace': namespace,
-                          'use_namespace': use_namespace,
-                          'slam': slam,
-                          'map': map_yaml_file,
-                          'use_sim_time': use_sim_time,
-                          'params_file': params_file,
-                          'default_bt_xml_filename': default_bt_xml_filename,
-                          'autostart': autostart}.items())
+    bringup_cmd = IncludeLaunchDescription(PythonLaunchDescriptionSource(
+        os.path.join(launch_dir, 'bringup_launch.py')),
+                                           launch_arguments={
+                                               'namespace': namespace,
+                                               'use_namespace': use_namespace,
+                                               'slam': slam,
+                                               'map': map_yaml_file,
+                                               'use_sim_time': use_sim_time,
+                                               'params_file': params_file,
+                                               'default_bt_xml_filename':
+                                               default_bt_xml_filename,
+                                               'autostart': autostart
+                                           }.items())
 
-    localization_cmd = IncludeLaunchDescription(
-    PythonLaunchDescriptionSource(os.path.join(localization_dir,'launch',
-                                                'dual_ekf_navsat_localization.launch.py')),
-    launch_arguments={'namespace': namespace,
-                        'use_namespace': use_namespace,
-                        'use_sim_time': use_sim_time,
-                        'params_file': params_file,
-                        'autostart': autostart}.items())                                  
+    localization_cmd = IncludeLaunchDescription(PythonLaunchDescriptionSource(
+        os.path.join(localization_dir, 'launch',
+                     'dual_ekf_navsat_localization.launch.py')),
+                                                launch_arguments={
+                                                    'namespace': namespace,
+                                                    'use_namespace':
+                                                    use_namespace,
+                                                    'use_sim_time':
+                                                    use_sim_time,
+                                                    'params_file': params_file,
+                                                    'autostart': autostart
+                                                }.items())
 
     # Create the launch description and populate
     ld = LaunchDescription()
@@ -211,6 +223,6 @@ def generate_launch_description():
     ld.add_action(start_robot_state_publisher_cmd)
     ld.add_action(rviz_cmd)
     ld.add_action(bringup_cmd)
-    ld.add_action(localization_cmd) 
+    ld.add_action(localization_cmd)
 
     return ld

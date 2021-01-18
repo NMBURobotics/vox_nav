@@ -1,0 +1,20 @@
+botanbot_map_server_rclcpp_node:
+  ros__parameters:
+    octomap_filename: "/home/ros2-foxy/f.bt"
+    octomap_publish_topic_name: "octomap"
+    octomap_voxel_size: 0.2
+    octomap_publish_frequency: 50
+    provide_utm_to_map_transform: true
+    publish_octomap_as_pointcloud: true
+    octomap_point_cloud_publish_topic: "octomap_pointcloud"
+    octomap_frame_id: "octomap"
+    map_coordinates:
+      latitude: 49.89998651126992
+      longitude: 8.90004175541922
+      altitude: 0.6342219080730283
+      quaternion:
+        x: -0.0002674302377596963
+        y: -7.804134265664371e-05
+        z: 0.7068408908205831
+        w: -0.7073725167509558
+ 

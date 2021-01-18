@@ -15,6 +15,7 @@ from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
 from launch_ros.actions import LifecycleNode
+from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch.actions import EmitEvent
@@ -31,26 +32,22 @@ import os
 
 
 def generate_launch_description():
-    share_dir = get_package_share_directory('botanbot_gps_waypoint_follower')
-    parameter_file = LaunchConfiguration('params_file')
-    node_name = 'gps_waypoint_follower_client'
+    share_dir = get_package_share_directory('botanbot_map_server')
+    node_name = 'botanbot_map_server_rclcpp_node'
 
+    parameter_file = LaunchConfiguration('params_file')
     params_declare = DeclareLaunchArgument(
         'params_file',
         default_value=os.path.join(share_dir, 'params',
-                                   'city_world_gps_waypoints.yaml'),
+                                   'botanbot_map_server.yaml'),
         description='FPath to the ROS2 parameters file to use.')
 
-    driver_node = LifecycleNode(
-        package='botanbot_gps_waypoint_follower',
-        executable='gps_waypoint_follower_client',
+    driver_node = Node(
+        package='botanbot_map_server',
+        executable='botanbot_map_server',
         name=node_name,
         namespace='',
         output='screen',
         parameters=[parameter_file],
     )
-
-    return LaunchDescription([
-        params_declare,
-        driver_node,
-    ])
+    return LaunchDescription([params_declare, driver_node])

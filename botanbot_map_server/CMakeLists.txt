@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(botanbot_map_server)
+project(botanbot_map_server CXX)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -45,7 +45,6 @@ set(botanbot_map_server_exc_name botanbot_map_server)
 add_executable(${botanbot_map_server_exc_name} src/botanbot_map_server.cpp)
 ament_target_dependencies(${botanbot_map_server_exc_name} ${dependencies})
 target_link_libraries(${botanbot_map_server_exc_name})
-
  
 install(TARGETS ${botanbot_map_server_exc_name}
   RUNTIME DESTINATION lib/${PROJECT_NAME})
