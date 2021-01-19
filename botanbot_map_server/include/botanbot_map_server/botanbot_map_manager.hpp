@@ -22,7 +22,10 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 #include <botanbot_utilities/navsat_conversions.hpp>
 #include <botanbot_utilities/pcl_helpers.hpp>
 #include <botanbot_utilities/gps_waypoint_collector.hpp>
@@ -43,6 +46,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <mutex>
 
 /**
  * @brief
@@ -91,6 +95,13 @@ public:
    */
   void publishUTMMapTransfrom();
 
+  /**
+   * @brief mono callback, subscries to an mono image and runs openvslam localization on a prebuild map.
+   *
+   * @param msg
+  */
+  void gpsOdomCallback(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
+
 protected:
   // Used to creted a periodic callback function IOT publish transfrom/octomap/cloud etc.
   rclcpp::TimerBase::SharedPtr timer_;
@@ -105,7 +116,9 @@ protected:
   // otree object to read and store binary octomap from disk
   std::shared_ptr<octomap::OcTree> octomap_octree_;
   // we read gps coordinates of map from yaml
-  botanbot_msgs::msg::OrientedNavSatFix::SharedPtr oriented_navsat_fix_ros_msg_;
+  botanbot_msgs::msg::OrientedNavSatFix::SharedPtr map_datum_;
+  // we get initial pose of robot from live gps sensor data
+  botanbot_msgs::msg::OrientedNavSatFix::SharedPtr robot_datum_;
   // to broadcast utm -> map
   tf2_ros::TransformBroadcaster tf_broadcaster_;
   // rclcpp parameters from yaml file: full path to octomap file in disk
@@ -129,6 +142,20 @@ protected:
   // we will recieve gp data once and that is it , weonly need this to precisely
   // define start location of map
   std::once_flag gps_data_recieved_flag_;
+  bool is_robot_datum_ready_;
+  // subscribe to gps odometry published by navsat_transfrom_node
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr gps_odom_subscriber_;
+  //
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr map_aligned_gps_odom_publisher_;
+
+  // tf buffer to get transfroms
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
+  nav_msgs::msg::Odometry gps_odom_;
+  // to ensure safety when accessing global var gps_odom_
+  std::mutex global_mutex_;
+
 };
 }  // namespace botanbot_map_server
 

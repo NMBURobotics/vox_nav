@@ -154,6 +154,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        wide_angle_camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Name: RobotModel
       TF Prefix: ""
       Update Interval: 0
@@ -204,15 +208,21 @@ Visualization Manager:
           Value: true
         rear_right_wheel:
           Value: true
+        robot_datum:
+          Value: true
         steering_wheel:
           Value: true
+        utm:
+          Value: true
         velodyne_link:
+          Value: true
+        wide_angle_camera_link:
           Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
-      Show Names: false
+      Show Names: true
       Tree:
         map:
           {}
@@ -250,6 +260,11 @@ Visualization Manager:
               {}
             velodyne_link:
               {}
+            wide_angle_camera_link:
+              {}
+        utm:
+          robot_datum:
+            {}
       Update Interval: 0
       Value: true
     - Alpha: 0.20000000298023224
@@ -386,7 +401,7 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /global_costmap/published_footprint
           Value: false
-      Enabled: true
+      Enabled: false
       Name: Global Planner
     - Class: rviz_common/Group
       Displays:
@@ -494,7 +509,7 @@ Visualization Manager:
           Use Fixed Frame: true
           Use rainbow: true
           Value: true
-      Enabled: true
+      Enabled: false
       Name: Controller
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -601,10 +616,43 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /odometry/global
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 4096
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.009999999776482582
+      Style: Flat Squares
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /octomap_pointcloud
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: odom
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
@@ -636,25 +684,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 10.981356620788574
+      Distance: 14.738614082336426
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.08112382888793945
-        Y: -0.7964282035827637
-        Z: -2.662546648934949e-06
+        X: -2.207001209259033
+        Y: 2.4247026443481445
+        Z: -2.307890326846973e-06
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5397964715957642
+      Pitch: 0.7997963428497314
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 1.56360924243927
+      Yaw: 1.6117937564849854
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016
