@@ -15,12 +15,12 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "botanbot_map_server/botanbot_map_server.hpp"
+#include "botanbot_map_server/botanbot_map_manager.hpp"
 
 namespace botanbot_map_server
 {
-BotanbotOctomapServer::BotanbotOctomapServer()
-: Node("botanbot_map_server_rclcpp_node"),
+BotanbotMapManager::BotanbotMapManager()
+: Node("botanbot_map_manager_rclcpp_node"),
   tf_broadcaster_(*this)
 {
   RCLCPP_INFO(
@@ -39,7 +39,7 @@ BotanbotOctomapServer::BotanbotOctomapServer()
   declare_parameter("provide_utm_to_map_transform", true);
   declare_parameter("publish_octomap_as_pointcloud", true);
   declare_parameter("octomap_point_cloud_publish_topic", "octomap_pointcloud");
-  declare_parameter("octomap_frame_id", "octomap");
+  declare_parameter("octomap_frame_id", "map");
   declare_parameter("map_coordinates.latitude", 49.0);
   declare_parameter("map_coordinates.longitude", 3.0);
   declare_parameter("map_coordinates.altitude", 0.5);
@@ -86,20 +86,20 @@ BotanbotOctomapServer::BotanbotOctomapServer()
 
   timer_ = this->create_wall_timer(
     std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
-    std::bind(&BotanbotOctomapServer::publishMapWithTimer, this));
+    std::bind(&BotanbotMapManager::timerCallback, this));
   RCLCPP_INFO(
     this->get_logger(),
-    "Created an Instance of BotanbotOctomapServer");
+    "Created an Instance of BotanbotMapManager");
 }
 
-BotanbotOctomapServer::~BotanbotOctomapServer()
+BotanbotMapManager::~BotanbotMapManager()
 {
   RCLCPP_INFO(
     this->get_logger(),
-    "Destroyed an Instance of BotanbotOctomapServer");
+    "Destroyed an Instance of BotanbotMapManager");
 }
 
-void BotanbotOctomapServer::publishMapWithTimer()
+void BotanbotMapManager::timerCallback()
 {
   RCLCPP_INFO(
     this->get_logger(), "Publishing octomap with frequency of %i hertz",
@@ -111,13 +111,12 @@ void BotanbotOctomapServer::publishMapWithTimer()
   publishUTMMapTransfrom();
 }
 
-void BotanbotOctomapServer::fillPointCloudfromOctomap(
+void BotanbotMapManager::fillPointCloudfromOctomap(
   const std::shared_ptr<octomap::OcTree> octomap_octree,
   sensor_msgs::msg::PointCloud2::SharedPtr cloud)
 {
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud =
     pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-
   // traverse all leafs in the tree:
   for (auto it = octomap_octree_->begin(0), end = octomap_octree_->end(); it != end; ++it) {
     if (octomap_octree_->isNodeOccupied(*it)) {
@@ -141,7 +140,7 @@ void BotanbotOctomapServer::fillPointCloudfromOctomap(
     this->get_logger(), "Filed a pointclod from Octomap with %i points", pcl_cloud->points.size());
 }
 
-void BotanbotOctomapServer::publishUTMMapTransfrom()
+void BotanbotMapManager::publishUTMMapTransfrom()
 {
   double altitude = oriented_navsat_fix_ros_msg_->position.altitude;
   double longitude = oriented_navsat_fix_ros_msg_->position.longitude;
@@ -149,35 +148,22 @@ void BotanbotOctomapServer::publishUTMMapTransfrom()
   double utmY, utmX;
   std::string utm_zone_tmp;
   botanbot_utilities::navsat_conversions::LLtoUTM(latitude, longitude, utmY, utmX, utm_zone_tmp);
+  tf2::Transform map_origin;
+  tf2::Quaternion map_rot;
+  map_rot.setX(oriented_navsat_fix_ros_msg_->orientation.x);
+  map_rot.setY(oriented_navsat_fix_ros_msg_->orientation.y);
+  map_rot.setZ(oriented_navsat_fix_ros_msg_->orientation.z);
+  map_rot.setW(oriented_navsat_fix_ros_msg_->orientation.w);
 
-  tf2::Transform octomap_origin;
-  tf2::Quaternion octomap_rot;
-  octomap_rot.setRPY(0, 0, 0);
   geometry_msgs::msg::TransformStamped map_utm_transform_stamped;
-  octomap_origin.setOrigin(tf2::Vector3(utmX, utmY, altitude));
-  octomap_origin.setRotation(octomap_rot);
-  octomap_origin = octomap_origin.inverse();
+  map_origin.setOrigin(tf2::Vector3(utmX, utmY, altitude));
+  map_origin.setRotation(map_rot);
 
   map_utm_transform_stamped.header.stamp = this->now();
   map_utm_transform_stamped.header.frame_id = "utm";
   map_utm_transform_stamped.child_frame_id = octomap_frame_id_;
-  map_utm_transform_stamped.transform = tf2::toMsg(octomap_origin);
+  map_utm_transform_stamped.transform = tf2::toMsg(map_origin);
   tf_broadcaster_.sendTransform(map_utm_transform_stamped);
-
-  tf2::Transform identity;
-  geometry_msgs::msg::TransformStamped identity_trans;
-  identity.setOrigin(tf2::Vector3(0.0, -0.7, 0.0));
-  tf2::Quaternion identity_rot;
-  identity_rot.setX(oriented_navsat_fix_ros_msg_->orientation.x);
-  identity_rot.setY(oriented_navsat_fix_ros_msg_->orientation.y);
-  identity_rot.setZ(oriented_navsat_fix_ros_msg_->orientation.z);
-  identity_rot.setW(oriented_navsat_fix_ros_msg_->orientation.w);
-  identity.setRotation(identity_rot);
-  identity_trans.header.stamp = this->now();
-  identity_trans.header.frame_id = octomap_frame_id_;
-  identity_trans.child_frame_id = "odom";
-  identity_trans.transform = tf2::toMsg(identity);
-  tf_broadcaster_.sendTransform(identity_trans);
   fillPointCloudfromOctomap(octomap_octree_, octomap_pointcloud_ros_msg_);
 }
 }  // namespace botanbot_map_server
@@ -193,7 +179,7 @@ int main(int argc, char const * argv[])
 {
   rclcpp::init(argc, argv);
   auto gps_waypoint_follower_client_node = std::make_shared
-    <botanbot_map_server::BotanbotOctomapServer>();
+    <botanbot_map_server::BotanbotMapManager>();
   rclcpp::spin(gps_waypoint_follower_client_node);
   rclcpp::shutdown();
   return 0;

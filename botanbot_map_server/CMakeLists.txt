@@ -41,12 +41,12 @@ include_directories(
   ${THIS_PACKAGE_INCLUDE_DIRS}
   ${OCTOMAP_INCLUDE_DIRS})
 
-set(botanbot_map_server_exc_name botanbot_map_server)
-add_executable(${botanbot_map_server_exc_name} src/botanbot_map_server.cpp)
-ament_target_dependencies(${botanbot_map_server_exc_name} ${dependencies})
-target_link_libraries(${botanbot_map_server_exc_name})
+set(botanbot_map_manager_exc_name botanbot_map_manager)
+add_executable(${botanbot_map_manager_exc_name} src/botanbot_map_manager.cpp)
+ament_target_dependencies(${botanbot_map_manager_exc_name} ${dependencies})
+target_link_libraries(${botanbot_map_manager_exc_name})
  
-install(TARGETS ${botanbot_map_server_exc_name}
+install(TARGETS ${botanbot_map_manager_exc_name}
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

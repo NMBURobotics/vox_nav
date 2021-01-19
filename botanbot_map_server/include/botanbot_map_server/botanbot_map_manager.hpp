@@ -12,12 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BOTANBOT_MAP_SERVER__BOTANBOT_MAP_SERVER_HPP_
-#define BOTANBOT_MAP_SERVER__BOTANBOT_MAP_SERVER_HPP_
-
-#include <vector>
-#include <string>
-#include <memory>
+#ifndef BOTANBOT_MAP_SERVER__BOTANBOT_MAP_MANAGER_HPP_
+#define BOTANBOT_MAP_SERVER__BOTANBOT_MAP_MANAGER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
@@ -42,6 +38,11 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+
+#include <vector>
+#include <string>
+#include <memory>
+
 /**
  * @brief
  *
@@ -52,30 +53,29 @@ namespace botanbot_map_server
  * @brief
  *
  */
-class BotanbotOctomapServer : public rclcpp::Node
+class BotanbotMapManager : public rclcpp::Node
 {
-
 public:
   /**
-   * @brief Construct a new Botanbot Octomap Server object
+   * @brief Construct a new Botanbot Map Manager object
    *
    */
-  BotanbotOctomapServer();
+  BotanbotMapManager();
 
   /**
-   * @brief Destroy the Botanbot Octomap Server object
+   * @brief Destroy the Botanbot Map Manager object
    *
    */
-  ~BotanbotOctomapServer();
+  ~BotanbotMapManager();
 
   /**
-  * @brief periodically called function to publish data
+  * @brief periodically called function to publish octomap and its pointcloud data
   *
   */
-  void publishMapWithTimer();
+  void timerCallback();
 
   /**
-   * @brief
+   * @brief fill cloud from octomap_octree
    *
    * @param octomap_octree
    * @param cloud
@@ -111,8 +111,7 @@ protected:
   bool publish_octomap_as_pointcloud_;
   std::string octomap_point_cloud_publish_topic_;
   std::string octomap_frame_id_;
-
 };
 }  // namespace botanbot_map_server
 
-#endif  // BOTANBOT_MAP_SERVER__BOTANBOT_MAP_SERVER_HPP_
+#endif  // BOTANBOT_MAP_SERVER__BOTANBOT_MAP_MANAGER_HPP_

@@ -33,18 +33,18 @@ import os
 
 def generate_launch_description():
     share_dir = get_package_share_directory('botanbot_map_server')
-    node_name = 'botanbot_map_server_rclcpp_node'
+    node_name = 'botanbot_map_manager_rclcpp_node'
 
     parameter_file = LaunchConfiguration('params_file')
     params_declare = DeclareLaunchArgument(
         'params_file',
         default_value=os.path.join(share_dir, 'params',
-                                   'botanbot_map_server.yaml'),
+                                   'botanbot_map_manager.yaml'),
         description='FPath to the ROS2 parameters file to use.')
 
     driver_node = Node(
         package='botanbot_map_server',
-        executable='botanbot_map_server',
+        executable='botanbot_map_manager',
         name=node_name,
         namespace='',
         output='screen',
