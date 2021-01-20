@@ -39,7 +39,6 @@ BotanbotMapManager::BotanbotMapManager()
   declare_parameter("octomap_publish_topic_name", "octomap");
   declare_parameter("octomap_voxel_size", 0.2);
   declare_parameter("octomap_publish_frequency", 10);
-  //declare_parameter("provide_utm_to_robot_transform", true);
   declare_parameter("publish_octomap_as_pointcloud", true);
   declare_parameter("octomap_point_cloud_publish_topic", "octomap_pointcloud");
   declare_parameter("octomap_frame_id", "map");
@@ -56,7 +55,6 @@ BotanbotMapManager::BotanbotMapManager()
   get_parameter("octomap_publish_topic_name", octomap_publish_topic_name_);
   get_parameter("octomap_voxel_size", octomap_voxel_size_);
   get_parameter("octomap_publish_frequency", octomap_publish_frequency_);
-  //get_parameter("provide_utm_to_robot_transform", provide_utm_to_map_transform_);
   get_parameter("publish_octomap_as_pointcloud", publish_octomap_as_pointcloud_);
   get_parameter("octomap_point_cloud_publish_topic", octomap_point_cloud_publish_topic_);
   get_parameter("octomap_frame_id", octomap_frame_id_);
@@ -192,13 +190,13 @@ void BotanbotMapManager::timerCallback()
     geometry_msgs::msg::TransformStamped utm_map_transform_stamped;
     utm_map_transform_stamped.header.stamp = stamp;
     utm_map_transform_stamped.header.frame_id = utm_frame_id;
-    utm_map_transform_stamped.child_frame_id = "map_origin";
+    utm_map_transform_stamped.child_frame_id = "static_map_datum";
     utm_map_transform_stamped.transform = tf2::toMsg(utm_to_map_trans);
     tf_broadcaster_.sendTransform(utm_map_transform_stamped);
 
     geometry_msgs::msg::PoseStamped in_pose, out_pose;
     in_pose.header.stamp = stamp;
-    in_pose.header.frame_id = "map_origin";
+    in_pose.header.frame_id = "static_map_datum";
 
     rclcpp::Duration timeout(std::chrono::seconds(1));
     if (botanbot_utilities::transformPose(
@@ -213,7 +211,7 @@ void BotanbotMapManager::timerCallback()
         out_pose.pose.position.y);
 
       geometry_msgs::msg::TransformStamped map_origin_to_map_trans = tf_buffer_->lookupTransform(
-        std::string("map_origin"),
+        std::string("static_map_datum"),
         octomap_frame_id_,
         tf2::TimePointZero
       );
@@ -252,7 +250,7 @@ void BotanbotMapManager::publishOctomap(
     }
   }
   //pcl_cloud->header.stamp = stamp;
-  pcl_cloud->header.frame_id = "map_origin";
+  pcl_cloud->header.frame_id = "static_map_datum";
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud_aligned =
     pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
