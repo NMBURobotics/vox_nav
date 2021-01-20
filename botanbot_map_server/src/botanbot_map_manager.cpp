@@ -39,7 +39,7 @@ BotanbotMapManager::BotanbotMapManager()
   declare_parameter("octomap_publish_topic_name", "octomap");
   declare_parameter("octomap_voxel_size", 0.2);
   declare_parameter("octomap_publish_frequency", 10);
-  declare_parameter("provide_utm_to_map_transform", true);
+  //declare_parameter("provide_utm_to_robot_transform", true);
   declare_parameter("publish_octomap_as_pointcloud", true);
   declare_parameter("octomap_point_cloud_publish_topic", "octomap_pointcloud");
   declare_parameter("octomap_frame_id", "map");
@@ -56,7 +56,7 @@ BotanbotMapManager::BotanbotMapManager()
   get_parameter("octomap_publish_topic_name", octomap_publish_topic_name_);
   get_parameter("octomap_voxel_size", octomap_voxel_size_);
   get_parameter("octomap_publish_frequency", octomap_publish_frequency_);
-  get_parameter("provide_utm_to_map_transform", provide_utm_to_map_transform_);
+  //get_parameter("provide_utm_to_robot_transform", provide_utm_to_map_transform_);
   get_parameter("publish_octomap_as_pointcloud", publish_octomap_as_pointcloud_);
   get_parameter("octomap_point_cloud_publish_topic", octomap_point_cloud_publish_topic_);
   get_parameter("octomap_frame_id", octomap_frame_id_);
@@ -123,35 +123,6 @@ void BotanbotMapManager::gpsOdomCallback(
 void BotanbotMapManager::timerCallback()
 {
   std::lock_guard<std::mutex> guard(global_mutex_);
-  auto stamp = this->now();
-  octomap_ros_msg_->header.stamp = stamp;
-  octomap_ros_msg_->header.frame_id = octomap_frame_id_;
-  octomap_publisher_->publish(*octomap_ros_msg_);
-  octomap_pointloud_publisher_->publish(*octomap_pointcloud_ros_msg_);
-
-  double altitude = map_datum_->position.altitude;
-  double longitude = map_datum_->position.longitude;
-  double latitude = map_datum_->position.latitude;
-  double utmY, utmX;
-  std::string utm_zone_tmp;
-  botanbot_utilities::navsat_conversions::LLtoUTM(latitude, longitude, utmY, utmX, utm_zone_tmp);
-  tf2::Transform map_origin;
-  tf2::Quaternion map_rot;
-  map_rot.setX(map_datum_->orientation.x);
-  map_rot.setY(map_datum_->orientation.y);
-  map_rot.setZ(map_datum_->orientation.z);
-  map_rot.setW(map_datum_->orientation.w);
-
-  geometry_msgs::msg::TransformStamped map_utm_transform_stamped;
-  map_origin.setOrigin(tf2::Vector3(utmX, utmY, altitude));
-  map_origin.setRotation(map_rot);
-
-  map_utm_transform_stamped.header.stamp = stamp;
-  map_utm_transform_stamped.header.frame_id = "utm";
-  map_utm_transform_stamped.child_frame_id = octomap_frame_id_;
-  map_utm_transform_stamped.transform = tf2::toMsg(map_origin);
-  tf_broadcaster_.sendTransform(map_utm_transform_stamped);
-  fillPointCloudfromOctomap(octomap_octree_, octomap_pointcloud_ros_msg_);
 
   if (!gps_waypoint_collector_node_->isOrientedGPSDataReady()) {
     RCLCPP_WARN(
@@ -173,68 +144,94 @@ void BotanbotMapManager::timerCallback()
       });
   }
 
+  rclcpp::Time stamp = this->now();
+  std::string map_frame_id = octomap_frame_id_;
+  std::string utm_frame_id = "utm";
+
+  // First we need to make sure we have already recieved robot sinitial pose
   if (is_robot_datum_ready_) {
-    altitude = robot_datum_->position.altitude;
-    longitude = robot_datum_->position.longitude;
-    latitude = robot_datum_->position.latitude;
+    double altitude = robot_datum_->position.altitude;
+    double longitude = robot_datum_->position.longitude;
+    double latitude = robot_datum_->position.latitude;
+    double utmY, utmX;
+    std::string utm_zone_tmp;
     botanbot_utilities::navsat_conversions::LLtoUTM(
       latitude, longitude, utmY, utmX,
       utm_zone_tmp);
-    tf2::Transform robot_datum_origin;
-    tf2::Quaternion robot_datum_rot;
-    robot_datum_rot.setX(robot_datum_->orientation.x);
-    robot_datum_rot.setY(robot_datum_->orientation.y);
-    robot_datum_rot.setZ(robot_datum_->orientation.z);
-    robot_datum_rot.setW(robot_datum_->orientation.w);
 
-    geometry_msgs::msg::TransformStamped robot_utm_transform_stamped;
-    robot_datum_origin.setOrigin(tf2::Vector3(utmX, utmY, altitude));
-    robot_datum_origin.setRotation(robot_datum_rot);
+    tf2::Transform utm_to_robot_trans, utm_to_map_trans;
+    utm_to_robot_trans.setOrigin(tf2::Vector3(utmX, utmY, altitude));
+    tf2::Quaternion robot_rot;
+    robot_rot.setX(robot_datum_->orientation.x);
+    robot_rot.setY(robot_datum_->orientation.y);
+    robot_rot.setZ(robot_datum_->orientation.z);
+    robot_rot.setW(robot_datum_->orientation.w);
+    utm_to_robot_trans.setRotation(robot_rot);
 
-    robot_utm_transform_stamped.header.stamp = stamp;
-    robot_utm_transform_stamped.header.frame_id = "utm";
-    robot_utm_transform_stamped.child_frame_id = "robot_datum";
-    robot_utm_transform_stamped.transform = tf2::toMsg(robot_datum_origin);
-    tf_broadcaster_.sendTransform(robot_utm_transform_stamped);
+    geometry_msgs::msg::TransformStamped utm_robot_transform_stamped;
+    utm_robot_transform_stamped.header.stamp = stamp;
+    utm_robot_transform_stamped.header.frame_id = utm_frame_id;
+    utm_robot_transform_stamped.child_frame_id = octomap_frame_id_;
+    utm_robot_transform_stamped.transform = tf2::toMsg(utm_to_robot_trans);
+    tf_broadcaster_.sendTransform(utm_robot_transform_stamped);
+    ///////////////////////////////////////////////////////////////////////////////
+    altitude = map_datum_->position.altitude;
+    longitude = map_datum_->position.longitude;
+    latitude = map_datum_->position.latitude;
+    botanbot_utilities::navsat_conversions::LLtoUTM(
+      latitude, longitude, utmY, utmX,
+      utm_zone_tmp);
+    utm_to_map_trans.setOrigin(tf2::Vector3(utmX, utmY, altitude));
+    tf2::Quaternion map_rot;
+    map_rot.setX(map_datum_->orientation.x);
+    map_rot.setY(map_datum_->orientation.y);
+    map_rot.setZ(map_datum_->orientation.z);
+    map_rot.setW(map_datum_->orientation.w);
+    utm_to_map_trans.setRotation(map_rot);
 
-    geometry_msgs::msg::PoseStamped robot_datum;
-    robot_datum.header.frame_id = "robot_datum";
-    robot_datum.header.stamp = stamp;
-    robot_datum.pose.orientation = robot_datum_->orientation;
+    geometry_msgs::msg::TransformStamped utm_map_transform_stamped;
+    utm_map_transform_stamped.header.stamp = stamp;
+    utm_map_transform_stamped.header.frame_id = utm_frame_id;
+    utm_map_transform_stamped.child_frame_id = "map_origin";
+    utm_map_transform_stamped.transform = tf2::toMsg(utm_to_map_trans);
+    tf_broadcaster_.sendTransform(utm_map_transform_stamped);
 
-    geometry_msgs::msg::PoseStamped robot_datum_in_map;
-    robot_datum_in_map.header.frame_id = "map";
-    robot_datum_in_map.header.stamp = stamp;
+    geometry_msgs::msg::PoseStamped in_pose, out_pose;
+    in_pose.header.stamp = stamp;
+    in_pose.header.frame_id = "map_origin";
 
-    try {
-      tf_buffer_->transform(
-        robot_datum, robot_datum_in_map, "map",
-        tf2::durationFromSec(0.1));
+    rclcpp::Duration timeout(std::chrono::seconds(1));
+    if (botanbot_utilities::transformPose(
+        tf_buffer_, octomap_frame_id_, in_pose, out_pose, timeout))
+    {
       RCLCPP_INFO(get_logger(), "Transfromed gps odometry from root_datum to map datum");
       RCLCPP_INFO(
         get_logger(), "Ex values: %.4f, %.4f,  New val: %.4f,%.4f ",
-        robot_datum.pose.position.x,
-        robot_datum.pose.position.y,
-        robot_datum_in_map.pose.position.x,
-        robot_datum_in_map.pose.position.y);
+        in_pose.pose.position.x,
+        in_pose.pose.position.y,
+        out_pose.pose.position.x,
+        out_pose.pose.position.y);
 
-      nav_msgs::msg::Odometry map_aligned_gps_odom;
-      map_aligned_gps_odom.pose.pose.position = robot_datum_in_map.pose.position;
-      map_aligned_gps_odom.pose.pose.orientation = robot_datum_in_map.pose.orientation;
-      map_aligned_gps_odom.header = robot_datum_in_map.header;
+      geometry_msgs::msg::TransformStamped map_origin_to_map_trans = tf_buffer_->lookupTransform(
+        std::string("map_origin"),
+        octomap_frame_id_,
+        tf2::TimePointZero
+      );
 
-      map_aligned_gps_odom_publisher_->publish(map_aligned_gps_odom);
-    } catch (tf2::TransformException & ex) {
-      RCLCPP_ERROR(
-        this->get_logger(), "Exception in robot_datum -> map transform: %s",
-        ex.what());
+      publishOctomap(stamp, octomap_frame_id_, map_origin_to_map_trans);
+
+      /*nav_msgs::msg::Odometry map_aligned_gps_odom;
+     map_aligned_gps_odom.pose.pose.position = robot_datum_in_map.pose.position;
+     map_aligned_gps_odom.pose.pose.orientation = robot_datum_in_map.pose.orientation;
+     map_aligned_gps_odom.header = robot_datum_in_map.header;
+     map_aligned_gps_odom_publisher_->publish(map_aligned_gps_odom);*/
     }
   }
 }
 
-void BotanbotMapManager::fillPointCloudfromOctomap(
-  const std::shared_ptr<octomap::OcTree> octomap_octree,
-  sensor_msgs::msg::PointCloud2::SharedPtr cloud)
+void BotanbotMapManager::publishOctomap(
+  rclcpp::Time stamp, std::string frame_id,
+  geometry_msgs::msg::TransformStamped map_origin_to_map_trans)
 {
   pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud =
     pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
@@ -243,9 +240,9 @@ void BotanbotMapManager::fillPointCloudfromOctomap(
     if (octomap_octree_->isNodeOccupied(*it)) {
       double half_size = it.getSize() / 2.0;
       double size = it.getSize();
-      double x = it.getX();
-      double y = it.getY();
-      double z = it.getZ();
+      double x = it.getX() - map_origin_to_map_trans.transform.translation.x;
+      double y = it.getY() - map_origin_to_map_trans.transform.translation.y;
+      double z = it.getZ() - map_origin_to_map_trans.transform.translation.z;
       // insert into pointcloud:
       pcl::PointXYZ point = pcl::PointXYZ();
       point.x = x;
@@ -254,14 +251,61 @@ void BotanbotMapManager::fillPointCloudfromOctomap(
       pcl_cloud->points.push_back(point);
     }
   }
-  pcl::toROSMsg(*pcl_cloud, *cloud);
-  cloud->header.frame_id = octomap_frame_id_;
-  cloud->header.stamp = this->now();
+  //pcl_cloud->header.stamp = stamp;
+  pcl_cloud->header.frame_id = "map_origin";
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud_aligned =
+    pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+
+  /*pcl_ros::transformPointCloud<pcl::PointXYZ>(
+    frame_id, *pcl_cloud, *pcl_cloud_aligned, *tf_buffer_);*/
+
+  pcl::toROSMsg(*pcl_cloud, *octomap_pointcloud_ros_msg_);
+  octomap_pointcloud_ros_msg_->header.frame_id = frame_id;
+  octomap_pointcloud_ros_msg_->header.stamp = stamp;
+  octomap_pointloud_publisher_->publish(*octomap_pointcloud_ros_msg_);
+
+  //octomap_ros_msg_->header.stamp = stamp;
+  //octomap_ros_msg_->header.frame_id = frame_id;
+  //octomap_publisher_->publish(*octomap_ros_msg_);
 }
 
-void BotanbotMapManager::publishUTMMapTransfrom()
+void BotanbotMapManager::broadcastUtmMapTransform(
+  rclcpp::Time stamp, std::string utm_frame_id,
+  std::string map_frame_id)
 {
+  double altitude = map_datum_->position.altitude;
+  double longitude = map_datum_->position.longitude;
+  double latitude = map_datum_->position.latitude;
+  double utmY, utmX;
+  std::string utm_zone_tmp;
+  botanbot_utilities::navsat_conversions::LLtoUTM(latitude, longitude, utmY, utmX, utm_zone_tmp);
+
+  tf2::Transform map_origin;
+  map_origin.setOrigin(tf2::Vector3(utmX, utmY, altitude));
+
+  tf2::Quaternion map_rot;
+  map_rot.setX(map_datum_->orientation.x);
+  map_rot.setY(map_datum_->orientation.y);
+  map_rot.setZ(map_datum_->orientation.z);
+  map_rot.setW(map_datum_->orientation.w);
+  map_origin.setRotation(map_rot);
+
+  geometry_msgs::msg::TransformStamped utm_map_transform_stamped;
+  utm_map_transform_stamped.header.stamp = stamp;
+  utm_map_transform_stamped.header.frame_id = utm_frame_id;
+  utm_map_transform_stamped.child_frame_id = map_frame_id;
+  utm_map_transform_stamped.transform = tf2::toMsg(map_origin);
+  tf_broadcaster_.sendTransform(utm_map_transform_stamped);
 }
+
+void BotanbotMapManager::broadcastUtmRobotInitialPoseTransform(
+  rclcpp::Time stamp, std::string utm_frame_id,
+  std::string robot_initial_pose_frame_id)
+{
+
+}
+
 
 }  // namespace botanbot_map_server
 

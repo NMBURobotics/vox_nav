@@ -18,6 +18,8 @@
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <tf2/LinearMath/Quaternion.h>
+#include <tf2/transform_datatypes.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <tf2/convert.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/static_transform_broadcaster.h>
@@ -29,6 +31,7 @@
 #include <botanbot_utilities/navsat_conversions.hpp>
 #include <botanbot_utilities/pcl_helpers.hpp>
 #include <botanbot_utilities/gps_waypoint_collector.hpp>
+#include <botanbot_utilities/tf_helpers.hpp>
 #include <botanbot_msgs/msg/oriented_nav_sat_fix.hpp>
 
 #include <octomap_msgs/msg/octomap.hpp>
@@ -42,6 +45,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/transforms.hpp>
 
 #include <vector>
 #include <string>
@@ -80,20 +84,36 @@ public:
   void timerCallback();
 
   /**
-   * @brief fill cloud from octomap_octree
+   * @brief
    *
-   * @param octomap_octree
-   * @param cloud
+   * @param stamp
+   * @param frame_id
    */
-  void fillPointCloudfromOctomap(
-    const std::shared_ptr<octomap::OcTree> octomap_octree,
-    sensor_msgs::msg::PointCloud2::SharedPtr cloud);
+  void publishOctomap(
+    rclcpp::Time stamp, std::string frame_id,
+    geometry_msgs::msg::TransformStamped map_origin_to_map_trans);
 
   /**
    * @brief
    *
+   * @param stamp
+   * @param utm_frame_id
+   * @param map_frame_id
    */
-  void publishUTMMapTransfrom();
+  void broadcastUtmMapTransform(
+    rclcpp::Time stamp, std::string utm_frame_id,
+    std::string map_frame_id);
+
+  /**
+* @brief
+*
+* @param stamp
+* @param utm_frame_id
+* @param map_frame_id
+*/
+  void broadcastUtmRobotInitialPoseTransform(
+    rclcpp::Time stamp, std::string utm_frame_id,
+    std::string robot_initial_pose_frame_id);
 
   /**
    * @brief mono callback, subscries to an mono image and runs openvslam localization on a prebuild map.
