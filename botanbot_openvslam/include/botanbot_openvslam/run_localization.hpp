@@ -30,8 +30,16 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <nav_msgs/msg/odometry.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 #include <botanbot_openvslam/gps_data_handler.hpp>
+#include <botanbot_utilities/tf_helpers.hpp>
 
 #include <image_transport/image_transport.hpp>
 #include <cv_bridge/cv_bridge.h>
@@ -95,6 +103,9 @@ public:
    */
   void executeViewerPangolinThread();
 
+
+  void  poseOdomPublisher(Eigen::Matrix4d cam_pose);
+
   /**
    * @brief Typedefs for shortnening Approx time Syncer initialization.
    *
@@ -127,6 +138,11 @@ private:
   message_filters::Subscriber<sensor_msgs::msg::Image> rgbd_depth_image_subscriber_;
   // subscriber for mono cam in case monocular camera model localization
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr mono_image_subscriber_;
+
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr robot_pose_in_map_publisher_;
+
+  rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr robot_odom_publisher_;
+
   // parameter to hold full path to vocab.dbow2 file
   std::string vocab_file_path_;
   // parameter to hold full path to slam_config.yaml file
@@ -141,6 +157,10 @@ private:
   bool eval_log_;
   // enable/disable mappin while localzating
   bool enable_mapping_module_;
+
+  // tf buffer to get transfroms
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 };
 
 }  // namespace botanbot_openvslam

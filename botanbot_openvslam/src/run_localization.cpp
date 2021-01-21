@@ -105,6 +105,15 @@ RunLocalization::RunLocalization()
     throw std::runtime_error("Invalid setup type: " + cfg_->camera_->get_setup_type_string());
   }
 
+  robot_odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>(
+    "openvslam/odometry", rclcpp::SystemDefaultsQoS());
+
+  robot_pose_in_map_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
+    "openvslam/robot_pose", rclcpp::SystemDefaultsQoS());
+
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
   rclcpp::sleep_for(std::chrono::seconds(2));
 
   pangolin_viewer_ = std::make_shared<pangolin_viewer::viewer>(
@@ -154,7 +163,10 @@ void RunLocalization::rgbdCallback(
   const auto timestamp =
     std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - initial_time_stamp_).count();
   // input the current frame and estimate the camera pose
-  SLAM_->feed_RGBD_frame(colorcv, depthcv, timestamp, *mask_);
+  Eigen::Matrix4d cam_pose = SLAM_->feed_RGBD_frame(colorcv, depthcv, timestamp, *mask_);
+
+  poseOdomPublisher(cam_pose);
+
   const auto tp_2 = std::chrono::steady_clock::now();
   const auto track_time =
     std::chrono::duration_cast<std::chrono::duration<double>>(tp_2 - tp_1).count();
@@ -187,6 +199,68 @@ void RunLocalization::executeViewerPangolinThread()
     }
     rclcpp::shutdown();
   }
+}
+
+void RunLocalization::poseOdomPublisher(Eigen::Matrix4d cam_pose)
+{
+  Eigen::Matrix3d rotation_matrix = cam_pose.block(0, 0, 3, 3);
+  Eigen::Vector3d translation_vector = cam_pose.block(0, 3, 3, 1);
+
+  tf2::Vector3 cam_pose_origin(
+    translation_vector(0),
+    translation_vector(1),
+    translation_vector(2));
+
+  Eigen::Quaternion<double> cam_pose_eigen_quat(rotation_matrix);
+
+  tf2::Quaternion cam_pose_tf_quat;
+  cam_pose_tf_quat.setX(cam_pose_eigen_quat.x());
+  cam_pose_tf_quat.setY(cam_pose_eigen_quat.y());
+  cam_pose_tf_quat.setZ(cam_pose_eigen_quat.z());
+  cam_pose_tf_quat.setW(cam_pose_eigen_quat.w());
+
+  tf2::Transform cam_pose_tf;
+  cam_pose_tf.setOrigin(cam_pose_origin);
+  cam_pose_tf.setRotation(cam_pose_tf_quat);
+
+  tf2::Quaternion cam_pose_correction_tf_quat;
+  cam_pose_correction_tf_quat.setRPY(1.57, 0, 0);
+
+  tf2::Transform cam_pose_correction_tf;
+  cam_pose_correction_tf.setOrigin(tf2::Vector3(0, 0, 0));
+  cam_pose_correction_tf.setRotation(cam_pose_correction_tf_quat);
+
+  cam_pose_tf = cam_pose_correction_tf * cam_pose_tf;
+
+  rclcpp::Time now = this->now();
+  // Create pose message and update it with current camera pose
+  geometry_msgs::msg::PoseStamped in_pose, out_pose;
+  in_pose.header.stamp = now;
+  in_pose.header.frame_id = "static_map";
+  out_pose.header.stamp = now;
+  out_pose.header.frame_id = "map";
+
+  in_pose.pose.position.x = cam_pose_tf.getOrigin().getX();
+  in_pose.pose.position.y = cam_pose_tf.getOrigin().getY();
+  in_pose.pose.position.z = cam_pose_tf.getOrigin().getZ();
+  in_pose.pose.orientation.x = cam_pose_tf.getRotation().getX();
+  in_pose.pose.orientation.y = cam_pose_tf.getRotation().getY();
+  in_pose.pose.orientation.z = cam_pose_tf.getRotation().getZ();
+  in_pose.pose.orientation.w = cam_pose_tf.getRotation().getW();
+
+  rclcpp::Duration transfrom_timeout(std::chrono::seconds(1));
+  botanbot_utilities::transformPose(
+    tf_buffer_, "map", in_pose, out_pose, transfrom_timeout);
+
+  nav_msgs::msg::Odometry odom;
+  odom.header.stamp = now;
+  odom.header.frame_id = "map";
+  odom.child_frame_id = "base_link";
+  odom.pose.pose.position = out_pose.pose.position;
+  odom.pose.pose.orientation = out_pose.pose.orientation;
+
+  robot_odom_publisher_->publish(odom);
+  robot_pose_in_map_publisher_->publish(out_pose);
 }
 }  // namespace botanbot_openvslam
 
