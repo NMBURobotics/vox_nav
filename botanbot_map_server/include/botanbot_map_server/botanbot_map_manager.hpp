@@ -17,6 +17,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
+#include <rclcpp/service.hpp>
+#include <rclcpp/client.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_eigen/tf2_eigen.h>
@@ -46,6 +48,8 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.hpp>
+
+#include <robot_localization/srv/from_ll.hpp>
 
 #include <vector>
 #include <string>
@@ -94,28 +98,6 @@ public:
     rclcpp::Time stamp, std::string frame_id,
     geometry_msgs::msg::TransformStamped static_map_to_map_trans);
 
-  /**
-   * @brief
-   *
-   * @param stamp
-   * @param utm_frame_id
-   * @param static_map_frame_id
-   */
-  void broadcastUtmStaticMapTransform(
-    rclcpp::Time stamp, std::string utm_frame_id,
-    std::string static_map_frame_id);
-
-  /**
-   * @brief
-   *
-   * @param stamp
-   * @param utm_frame_id
-   * @param map_frame_id
-   */
-  void broadcastUtmMapTransform(
-    rclcpp::Time stamp, std::string utm_frame_id,
-    std::string map_frame_id);
-
 protected:
   // Used to creted a periodic callback function IOT publish transfrom/octomap/cloud etc.
   rclcpp::TimerBase::SharedPtr timer_;
@@ -131,10 +113,6 @@ protected:
   std::shared_ptr<octomap::OcTree> octomap_octree_;
   // we read gps coordinates of map from yaml
   botanbot_msgs::msg::OrientedNavSatFix::SharedPtr static_map_gps_pose_;
-  // we get initial pose of robot from live gps sensor data
-  botanbot_msgs::msg::OrientedNavSatFix::SharedPtr robot_initial_gps_pose_;
-  // to broadcast utm -> map
-  tf2_ros::TransformBroadcaster tf_broadcaster_;
   // rclcpp parameters from yaml file: full path to octomap file in disk
   std::string octomap_filename_;
   // rclcpp parameters from yaml file: topic name for published octomap
@@ -143,29 +121,16 @@ protected:
   double octomap_voxel_size_;
   // rclcpp parameters from yaml file: publish frequncy to publish map and transfroms
   int octomap_publish_frequency_;
-  // rclcpp parameters from yaml file: if true, utm -> map transftom is avail for TF
-  bool provide_utm_to_map_transform_;
   // rclcpp parameters from yaml file: if true, a cloud will be published which represents octomap
   bool publish_octomap_as_pointcloud_;
   // rclcpp parameters from yaml file: topic name for published octomap as cloud
   std::string octomap_point_cloud_publish_topic_;
   // rclcpp parameters from yaml file: frame id for map typicall: "map"
   std::string map_frame_id_;
-  // rclcpp parameters from yaml file: frame id for octomap typicall: "map"
-  std::string static_map_frame_id_;
-  // rclcpp parameters from yaml file: frame id for global frame , we use UTM coordinatesso "utm"
-  std::string utm_frame_id_;
-  // We will get the GPS coordinates before starting the Mapping.
-  std::shared_ptr<botanbot_utilities::GPSWaypointCollector> gps_waypoint_collector_node_;
-  // we will recieve gp data once and that is it , weonly need this to precisely
-  // define start location of map
-  std::once_flag robot_initial_gps_pose_recieved_flag_;
-  bool is_robot_initial_gps_pose_ready_;
-  //
-  bool use_robot_datum_;
-  // tf buffer to get transfroms
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
+  rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr from_ll_to_map_client_;
+  rclcpp::Node::SharedPtr from_ll_to_map_client_node_;
+  double transform_tolerance_;
 };
 }  // namespace botanbot_map_server
 
