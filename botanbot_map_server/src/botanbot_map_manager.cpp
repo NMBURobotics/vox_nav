@@ -28,7 +28,8 @@ BotanbotMapManager::BotanbotMapManager()
   octomap_ros_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
   octomap_pointcloud_ros_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
   static_map_gps_pose_ = std::make_shared<botanbot_msgs::msg::OrientedNavSatFix>();
-  from_ll_to_map_client_node_ = std::make_shared<rclcpp::Node>("fromll_client_rclcpp_node");
+  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
+    "fromll_client_rclcpp_node");
 
   // Declare this node's parameters
   declare_parameter("octomap_filename", "/home/ros2-foxy/f.bt");
@@ -83,8 +84,8 @@ BotanbotMapManager::BotanbotMapManager()
     std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
     std::bind(&BotanbotMapManager::timerCallback, this));
 
-  from_ll_to_map_client_ =
-    from_ll_to_map_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
+  robot_localization_fromLL_client_ =
+    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
 
   RCLCPP_INFO(
     this->get_logger(),
@@ -100,111 +101,104 @@ BotanbotMapManager::~BotanbotMapManager()
 
 void BotanbotMapManager::timerCallback()
 {
-  while (!from_ll_to_map_client_->wait_for_service(std::chrono::seconds(1))) {
+  std::call_once(
+    align_static_map_once_, [this]()
+    {
+      auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
+      auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
+      request->ll_point.latitude = static_map_gps_pose_->position.latitude;
+      request->ll_point.longitude = static_map_gps_pose_->position.longitude;
+      request->ll_point.altitude = static_map_gps_pose_->position.altitude;
+      fromGPSPoseToMapPose(request, response);
+      // The translation from static_map origin to map is basically inverse of this transform
+      tf2::Transform static_map_translation;
+      static_map_translation.setOrigin(
+        tf2::Vector3(
+          response->map_point.x,
+          response->map_point.y,
+          response->map_point.z));
+      // this is identity because map and utm frames are rotationally aligned
+      static_map_translation.setRotation(tf2::Quaternion::getIdentity());
+
+      tf2::Transform static_map_rotation;
+      tf2::Quaternion static_map_quaternion;
+      tf2::fromMsg(static_map_gps_pose_->orientation, static_map_quaternion);
+      // First align the static map origin to map in translation, and then rotate the static map with its correct rotation
+      static_map_rotation.setOrigin(tf2::Vector3(0, 0, 0));
+      static_map_rotation.setRotation(static_map_quaternion);
+      tf2::Transform static_map_to_map_transfrom = static_map_rotation *
+      static_map_translation.inverse();
+      alignStaticMapToMap(static_map_to_map_transfrom);
+    });
+  publishAlignedMap();
+}
+
+void BotanbotMapManager::publishAlignedMap()
+{
+  octomap_ros_msg_->header.stamp = this->now();
+  octomap_ros_msg_->header.frame_id = map_frame_id_;
+  octomap_publisher_->publish(*octomap_ros_msg_);
+
+  octomap_pointcloud_ros_msg_->header.frame_id = map_frame_id_;
+  octomap_pointcloud_ros_msg_->header.stamp = this->now();
+  octomap_pointloud_publisher_->publish(*octomap_pointcloud_ros_msg_);
+}
+
+void BotanbotMapManager::fromGPSPoseToMapPose(
+  const robot_localization::srv::FromLL::Request::SharedPtr request,
+  robot_localization::srv::FromLL::Response::SharedPtr response)
+{
+  while (!robot_localization_fromLL_client_->wait_for_service(std::chrono::seconds(1))) {
     if (!rclcpp::ok()) {
-      RCLCPP_ERROR(this->get_logger(), "Interrupted while waiting for the service. Exiting.");
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Interrupted while waiting for the /fromLL service. Exiting.");
       return;
     }
-    RCLCPP_INFO(this->get_logger(), "/fromll service not available, waiting again...");
+    RCLCPP_INFO(this->get_logger(), "/fromLL service not available, waiting again...");
   }
 
-  auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
-  auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
-  request->ll_point.latitude = static_map_gps_pose_->position.latitude;
-  request->ll_point.longitude = static_map_gps_pose_->position.longitude;
-  request->ll_point.altitude = static_map_gps_pose_->position.altitude;
-
-  auto result_future = from_ll_to_map_client_->async_send_request(request);
-
+  auto result_future = robot_localization_fromLL_client_->async_send_request(request);
   if (rclcpp::spin_until_future_complete(
-      from_ll_to_map_client_node_,
+      robot_localization_fromLL_client_node_,
       result_future) !=
     rclcpp::FutureReturnCode::SUCCESS)
   {
-    RCLCPP_ERROR(this->get_logger(), "service call failed :(");
+    RCLCPP_ERROR(this->get_logger(), "/fromLL service call failed :(");
   }
 
   auto result = result_future.get();
-  geometry_msgs::msg::PoseStamped static_map_origin_in_map_frame;
-  static_map_origin_in_map_frame.header.frame_id = map_frame_id_;
-  static_map_origin_in_map_frame.header.stamp = this->now();
-  static_map_origin_in_map_frame.pose.position.x = result->map_point.x;
-  static_map_origin_in_map_frame.pose.position.y = result->map_point.y;
-  static_map_origin_in_map_frame.pose.position.z = result->map_point.z;
+  response->map_point = result->map_point;
+}
 
-  tf2::Transform static_map_translation;
-  static_map_translation.setOrigin(
-    tf2::Vector3(
-      static_map_origin_in_map_frame.pose.position.x,
-      static_map_origin_in_map_frame.pose.position.y,
-      static_map_origin_in_map_frame.pose.position.z));
-  static_map_translation.setRotation(tf2::Quaternion::getIdentity());
-
-  tf2::Transform static_map_rotation;
-  tf2::Quaternion static_map_quaternion;
-  tf2::fromMsg(static_map_gps_pose_->orientation, static_map_quaternion);
-  static_map_rotation.setOrigin(tf2::Vector3(0, 0, 0));
-  static_map_rotation.setRotation(static_map_quaternion);
-
+void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom)
+{
   pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_octomap_cloud =
     pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
-
   for (auto it = octomap_octree_->begin(0), end = octomap_octree_->end(); it != end; ++it) {
     if (octomap_octree_->isNodeOccupied(*it)) {
-      double half_size = it.getSize() / 2.0;
-      double size = it.getSize();
-      double x = it.getX();
-      double y = it.getY();
-      double z = it.getZ();
       // insert into pointcloud:
       pcl::PointXYZ point = pcl::PointXYZ();
-      point.x = x;
-      point.y = y;
-      point.z = z;
+      point.x = it.getX();
+      point.y = it.getY();
+      point.z = it.getZ();
       aligned_octomap_cloud->points.push_back(point);
     }
   }
 
   pcl_ros::transformPointCloud(
-    *aligned_octomap_cloud, *aligned_octomap_cloud,
-    static_map_rotation * static_map_translation.inverse());
-
+    *aligned_octomap_cloud, *aligned_octomap_cloud, static_map_to_map_transfrom
+  );
   pcl::toROSMsg(*aligned_octomap_cloud, *octomap_pointcloud_ros_msg_);
-  octomap_pointcloud_ros_msg_->header.frame_id = "map";
-  octomap_pointcloud_ros_msg_->header.stamp = this->now();
-  octomap_pointloud_publisher_->publish(*octomap_pointcloud_ros_msg_);
-}
 
-void BotanbotMapManager::publishOctomap(
-  rclcpp::Time stamp, std::string map_frame_id,
-  geometry_msgs::msg::TransformStamped static_map_to_map_trans)
-{
-  pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_octomap_cloud =
-    pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+
   std::shared_ptr<octomap::OcTree> aligned_octomap =
     std::make_shared<octomap::OcTree>(octomap_voxel_size_);
   octomap::Pointcloud temp_octocloud;
-
-  for (auto it = octomap_octree_->begin(0), end = octomap_octree_->end(); it != end; ++it) {
-    if (octomap_octree_->isNodeOccupied(*it)) {
-      double half_size = it.getSize() / 2.0;
-      double size = it.getSize();
-      double x = it.getX() - static_map_to_map_trans.transform.translation.x;
-      double y = it.getY() - static_map_to_map_trans.transform.translation.y;
-      double z = it.getZ() - static_map_to_map_trans.transform.translation.z;
-      // insert into pointcloud:
-      pcl::PointXYZ point = pcl::PointXYZ();
-      point.x = x;
-      point.y = y;
-      point.z = z;
-      aligned_octomap_cloud->points.push_back(point);
-      octomap::point3d octocloud_point(x, y, z);
-      temp_octocloud.push_back(octocloud_point);
-    }
+  for (auto && i : aligned_octomap_cloud->points) {
+    octomap::point3d octocloud_point(i.x, i.y, i.z);
+    temp_octocloud.push_back(octocloud_point);
   }
-  pcl::toROSMsg(*aligned_octomap_cloud, *octomap_pointcloud_ros_msg_);
-  octomap_pointcloud_ros_msg_->header.frame_id = map_frame_id;
-  octomap_pointcloud_ros_msg_->header.stamp = stamp;
   octomap::point3d sensorOrigin(0, 0, 0);
   aligned_octomap->insertPointCloud(temp_octocloud, sensorOrigin);
   try {
@@ -215,10 +209,6 @@ void BotanbotMapManager::publishOctomap(
       get_logger(),
       "Exception while converting binary octomap  %s:", e.what());
   }
-  octomap_ros_msg_->header.stamp = stamp;
-  octomap_ros_msg_->header.frame_id = map_frame_id;
-  octomap_pointloud_publisher_->publish(*octomap_pointcloud_ros_msg_);
-  octomap_publisher_->publish(*octomap_ros_msg_);
 }
 
 }  // namespace botanbot_map_server

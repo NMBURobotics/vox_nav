@@ -30,10 +30,6 @@
 #include <tf2_ros/transform_listener.h>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-#include <botanbot_utilities/navsat_conversions.hpp>
-#include <botanbot_utilities/pcl_helpers.hpp>
-#include <botanbot_utilities/gps_waypoint_collector.hpp>
-#include <botanbot_utilities/tf_helpers.hpp>
 #include <botanbot_msgs/msg/oriented_nav_sat_fix.hpp>
 
 #include <octomap_msgs/msg/octomap.hpp>
@@ -90,47 +86,61 @@ public:
   /**
    * @brief
    *
-   * @param stamp
-   * @param frame_id
-   * @param static_map_to_map_trans
    */
-  void publishOctomap(
-    rclcpp::Time stamp, std::string frame_id,
-    geometry_msgs::msg::TransformStamped static_map_to_map_trans);
+  void publishAlignedMap();
+
+  /**
+   * @brief
+   *
+   * @param request
+   * @param response
+   */
+  void fromGPSPoseToMapPose(
+    const robot_localization::srv::FromLL::Request::SharedPtr request,
+    robot_localization::srv::FromLL::Response::SharedPtr response);
+
+  /**
+   * @brief
+   *
+   * @param static_map_to_map_transfrom
+   */
+  void alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom);
 
 protected:
   // Used to creted a periodic callback function IOT publish transfrom/octomap/cloud etc.
   rclcpp::TimerBase::SharedPtr timer_;
   // publishes octomap in its native format
   rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_publisher_;
-  // reusable octomp message, dont need to recreate each time we publish
-  octomap_msgs::msg::Octomap::SharedPtr octomap_ros_msg_;
   // publishes octomap in form of a point cloud message
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr octomap_pointloud_publisher_;
+  // robot_localization package provides a service to convert lat,long,al GPS cooordinates to x,y,z map points
+  rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr robot_localization_fromLL_client_;
+  // clint node used for spinning the service callback of robot_localization_fromLL_client_
+  rclcpp::Node::SharedPtr robot_localization_fromLL_client_node_;
   // reusable octomap point loud message, dont need to recreate each time we publish
   sensor_msgs::msg::PointCloud2::SharedPtr octomap_pointcloud_ros_msg_;
-  // otree object to read and store binary octomap from disk
-  std::shared_ptr<octomap::OcTree> octomap_octree_;
+  // reusable octomp message, dont need to recreate each time we publish
+  octomap_msgs::msg::Octomap::SharedPtr octomap_ros_msg_;
   // we read gps coordinates of map from yaml
   botanbot_msgs::msg::OrientedNavSatFix::SharedPtr static_map_gps_pose_;
+  // otree object to read and store binary octomap from disk
+  std::shared_ptr<octomap::OcTree> octomap_octree_;
   // rclcpp parameters from yaml file: full path to octomap file in disk
   std::string octomap_filename_;
   // rclcpp parameters from yaml file: topic name for published octomap
   std::string octomap_publish_topic_name_;
+  // rclcpp parameters from yaml file: topic name for published octomap as cloud
+  std::string octomap_point_cloud_publish_topic_;
+  // rclcpp parameters from yaml file: frame id for map typicall: "map"
+  std::string map_frame_id_;
   // rclcpp parameters from yaml file: vxel size for octomap
   double octomap_voxel_size_;
   // rclcpp parameters from yaml file: publish frequncy to publish map and transfroms
   int octomap_publish_frequency_;
   // rclcpp parameters from yaml file: if true, a cloud will be published which represents octomap
   bool publish_octomap_as_pointcloud_;
-  // rclcpp parameters from yaml file: topic name for published octomap as cloud
-  std::string octomap_point_cloud_publish_topic_;
-  // rclcpp parameters from yaml file: frame id for map typicall: "map"
-  std::string map_frame_id_;
-
-  rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr from_ll_to_map_client_;
-  rclcpp::Node::SharedPtr from_ll_to_map_client_node_;
-  double transform_tolerance_;
+  // we need to align static map to map only once, since it is static !
+  std::once_flag align_static_map_once_;
 };
 }  // namespace botanbot_map_server
 
