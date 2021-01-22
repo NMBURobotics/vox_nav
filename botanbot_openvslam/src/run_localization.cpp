@@ -230,30 +230,31 @@ void RunLocalization::poseOdomPublisher(Eigen::Matrix4d cam_pose)
   Eigen::Matrix3d rotation_matrix = cam_pose.block(0, 0, 3, 3);
   Eigen::Vector3d translation_vector = cam_pose.block(0, 3, 3, 1);
 
-  tf2::Vector3 cam_pose_origin(
+  tf2::Matrix3x3 tf_rotation_matrix(
+    rotation_matrix(0, 0), rotation_matrix(0, 1), rotation_matrix(0, 2),
+    rotation_matrix(1, 0), rotation_matrix(1, 1), rotation_matrix(1, 2),
+    rotation_matrix(2, 0), rotation_matrix(2, 1), rotation_matrix(2, 2));
+
+  tf2::Vector3 tf_translation_vector(
     translation_vector(0),
     translation_vector(1),
     translation_vector(2));
 
-  Eigen::Quaternion<double> cam_pose_eigen_quat(rotation_matrix);
+  tf_rotation_matrix = tf_rotation_matrix.transpose();
+  tf_translation_vector = -(tf_rotation_matrix * tf_translation_vector);
 
-  tf2::Quaternion cam_pose_tf_quat;
-  cam_pose_tf_quat.setX(cam_pose_eigen_quat.x());
-  cam_pose_tf_quat.setY(cam_pose_eigen_quat.y());
-  cam_pose_tf_quat.setZ(cam_pose_eigen_quat.z());
-  cam_pose_tf_quat.setW(cam_pose_eigen_quat.w());
+  tf2::Transform transform_tf(tf_rotation_matrix, tf_translation_vector);
 
-  tf2::Transform cam_pose_tf;
-  cam_pose_tf.setOrigin(cam_pose_origin);
-  cam_pose_tf.setRotation(cam_pose_tf_quat);
+  tf2::Matrix3x3 rot_open_to_ros(
+    0, 0, 1,
+    -1, 0, 0,
+    0, -1, 0);
 
-  tf2::Quaternion cam_pose_correction_tf_quat;
-  cam_pose_correction_tf_quat.setRPY(3.14, 1.57, 1.57);
+  tf2::Transform transformA(rot_open_to_ros, tf2::Vector3(0.0, 0.0, 0.0));
+  tf2::Transform transformB(rot_open_to_ros.inverse(), tf2::Vector3(0.0, 0.0, 0.0));
 
-  tf2::Transform cam_pose_correction_tf;
-  cam_pose_correction_tf.setOrigin(tf2::Vector3(0, 0, 0));
-  cam_pose_correction_tf.setRotation(cam_pose_correction_tf_quat);
-  //cam_pose_tf = cam_pose_correction_tf * cam_pose_tf;
+  tf2::Transform cam_pose_tf = transformA * transform_tf * transformB;
+  //cam_pose_tf = cam_pose_correction_tf.inverse() * cam_pose_tf;
 
   auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
   auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
@@ -307,7 +308,7 @@ void RunLocalization::poseOdomPublisher(Eigen::Matrix4d cam_pose)
   static_map_rotation.setRotation(static_map_quaternion);
 
   tf2::Transform cam_pose_to_map_transfrom = static_map_rotation *
-    static_map_translation.inverse() * cam_pose_tf.inverse();
+    static_map_translation.inverse() * cam_pose_tf;
 
   rclcpp::Time now = this->now();
   // Create pose message and update it with current camera pose
