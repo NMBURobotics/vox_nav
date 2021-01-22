@@ -43,6 +43,7 @@ RunLocalization::RunLocalization()
   declare_parameter("debug_mode", true);
   declare_parameter("eval_log", true);
   declare_parameter("enable_mapping_module", true);
+  declare_parameter("yaw_offset", 1.57);
   declare_parameter("map_coordinates.latitude", 49.0);
   declare_parameter("map_coordinates.longitude", 3.0);
   declare_parameter("map_coordinates.altitude", 0.5);
@@ -58,6 +59,7 @@ RunLocalization::RunLocalization()
   get_parameter("debug_mode", debug_mode_);
   get_parameter("eval_log", eval_log_);
   get_parameter("enable_mapping_module", enable_mapping_module_);
+  get_parameter("yaw_offset", yaw_offset_);
   get_parameter("map_coordinates.latitude", static_map_gps_pose_->position.latitude);
   get_parameter("map_coordinates.longitude", static_map_gps_pose_->position.longitude);
   get_parameter("map_coordinates.altitude", static_map_gps_pose_->position.altitude);
@@ -251,7 +253,7 @@ void RunLocalization::poseOdomPublisher(Eigen::Matrix4d cam_pose)
   tf2::Transform cam_pose_correction_tf;
   cam_pose_correction_tf.setOrigin(tf2::Vector3(0, 0, 0));
   cam_pose_correction_tf.setRotation(cam_pose_correction_tf_quat);
-  cam_pose_tf = cam_pose_correction_tf * cam_pose_tf;
+  //cam_pose_tf = cam_pose_correction_tf * cam_pose_tf;
 
   auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
   auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
@@ -278,13 +280,22 @@ void RunLocalization::poseOdomPublisher(Eigen::Matrix4d cam_pose)
   auto result = result_future.get();
   response->map_point = result->map_point;
 
+  // "/fromLL" service only accounts for translational transform, we still need to rotate the points according to yaw_offset
+  // yaw_offset determines rotation between utm and map frame
+  // Normally utm and map frmaes are aligned rotationally, but if there is yaw_offset set in
+  // navsat_transfrom_node we have to account for that yaw_offset here as well
+  // use classic rotation formula https://en.wikipedia.org/wiki/Rotation_matrix#In_two_dimensions;
+  // The rotation only happens in x and y since it is round the z axis(yaw)
+  double x = response->map_point.x;
+  double y = response->map_point.y;
+  double x_dot = x * std::cos(yaw_offset_) - y * std::sin(yaw_offset_);
+  double y_dot = x * std::sin(yaw_offset_) + y * std::cos(yaw_offset_);
+
   // The translation from static_map origin to map is basically inverse of this transform
   tf2::Transform static_map_translation;
   static_map_translation.setOrigin(
-    tf2::Vector3(
-      response->map_point.x,
-      response->map_point.y,
-      response->map_point.z));
+    tf2::Vector3(x_dot, y_dot, response->map_point.z));
+
   // this is identity because map and utm frames are rotationally aligned
   static_map_translation.setRotation(tf2::Quaternion::getIdentity());
 

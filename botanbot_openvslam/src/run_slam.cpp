@@ -26,8 +26,6 @@
 
 namespace botanbot_openvslam
 {
-
-
 RunSlam::RunSlam()
 :  Node("run_slam_rclcpp_node")
 {

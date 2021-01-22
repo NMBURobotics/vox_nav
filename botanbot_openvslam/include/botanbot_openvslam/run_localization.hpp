@@ -150,6 +150,8 @@ private:
   rclcpp::Node::SharedPtr robot_localization_fromLL_client_node_;
   // we read gps coordinates of map from yaml
   botanbot_msgs::msg::OrientedNavSatFix::SharedPtr static_map_gps_pose_;
+  // see navsat_transform_node from robot_localization, this offset is needed to recorrect orientation of static map
+  double yaw_offset_;
   // parameter to hold full path to vocab.dbow2 file
   std::string vocab_file_path_;
   // parameter to hold full path to slam_config.yaml file

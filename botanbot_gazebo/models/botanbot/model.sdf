@@ -443,7 +443,6 @@
                 </geometry>
             </collision>
             <inertial>
-                <pose>0 0 0 0 0 0</pose>
                 <inertia>
                     <ixx>0.001</ixx>
                     <ixy>0.000</ixy>
@@ -561,7 +560,7 @@
                 </geometry>
             </collision>
             <inertial>
-                <pose>0 0 0 0 0 0</pose>
+                <pose>0 0 0 -1.57 0 -1.57</pose>
                 <inertia>
                     <ixx>0.001</ixx>
                     <ixy>0.000</ixy>
@@ -670,7 +669,6 @@
                 </material>
             </visual>
             <sensor type="gpu_ray" name="VLP16">
-                <pose>0 0 0 0 0 0</pose>
                 <visualize>false</visualize>
                 <update_rate>10</update_rate>
                 <ray>

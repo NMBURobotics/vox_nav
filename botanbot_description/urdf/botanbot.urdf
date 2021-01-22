@@ -162,25 +162,135 @@
     <link name="camera_bottom_screw_frame">
         <visual>
             <geometry>
-                <mesh filename="package://botanbot_description/meshes/d435.dae" />
+                <mesh filename="package://botanbot_description/meshes/d435.dae"/>
             </geometry>
         </visual>
         <collision>
             <geometry>
-                <mesh filename="package://botanbot_description/meshes/d435.dae" />
+                <mesh filename="package://botanbot_description/meshes/d435.dae"/>
             </geometry>
         </collision>
     </link>
-    <link name="camera_link"></link>
-    <link name="camera_depth_frame"></link>
-    <link name="camera_depth_optical_frame"></link>
-    <link name="camera_color_frame"></link>
-    <link name="camera_color_optical_frame"></link>
-    <link name="camera_left_ir_frame"></link>
-    <link name="camera_left_ir_optical_frame"></link>
-    <link name="camera_right_ir_frame"></link>
-    <link name="camera_right_ir_optical_frame"></link>
-    <link name="wide_angle_camera_link"></link>
+    <link name="camera_link">
+        <visual>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="camera_depth_frame">
+        <visual>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="camera_depth_optical_frame">
+        <visual>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001" />
+            </geometry>
+        </collision>
+    </link>
+    <link name="camera_color_frame">
+        <visual>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001" />
+            </geometry>
+        </collision>        
+    </link>
+    <link name="camera_color_optical_frame">
+        <visual>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001" />
+            </geometry>
+        </collision>        
+    </link>
+    <link name="camera_left_ir_frame">
+        <visual>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001" />
+            </geometry>
+        </collision>        
+    </link>
+    <link name="camera_left_ir_optical_frame">
+        <visual>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001" />
+            </geometry>
+        </collision>        
+    </link>
+    <link name="camera_right_ir_frame">
+        <visual>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001" />
+            </geometry>
+        </collision>        
+    </link>
+    <link name="camera_right_ir_optical_frame">
+        <visual>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001" />
+            </geometry>
+        </collision>        
+    </link>
+    <link name="wide_angle_camera_link">
+        <visual>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001"/>
+            </geometry>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://botanbot_description/meshes/d435.dae" scale="0.0001 0.0001 0.0001" />
+            </geometry>
+        </collision>        
+    </link>
     <!-- END LINKS RELATED TO SENSORS       -->
     <!-- END LINKS                          -->
     <!--////////////////////////////////////-->
@@ -245,7 +355,7 @@
     <joint name="camera_joint" type="fixed">
         <parent link="base_link" />
         <child link="camera_bottom_screw_frame" />
-        <pose xyz="0.3 0.0 0.8" rpy="-1.57 0 -1.57" />
+        <pose xyz="0.3 0.0 0.8" rpy="0 0 0" />
     </joint>
     <joint name="camera_link_joint" type="fixed">
         <parent link="camera_bottom_screw_frame" />
