@@ -28,21 +28,43 @@ namespace botanbot_openvslam
 RunLocalization::RunLocalization()
 :  Node("run_localization_rclcpp_node")
 {
-  this->declare_parameter("vocab_file_path", "none");
-  this->declare_parameter("setting_file_path", "none");
-  this->declare_parameter("mask_img_path", "");
-  this->declare_parameter("prebuilt_map_path", "");
-  this->declare_parameter("debug_mode", true);
-  this->declare_parameter("eval_log", true);
-  this->declare_parameter("enable_mapping_module", true);
 
-  vocab_file_path_ = this->get_parameter("vocab_file_path").as_string();
-  setting_file_path_ = this->get_parameter("setting_file_path").as_string();
-  mask_img_path_ = this->get_parameter("mask_img_path").as_string();
-  prebuilt_map_path_ = this->get_parameter("prebuilt_map_path").as_string();
-  debug_mode_ = this->get_parameter("debug_mode").as_bool();
-  eval_log_ = this->get_parameter("eval_log").as_bool();
-  enable_mapping_module_ = this->get_parameter("enable_mapping_module").as_bool();
+  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
+    "run_localization_fromll_client_node");
+
+  robot_localization_fromLL_client_ =
+    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
+  static_map_gps_pose_ = std::make_shared<botanbot_msgs::msg::OrientedNavSatFix>();
+
+  declare_parameter("vocab_file_path", "none");
+  declare_parameter("setting_file_path", "none");
+  declare_parameter("mask_img_path", "");
+  declare_parameter("prebuilt_map_path", "");
+  declare_parameter("debug_mode", true);
+  declare_parameter("eval_log", true);
+  declare_parameter("enable_mapping_module", true);
+  declare_parameter("map_coordinates.latitude", 49.0);
+  declare_parameter("map_coordinates.longitude", 3.0);
+  declare_parameter("map_coordinates.altitude", 0.5);
+  declare_parameter("map_coordinates.quaternion.x", 0.0);
+  declare_parameter("map_coordinates.quaternion.y", 0.0);
+  declare_parameter("map_coordinates.quaternion.z", 0.0);
+  declare_parameter("map_coordinates.quaternion.w", 1.0);
+
+  get_parameter("vocab_file_path", vocab_file_path_);
+  get_parameter("setting_file_path", setting_file_path_);
+  get_parameter("mask_img_path", mask_img_path_);
+  get_parameter("prebuilt_map_path", prebuilt_map_path_);
+  get_parameter("debug_mode", debug_mode_);
+  get_parameter("eval_log", eval_log_);
+  get_parameter("enable_mapping_module", enable_mapping_module_);
+  get_parameter("map_coordinates.latitude", static_map_gps_pose_->position.latitude);
+  get_parameter("map_coordinates.longitude", static_map_gps_pose_->position.longitude);
+  get_parameter("map_coordinates.altitude", static_map_gps_pose_->position.altitude);
+  get_parameter("map_coordinates.quaternion.x", static_map_gps_pose_->orientation.x);
+  get_parameter("map_coordinates.quaternion.y", static_map_gps_pose_->orientation.y);
+  get_parameter("map_coordinates.quaternion.z", static_map_gps_pose_->orientation.z);
+  get_parameter("map_coordinates.quaternion.w", static_map_gps_pose_->orientation.w);
 
   mask_ = std::make_shared<cv::Mat>();
   if (!mask_img_path_.empty()) {
@@ -224,43 +246,81 @@ void RunLocalization::poseOdomPublisher(Eigen::Matrix4d cam_pose)
   cam_pose_tf.setRotation(cam_pose_tf_quat);
 
   tf2::Quaternion cam_pose_correction_tf_quat;
-  cam_pose_correction_tf_quat.setRPY(1.57, 0, 0);
+  cam_pose_correction_tf_quat.setRPY(3.14, 1.57, 1.57);
 
   tf2::Transform cam_pose_correction_tf;
   cam_pose_correction_tf.setOrigin(tf2::Vector3(0, 0, 0));
   cam_pose_correction_tf.setRotation(cam_pose_correction_tf_quat);
-
   cam_pose_tf = cam_pose_correction_tf * cam_pose_tf;
+
+  auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
+  auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
+  request->ll_point.latitude = static_map_gps_pose_->position.latitude;
+  request->ll_point.longitude = static_map_gps_pose_->position.longitude;
+  request->ll_point.altitude = static_map_gps_pose_->position.altitude;
+  while (!robot_localization_fromLL_client_->wait_for_service(std::chrono::seconds(1))) {
+    if (!rclcpp::ok()) {
+      RCLCPP_ERROR(
+        this->get_logger(),
+        "Interrupted while waiting for the /fromLL service. Exiting.");
+      return;
+    }
+    RCLCPP_INFO(this->get_logger(), "/fromLL service not available, waiting again...");
+  }
+  auto result_future = robot_localization_fromLL_client_->async_send_request(request);
+  if (rclcpp::spin_until_future_complete(
+      robot_localization_fromLL_client_node_,
+      result_future) !=
+    rclcpp::FutureReturnCode::SUCCESS)
+  {
+    RCLCPP_ERROR(this->get_logger(), "/fromLL service call failed :(");
+  }
+  auto result = result_future.get();
+  response->map_point = result->map_point;
+
+  // The translation from static_map origin to map is basically inverse of this transform
+  tf2::Transform static_map_translation;
+  static_map_translation.setOrigin(
+    tf2::Vector3(
+      response->map_point.x,
+      response->map_point.y,
+      response->map_point.z));
+  // this is identity because map and utm frames are rotationally aligned
+  static_map_translation.setRotation(tf2::Quaternion::getIdentity());
+
+  tf2::Transform static_map_rotation;
+  tf2::Quaternion static_map_quaternion;
+  tf2::fromMsg(static_map_gps_pose_->orientation, static_map_quaternion);
+  // First align the static map origin to map in translation, and then rotate the static map with its correct rotation
+  static_map_rotation.setOrigin(tf2::Vector3(0, 0, 0));
+  static_map_rotation.setRotation(static_map_quaternion);
+
+  tf2::Transform cam_pose_to_map_transfrom = static_map_rotation *
+    static_map_translation.inverse() * cam_pose_tf.inverse();
 
   rclcpp::Time now = this->now();
   // Create pose message and update it with current camera pose
-  geometry_msgs::msg::PoseStamped in_pose, out_pose;
-  in_pose.header.stamp = now;
-  in_pose.header.frame_id = "static_map";
-  out_pose.header.stamp = now;
-  out_pose.header.frame_id = "map";
+  geometry_msgs::msg::PoseStamped pose;
+  pose.header.stamp = now;
+  pose.header.frame_id = "map";
 
-  in_pose.pose.position.x = cam_pose_tf.getOrigin().getX();
-  in_pose.pose.position.y = cam_pose_tf.getOrigin().getY();
-  in_pose.pose.position.z = cam_pose_tf.getOrigin().getZ();
-  in_pose.pose.orientation.x = cam_pose_tf.getRotation().getX();
-  in_pose.pose.orientation.y = cam_pose_tf.getRotation().getY();
-  in_pose.pose.orientation.z = cam_pose_tf.getRotation().getZ();
-  in_pose.pose.orientation.w = cam_pose_tf.getRotation().getW();
-
-  rclcpp::Duration transfrom_timeout(std::chrono::seconds(1));
-  botanbot_utilities::transformPose(
-    tf_buffer_, "map", in_pose, out_pose, transfrom_timeout);
+  pose.pose.position.x = cam_pose_to_map_transfrom.getOrigin().getX();
+  pose.pose.position.y = cam_pose_to_map_transfrom.getOrigin().getY();
+  pose.pose.position.z = cam_pose_to_map_transfrom.getOrigin().getZ();
+  pose.pose.orientation.x = cam_pose_to_map_transfrom.getRotation().getX();
+  pose.pose.orientation.y = cam_pose_to_map_transfrom.getRotation().getY();
+  pose.pose.orientation.z = cam_pose_to_map_transfrom.getRotation().getZ();
+  pose.pose.orientation.w = cam_pose_to_map_transfrom.getRotation().getW();
 
   nav_msgs::msg::Odometry odom;
   odom.header.stamp = now;
   odom.header.frame_id = "map";
   odom.child_frame_id = "base_link";
-  odom.pose.pose.position = out_pose.pose.position;
-  odom.pose.pose.orientation = out_pose.pose.orientation;
+  odom.pose.pose.position = pose.pose.position;
+  odom.pose.pose.orientation = pose.pose.orientation;
 
   robot_odom_publisher_->publish(odom);
-  robot_pose_in_map_publisher_->publish(out_pose);
+  robot_pose_in_map_publisher_->publish(pose);
 }
 }  // namespace botanbot_openvslam
 

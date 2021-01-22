@@ -8,10 +8,10 @@ ekf_local_filter_node:
     sensor_timeout: 0.1
     odom0: /odometry/wheel
     imu0: /imu/data
-    base_link_frame: base_link
     odom_frame: odom
-    map_frame: map
+    base_link_frame: base_link
     world_frame: odom
+    map_frame: map
     odom0_config: [false,  false, false, # X , Y , Z
                     false, false, false, # roll , pitch ,yaw
                     true,  true,  true,  # dX , dY , dZ
@@ -56,9 +56,9 @@ ekf_global_filter_node:
     odom0: /odometry/wheel
     odom1: /odometry/gps
     imu0: /imu/data
-    base_link_frame: base_link
-    odom_frame: odom
     map_frame: map
+    odom_frame: odom
+    base_link_frame: base_link
     world_frame: map
     odom0_config: [false,  false,  false, # X , Y , Z
                     false, false, false,  # roll , pitch ,yaw
@@ -69,7 +69,7 @@ ekf_global_filter_node:
     odom0_differential: false
     odom0_queue_size: 10
     odom1_config: [true,  true,  false, # X , Y , Z
-                  false, false, true, # roll , pitch ,yaw
+                  false, false, false, # roll , pitch ,yaw
                   false, false, false, # dX , dY , dZ
                   false, false, false,  # droll , dpitch ,dyaw
                   false, false, false] # ddX , ddY , ddZ
@@ -107,12 +107,11 @@ navsat_transform_node:
     frequency: 30.0
     delay: 0.0
     magnetic_declination_radians: 0.0  # For lat/long 55.944831, -3.186998
-    yaw_offset: 0.0 # IMU reads 0 facing magnetic north, not east
+    yaw_offset: 1.57 # IMU reads 0 facing magnetic north, not east
     zero_altitude: false
     broadcast_utm_transform: true
     broadcast_utm_transform_as_parent_frame: true
     publish_filtered_gps: true
     use_odometry_yaw: true
-    wait_for_datum: false
-    datum: [49.89998651126992, 8.90004175541922, 0.6342219080730283]
- 
+    #wait_for_datum: true
+    #datum: [-2.846001584706555e-09, -8.984332830094866e-06, 0.0]

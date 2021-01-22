@@ -10,6 +10,7 @@ botanbot_map_manager_rclcpp_node:
     map_frame_id: "map"
     static_map_frame_id: "static_map"
     utm_frame_id: "utm"
+    yaw_offset: 1.57 #see navsat_transform_node from robot_localization, this offset is needed to recorrect orientation of static map
     map_coordinates:
       latitude: 49.89998651126992
       longitude: 8.90004175541922

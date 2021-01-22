@@ -38,8 +38,10 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
+#include <robot_localization/srv/from_ll.hpp>
 #include <botanbot_openvslam/gps_data_handler.hpp>
 #include <botanbot_utilities/tf_helpers.hpp>
+#include <botanbot_msgs/msg/oriented_nav_sat_fix.hpp>
 
 #include <image_transport/image_transport.hpp>
 #include <cv_bridge/cv_bridge.h>
@@ -130,7 +132,7 @@ private:
   std::shared_ptr<std::thread> pangolin_viewer_thread_;
   // keep a copy initial time stamp
   std::chrono::steady_clock::time_point initial_time_stamp_;
-  //
+  // TODO(fetullah.atas) what is this parameter for ?
   std::vector<double> track_times_;
   // subscriber for color cam in case rgbd camera model localization
   message_filters::Subscriber<sensor_msgs::msg::Image> rgbd_color_image_subscriber_;
@@ -142,7 +144,12 @@ private:
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr robot_pose_in_map_publisher_;
 
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr robot_odom_publisher_;
-
+  // robot_localization package provides a service to convert lat,long,al GPS cooordinates to x,y,z map points
+  rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr robot_localization_fromLL_client_;
+  // clint node used for spinning the service callback of robot_localization_fromLL_client_
+  rclcpp::Node::SharedPtr robot_localization_fromLL_client_node_;
+  // we read gps coordinates of map from yaml
+  botanbot_msgs::msg::OrientedNavSatFix::SharedPtr static_map_gps_pose_;
   // parameter to hold full path to vocab.dbow2 file
   std::string vocab_file_path_;
   // parameter to hold full path to slam_config.yaml file
@@ -157,8 +164,7 @@ private:
   bool eval_log_;
   // enable/disable mappin while localzating
   bool enable_mapping_module_;
-
-  // tf buffer to get transfroms
+  // tf buffer to get access to transfroms
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 };

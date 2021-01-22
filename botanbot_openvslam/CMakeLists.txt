@@ -130,6 +130,8 @@ find_package(geometry_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(botanbot_utilities REQUIRED)
+find_package(botanbot_msgs REQUIRED)
+find_package(robot_localization REQUIRED)
 find_package(yaml-cpp REQUIRED )
 find_package(Threads REQUIRED)
 find_library(OpenVSLAM_LIB openvslam HINTS ${OpenVSLAM_LIB_DIR})
@@ -156,10 +158,12 @@ cv_bridge
 image_transport
 rcutils 
 botanbot_utilities
+botanbot_msgs
 nav_msgs
 tf2_geometry_msgs
 tf2_ros
 geometry_msgs
+robot_localization
 )
 
 # pangolin viewer

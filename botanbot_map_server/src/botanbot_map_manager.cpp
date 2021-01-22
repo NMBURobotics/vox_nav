@@ -29,7 +29,7 @@ BotanbotMapManager::BotanbotMapManager()
   octomap_pointcloud_ros_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
   static_map_gps_pose_ = std::make_shared<botanbot_msgs::msg::OrientedNavSatFix>();
   robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
-    "fromll_client_rclcpp_node");
+    "map_manager_fromll_client_node");
 
   // Declare this node's parameters
   declare_parameter("octomap_filename", "/home/ros2-foxy/f.bt");
@@ -39,6 +39,7 @@ BotanbotMapManager::BotanbotMapManager()
   declare_parameter("publish_octomap_as_pointcloud", true);
   declare_parameter("octomap_point_cloud_publish_topic", "octomap_pointcloud");
   declare_parameter("map_frame_id", "map");
+  declare_parameter("yaw_offset", 1.57);
   declare_parameter("map_coordinates.latitude", 49.0);
   declare_parameter("map_coordinates.longitude", 3.0);
   declare_parameter("map_coordinates.altitude", 0.5);
@@ -55,6 +56,7 @@ BotanbotMapManager::BotanbotMapManager()
   get_parameter("publish_octomap_as_pointcloud", publish_octomap_as_pointcloud_);
   get_parameter("octomap_point_cloud_publish_topic", octomap_point_cloud_publish_topic_);
   get_parameter("map_frame_id", map_frame_id_);
+  get_parameter("yaw_offset", yaw_offset_);
   get_parameter("map_coordinates.latitude", static_map_gps_pose_->position.latitude);
   get_parameter("map_coordinates.longitude", static_map_gps_pose_->position.longitude);
   get_parameter("map_coordinates.altitude", static_map_gps_pose_->position.altitude);
@@ -102,21 +104,34 @@ BotanbotMapManager::~BotanbotMapManager()
 void BotanbotMapManager::timerCallback()
 {
   std::call_once(
-    align_static_map_once_, [this]()
-    {
+    align_static_map_once_, [this]() {
+      RCLCPP_INFO(
+        get_logger(), "Going to align the static map to map frames once,"
+        " But the map and octomap will be published at %i frequncy rate", octomap_publish_frequency_);
+
       auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
       auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
       request->ll_point.latitude = static_map_gps_pose_->position.latitude;
       request->ll_point.longitude = static_map_gps_pose_->position.longitude;
       request->ll_point.altitude = static_map_gps_pose_->position.altitude;
       fromGPSPoseToMapPose(request, response);
+
+      // "/fromLL" service only accounts for translational transform, we still need to rotate the points according to yaw_offset
+      // yaw_offset determines rotation between utm and map frame
+      // Normally utm and map frmaes are aligned rotationally, but if there is yaw_offset set in
+      // navsat_transfrom_node we have to account for that yaw_offset here as well
+      // use classic rotation formula https://en.wikipedia.org/wiki/Rotation_matrix#In_two_dimensions;
+      // The rotation only happens in x and y since it is round the z axis(yaw)
+      double x = response->map_point.x;
+      double y = response->map_point.y;
+      double x_dot = x * std::cos(yaw_offset_) - y * std::sin(yaw_offset_);
+      double y_dot = x * std::sin(yaw_offset_) + y * std::cos(yaw_offset_);
+
       // The translation from static_map origin to map is basically inverse of this transform
       tf2::Transform static_map_translation;
       static_map_translation.setOrigin(
-        tf2::Vector3(
-          response->map_point.x,
-          response->map_point.y,
-          response->map_point.z));
+        tf2::Vector3(x_dot, y_dot, response->map_point.z));
+
       // this is identity because map and utm frames are rotationally aligned
       static_map_translation.setRotation(tf2::Quaternion::getIdentity());
 
@@ -126,10 +141,12 @@ void BotanbotMapManager::timerCallback()
       // First align the static map origin to map in translation, and then rotate the static map with its correct rotation
       static_map_rotation.setOrigin(tf2::Vector3(0, 0, 0));
       static_map_rotation.setRotation(static_map_quaternion);
+
       tf2::Transform static_map_to_map_transfrom = static_map_rotation *
       static_map_translation.inverse();
       alignStaticMapToMap(static_map_to_map_transfrom);
     });
+
   publishAlignedMap();
 }
 
@@ -155,7 +172,7 @@ void BotanbotMapManager::fromGPSPoseToMapPose(
         "Interrupted while waiting for the /fromLL service. Exiting.");
       return;
     }
-    RCLCPP_INFO(this->get_logger(), "/fromLL service not available, waiting again...");
+    RCLCPP_INFO(this->get_logger(), "/fromLL service not available, waiting and trying again...");
   }
 
   auto result_future = robot_localization_fromLL_client_->async_send_request(request);
