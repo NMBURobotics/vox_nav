@@ -8,6 +8,7 @@ Panels:
         - /TF1/Tree1
         - /Global Planner1/Path1
         - /PointCloud21/Autocompute Value Bounds1
+        - /Odometry1/Shape1
         - /Odometry2/Shape1
       Splitter Ratio: 0.3684210479259491
     Tree Height: 433
@@ -78,38 +79,47 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         camera_color_optical_frame:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         camera_depth_frame:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         camera_depth_optical_frame:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         camera_left_ir_frame:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         camera_left_ir_optical_frame:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         camera_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         camera_right_ir_frame:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         camera_right_ir_optical_frame:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
         front_left_wheel:
           Alpha: 1
           Show Axes: false
@@ -159,6 +169,7 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
+          Value: true
       Name: RobotModel
       TF Prefix: ""
       Update Interval: 0
@@ -625,14 +636,14 @@ Visualization Manager:
           Value: true
         Value: false
       Enabled: true
-      Keep: 100
+      Keep: 1000
       Name: Odometry
       Position Tolerance: 0.10000000149011612
       Shape:
         Alpha: 1
         Axes Length: 1
         Axes Radius: 0.10000000149011612
-        Color: 255; 25; 0
+        Color: 0; 25; 255
         Head Length: 0.30000001192092896
         Head Radius: 0.10000000149011612
         Shaft Length: 1
@@ -663,7 +674,7 @@ Visualization Manager:
           Value: true
         Value: true
       Enabled: true
-      Keep: 100
+      Keep: 1000
       Name: Odometry
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -682,6 +693,44 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /openvslam/odometry
+      Value: true
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz_default_plugins/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: false
+      Enabled: true
+      Keep: 1000
+      Name: Odometry
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 200; 150; 50
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /odometry/local
       Value: true
   Enabled: true
   Global Options:
@@ -718,25 +767,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 38.858863830566406
+      Distance: 39.060569763183594
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.6505489349365234
-        Y: 3.501744508743286
-        Z: -2.774733366095461e-05
+        X: 4.778827667236328
+        Y: -5.542760848999023
+        Z: -3.276928327977657e-05
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.3197963237762451
+      Pitch: 0.5697963237762451
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 5.718168258666992
+      Yaw: 3.1445400714874268
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016

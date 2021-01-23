@@ -426,9 +426,9 @@ void BotanbotAckermannDrive::Load(gazebo::physics::ModelPtr _model, sdf::Element
   }
 
   auto pose = impl_->model_->WorldPose();
-  impl_->odom_.pose.pose.position = gazebo_ros::Convert<geometry_msgs::msg::Point>(pose.Pos());
+  /*impl_->odom_.pose.pose.position = gazebo_ros::Convert<geometry_msgs::msg::Point>(pose.Pos());
   impl_->odom_.pose.pose.orientation = gazebo_ros::Convert<geometry_msgs::msg::Quaternion>(
-    pose.Rot());
+    pose.Rot());*/
 
   impl_->covariance_[0] = _sdf->Get<double>("covariance_x", 0.00001).first;
   impl_->covariance_[1] = _sdf->Get<double>("covariance_y", 0.00001).first;
