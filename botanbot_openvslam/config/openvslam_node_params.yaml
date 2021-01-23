@@ -16,7 +16,8 @@ run_localization_rclcpp_node:
     prebuilt_map_path : /home/ros2-foxy/f.msg
     debug_mode: true
     eval_log: true
-    enable_mapping_module: false
+    enable_mapping_module: false    
+    enable_pangolin_viewer: false
     map_coordinates:
       latitude: 49.89998651126992
       longitude: 8.90004175541922

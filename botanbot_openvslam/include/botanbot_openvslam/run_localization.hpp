@@ -140,9 +140,9 @@ private:
   message_filters::Subscriber<sensor_msgs::msg::Image> rgbd_depth_image_subscriber_;
   // subscriber for mono cam in case monocular camera model localization
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr mono_image_subscriber_;
-
+  // After robot relocalized within map, publish the pose in map frame
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr robot_pose_in_map_publisher_;
-
+  // After robot relocalized within map, pubish the odometry in map frame
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr robot_odom_publisher_;
   // robot_localization package provides a service to convert lat,long,al GPS cooordinates to x,y,z map points
   rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr robot_localization_fromLL_client_;
@@ -166,6 +166,8 @@ private:
   bool eval_log_;
   // enable/disable mappin while localzating
   bool enable_mapping_module_;
+  // enable disable pangolin viewer from yaml config file
+  bool enable_pangolin_viewer_;
   // tf buffer to get access to transfroms
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;

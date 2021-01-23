@@ -29,12 +29,9 @@ RunLocalization::RunLocalization()
 :  Node("run_localization_rclcpp_node")
 {
 
-  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
-    "run_localization_fromll_client_node");
-
-  robot_localization_fromLL_client_ =
-    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
   static_map_gps_pose_ = std::make_shared<botanbot_msgs::msg::OrientedNavSatFix>();
+  mask_ = std::make_shared<cv::Mat>();
+  initial_time_stamp_ = std::chrono::steady_clock::now();
 
   declare_parameter("vocab_file_path", "none");
   declare_parameter("setting_file_path", "none");
@@ -43,6 +40,7 @@ RunLocalization::RunLocalization()
   declare_parameter("debug_mode", true);
   declare_parameter("eval_log", true);
   declare_parameter("enable_mapping_module", true);
+  declare_parameter("enable_pangolin_viewer", true);
   declare_parameter("yaw_offset", 1.57);
   declare_parameter("map_coordinates.latitude", 49.0);
   declare_parameter("map_coordinates.longitude", 3.0);
@@ -59,6 +57,7 @@ RunLocalization::RunLocalization()
   get_parameter("debug_mode", debug_mode_);
   get_parameter("eval_log", eval_log_);
   get_parameter("enable_mapping_module", enable_mapping_module_);
+  get_parameter("enable_pangolin_viewer", enable_pangolin_viewer_);
   get_parameter("yaw_offset", yaw_offset_);
   get_parameter("map_coordinates.latitude", static_map_gps_pose_->position.latitude);
   get_parameter("map_coordinates.longitude", static_map_gps_pose_->position.longitude);
@@ -68,7 +67,6 @@ RunLocalization::RunLocalization()
   get_parameter("map_coordinates.quaternion.z", static_map_gps_pose_->orientation.z);
   get_parameter("map_coordinates.quaternion.w", static_map_gps_pose_->orientation.w);
 
-  mask_ = std::make_shared<cv::Mat>();
   if (!mask_img_path_.empty()) {
     try {
       mask_ = std::make_shared<cv::Mat>(cv::imread(mask_img_path_, cv::IMREAD_GRAYSCALE));
@@ -92,7 +90,6 @@ RunLocalization::RunLocalization()
     return;
   }
 
-  initial_time_stamp_ = std::chrono::steady_clock::now();
   SLAM_ = std::make_shared<openvslam::system>(cfg_, vocab_file_path_.c_str());
   // load the prebuilt map
   SLAM_->load_map_database(prebuilt_map_path_.c_str());
@@ -110,6 +107,7 @@ RunLocalization::RunLocalization()
     mono_image_subscriber_ = this->create_subscription<sensor_msgs::msg::Image>(
       "camera/color/image_raw", rclcpp::SystemDefaultsQoS(),
       std::bind(&RunLocalization::monoCallback, this, std::placeholders::_1));
+    RCLCPP_INFO(get_logger(), "Localization setup is based on Monocular setting.");
   } else if ((cfg_->camera_->setup_type_ == openvslam::camera::setup_type_t::RGBD)) {
     rgbd_color_image_subscriber_.subscribe(
       this, "camera/color/image_raw",
@@ -125,27 +123,32 @@ RunLocalization::RunLocalization()
       std::bind(
         &RunLocalization::rgbdCallback, this, std::placeholders::_1,
         std::placeholders::_2));
+    RCLCPP_INFO(get_logger(), "Localization setup is based on RGBD setting.");
   } else {
     throw std::runtime_error("Invalid setup type: " + cfg_->camera_->get_setup_type_string());
   }
-
+  // setup robot_localization /fromLL service stuff
+  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
+    "run_localization_fromll_client_node");
+  robot_localization_fromLL_client_ =
+    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
+  // setup odom and pose pulishers
   robot_odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>(
     "openvslam/odometry", rclcpp::SystemDefaultsQoS());
-
   robot_pose_in_map_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
     "openvslam/robot_pose", rclcpp::SystemDefaultsQoS());
-
+  // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  rclcpp::sleep_for(std::chrono::seconds(2));
+  if (enable_pangolin_viewer_) {
+    pangolin_viewer_ = std::make_shared<pangolin_viewer::viewer>(
+      cfg_, SLAM_.get(), SLAM_->get_frame_publisher(), SLAM_->get_map_publisher());
 
-  pangolin_viewer_ = std::make_shared<pangolin_viewer::viewer>(
-    cfg_, SLAM_.get(),
-    SLAM_->get_frame_publisher(), SLAM_->get_map_publisher());
-
-  pangolin_viewer_thread_ =
-    std::make_shared<std::thread>(std::thread(&RunLocalization::executeViewerPangolinThread, this));
+    pangolin_viewer_thread_ =
+      std::make_shared<std::thread>(
+      std::thread(&RunLocalization::executeViewerPangolinThread, this));
+  }
   RCLCPP_INFO(get_logger(), "Constructed an instance of RunLocalization node ... ");
 }
 
@@ -252,15 +255,14 @@ void RunLocalization::poseOdomPublisher(Eigen::Matrix4d cam_pose)
 
   tf2::Transform transformA(rot_open_to_ros, tf2::Vector3(0.0, 0.0, 0.0));
   tf2::Transform transformB(rot_open_to_ros.inverse(), tf2::Vector3(0.0, 0.0, 0.0));
-
   tf2::Transform cam_pose_tf = transformA * transform_tf * transformB;
-  //cam_pose_tf = cam_pose_correction_tf.inverse() * cam_pose_tf;
 
   auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
   auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
   request->ll_point.latitude = static_map_gps_pose_->position.latitude;
   request->ll_point.longitude = static_map_gps_pose_->position.longitude;
   request->ll_point.altitude = static_map_gps_pose_->position.altitude;
+
   while (!robot_localization_fromLL_client_->wait_for_service(std::chrono::seconds(1))) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(
@@ -318,7 +320,7 @@ void RunLocalization::poseOdomPublisher(Eigen::Matrix4d cam_pose)
 
   pose.pose.position.x = cam_pose_to_map_transfrom.getOrigin().getX();
   pose.pose.position.y = cam_pose_to_map_transfrom.getOrigin().getY();
-  pose.pose.position.z = cam_pose_to_map_transfrom.getOrigin().getZ();
+  pose.pose.position.z = cam_pose_to_map_transfrom.getOrigin().getZ() + 0.3;
   pose.pose.orientation.x = cam_pose_to_map_transfrom.getRotation().getX();
   pose.pose.orientation.y = cam_pose_to_map_transfrom.getRotation().getY();
   pose.pose.orientation.z = cam_pose_to_map_transfrom.getRotation().getZ();
