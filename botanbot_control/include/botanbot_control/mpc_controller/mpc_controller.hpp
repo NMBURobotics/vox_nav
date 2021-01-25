@@ -38,6 +38,10 @@ public:
 
   void setSpeedLimit(const double & speed_limit) override;
 
+  void solve();
+
+  geometry_msgs::msg::TwistStamped  interpolate(double dt);
+
 private:
 };
 
