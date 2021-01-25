@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="botanbot_se3_planner">
+    <class type="botanbot_planning::SE3Planner" base_class_type="botanbot_planning::PlannerCore">
+      <description>TODO(fetullah.atas)</description>
+    </class>
+  </library>
+</class_libraries>
