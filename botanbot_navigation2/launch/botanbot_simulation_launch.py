@@ -29,7 +29,8 @@ GAZEBO_WORLD = os.environ['GAZEBO_WORLD']
 def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('botanbot_navigation2')
-    localization_dir = get_package_share_directory('botanbot_localization')
+    localization_dir = get_package_share_directory(
+        'botanbot_robot_localization')
 
     launch_dir = os.path.join(bringup_dir, 'launch')
     params_dir = os.path.join(bringup_dir, 'params')
