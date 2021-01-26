@@ -12,42 +12,116 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <nav_msgs/msg/path.hpp>
 #include <botanbot_control/mpc_controller/mpc_controller.hpp>
 
-#include <botanbot_control/mpc_controller/mpc_acado/acado_common.h>
-#include <botanbot_control/mpc_controller/mpc_acado/acado_auxiliary_functions.h>
 
-
-ACADOworkspace acadoWorkspace;
-ACADOvariables acadoVariables;
+using namespace std;
 
 namespace botanbot_control
 {
 namespace mpc_controller
 {
 
-using AcadoReal = real_t;
-constexpr auto HORIZON = static_cast<std::size_t>(ACADO_N);
-// State variable indices
-static_assert(ACADO_NX == 6, "Unexpected num of state variables");
-constexpr auto NX = static_cast<std::size_t>(ACADO_NX);
-constexpr auto IDX_X = 0U;
-constexpr auto IDX_Y = 1U;
-constexpr auto IDX_HEADING = 2U;
-constexpr auto IDX_VEL_LONG = 3U;
-constexpr auto IDX_ACCEL = 4U;
-constexpr auto IDX_WHEEL_ANGLE = 5U;
-// Control variable indices
-static_assert(ACADO_NU == 2, "Unexpected num of control variables");
-constexpr auto NU = static_cast<std::size_t>(ACADO_NU);
-constexpr auto IDX_JERK = 0U;
-constexpr auto IDX_WHEEL_ANGLE_RATE = 1U;
-
 MPCController::MPCController()
 {
-  // Reset all solver memory
-  std::memset(&acadoWorkspace, 0, sizeof( acadoWorkspace ));
-  std::memset(&acadoVariables, 0, sizeof( acadoVariables ));
+  vector<vector<double>> control_output;
+
+  nav_msgs::msg::Odometry robot_odom;
+  nav_msgs::msg::Path path;
+  geometry_msgs::msg::PoseStamped pose;
+
+  pose.pose.position.x = 1.0;
+  path.poses.push_back(pose);
+  pose.pose.position.x = 2.0;
+  path.poses.push_back(pose);
+  pose.pose.position.x = 3.0;
+  path.poses.push_back(pose);
+  pose.pose.position.x = 4.0;
+  path.poses.push_back(pose);
+
+  // j[1] is the data JSON object
+  vector<double> ptsx;
+  vector<double> ptsy;
+  for (auto && path_pose : path.poses) {
+    ptsx.push_back(path_pose.pose.position.x);
+    ptsy.push_back(path_pose.pose.position.y);
+
+    double px = path_pose.pose.position.x;
+    double py = path_pose.pose.position.x;
+    double psi = 0;
+    double v = robot_odom.twist.twist.linear.x;
+
+    // simulate latency compensation
+    const double latency = 0.1;
+    px = px + v * cos(psi) * latency;
+    py = py + v * sin(psi) * latency;
+
+    //converting to car's local coordinate system
+    Eigen::VectorXd xvals(ptsx.size());
+    Eigen::VectorXd yvals(ptsx.size());
+    Eigen::MatrixXd translation(2, 2);
+    translation << cos(-psi), -sin(-psi),
+      sin(-psi), cos(-psi);
+    Eigen::VectorXd pnt(2);
+    Eigen::VectorXd local_pnt(2);
+
+    for (int i = 0; i < ptsx.size(); i++) {
+      // convert to vehicle coordinates
+      pnt << ptsx[i] - px, ptsy[i] - py;
+      local_pnt = translation * pnt;
+      xvals[i] = local_pnt[0];
+      yvals[i] = local_pnt[1];
+      // std::cout <<"i: "<< i<< "lcl: " << local_pnt[0] <<", "<< local_pnt[1] << std::endl;
+    }
+
+    auto coeffs = polyfit(xvals, yvals, 3);
+
+    // acado setting
+    // because current pos is in local coordinate, x = y = psi = 0
+    vector<double> cur_state = {0, 0, v * MPH2MS, 0, 0};
+
+    double ref_v = 20;     // m/s
+    if (flg_init == false) {
+      printf("-------  initialized the acado ------- \n");
+      control_output = init_acado();
+      flg_init = true;
+    }
+    vector<double> predicted_states = motion_prediction(cur_state, control_output);
+    vector<double> ref_states = calculate_ref_states(coeffs, ref_v);
+    control_output = run_mpc_acado(predicted_states, ref_states, control_output);
+
+    printf(
+      "steer value: %lf,   throttle : %lf \n",
+      -control_output[1][0], control_output[0][0]);
+
+    // Display the MPC predicted trajectory
+    vector<double> mpc_x_vals;
+    vector<double> mpc_y_vals;
+
+    // .. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
+    // the points in the simulator are connected by a Green line
+    for (int i = 0; i < predicted_states.size(); i++) {
+      if (i % NY == 0) {
+        mpc_x_vals.push_back(predicted_states[i]);
+      } else if (i % NY == 1) {
+        mpc_y_vals.push_back(predicted_states[i]);
+      }
+    }
+
+    // Display the waypoints/reference line
+    vector<double> next_x_vals;
+    vector<double> next_y_vals;
+    //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
+    // the points in the simulator are connected by a Yellow line
+    for (int x = 0; x < 100; x = x + 5) {
+      double y = polyeval(coeffs, x);
+      next_x_vals.push_back(x);
+      next_y_vals.push_back(y);
+    }
+
+  }
+
 
 }
 
@@ -55,48 +129,33 @@ MPCController::~MPCController()
 {
 }
 
+void MPCController::configure(
+  const rclcpp_lifecycle::LifecycleNode::WeakPtr &,
+  std::string name, const std::shared_ptr<tf2_ros::Buffer> &
+  /*const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> &*/)
+{
+
+}
+
 void MPCController::solve()
 {
-  const auto prep_ret = acado_preparationStep();
-  if (0 != prep_ret) {
-    std::string err_str{"Solver preparation error: ", std::string::allocator_type{}};
-    err_str += std::to_string(prep_ret);
-    throw std::runtime_error{err_str};
-  }
-  const auto solve_ret = acado_feedbackStep();
-  if (0 != solve_ret) {
-    std::string err_str{"Solver error: ", std::string::allocator_type{}};
-    err_str += std::to_string(solve_ret);
-    throw std::runtime_error{err_str};
-  }
+
 }
 
 geometry_msgs::msg::TwistStamped MPCController::computeVelocityCommands(
   const geometry_msgs::msg::PoseStamped & pose,
   const geometry_msgs::msg::Twist & velocity)
 {
-  auto current_idx = 0;
-  const auto dt = 0.001;
-  nav_msgs::msg::Path ref_path;
-
-  const auto max_pts = ref_path.poses.size();
-
-  const auto horizon = std::min(static_cast<std::size_t>(max_pts - current_idx), HORIZON);
-  // Consider different ways of updating initial guess for reference update
-
-  std::fill(&acadoVariables.u[0U], &acadoVariables.u[HORIZON * NU], AcadoReal{});
-  acado_initializeNodesByForwardSimulation();
-
-  solve();
-
-  const auto idx = static_cast<std::size_t>(count) * static_cast<std::size_t>(NX);
-  const auto longitudinal0 = static_cast<Real>(acadoVariables.x[idx + IDX_ACCEL]);
-  const auto lateral0 = static_cast<Real>(acadoVariables.x[idx + IDX_WHEEL_ANGLE]);
-  const auto jdx = (static_cast<std::size_t>(count) + 1U) * static_cast<std::size_t>(NX);
-  const auto longitudinal1 = static_cast<Real>(acadoVariables.x[jdx + IDX_ACCEL]);
-  const auto lateral1 = static_cast<Real>(acadoVariables.x[jdx + IDX_WHEEL_ANGLE]);
-
   return geometry_msgs::msg::TwistStamped();
+}
+
+void MPCController::setPlan(const nav_msgs::msg::Path & path)
+{
+
+}
+
+void MPCController::setSpeedLimit(const double & speed_limit)
+{
 
 }
 
@@ -104,3 +163,14 @@ geometry_msgs::msg::TwistStamped MPCController::computeVelocityCommands(
 }  // namespace mpc_controller
 
 }  // namespace botanbot_control
+
+
+int main(int argc, char ** argv)
+{
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<rclcpp::Node>("mpc");
+  botanbot_control::mpc_controller::MPCController mpc;
+  rclcpp::spin(node->get_node_base_interface());
+  rclcpp::shutdown();
+  return 0;
+}

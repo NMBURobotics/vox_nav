@@ -48,6 +48,7 @@
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "geometry_msgs/msg/twist_stamped.hpp"
 #include "nav_msgs/msg/path.hpp"
+#include "nav_msgs/msg/odometry.hpp"
 
 
 namespace botanbot_control
