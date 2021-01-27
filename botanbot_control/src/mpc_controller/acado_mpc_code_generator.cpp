@@ -7,45 +7,44 @@ int main()
   USING_NAMESPACE_ACADO
 
   // — state variables (acadoVariables.x)—
-  DifferentialState x;     // x position of rear axle
-  DifferentialState y;     // y position of rear axle
-  DifferentialState v;     // v vehicle speed [m/s]
-  DifferentialState yaw;   // vehicle orientation [rad]
-  DifferentialState delta;
+  DifferentialState x;       // x position of rear axle
+  DifferentialState y;       // y position of rear axle
+  DifferentialState theta;   // vehicle orientation [rad]
 
   // — control inputs —
-  Control a;                 // acceleration[m/s^2]
-  Control deltarate;         // steering angle rate
+  Control v;                   // speed[m/s]
+  Control phi;                 // steering angle
 
   // —- differential equations —-
   double L = 1.32;            // vehicle wheel base
   DifferentialEquation f;
-  f << dot(x) == v * cos(yaw);
-  f << dot(y) == v * sin(yaw);
-  f << dot(v) == a;
-  f << dot(yaw) == v * tan(delta) / L;
-  f << dot(delta) == deltarate;
+  f << dot(x) == v * cos(theta);
+  f << dot(y) == v * sin(theta);
+  f << dot(theta) == (v / L) * tan(phi);
 
   // — reference functions (acadoVariables.y) —
   Function rf;
   Function rfN;
-  rf << x << y << v << yaw << delta;
-  rfN << x << y << v << yaw << delta;
+  rf << x << y << theta;
+  rfN << x << y << theta;
   // — constraints, weighting matrices for the reference functions —
   // N=number of prediction time steps, Ts=step time interval
   // Provide defined weighting matrices:
   BMatrix W = eye<bool>(rf.getDim());
   BMatrix WN = eye<bool>(rfN.getDim());
 
-  // 5 second time horizon
-  const int N = 30;  // Number of steps
+  // Number of steps
+  const int N = 10;
   const double Ts = 0.1;
 
   OCP ocp(0, N * Ts, N);
 
   ocp.subjectTo(f);
-  ocp.subjectTo(-3.0 <= a <= 3.0);
-  ocp.subjectTo(-M_PI <= delta <= M_PI);
+  // limit velocity(m/s) to [-1.0,1.0]
+  ocp.subjectTo(-1.0 <= v <= 1.0);
+
+  // limit steering angle(rad) to [-0.78,0.78]
+  ocp.subjectTo(-M_PI / 4.0 <= phi <= M_PI / 4.0);
   ocp.minimizeLSQ(W, rf);
   ocp.minimizeLSQEndTerm(WN, rfN);
 

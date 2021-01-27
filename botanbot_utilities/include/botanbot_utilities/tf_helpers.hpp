@@ -42,6 +42,22 @@ bool transformPose(
   rclcpp::Duration & transform_tolerance
 );
 
+/**
+ * @brief Get the Current Pose object
+ *
+ * @param global_pose
+ * @param tf_buffer
+ * @param global_frame
+ * @param robot_frame
+ * @param transform_timeout
+ * @return true
+ * @return false
+ */
+bool getCurrentPose(
+  geometry_msgs::msg::PoseStamped & global_pose,
+  tf2_ros::Buffer & tf_buffer, const std::string global_frame = "map",
+  const std::string robot_frame = "base_link", const double transform_timeout = 0.1);
+
 }  // namespace botanbot_utilities
 
 #endif  // BOTANBOT_UTILITIES__TF_HELPERS_HPP_

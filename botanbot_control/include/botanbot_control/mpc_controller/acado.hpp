@@ -31,7 +31,10 @@ vector<double> motion_prediction(
   const vector<vector<double>> & prev_u);
 vector<double> calculate_ref_states(const Eigen::VectorXd & coeff, const double & ref_v);
 vector<double> update_states(vector<double> state, double acceleration_cmd, double steering_cmd);
+int calculate_nearest_state_index(
+  vector<double> ptsx, vector<double> ptsy, double currx,
+  double curry);
 #define Ts 0.1 // sampling time
-#define Lf 2.6
+#define Lf 1.32
 
 #endif

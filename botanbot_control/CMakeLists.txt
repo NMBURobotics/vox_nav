@@ -35,6 +35,8 @@ find_package(botanbot_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(ACADO REQUIRED)
+find_package(botanbot_msgs REQUIRED)
+find_package(botanbot_utilities REQUIRED)
 
 include_directories(
   include
@@ -65,7 +67,9 @@ set(dependencies
     OCTOMAP
     LIBFCL
     ompl
-    pcl_ros)
+    pcl_ros
+    botanbot_msgs
+    botanbot_utilities)
 
 file(GLOB_RECURSE SOURCES ${ACADO_INCLUDE_DIRS}/../../share/acado/external_packages/qpoases/SRC/*.cpp 
                           include/botanbot_control/mpc_controller/mpc_acado/*.c

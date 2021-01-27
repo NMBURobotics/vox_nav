@@ -23,110 +23,173 @@ namespace botanbot_control
 namespace mpc_controller
 {
 
-MPCController::MPCController()
+MPCController::MPCController(rclcpp::Node::SharedPtr parent)
 {
-  vector<vector<double>> control_output;
+  node_ = parent;
 
-  nav_msgs::msg::Odometry robot_odom;
-  nav_msgs::msg::Path path;
+  cmd_vel_publisher_ =
+    node_->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+
+  odom_subscriber_ = node_->create_subscription<nav_msgs::msg::Odometry>(
+    "/odometry/global", rclcpp::SystemDefaultsQoS(),
+    std::bind(&MPCController::globalOdometryCallback, this, std::placeholders::_1));
+
+  // setup TF buffer and listerner to read transforms
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+  timer_ = node_->create_wall_timer(
+    std::chrono::milliseconds(100),
+    std::bind(&MPCController::timerCallback, this));
+
   geometry_msgs::msg::PoseStamped pose;
 
   pose.pose.position.x = 1.0;
-  path.poses.push_back(pose);
-  pose.pose.position.x = 2.0;
-  path.poses.push_back(pose);
-  pose.pose.position.x = 3.0;
-  path.poses.push_back(pose);
-  pose.pose.position.x = 4.0;
-  path.poses.push_back(pose);
+  pose.pose.position.y = 1.0;
+  ref_traj.poses.push_back(pose);
 
-  // j[1] is the data JSON object
-  vector<double> ptsx;
-  vector<double> ptsy;
-  for (auto && path_pose : path.poses) {
+  pose.pose.position.x = 2.0;
+  pose.pose.position.y = 2.0;
+  ref_traj.poses.push_back(pose);
+
+  pose.pose.position.x = 3.0;
+  pose.pose.position.y = 3.0;
+  ref_traj.poses.push_back(pose);
+
+  pose.pose.position.x = 4.0;
+  pose.pose.position.y = 4.0;
+  ref_traj.poses.push_back(pose);
+
+  pose.pose.position.x = 4.0;
+  pose.pose.position.y = 5.0;
+  ref_traj.poses.push_back(pose);
+
+  pose.pose.position.x = 5.0;
+  pose.pose.position.y = 6.0;
+  ref_traj.poses.push_back(pose);
+
+
+  for (auto && path_pose : ref_traj.poses) {
     ptsx.push_back(path_pose.pose.position.x);
     ptsy.push_back(path_pose.pose.position.y);
-
-    double px = path_pose.pose.position.x;
-    double py = path_pose.pose.position.x;
-    double psi = 0;
-    double v = robot_odom.twist.twist.linear.x;
-
-    // simulate latency compensation
-    const double latency = 0.1;
-    px = px + v * cos(psi) * latency;
-    py = py + v * sin(psi) * latency;
-
-    //converting to car's local coordinate system
-    Eigen::VectorXd xvals(ptsx.size());
-    Eigen::VectorXd yvals(ptsx.size());
-    Eigen::MatrixXd translation(2, 2);
-    translation << cos(-psi), -sin(-psi),
-      sin(-psi), cos(-psi);
-    Eigen::VectorXd pnt(2);
-    Eigen::VectorXd local_pnt(2);
-
-    for (int i = 0; i < ptsx.size(); i++) {
-      // convert to vehicle coordinates
-      pnt << ptsx[i] - px, ptsy[i] - py;
-      local_pnt = translation * pnt;
-      xvals[i] = local_pnt[0];
-      yvals[i] = local_pnt[1];
-      // std::cout <<"i: "<< i<< "lcl: " << local_pnt[0] <<", "<< local_pnt[1] << std::endl;
-    }
-
-    auto coeffs = polyfit(xvals, yvals, 3);
-
-    // acado setting
-    // because current pos is in local coordinate, x = y = psi = 0
-    vector<double> cur_state = {0, 0, v * MPH2MS, 0, 0};
-
-    double ref_v = 20;     // m/s
-    if (flg_init == false) {
-      printf("-------  initialized the acado ------- \n");
-      control_output = init_acado();
-      flg_init = true;
-    }
-    vector<double> predicted_states = motion_prediction(cur_state, control_output);
-    vector<double> ref_states = calculate_ref_states(coeffs, ref_v);
-    control_output = run_mpc_acado(predicted_states, ref_states, control_output);
-
-    printf(
-      "steer value: %lf,   throttle : %lf \n",
-      -control_output[1][0], control_output[0][0]);
-
-    // Display the MPC predicted trajectory
-    vector<double> mpc_x_vals;
-    vector<double> mpc_y_vals;
-
-    // .. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-    // the points in the simulator are connected by a Green line
-    for (int i = 0; i < predicted_states.size(); i++) {
-      if (i % NY == 0) {
-        mpc_x_vals.push_back(predicted_states[i]);
-      } else if (i % NY == 1) {
-        mpc_y_vals.push_back(predicted_states[i]);
-      }
-    }
-
-    // Display the waypoints/reference line
-    vector<double> next_x_vals;
-    vector<double> next_y_vals;
-    //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-    // the points in the simulator are connected by a Yellow line
-    for (int x = 0; x < 100; x = x + 5) {
-      double y = polyeval(coeffs, x);
-      next_x_vals.push_back(x);
-      next_y_vals.push_back(y);
-    }
-
   }
-
 
 }
 
+
 MPCController::~MPCController()
 {
+}
+
+void MPCController::globalOdometryCallback(
+  const nav_msgs::msg::Odometry::ConstSharedPtr msg)
+{
+  latest_recived_odom_ = *msg;
+}
+
+
+void MPCController::timerCallback()
+{
+
+  geometry_msgs::msg::PoseStamped curr_robot_pose;
+  if (!botanbot_utilities::getCurrentPose(
+      curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1))
+  {
+    RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
+  }
+
+  int nearest_state_index = calculate_nearest_state_index(
+    ptsx, ptsy,
+    curr_robot_pose.pose.position.x,
+    curr_robot_pose.pose.position.y);
+
+  std::cout << "nearest point x: " << ptsx[nearest_state_index] << std::endl;
+  std::cout << "nearest point y: " << ptsy[nearest_state_index] << std::endl;
+
+  tf2::Quaternion q;
+  tf2::fromMsg(curr_robot_pose.pose.orientation, q);
+  double roll, pitch, yaw;
+
+  tf2::Matrix3x3 m(q);
+  m.getRPY(roll, pitch, yaw);
+
+  // current robot states
+  double x = curr_robot_pose.pose.position.x;
+  double y = curr_robot_pose.pose.position.y;
+  double theta = yaw;
+
+  double v = latest_recived_odom_.twist.twist.linear.x;
+
+  //converting to car's local coordinate system
+  Eigen::VectorXd xvals(ptsx.size());
+  Eigen::VectorXd yvals(ptsx.size());
+  Eigen::MatrixXd translation(2, 2);
+  translation << cos(theta), -sin(theta),
+    sin(theta), cos(theta);
+  Eigen::VectorXd pnt(2);
+  Eigen::VectorXd local_pnt(2);
+
+  for (int i = 0; i < ptsx.size(); i++) {
+    // convert to vehicle coordinates
+    pnt << ptsx[i] - x, ptsy[i] - y;
+    local_pnt = translation * pnt;
+    xvals[i] = local_pnt[0];
+    yvals[i] = local_pnt[1];
+  }
+
+  auto coeffs = polyfit(xvals, yvals, 3);
+  std::cout << "coeffs \n " << coeffs << std::endl;
+
+  // acado setting
+  // because current pos is in local coordinate, x = y = psi = 0
+  vector<double> cur_state = {0, 0, 0};
+
+
+  if (flg_init == false) {
+    printf("-------  initialized the acado ------- \n");
+    control_output = init_acado();
+    flg_init = true;
+  }
+  vector<double> predicted_states = motion_prediction(cur_state, control_output);
+  vector<double> ref_states = calculate_ref_states(coeffs, v);
+  control_output = run_mpc_acado(predicted_states, ref_states, control_output);
+
+  /*printf(
+    "steer value: %lf,   throttle : %lf \n",
+    -control_output[1][0], control_output[0][0]);*/
+
+  // Display the MPC predicted trajectory
+  vector<double> mpc_x_vals;
+  vector<double> mpc_y_vals;
+
+  // .. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
+  // the points in the simulator are connected by a Green line
+  for (int i = 0; i < predicted_states.size(); i++) {
+    if (i % NY == 0) {
+      mpc_x_vals.push_back(predicted_states[i]);
+    } else if (i % NY == 1) {
+      mpc_y_vals.push_back(predicted_states[i]);
+    }
+  }
+
+  // Display the waypoints/reference line
+  vector<double> next_x_vals;
+  vector<double> next_y_vals;
+  //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
+  // the points in the simulator are connected by a Yellow line
+  for (int x = 0; x < 100; x = x + 5) {
+    double y = polyeval(coeffs, x);
+    next_x_vals.push_back(x);
+    next_y_vals.push_back(y);
+  }
+
+  std::cout << "velocity cmd" << control_output[0][0] << std::endl;
+  std::cout << "steering angle" << control_output[1][0] << std::endl;
+
+  geometry_msgs::msg::Twist twist;
+  twist.linear.x = -control_output[0][0];
+  twist.angular.z = -control_output[1][0];
+  cmd_vel_publisher_->publish(twist);
 }
 
 void MPCController::configure(
@@ -141,7 +204,6 @@ void MPCController::solve()
 {
 
 }
-
 geometry_msgs::msg::TwistStamped MPCController::computeVelocityCommands(
   const geometry_msgs::msg::PoseStamped & pose,
   const geometry_msgs::msg::Twist & velocity)
@@ -153,6 +215,38 @@ void MPCController::setPlan(const nav_msgs::msg::Path & path)
 {
 
 }
+
+Eigen::VectorXd MPCController::polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals, int order)
+{
+  assert(xvals.size() == yvals.size());
+  assert(order >= 1 && order <= xvals.size() - 1);
+  Eigen::MatrixXd A(xvals.size(), order + 1);
+
+  for (int i = 0; i < xvals.size(); i++) {
+    A(i, 0) = 1.0;
+  }
+
+  for (int j = 0; j < xvals.size(); j++) {
+    for (int i = 0; i < order; i++) {
+      A(j, i + 1) = A(j, i) * xvals(j);
+    }
+  }
+
+  auto Q = A.householderQr();
+  auto result = Q.solve(yvals);
+  return result;
+}
+
+// Evaluate a polynomial.
+double MPCController::polyeval(Eigen::VectorXd coeffs, double x)
+{
+  double result = 0.0;
+  for (int i = 0; i < coeffs.size(); i++) {
+    result += coeffs[i] * pow(x, i);
+  }
+  return result;
+}
+
 
 void MPCController::setSpeedLimit(const double & speed_limit)
 {
@@ -169,7 +263,7 @@ int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<rclcpp::Node>("mpc");
-  botanbot_control::mpc_controller::MPCController mpc;
+  botanbot_control::mpc_controller::MPCController mpc(node);
   rclcpp::spin(node->get_node_base_interface());
   rclcpp::shutdown();
   return 0;
