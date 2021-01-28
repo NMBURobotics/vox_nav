@@ -10,9 +10,10 @@ int main()
   DifferentialState x;       // x position of rear axle
   DifferentialState y;       // y position of rear axle
   DifferentialState theta;   // vehicle orientation [rad]
+  DifferentialState v;       // vehicle speed [m/s]
 
   // — control inputs —
-  Control v;                   // speed[m/s]
+  Control a;                   // acceleration[m/s]
   Control phi;                 // steering angle
 
   // —- differential equations —-
@@ -21,12 +22,14 @@ int main()
   f << dot(x) == v * cos(theta);
   f << dot(y) == v * sin(theta);
   f << dot(theta) == (v / L) * tan(phi);
+  f << dot(v) == a;
+
 
   // — reference functions (acadoVariables.y) —
   Function rf;
   Function rfN;
-  rf << x << y << theta;
-  rfN << x << y << theta;
+  rf << x << y << theta << v;
+  rfN << x << y << theta << v;
   // — constraints, weighting matrices for the reference functions —
   // N=number of prediction time steps, Ts=step time interval
   // Provide defined weighting matrices:
@@ -41,7 +44,7 @@ int main()
 
   ocp.subjectTo(f);
   // limit velocity(m/s) to [-1.0,1.0]
-  ocp.subjectTo(-1.0 <= v <= 1.0);
+  ocp.subjectTo(-1.0 <= a <= 1.0);
 
   // limit steering angle(rad) to [-0.78,0.78]
   ocp.subjectTo(-M_PI / 4.0 <= phi <= M_PI / 4.0);

@@ -44,34 +44,40 @@ MPCController::MPCController(rclcpp::Node::SharedPtr parent)
 
   geometry_msgs::msg::PoseStamped pose;
 
-  pose.pose.position.x = 1.0;
-  pose.pose.position.y = 1.0;
+  pose.pose.position.x = -1.0;
+  pose.pose.position.y = -1.0;
   ref_traj.poses.push_back(pose);
 
-  pose.pose.position.x = 2.0;
-  pose.pose.position.y = 2.0;
+  pose.pose.position.x = -2.0;
+  pose.pose.position.y = -2.0;
   ref_traj.poses.push_back(pose);
 
-  pose.pose.position.x = 3.0;
-  pose.pose.position.y = 3.0;
+  pose.pose.position.x = -3.0;
+  pose.pose.position.y = -3.0;
   ref_traj.poses.push_back(pose);
 
-  pose.pose.position.x = 4.0;
-  pose.pose.position.y = 4.0;
+  pose.pose.position.x = -4.0;
+  pose.pose.position.y = -4.0;
   ref_traj.poses.push_back(pose);
 
-  pose.pose.position.x = 4.0;
-  pose.pose.position.y = 5.0;
+  pose.pose.position.x = -4.0;
+  pose.pose.position.y = -5.0;
   ref_traj.poses.push_back(pose);
 
-  pose.pose.position.x = 5.0;
-  pose.pose.position.y = 6.0;
+  pose.pose.position.x = -5.0;
+  pose.pose.position.y = -6.0;
   ref_traj.poses.push_back(pose);
 
 
   for (auto && path_pose : ref_traj.poses) {
     ptsx.push_back(path_pose.pose.position.x);
     ptsy.push_back(path_pose.pose.position.y);
+  }
+
+  if (flg_init == false) {
+    printf("-------  initialized the acado ------- \n");
+    control_output = init_acado();
+    flg_init = true;
   }
 
 }
@@ -90,7 +96,6 @@ void MPCController::globalOdometryCallback(
 
 void MPCController::timerCallback()
 {
-
   geometry_msgs::msg::PoseStamped curr_robot_pose;
   if (!botanbot_utilities::getCurrentPose(
       curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1))
@@ -117,7 +122,6 @@ void MPCController::timerCallback()
   double x = curr_robot_pose.pose.position.x;
   double y = curr_robot_pose.pose.position.y;
   double theta = yaw;
-
   double v = latest_recived_odom_.twist.twist.linear.x;
 
   //converting to car's local coordinate system
@@ -140,18 +144,13 @@ void MPCController::timerCallback()
   auto coeffs = polyfit(xvals, yvals, 3);
   std::cout << "coeffs \n " << coeffs << std::endl;
 
+  double target_speed = 1.0;
+
   // acado setting
   // because current pos is in local coordinate, x = y = psi = 0
-  vector<double> cur_state = {0, 0, 0};
-
-
-  if (flg_init == false) {
-    printf("-------  initialized the acado ------- \n");
-    control_output = init_acado();
-    flg_init = true;
-  }
+  vector<double> cur_state = {0, 0, 0, 0};
   vector<double> predicted_states = motion_prediction(cur_state, control_output);
-  vector<double> ref_states = calculate_ref_states(coeffs, v);
+  vector<double> ref_states = calculate_ref_states(coeffs, target_speed, v);
   control_output = run_mpc_acado(predicted_states, ref_states, control_output);
 
   /*printf(
@@ -187,8 +186,8 @@ void MPCController::timerCallback()
   std::cout << "steering angle" << control_output[1][0] << std::endl;
 
   geometry_msgs::msg::Twist twist;
-  twist.linear.x = -control_output[0][0];
-  twist.angular.z = -control_output[1][0];
+  twist.linear.x = control_output[0][0];
+  twist.angular.z = control_output[1][0];
   cmd_vel_publisher_->publish(twist);
 }
 

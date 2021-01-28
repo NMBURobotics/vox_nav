@@ -11,9 +11,7 @@
 using namespace std;
 
 #define NX   ACADO_NX              /* Number of differential state variables.  */
-#define NXA  ACADO_NXA             /* Number of algebraic variables. */
 #define NU   ACADO_NU              /* Number of control inputs. */
-#define NOD  ACADO_NOD             /* Number of online data values. */
 
 #define NY   ACADO_NY              /* Number of measurements/references on nodes 0..N - 1. */
 #define NYN  ACADO_NYN             /* Number of measurements/references on node N. */
@@ -29,7 +27,9 @@ vector<vector<double>> run_mpc_acado(
 vector<double> motion_prediction(
   const vector<double> & cur_states,
   const vector<vector<double>> & prev_u);
-vector<double> calculate_ref_states(const Eigen::VectorXd & coeff, const double & ref_v);
+vector<double> calculate_ref_states(
+  const Eigen::VectorXd & coeff, const double & ref_v,
+  double curr_speed);
 vector<double> update_states(vector<double> state, double acceleration_cmd, double steering_cmd);
 int calculate_nearest_state_index(
   vector<double> ptsx, vector<double> ptsy, double currx,

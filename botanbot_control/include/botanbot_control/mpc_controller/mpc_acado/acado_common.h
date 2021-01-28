@@ -70,15 +70,15 @@ extern "C"
 /** Number of control variables. */
 #define ACADO_NU 2
 /** Number of differential variables. */
-#define ACADO_NX 3
+#define ACADO_NX 4
 /** Number of algebraic variables. */
 #define ACADO_NXA 0
 /** Number of differential derivative variables. */
 #define ACADO_NXD 0
 /** Number of references/measurements per node on the first N nodes. */
-#define ACADO_NY 3
+#define ACADO_NY 4
 /** Number of references/measurements on the last (N + 1)st node. */
-#define ACADO_NYN 3
+#define ACADO_NYN 4
 /** Total number of QP optimization variables. */
 #define ACADO_QP_NV 20
 /** Number of integration steps per shooting interval. */
@@ -104,11 +104,11 @@ extern "C"
 typedef struct ACADOvariables_
 {
 int dummy;
-/** Matrix of size: 11 x 3 (row major format)
+/** Matrix of size: 11 x 4 (row major format)
  * 
  *  Matrix containing 11 differential variable vectors.
  */
-real_t x[ 33 ];
+real_t x[ 44 ];
 
 /** Matrix of size: 10 x 2 (row major format)
  * 
@@ -116,29 +116,29 @@ real_t x[ 33 ];
  */
 real_t u[ 20 ];
 
-/** Column vector of size: 30
+/** Column vector of size: 40
  * 
- *  Matrix containing 10 reference/measurement vectors of size 3 for first 10 nodes.
+ *  Matrix containing 10 reference/measurement vectors of size 4 for first 10 nodes.
  */
-real_t y[ 30 ];
+real_t y[ 40 ];
 
-/** Column vector of size: 3
+/** Column vector of size: 4
  * 
  *  Reference/measurement vector for the 11. node.
  */
-real_t yN[ 3 ];
+real_t yN[ 4 ];
 
-/** Matrix of size: 30 x 3 (row major format) */
-real_t W[ 90 ];
+/** Matrix of size: 40 x 4 (row major format) */
+real_t W[ 160 ];
 
-/** Matrix of size: 3 x 3 (row major format) */
-real_t WN[ 9 ];
+/** Matrix of size: 4 x 4 (row major format) */
+real_t WN[ 16 ];
 
-/** Column vector of size: 3
+/** Column vector of size: 4
  * 
  *  Current state feedback vector.
  */
-real_t x0[ 3 ];
+real_t x0[ 4 ];
 
 /** Column vector of size: 20
  * 
@@ -163,73 +163,73 @@ real_t ubValues[ 20 ];
  */
 typedef struct ACADOworkspace_
 {
-/** Column vector of size: 17 */
-real_t rhs_aux[ 17 ];
+/** Column vector of size: 19 */
+real_t rhs_aux[ 19 ];
 
 real_t rk_ttt;
 
-/** Row vector of size: 20 */
-real_t rk_xxx[ 20 ];
+/** Row vector of size: 30 */
+real_t rk_xxx[ 30 ];
 
-/** Matrix of size: 3 x 18 (row major format) */
-real_t rk_kkk[ 54 ];
+/** Matrix of size: 3 x 28 (row major format) */
+real_t rk_kkk[ 84 ];
 
-/** Row vector of size: 20 */
-real_t state[ 20 ];
+/** Row vector of size: 30 */
+real_t state[ 30 ];
 
-/** Column vector of size: 30 */
-real_t d[ 30 ];
+/** Column vector of size: 40 */
+real_t d[ 40 ];
 
-/** Column vector of size: 30 */
-real_t Dy[ 30 ];
+/** Column vector of size: 40 */
+real_t Dy[ 40 ];
 
-/** Column vector of size: 3 */
-real_t DyN[ 3 ];
+/** Column vector of size: 4 */
+real_t DyN[ 4 ];
 
-/** Matrix of size: 30 x 3 (row major format) */
-real_t evGx[ 90 ];
+/** Matrix of size: 40 x 4 (row major format) */
+real_t evGx[ 160 ];
 
-/** Matrix of size: 30 x 2 (row major format) */
-real_t evGu[ 60 ];
+/** Matrix of size: 40 x 2 (row major format) */
+real_t evGu[ 80 ];
 
-/** Row vector of size: 5 */
-real_t objValueIn[ 5 ];
+/** Row vector of size: 6 */
+real_t objValueIn[ 6 ];
 
-/** Row vector of size: 3 */
-real_t objValueOut[ 3 ];
+/** Row vector of size: 4 */
+real_t objValueOut[ 4 ];
 
-/** Matrix of size: 30 x 3 (row major format) */
-real_t Q1[ 90 ];
+/** Matrix of size: 40 x 4 (row major format) */
+real_t Q1[ 160 ];
 
-/** Matrix of size: 30 x 3 (row major format) */
-real_t Q2[ 90 ];
+/** Matrix of size: 40 x 4 (row major format) */
+real_t Q2[ 160 ];
 
-/** Matrix of size: 3 x 3 (row major format) */
-real_t QN1[ 9 ];
+/** Matrix of size: 4 x 4 (row major format) */
+real_t QN1[ 16 ];
 
-/** Matrix of size: 3 x 3 (row major format) */
-real_t QN2[ 9 ];
+/** Matrix of size: 4 x 4 (row major format) */
+real_t QN2[ 16 ];
 
-/** Column vector of size: 3 */
-real_t Dx0[ 3 ];
+/** Column vector of size: 4 */
+real_t Dx0[ 4 ];
 
-/** Matrix of size: 3 x 3 (row major format) */
-real_t T[ 9 ];
+/** Matrix of size: 4 x 4 (row major format) */
+real_t T[ 16 ];
 
-/** Matrix of size: 165 x 2 (row major format) */
-real_t E[ 330 ];
+/** Matrix of size: 220 x 2 (row major format) */
+real_t E[ 440 ];
 
-/** Matrix of size: 165 x 2 (row major format) */
-real_t QE[ 330 ];
+/** Matrix of size: 220 x 2 (row major format) */
+real_t QE[ 440 ];
 
-/** Column vector of size: 30 */
-real_t Qd[ 30 ];
+/** Column vector of size: 40 */
+real_t Qd[ 40 ];
 
-/** Column vector of size: 33 */
-real_t QDy[ 33 ];
+/** Column vector of size: 44 */
+real_t QDy[ 44 ];
 
-/** Matrix of size: 20 x 3 (row major format) */
-real_t H10[ 60 ];
+/** Matrix of size: 20 x 4 (row major format) */
+real_t H10[ 80 ];
 
 /** Matrix of size: 20 x 20 (row major format) */
 real_t H[ 400 ];
