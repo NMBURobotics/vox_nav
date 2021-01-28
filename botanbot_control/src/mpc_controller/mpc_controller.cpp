@@ -80,6 +80,8 @@ MPCController::MPCController(rclcpp::Node::SharedPtr parent)
     flg_init = true;
   }
 
+  previous_time_ = node_->now();
+
 }
 
 
@@ -96,6 +98,17 @@ void MPCController::globalOdometryCallback(
 
 void MPCController::timerCallback()
 {
+
+
+  double dt = node_->now().seconds() - previous_time_.seconds();
+
+  // reject if step is too long
+  if (dt > 0.5) {
+    previous_time_ = node_->now();
+    RCLCPP_WARN(node_->get_logger(), "A large step found but gonna igore it ");
+    dt = node_->now().seconds() - previous_time_.seconds();
+  }
+
   geometry_msgs::msg::PoseStamped curr_robot_pose;
   if (!botanbot_utilities::getCurrentPose(
       curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1))
@@ -182,13 +195,26 @@ void MPCController::timerCallback()
     next_y_vals.push_back(y);
   }
 
-  std::cout << "velocity cmd" << control_output[0][0] << std::endl;
-  std::cout << "steering angle" << control_output[1][0] << std::endl;
+  std::cout << "acceleration cmd " << control_output[0][0] << std::endl;
+  std::cout << "steering angle " << control_output[1][0] << std::endl;
 
-  geometry_msgs::msg::Twist twist;
-  twist.linear.x = control_output[0][0];
-  twist.angular.z = control_output[1][0];
+  twist.linear.x += control_output[0][0] * (dt);
+
+  double kMAX_SPEED = 1.0;     // maximum SPEED [M/S]
+
+  if (twist.linear.x > kMAX_SPEED) {
+    twist.linear.x = kMAX_SPEED;
+  } else if (twist.linear.x < -kMAX_SPEED) {
+    twist.linear.x = -kMAX_SPEED;
+  }
+
+  std::cout << "Time step " << dt << std::endl;
+
+  twist.angular.z = twist.linear.x * control_output[1][0] / Lf;
+
   cmd_vel_publisher_->publish(twist);
+
+  previous_time_ = node_->now();
 }
 
 void MPCController::configure(
