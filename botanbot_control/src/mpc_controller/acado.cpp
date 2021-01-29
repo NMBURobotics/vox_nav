@@ -234,8 +234,8 @@ vector<double> update_states(
   double streering_angle_cmd)
 {
   double kMAX_STEER = 0.6;   // maximum steering angle
-  double kMAX_ACCEL = 10.0;    // min
-  double kMIN_ACCEL = -10.0;  // max
+  double kMAX_ACCEL = 2.0;    // min
+  double kMIN_ACCEL = -2.0;  // max
 
   if (streering_angle_cmd > kMAX_STEER) {
     streering_angle_cmd = kMAX_STEER;

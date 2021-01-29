@@ -44,7 +44,7 @@ int main()
 
   ocp.subjectTo(f);
   // limit velocity(m/s) to [-1.0,1.0]
-  ocp.subjectTo(-10.0 <= a <= 10.0);
+  ocp.subjectTo(-2.0 <= a <= 2.0);
 
   // limit steering angle(rad) to [-0.78,0.78]
   ocp.subjectTo(-M_PI / 4.0 <= phi <= M_PI / 4.0);

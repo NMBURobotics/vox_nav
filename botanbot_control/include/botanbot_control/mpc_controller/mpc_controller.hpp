@@ -93,6 +93,9 @@ private:
   std::vector<double> ptsx;
   std::vector<double> ptsy;
 
+  Eigen::VectorXd xvals_base_link;
+  Eigen::VectorXd yvals_base_link;
+
   vector<vector<double>> control_output;
 
   geometry_msgs::msg::Twist twist;

@@ -27,6 +27,12 @@ bool transformPose(
   rclcpp::Duration & transform_tolerance
 )
 {
+
+  while (!tf->canTransform("base_link", "map", rclcpp::Time(0))) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    RCLCPP_INFO(rclcpp::get_logger("tf_help"), "Waiting for Transforms to be available!");
+  }
+  RCLCPP_INFO(rclcpp::get_logger("tf_help"), "Transforms are available now!");
   if (in_pose.header.frame_id == frame) {
     out_pose = in_pose;
     return true;

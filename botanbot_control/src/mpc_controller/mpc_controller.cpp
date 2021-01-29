@@ -61,13 +61,16 @@ MPCController::MPCController(rclcpp::Node::SharedPtr parent)
   pose.pose.position.y = -4.0;
   ref_traj.poses.push_back(pose);
 
-  pose.pose.position.x = -4.0;
+  pose.pose.position.x = -5.0;
   pose.pose.position.y = -5.0;
   ref_traj.poses.push_back(pose);
 
-  pose.pose.position.x = -5.0;
+  pose.pose.position.x = -6.0;
   pose.pose.position.y = -6.0;
   ref_traj.poses.push_back(pose);
+
+  xvals_base_link.resize(ref_traj.poses.size());
+  yvals_base_link.resize(ref_traj.poses.size());
 
 
   if (flg_init == false) {
@@ -94,8 +97,6 @@ void MPCController::globalOdometryCallback(
 
 void MPCController::timerCallback()
 {
-  Eigen::VectorXd xvals_base_link(ref_traj.poses.size());
-  Eigen::VectorXd yvals_base_link(ref_traj.poses.size());
 
   rclcpp::Duration transfrom_tolerance(std::chrono::seconds(1));
 
@@ -103,24 +104,25 @@ void MPCController::timerCallback()
   for (auto && path_pose_map : ref_traj.poses) {
     geometry_msgs::msg::PoseStamped path_pose_base_link;
     path_pose_map.header.frame_id = "map";
-    path_pose_map.header.stamp = node_->now();
+    path_pose_map.header.stamp.nanosec = node_->now().nanoseconds();
     path_pose_base_link.header.frame_id = "base_link";
-    path_pose_base_link.header.stamp = node_->now();
+    path_pose_base_link.header.stamp.nanosec = node_->now().nanoseconds();
 
     botanbot_utilities::transformPose(
       tf_buffer_,
       "base_link", path_pose_map, path_pose_base_link,
       transfrom_tolerance);
 
-    ptsx.push_back(path_pose_base_link.pose.position.x);
-    ptsy.push_back(path_pose_base_link.pose.position.y);
+    //ptsx.push_back(path_pose_base_link.pose.position.x);
+    //ptsy.push_back(path_pose_base_link.pose.position.y);
 
     xvals_base_link[index] = path_pose_base_link.pose.position.x;
     yvals_base_link[index] = path_pose_base_link.pose.position.y;
+    std::cout << "PATH IN BASE LINK X Y " << xvals_base_link[index] << yvals_base_link[index] <<
+      std::endl;
 
     index++;
   }
-
 
   double dt = node_->now().seconds() - previous_time_.seconds();
   // reject if step is too long
@@ -137,13 +139,13 @@ void MPCController::timerCallback()
     RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
   }
 
-  /*int nearest_state_index = calculate_nearest_state_index(
+  int nearest_state_index = calculate_nearest_state_index(
     ptsx, ptsy,
     curr_robot_pose.pose.position.x,
     curr_robot_pose.pose.position.y);
 
   std::cout << "nearest point x: " << ptsx[nearest_state_index] << std::endl;
-  std::cout << "nearest point y: " << ptsy[nearest_state_index] << std::endl;*/
+  std::cout << "nearest point y: " << ptsy[nearest_state_index] << std::endl;
 
   tf2::Quaternion q;
   tf2::fromMsg(curr_robot_pose.pose.orientation, q);
@@ -200,6 +202,7 @@ void MPCController::timerCallback()
   std::cout << "Time step " << dt << std::endl;
 
   twist.linear.x += control_output[0][0] * (dt);
+
   double kMAX_SPEED = 1.0;
 
   if (twist.linear.x > kMAX_SPEED) {
