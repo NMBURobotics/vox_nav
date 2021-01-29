@@ -34,9 +34,9 @@ find_package(trajectory_msgs REQUIRED)
 find_package(botanbot_msgs REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pluginlib REQUIRED)
-find_package(ACADO REQUIRED)
 find_package(botanbot_msgs REQUIRED)
 find_package(botanbot_utilities REQUIRED)
+find_package(casadi REQUIRED)
 
 include_directories(
   include
@@ -44,11 +44,7 @@ include_directories(
   ${THIS_PACKAGE_INCLUDE_DIRS}
   ${OMPL_INCLUDE_DIRS}
   ${OCTOMAP_INCLUDE_DIRS}
-  ${ACADO_INCLUDE_DIRS}
-  include/botanbot_control/mpc_controller/mpc_acado/
-  ${ACADO_INCLUDE_DIRS}/../../share/acado/external_packages/qpoases/
-  ${ACADO_INCLUDE_DIRS}/../../share/acado/external_packages/qpoases/INCLUDE/
-  ${ACADO_INCLUDE_DIRS}/../../share/acado/external_packages/qpoases/SRC/
+  ${casadi_INCLUDE_DIR}
 )
 
 set(dependencies
@@ -70,22 +66,15 @@ set(dependencies
     pcl_ros
     botanbot_msgs
     botanbot_utilities)
-
-file(GLOB_RECURSE SOURCES ${ACADO_INCLUDE_DIRS}/../../share/acado/external_packages/qpoases/SRC/*.cpp 
-                          include/botanbot_control/mpc_controller/mpc_acado/*.c
-                          include/botanbot_control/mpc_controller/mpc_acado/*.cpp)
-                          
-add_library(mpc_lib SHARED ${SOURCES})
-ament_target_dependencies(mpc_lib ${dependencies})
-target_link_libraries(mpc_lib ${ACADO_SHARED_LIBRARIES})
-
+                     
 set(mpc_controller_exc_name botanbot_planner_server)
-add_executable(${mpc_controller_exc_name} src/mpc_controller/acado.cpp
-                                          src/mpc_controller/mpc_controller.cpp)
-ament_target_dependencies(${mpc_controller_exc_name} ${dependencies})
-target_link_libraries(${mpc_controller_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES} mpc_lib)
 
-install(TARGETS mpc_lib
+add_executable(${mpc_controller_exc_name} src/mpc_controller/mpc_controller.cpp 
+                                          src/mpc_controller/mpc_controller_wrapper.cpp)
+ament_target_dependencies(${mpc_controller_exc_name} ${dependencies})
+target_link_libraries(${mpc_controller_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES} casadi)
+
+install(TARGETS 
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -110,5 +99,4 @@ endif()
 
 ament_export_include_directories(include)
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
-ament_export_libraries(mpc_lib)
 ament_package()

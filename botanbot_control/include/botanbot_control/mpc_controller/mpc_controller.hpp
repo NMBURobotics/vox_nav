@@ -1,112 +1,35 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+#include <casadi/casadi.hpp>
 
-
-#include <rclcpp/rclcpp.hpp>
-#include <botanbot_control/controller_core.hpp>
-#include <botanbot_control/mpc_controller/acado.hpp>
-#include <botanbot_utilities/tf_helpers.hpp>
-
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-
-namespace botanbot_control
+class MPCController
 {
-namespace mpc_controller
-{
-class MPCController : public botanbot_control::ControllerCore
-{
-public:
-  MPCController(rclcpp::Node::SharedPtr parent);
-  ~MPCController();
-
-  void configure(
-    const rclcpp_lifecycle::LifecycleNode::WeakPtr &,
-    std::string name, const std::shared_ptr<tf2_ros::Buffer> &
-    /*const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> &*/) override;
-
-  void setPlan(const nav_msgs::msg::Path & path) override;
-
-  geometry_msgs::msg::TwistStamped computeVelocityCommands(
-    const geometry_msgs::msg::PoseStamped & pose,
-    const geometry_msgs::msg::Twist & velocity) override;
-
-  void setSpeedLimit(const double & speed_limit) override;
-
-  void solve();
-
-
-// global variable
-
-  bool flg_init = false;
-
-
-// Evaluate a polynomial.
-  double polyeval(Eigen::VectorXd coeffs, double x);
-
-// Fit a polynomial.
-// Adapted from
-// https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
-  Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals, int order);
-
-
-  void  globalOdometryCallback(
-    const nav_msgs::msg::Odometry::ConstSharedPtr msg);
-
-  /**
-* @brief periodically called function to publish octomap and its pointcloud data
-*
-*/
-  void timerCallback();
-
 private:
-  // RCLCPP node
-  rclcpp::Node::SharedPtr node_;
-  // ROS2 oublisher to publish velocity commands , for maual robot jogging
-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
-  // tf buffer to get access to transfroms
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::shared_ptr<casadi::Opti> opti_;
 
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber_;
+  int N = 10;                                    // timesteps in MPC Horizon
+  double DT = 0.2;                               // discretization time between timesteps(s)
+  double L_F = 1.5213;                           // distance from CoG to front axle(m)
+  double L_R = 1.4987;                           // distance from CoG to rear axle(m)
+  double V_MIN = 0.0;                            // min / max velocity constraint(m / s)
+  double V_MAX = 20.0;
+  double A_MIN = -3.0;                           // min / max acceleration constraint(m / s ^ 2)
+  double A_MAX = 2.0;
+  double DF_MIN = -0.5;                          // min / max front steer angle constraint(rad)
+  double DF_MAX = 0.5;
+  double A_DOT_MIN = -1.5;                       // min / max jerk constraint(m / s ^ 3)
+  double A_DOT_MAX = 1.5;
+  double DF_DOT_MIN = -0.5;                                 // min / max front steer angle rate constraint(rad / s)
+  double DF_DOT_MAX = 0.5;
+  std::vector<double> vector_Q = {1.0, 1.0, 10.0, 0.1};     // weights on x, y, psi, and v.
+  std::vector<double> vector_R = {10.0, 100.0};             // weights on jerk and slew rate(steering angle derivative)
 
-  nav_msgs::msg::Odometry latest_recived_odom_;
+  // We need weight matrixes as diagonal
+  casadi::Matrix<double> Q;
+  casadi::Matrix<double> R;
 
-  // Used to creted a periodic callback function IOT publish transfrom/octomap/cloud etc.
-  rclcpp::TimerBase::SharedPtr timer_;
+  casadi::MX u_prev_;   // previous input: [u_{acc, -1}, u_{df, -1}]
+  casadi::MX z_curr_;   // current state:  [x_0, y_0, psi_0, v_0]
 
-  nav_msgs::msg::Path ref_traj;
-
-  // j[1] is the data JSON object
-  std::vector<double> ptsx;
-  std::vector<double> ptsy;
-
-  Eigen::VectorXd xvals_base_link;
-  Eigen::VectorXd yvals_base_link;
-
-  vector<vector<double>> control_output;
-
-  geometry_msgs::msg::Twist twist;
-
-
-  rclcpp::Time previous_time_;
-
-
+public:
+  MPCController(/* args */);
+  ~MPCController();
 };
-
-
-}  // namespace mpc_controller
-
-}  // namespace botanbot_control
