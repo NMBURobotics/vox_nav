@@ -43,6 +43,7 @@ MPCController::MPCController(rclcpp::Node::SharedPtr parent)
     std::bind(&MPCController::timerCallback, this));
 
   geometry_msgs::msg::PoseStamped pose;
+  pose.header.frame_id = "map";
 
   pose.pose.position.x = -1.0;
   pose.pose.position.y = -1.0;
@@ -69,11 +70,6 @@ MPCController::MPCController(rclcpp::Node::SharedPtr parent)
   ref_traj.poses.push_back(pose);
 
 
-  for (auto && path_pose : ref_traj.poses) {
-    ptsx.push_back(path_pose.pose.position.x);
-    ptsy.push_back(path_pose.pose.position.y);
-  }
-
   if (flg_init == false) {
     printf("-------  initialized the acado ------- \n");
     control_output = init_acado();
@@ -98,10 +94,35 @@ void MPCController::globalOdometryCallback(
 
 void MPCController::timerCallback()
 {
+  Eigen::VectorXd xvals_base_link(ref_traj.poses.size());
+  Eigen::VectorXd yvals_base_link(ref_traj.poses.size());
+
+  rclcpp::Duration transfrom_tolerance(std::chrono::seconds(1));
+
+  int index = 0;
+  for (auto && path_pose_map : ref_traj.poses) {
+    geometry_msgs::msg::PoseStamped path_pose_base_link;
+    path_pose_map.header.frame_id = "map";
+    path_pose_map.header.stamp = node_->now();
+    path_pose_base_link.header.frame_id = "base_link";
+    path_pose_base_link.header.stamp = node_->now();
+
+    botanbot_utilities::transformPose(
+      tf_buffer_,
+      "base_link", path_pose_map, path_pose_base_link,
+      transfrom_tolerance);
+
+    ptsx.push_back(path_pose_base_link.pose.position.x);
+    ptsy.push_back(path_pose_base_link.pose.position.y);
+
+    xvals_base_link[index] = path_pose_base_link.pose.position.x;
+    yvals_base_link[index] = path_pose_base_link.pose.position.y;
+
+    index++;
+  }
 
 
   double dt = node_->now().seconds() - previous_time_.seconds();
-
   // reject if step is too long
   if (dt > 0.5) {
     previous_time_ = node_->now();
@@ -116,13 +137,13 @@ void MPCController::timerCallback()
     RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
   }
 
-  int nearest_state_index = calculate_nearest_state_index(
+  /*int nearest_state_index = calculate_nearest_state_index(
     ptsx, ptsy,
     curr_robot_pose.pose.position.x,
     curr_robot_pose.pose.position.y);
 
   std::cout << "nearest point x: " << ptsx[nearest_state_index] << std::endl;
-  std::cout << "nearest point y: " << ptsy[nearest_state_index] << std::endl;
+  std::cout << "nearest point y: " << ptsy[nearest_state_index] << std::endl;*/
 
   tf2::Quaternion q;
   tf2::fromMsg(curr_robot_pose.pose.orientation, q);
@@ -137,24 +158,7 @@ void MPCController::timerCallback()
   double theta = yaw;
   double v = latest_recived_odom_.twist.twist.linear.x;
 
-  //converting to car's local coordinate system
-  Eigen::VectorXd xvals(ptsx.size());
-  Eigen::VectorXd yvals(ptsx.size());
-  Eigen::MatrixXd translation(2, 2);
-  translation << cos(theta), -sin(theta),
-    sin(theta), cos(theta);
-  Eigen::VectorXd pnt(2);
-  Eigen::VectorXd local_pnt(2);
-
-  for (int i = 0; i < ptsx.size(); i++) {
-    // convert to vehicle coordinates
-    pnt << ptsx[i] - x, ptsy[i] - y;
-    local_pnt = translation * pnt;
-    xvals[i] = local_pnt[0];
-    yvals[i] = local_pnt[1];
-  }
-
-  auto coeffs = polyfit(xvals, yvals, 3);
+  auto coeffs = polyfit(xvals_base_link, yvals_base_link, 3);
   std::cout << "coeffs \n " << coeffs << std::endl;
 
   double target_speed = 1.0;
@@ -165,10 +169,6 @@ void MPCController::timerCallback()
   vector<double> predicted_states = motion_prediction(cur_state, control_output);
   vector<double> ref_states = calculate_ref_states(coeffs, target_speed, v);
   control_output = run_mpc_acado(predicted_states, ref_states, control_output);
-
-  /*printf(
-    "steer value: %lf,   throttle : %lf \n",
-    -control_output[1][0], control_output[0][0]);*/
 
   // Display the MPC predicted trajectory
   vector<double> mpc_x_vals;
@@ -197,10 +197,10 @@ void MPCController::timerCallback()
 
   std::cout << "acceleration cmd " << control_output[0][0] << std::endl;
   std::cout << "steering angle " << control_output[1][0] << std::endl;
+  std::cout << "Time step " << dt << std::endl;
 
   twist.linear.x += control_output[0][0] * (dt);
-
-  double kMAX_SPEED = 1.0;     // maximum SPEED [M/S]
+  double kMAX_SPEED = 1.0;
 
   if (twist.linear.x > kMAX_SPEED) {
     twist.linear.x = kMAX_SPEED;
@@ -208,10 +208,7 @@ void MPCController::timerCallback()
     twist.linear.x = -kMAX_SPEED;
   }
 
-  std::cout << "Time step " << dt << std::endl;
-
   twist.angular.z = twist.linear.x * control_output[1][0] / Lf;
-
   cmd_vel_publisher_->publish(twist);
 
   previous_time_ = node_->now();
