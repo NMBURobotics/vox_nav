@@ -86,6 +86,9 @@ private:
   rclcpp::Time previous_time_;
 
   MPCController mpc_;
+
+  SolutionResult::control_input_t previous_control_;
+
 };
 
 
