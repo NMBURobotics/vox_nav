@@ -14,22 +14,22 @@ class MPCController
 private:
   std::shared_ptr<casadi::Opti> opti_;
 
-  int N = 10;                                    // timesteps in MPC Horizon
-  double DT = 0.1;                               // discretization time between timesteps(s)
-  double L_F = 0.66;                           // distance from CoG to front axle(m)
-  double L_R = 0.66;                           // distance from CoG to rear axle(m)
-  double V_MIN = -10.0;                            // min / max velocity constraint(m / s)
+  int N = 20;                                                // timesteps in MPC Horizon
+  double DT = 0.1;                                          // discretization time between timesteps(s)
+  double L_F = 0.66;                                        // distance from CoG to front axle(m)
+  double L_R = 0.66;                                        // distance from CoG to rear axle(m)
+  double V_MIN = -10.0;                                     // min / max velocity constraint(m / s)
   double V_MAX = 10.0;
-  double A_MIN = -2.0;                           // min / max acceleration constraint(m / s ^ 2)
+  double A_MIN = -2.0;                                      // min / max acceleration constraint(m / s ^ 2)
   double A_MAX = 2.0;
-  double DF_MIN = -0.6;                          // min / max front steer angle constraint(rad)
+  double DF_MIN = -0.6;                                     // min / max front steer angle constraint(rad)
   double DF_MAX = 0.6;
-  double A_DOT_MIN = -1.5;                       // min / max jerk constraint(m / s ^ 3)
+  double A_DOT_MIN = -1.5;                                  // min / max jerk constraint(m / s ^ 3)
   double A_DOT_MAX = 1.5;
-  double DF_DOT_MIN = -0.5;                      // min / max front steer angle rate constraint(rad / s)
+  double DF_DOT_MIN = -0.5;                                 // min / max front steer angle rate constraint(rad / s)
   double DF_DOT_MAX = 0.5;
-  std::vector<double> vector_Q = {1.0, 1.0, 0.1, 0.0};     // weights on x, y, psi, and v.
-  std::vector<double> vector_R = {10.0, 10.0};             // weights on jerk and slew rate(steering angle derivative)
+  std::vector<double> vector_Q = {1.0, 1.0, 10.0, 0.1};     // weights on x, y, psi, and v.
+  std::vector<double> vector_R = {10.0, 100.0};             // weights on jerk and slew rate(steering angle derivative)
 
   // used to slice casadi matrixes
   casadi::Slice slice_all_;

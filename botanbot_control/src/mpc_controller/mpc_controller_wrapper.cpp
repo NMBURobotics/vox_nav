@@ -51,18 +51,16 @@ MPCWrapper::~MPCWrapper()
 nav_msgs::msg::Path MPCWrapper::createTestTraj()
 {
   nav_msgs::msg::Path test_traj;
-  double val = 0.1;
-  for (size_t i = 0; i < 100; i++) {
+  for (int i = 1; i < 20; i++) {
     geometry_msgs::msg::PoseStamped test_pose;
     test_pose.header.frame_id = "map";
     test_pose.header.stamp = node_->now();
-    test_pose.pose.position.x = val;
-    test_pose.pose.position.y = 2 * std::sin(val);
+    test_pose.pose.position.x = i;
+    test_pose.pose.position.y = -i;
     tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, -std::atan(test_pose.pose.position.y / test_pose.pose.position.x));
+    q.setRPY(0.0, 0.0, std::atan(test_pose.pose.position.y / test_pose.pose.position.x));
     test_pose.pose.orientation = tf2::toMsg(q);
     test_traj.poses.push_back(test_pose);
-    val += 0.8;
   }
   return test_traj;
 }
@@ -229,8 +227,8 @@ std::vector<std::vector<double>> MPCWrapper::intrpolateTraj(
   double start_distance =
     cumulative_dist_along_path[nearsest_taj_state_index];
 
-  int kTRAJHORIZON = 10;
-  double kTRAJDT = 0.6;
+  int kTRAJHORIZON = 20;
+  double kTRAJDT = 0.1;
   int kTARGETSPEED = 1.0;
 
   std::vector<double> interpolateto_fit;
