@@ -15,21 +15,21 @@ private:
   std::shared_ptr<casadi::Opti> opti_;
 
   int N = 10;                                    // timesteps in MPC Horizon
-  double DT = 0.2;                               // discretization time between timesteps(s)
-  double L_F = 1.5213;                           // distance from CoG to front axle(m)
-  double L_R = 1.4987;                           // distance from CoG to rear axle(m)
-  double V_MIN = 0.0;                            // min / max velocity constraint(m / s)
-  double V_MAX = 20.0;
-  double A_MIN = -3.0;                           // min / max acceleration constraint(m / s ^ 2)
+  double DT = 0.1;                               // discretization time between timesteps(s)
+  double L_F = 0.66;                           // distance from CoG to front axle(m)
+  double L_R = 0.66;                           // distance from CoG to rear axle(m)
+  double V_MIN = -10.0;                            // min / max velocity constraint(m / s)
+  double V_MAX = 10.0;
+  double A_MIN = -2.0;                           // min / max acceleration constraint(m / s ^ 2)
   double A_MAX = 2.0;
-  double DF_MIN = -0.5;                          // min / max front steer angle constraint(rad)
-  double DF_MAX = 0.5;
+  double DF_MIN = -0.6;                          // min / max front steer angle constraint(rad)
+  double DF_MAX = 0.6;
   double A_DOT_MIN = -1.5;                       // min / max jerk constraint(m / s ^ 3)
   double A_DOT_MAX = 1.5;
-  double DF_DOT_MIN = -0.5;                                 // min / max front steer angle rate constraint(rad / s)
+  double DF_DOT_MIN = -0.5;                      // min / max front steer angle rate constraint(rad / s)
   double DF_DOT_MAX = 0.5;
-  std::vector<double> vector_Q = {1.0, 1.0, 10.0, 0.1};     // weights on x, y, psi, and v.
-  std::vector<double> vector_R = {10.0, 100.0};             // weights on jerk and slew rate(steering angle derivative)
+  std::vector<double> vector_Q = {1.0, 1.0, 0.1, 0.0};     // weights on x, y, psi, and v.
+  std::vector<double> vector_R = {10.0, 10.0};             // weights on jerk and slew rate(steering angle derivative)
 
   // used to slice casadi matrixes
   casadi::Slice slice_all_;
@@ -54,7 +54,7 @@ private:
   // Decision vars
   // Actual trajectory we will follow given the optimal solution.
   // First index is the timestep k, i.e. self.z_dv[0,:] is z_0.
-  // It has self.N+1 timesteps since we go from z_0, ..., z_self.N.
+  // It has N+1 timesteps since we go from z_0, ..., z_N.
   // Second index is the state element, as detailed below.
   casadi::MX z_dv_;
   casadi::MX x_dv_;
@@ -62,7 +62,7 @@ private:
   casadi::MX psi_dv_;
   casadi::MX v_dv_;
 
-  // Control inputs used to achieve self.z_dv according to dynamics.
+  // Control inputs used to achieve z_dv according to dynamics.
   // First index is the timestep k, i.e. self.u_dv[0,:] is u_0.
   // Second index is the input element as detailed below.
   casadi::MX u_dv_;
@@ -70,7 +70,7 @@ private:
   casadi::MX df_dv_;
 
   // Slack variables used to relax input rate constraints.
-  //  Matches self.u_dv in structure but timesteps range from -1, ..., N-1.
+  // Matches self.u_dv in structure but timesteps range from -1, ..., N-1.
   casadi::MX sl_dv_;
   casadi::MX sl_acc_dv_;
   casadi::MX sl_df_dv_;
@@ -98,5 +98,4 @@ public:
     std::vector<double> inital_condition,
     std::vector<std::vector<double>> references,
     std::vector<double> previous_inputs);
-
 };

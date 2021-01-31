@@ -2,14 +2,16 @@
 
 MPCController::MPCController(/* args */)
 {
+  // create a intance on ynamic memory
   opti_ = std::make_shared<casadi::Opti>();
 
+  // make weight matrixes diagonal
   Q = Q.diag(vector_Q);
   R = R.diag(vector_R);
 
-  // previous control input
+  // make previous control input a 2 element parameter
   u_prev_ = opti_->parameter(2);
-  // curr state
+  // make curr state a 4 element parameter
   z_curr_ = opti_->parameter(4);
 
   // reference traj that we would like to follow
@@ -36,14 +38,6 @@ MPCController::MPCController(/* args */)
   sl_acc_dv_ = sl_dv_(slice_all_, 0);
   sl_df_dv_ = sl_dv_(slice_all_, 1);
 
-  std::cout << "Q diag: " << Q << std::endl;
-  std::cout << "R diag: " << R << std::endl;
-  std::cout << "z_ref_: " << z_ref_.dim() << std::endl;
-  std::cout << "x_ref_: " << x_ref_.dim() << std::endl;
-  std::cout << "y_ref_: " << y_ref_.dim() << std::endl;
-  std::cout << "psi_ref_: " << psi_ref_.dim() << std::endl;
-  std::cout << "v_ref_: " << v_ref_.dim() << std::endl;
-
   addConstraints();
   addCost();
   updateInitialCondition(0.0, 0.0, 0.0, 1.0);
@@ -53,7 +47,7 @@ MPCController::MPCController(/* args */)
     mock_x_ref.push_back(0.0);
     mock_y_ref.push_back(0.0);
     mock_psi_ref.push_back(0.0);
-    mock_v_ref.push_back(0.0);
+    mock_v_ref.push_back(1.0);
   }
   updateReference(mock_x_ref, mock_y_ref, mock_psi_ref, mock_v_ref);
   updatePreviousInput(0.0, 0.0);
@@ -64,9 +58,20 @@ MPCController::MPCController(/* args */)
   }
   updateSlackVars(mock_sl_acc_dv, mock_sl_df_dv);
 
-  opti_->solver("ipopt");
+  casadi::Dict opts = {{"ipopt.print_level", 0}, {"print_time", false}};
+  opti_->solver("ipopt", opts);
   solve();
 
+  std::cout << "State Weight Matrix Q: " << Q << std::endl;
+  std::cout << "Control Weight Matrix R: " << R << std::endl;
+  std::cout << "Current States z_curr_: " << opti_->debug().value(z_curr_) << std::endl;
+  std::cout << "Refernce Traj states z_ref_: " << opti_->debug().value(z_ref_) << std::endl;
+  std::cout << "Actual Traj states z_dv_: " << opti_->debug().value(z_dv_) << std::endl;
+  std::cout << "Control inputs u_dv_: " << opti_->debug().value(u_dv_) << std::endl;
+  std::cout << "Previous Control inputs u_prev_: " << opti_->debug().value(u_prev_) << std::endl;
+  std::cout << "Slack Vars sl_dv_: " << opti_->debug().value(sl_dv_) << std::endl;
+  std::cout << "Debug: x_dv_(0): " << opti_->debug().value(x_dv_(0)) << std::endl;
+  std::cout << "Debug: z_curr_(0): " << opti_->debug().value(z_curr_(0)) << std::endl;
 }
 
 MPCController::~MPCController()
@@ -86,19 +91,25 @@ void MPCController::addConstraints()
 
   // state dynamics constraints
   for (int i = 0; i < N; i++) {
-    auto beta = casadi::MX::atan(L_R / (L_F + L_R) * casadi::MX::cos(df_dv_(i)));
+
+    auto beta = casadi::MX::atan(L_R / (L_F + L_R) * casadi::MX::tan(df_dv_(i)));
+
     opti_->subject_to(
       x_dv_(i + 1) ==
       x_dv_(i) + DT * (v_dv_(i) * casadi::MX::cos(psi_dv_(i) + beta)));
+
     opti_->subject_to(
       y_dv_(i + 1) ==
       y_dv_(i) + DT * (v_dv_(i) * casadi::MX::sin(psi_dv_(i) + beta)));
+
     opti_->subject_to(
       psi_dv_(i + 1) ==
       psi_dv_(i) + DT * (v_dv_(i) / L_R * casadi::MX::sin(beta)));
+
     opti_->subject_to(
       v_dv_(i + 1) ==
       v_dv_(i) + DT * acc_dv_(i));
+
   }
 
   //  Input Bound Constraints
@@ -187,13 +198,20 @@ SolutionResult MPCController::solve()
   auto end = std::chrono::high_resolution_clock::now();
   auto execution_time =
     std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-  std::cout << "Solve took: " << execution_time << " ms" << std::endl;
-
 
   SolutionResult res;
   res.solve_time_ms = execution_time;
   res.is_optimal = is_solution_optimal;
   res.control_input = std::make_pair<double, double>(u_mpc(0, 0).scalar(), u_mpc(0, 1).scalar());
+
+  std::cout << "Current States z_curr_: \n " << opti_->debug().value(z_curr_) << std::endl;
+  std::cout << "Refernce Traj states z_ref_: \n" << opti_->debug().value(z_ref_) << std::endl;
+  std::cout << "Actual Traj states z_ref_: \n" << opti_->debug().value(z_dv_) << std::endl;
+  std::cout << "Control inputs u_dv_: \n" << opti_->debug().value(u_dv_) << std::endl;
+  std::cout << "Previous Control inputs u_prev_: \n" << opti_->debug().value(u_prev_) << std::endl;
+  std::cout << "Solve took: " << execution_time << " ms" << std::endl;
+  std::cout << "acceleration cmd " << res.control_input.first << std::endl;
+  std::cout << "steering angle " << res.control_input.second << std::endl;
 
   return res;
 }
@@ -201,7 +219,6 @@ SolutionResult MPCController::solve()
 void MPCController::updateInitialCondition(double x0, double y0, double psi0, double v0)
 {
   opti_->set_value(z_curr_, {x0, y0, psi0, v0});
-  std::cout << "Initial states are : " << opti_->debug().value(z_curr_) << std::endl;
 }
 
 void MPCController::updateReference(
