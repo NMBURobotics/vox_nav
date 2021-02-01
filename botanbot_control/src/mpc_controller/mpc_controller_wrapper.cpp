@@ -54,14 +54,16 @@ MPCWrapper::~MPCWrapper()
 nav_msgs::msg::Path MPCWrapper::createTestTraj()
 {
   nav_msgs::msg::Path test_traj;
-  for (int i = 1; i < 21; i++) {
+  double sample_theta_step = 2.0 * M_PI / 180.0;
+  double circle_radius = 10.0;
+  for (int i = 0; i < 90; i++) {
     geometry_msgs::msg::PoseStamped test_pose;
     test_pose.header.frame_id = "map";
     test_pose.header.stamp = node_->now();
-    test_pose.pose.position.x = i;
-    test_pose.pose.position.y = -i;
+    test_pose.pose.position.x = -circle_radius * std::cos(i * sample_theta_step);
+    test_pose.pose.position.y = -circle_radius * std::sin(i * sample_theta_step);
     tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, std::atan(test_pose.pose.position.y / test_pose.pose.position.x));
+    q.setRPY(0.0, 0.0, ((i * sample_theta_step) - M_PI_2  ));
     test_pose.pose.orientation = tf2::toMsg(q);
     test_traj.poses.push_back(test_pose);
   }
@@ -176,18 +178,21 @@ std::vector<std::vector<double>> MPCWrapper::intrpolateTraj(
   int kTRAJHORIZON = 10;
   double kTRAJDT = 0.3;
   double kTARGETSPEED = 1.0;
+
   for (int i = 0; i < kTRAJHORIZON; i++) {
-    interpolated_x_ref.push_back(
-      ref_traj.poses[nearsest_taj_state_index].pose.position.x + kTRAJDT * i);
-    interpolated_y_ref.push_back(
-      ref_traj.poses[nearsest_taj_state_index].pose.position.y - kTRAJDT * i);
 
     tf2::Quaternion curr_waypoint_psi_quat;
-    tf2::fromMsg(ref_traj.poses[i].pose.orientation, curr_waypoint_psi_quat);
+    tf2::fromMsg(
+      ref_traj.poses[nearsest_taj_state_index + i].pose.orientation,
+      curr_waypoint_psi_quat);
     double none, psi;
     tf2::Matrix3x3 curr_waypoint_rot(curr_waypoint_psi_quat);
     curr_waypoint_rot.getRPY(none, none, psi);
+
     interpolated_psi_ref.push_back(psi);
+    interpolated_x_ref.push_back(ref_traj.poses[nearsest_taj_state_index + i].pose.position.x);
+    interpolated_y_ref.push_back(ref_traj.poses[nearsest_taj_state_index + i].pose.position.y);
+
   }
 
   std::vector<std::vector<double>> interplated_references;
