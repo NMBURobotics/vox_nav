@@ -9,9 +9,7 @@ MPCController::MPCController(/* args */)
   Q = Q.diag(vector_Q);
   R = R.diag(vector_R);
 
-  // make previous control input a 2 element parameter
   u_prev_ = opti_->parameter(2);
-  // make curr state a 4 element parameter
   z_curr_ = opti_->parameter(4);
 
   // reference traj that we would like to follow
@@ -47,9 +45,10 @@ MPCController::MPCController(/* args */)
     mock_x_ref.push_back(0.0);
     mock_y_ref.push_back(0.0);
     mock_psi_ref.push_back(0.0);
-    mock_v_ref.push_back(1.0);
+    mock_v_ref.push_back(0.0);
   }
   updateReference(mock_x_ref, mock_y_ref, mock_psi_ref, mock_v_ref);
+
   updatePreviousInput(0.0, 0.0);
   std::vector<double> mock_sl_acc_dv, mock_sl_df_dv;
   for (int i = 0; i < N; i++) {
@@ -58,7 +57,25 @@ MPCController::MPCController(/* args */)
   }
   updateSlackVars(mock_sl_acc_dv, mock_sl_df_dv);
 
-  casadi::Dict opts = {{"ipopt.print_level", 0}, {"print_time", false}};
+
+  std::vector<double> initial_x_dv, initial_y_dv, initial_psi_dv, initial_v_dv;
+  for (int i = 0; i < N + 1; i++) {
+    initial_x_dv.push_back(0.0);
+    initial_y_dv.push_back(0.0);
+    initial_psi_dv.push_back(0.0);
+    initial_v_dv.push_back(0.0);
+  }
+  updateActualStates(initial_x_dv, initial_y_dv, initial_psi_dv, initial_v_dv);
+
+  std::vector<double> initial_acc_dv, initial_df_dv;
+  for (int i = 0; i < N; i++) {
+    initial_acc_dv.push_back(0.0);
+    initial_df_dv.push_back(0.0);
+  }
+  opti_->set_initial(u_dv_(slice_all_, 0), initial_acc_dv);
+  opti_->set_initial(u_dv_(slice_all_, 1), initial_df_dv);
+
+  casadi::Dict opts = {{"ipopt.print_level", 0}, {"expand", true}};
   opti_->solver("ipopt", opts);
   solve();
 
@@ -72,6 +89,7 @@ MPCController::MPCController(/* args */)
   std::cout << "Slack Vars sl_dv_: " << opti_->debug().value(sl_dv_) << std::endl;
   std::cout << "Debug: x_dv_(0): " << opti_->debug().value(x_dv_(0)) << std::endl;
   std::cout << "Debug: z_curr_(0): " << opti_->debug().value(z_curr_(0)) << std::endl;
+
 }
 
 MPCController::~MPCController()
@@ -95,20 +113,16 @@ void MPCController::addConstraints()
     auto beta = casadi::MX::atan(L_R / (L_F + L_R) * casadi::MX::tan(df_dv_(i)));
 
     opti_->subject_to(
-      x_dv_(i + 1) ==
-      x_dv_(i) + DT * (v_dv_(i) * casadi::MX::cos(psi_dv_(i) + beta)));
+      x_dv_(i + 1) == x_dv_(i) + DT * (v_dv_(i) * casadi::MX::cos(psi_dv_(i) + beta)));
 
     opti_->subject_to(
-      y_dv_(i + 1) ==
-      y_dv_(i) + DT * (v_dv_(i) * casadi::MX::sin(psi_dv_(i) + beta)));
+      y_dv_(i + 1) == y_dv_(i) + DT * (v_dv_(i) * casadi::MX::sin(psi_dv_(i) + beta)));
 
     opti_->subject_to(
-      psi_dv_(i + 1) ==
-      psi_dv_(i) + DT * (v_dv_(i) / L_R * casadi::MX::sin(beta)));
+      psi_dv_(i + 1) == psi_dv_(i) + DT * (v_dv_(i) / L_R * casadi::MX::sin(beta)));
 
     opti_->subject_to(
-      v_dv_(i + 1) ==
-      v_dv_(i) + DT * acc_dv_(i));
+      v_dv_(i + 1) == v_dv_(i) + DT * acc_dv_(i));
 
   }
 
@@ -153,9 +167,9 @@ void MPCController::addConstraints()
 
 void MPCController::addCost()
 {
-  auto quad_form = [](casadi::MX z, casadi::Matrix<double> Q)
+  auto quad_form = [](casadi::MX z, casadi::Matrix<double> P)
     {
-      return casadi::MX::mtimes(z, casadi::MX::mtimes(Q, z.T()));
+      return casadi::MX::mtimes(z, casadi::MX::mtimes(P, z.T()));
     };
 
   casadi::MX cost = 0.0;
@@ -233,7 +247,20 @@ void MPCController::updateReference(
   opti_->set_value(v_ref_, v_ref);
 }
 
-void MPCController::updateSlackVars(std::vector<double> sl_acc_dv, std::vector<double> sl_df_dv)
+void MPCController::updateActualStates(
+  std::vector<double> x_dv,
+  std::vector<double> y_dv,
+  std::vector<double> psi_dv,
+  std::vector<double> v_dv)
+{
+  opti_->set_initial(x_dv_, x_dv);
+  opti_->set_initial(y_dv_, y_dv);
+  opti_->set_initial(psi_dv_, psi_dv);
+  opti_->set_initial(v_dv_, v_dv);
+}
+
+void MPCController::updateSlackVars(
+  std::vector<double> sl_acc_dv, std::vector<double> sl_df_dv)
 {
   opti_->set_initial(sl_dv_(slice_all_, 0), sl_acc_dv);
   opti_->set_initial(sl_dv_(slice_all_, 1), sl_df_dv);

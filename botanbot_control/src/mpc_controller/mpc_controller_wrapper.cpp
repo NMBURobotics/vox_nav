@@ -33,6 +33,9 @@ MPCWrapper::MPCWrapper(rclcpp::Node::SharedPtr parent)
   // Initialize pubs & subs
   plan_publisher_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>("plan", 1);
 
+  interpolated_ref_traj_publisher_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "interpolated_plan", 1);
+
 
   // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
@@ -51,7 +54,7 @@ MPCWrapper::~MPCWrapper()
 nav_msgs::msg::Path MPCWrapper::createTestTraj()
 {
   nav_msgs::msg::Path test_traj;
-  for (int i = 1; i < 20; i++) {
+  for (int i = 1; i < 21; i++) {
     geometry_msgs::msg::PoseStamped test_pose;
     test_pose.header.frame_id = "map";
     test_pose.header.stamp = node_->now();
@@ -114,16 +117,18 @@ void MPCWrapper::solve()
     SolutionResult res = mpc_controller_.solve();
 
     //  The control output is acceleration but we need to publish speed
-    //twist_.linear.x += res.control_input.first * (dt);
-    //  The control output is steeering angle but we need to publish angular velocity
-    //twist_.angular.z = (twist_.linear.x * res.control_input.second) / kL_F;
-
     twist_.linear.x += res.control_input.first * (dt);
-    twist_.angular.z = res.control_input.second;
+    //  The control output is steeering angle but we need to publish angular velocity
+    //twist_.angular.z = twist_.linear.x / (std::tan(res.control_input.second) / kL_F);
+    twist_.angular.z = (twist_.linear.x * res.control_input.second) / kL_F;
+
+    //twist_.linear.x = res.control_input.first;
+    //twist_.angular.z = res.control_input.second;
 
     regulate_max_speed(kMAX_SPEED);
     cmd_vel_publisher_->publish(twist_);
     publihTestTraj();
+    publihInterpolatedRefTraj(ref_states);
     previous_control_ = res.control_input;
     rate.sleep();
   }
@@ -146,19 +151,15 @@ int MPCWrapper::calculate_nearest_state_index(
 {
   int closest_state_index = -1;
   int closest_state_distance = 10000.0;
-
   for (int i = 0; i < reference_traj.poses.size(); i++) {
-
     double curr_distance =
       std::sqrt(
       std::pow(reference_traj.poses[i].pose.position.x - curr_robot_pose.pose.position.x, 2) +
       std::pow(reference_traj.poses[i].pose.position.y - curr_robot_pose.pose.position.y, 2));
-
     if (curr_distance < closest_state_distance) {
       closest_state_distance = curr_distance;
       closest_state_index = i;
     }
-
   }
   return closest_state_index;
 }
@@ -170,88 +171,35 @@ std::vector<std::vector<double>> MPCWrapper::intrpolateTraj(
   int nearsest_taj_state_index =
     calculate_nearest_state_index(ref_traj, curr_robot_pose);
 
-  std::vector<double> cumulative_dist_along_path;
-  std::vector<double> psi_along_path;
-  std::vector<double> Xs, Ys;
+  std::vector<double> interpolated_x_ref, interpolated_y_ref, interpolated_psi_ref;
 
-  for (int i = 0; i < ref_traj.poses.size(); i++) {
-    if (i == 0) {
-      cumulative_dist_along_path.push_back(0.0);
-    } else {
-      double curr_waypoint_dist =
-        std::sqrt(
-        std::pow(ref_traj.poses[i].pose.position.x - ref_traj.poses[i - 1].pose.position.x, 2) +
-        std::pow(ref_traj.poses[i].pose.position.y - ref_traj.poses[i - 1].pose.position.y, 2)) +
-        cumulative_dist_along_path.back();
-      cumulative_dist_along_path.push_back(curr_waypoint_dist);
-    }
+  int kTRAJHORIZON = 10;
+  double kTRAJDT = 0.3;
+  double kTARGETSPEED = 1.0;
+  for (int i = 0; i < kTRAJHORIZON; i++) {
+    interpolated_x_ref.push_back(
+      ref_traj.poses[nearsest_taj_state_index].pose.position.x + kTRAJDT * i);
+    interpolated_y_ref.push_back(
+      ref_traj.poses[nearsest_taj_state_index].pose.position.y - kTRAJDT * i);
 
     tf2::Quaternion curr_waypoint_psi_quat;
     tf2::fromMsg(ref_traj.poses[i].pose.orientation, curr_waypoint_psi_quat);
     double none, psi;
     tf2::Matrix3x3 curr_waypoint_rot(curr_waypoint_psi_quat);
     curr_waypoint_rot.getRPY(none, none, psi);
-    psi_along_path.push_back(psi);
-    Xs.push_back(ref_traj.poses[i].pose.position.x);
-    Ys.push_back(ref_traj.poses[i].pose.position.y);
-  }
-
-  //FIT A curvature to discretized path
-  // apply numpy.diff o find differnces
-  // e.g Input array  :  [1 3 4 7 9]
-  // First order difference  :  [2 1 3 2]
-  std::vector<double> cumulative_dist_along_path_diff;
-  std::vector<double> psi_along_path_diff;
-  for (int i = 1; i < cumulative_dist_along_path.size(); i++) {
-    cumulative_dist_along_path_diff.push_back(
-      cumulative_dist_along_path[i] -
-      cumulative_dist_along_path[i - 1]);
-    psi_along_path_diff.push_back(
-      psi_along_path[i] -
-      psi_along_path[i - 1]);
-  }
-
-  double max_psi_jump = *std::max_element(psi_along_path_diff.begin(), psi_along_path_diff.end());
-  if (max_psi_jump > M_PI) {
-    std::cerr << "Detected a jump in angle difference: " << max_psi_jump << endl;
-  }
-
-  //  (curv = dpsi/dcdist).
-  std::vector<double> raw_curve;
-  for (int i = 0; i < psi_along_path_diff.size(); i++) {
-    raw_curve.push_back(psi_along_path_diff[i] / std::max(cumulative_dist_along_path_diff[i], 0.1)); // use diff_dists where greater than 10 cm
-  }
-  // curv at last waypoint
-  raw_curve.push_back(raw_curve.back());
-
-  double start_distance =
-    cumulative_dist_along_path[nearsest_taj_state_index];
-
-  int kTRAJHORIZON = 20;
-  double kTRAJDT = 0.1;
-  int kTARGETSPEED = 1.0;
-
-  std::vector<double> interpolateto_fit;
-  for (int i = 1; i < kTRAJHORIZON + 1; i++) {
-    interpolateto_fit.push_back(i * kTRAJDT + kTARGETSPEED + start_distance);
+    interpolated_psi_ref.push_back(psi);
   }
 
   std::vector<std::vector<double>> interplated_references;
-  std::vector<double> x_ref = interp<double>(interpolateto_fit, cumulative_dist_along_path, Xs);
-  std::vector<double> y_ref = interp<double>(interpolateto_fit, cumulative_dist_along_path, Ys);
-  std::vector<double> psi_ref = interp<double>(
-    interpolateto_fit, cumulative_dist_along_path,
-    psi_along_path);
-  std::vector<double> v_ref(x_ref.size(), kTARGETSPEED);
+  std::vector<double> v_ref(interpolated_x_ref.size(), kTARGETSPEED);
 
-  interplated_references.push_back(x_ref);
-  interplated_references.push_back(y_ref);
-  interplated_references.push_back(psi_ref);
+  interplated_references.push_back(interpolated_x_ref);
+  interplated_references.push_back(interpolated_y_ref);
+  interplated_references.push_back(interpolated_psi_ref);
   interplated_references.push_back(v_ref);
 
   return interplated_references;
 }
-
 
 void
 MPCWrapper::publihTestTraj()
@@ -268,13 +216,7 @@ MPCWrapper::publihTestTraj()
     marker.type = visualization_msgs::msg::Marker::CUBE;
     marker.action = visualization_msgs::msg::Marker::ADD;
     marker.lifetime = rclcpp::Duration::from_seconds(0);
-    marker.pose.position.x = i.pose.position.x;
-    marker.pose.position.y = i.pose.position.y;
-    marker.pose.position.z = i.pose.position.z;
-    marker.pose.orientation.x = i.pose.orientation.x;
-    marker.pose.orientation.y = i.pose.orientation.y;
-    marker.pose.orientation.z = i.pose.orientation.z;
-    marker.pose.orientation.w = i.pose.orientation.w;
+    marker.pose = i.pose;
     marker.scale.x = 0.5;
     marker.scale.y = 0.2;
     marker.scale.z = 0.2;
@@ -286,6 +228,38 @@ MPCWrapper::publihTestTraj()
     path_idx++;
   }
   plan_publisher_->publish(marker_array);
+}
+
+void
+MPCWrapper::publihInterpolatedRefTraj(std::vector<std::vector<double>> interpolated_ref_traj)
+{
+  visualization_msgs::msg::MarkerArray marker_array;
+  // iterae through Ref raj Xs
+  for (int i = 0; i < interpolated_ref_traj[0].size(); i++) {
+    visualization_msgs::msg::Marker marker;
+    marker.header.frame_id = "map";
+    marker.header.stamp = rclcpp::Clock().now();
+    marker.ns = "path";
+    marker.id = i;
+    marker.type = visualization_msgs::msg::Marker::CUBE;
+    marker.action = visualization_msgs::msg::Marker::ADD;
+    marker.lifetime = rclcpp::Duration::from_seconds(0);
+    marker.pose.position.x = interpolated_ref_traj[0][i];
+    marker.pose.position.y = interpolated_ref_traj[1][i];
+    marker.pose.position.z = 0.1;
+    tf2::Quaternion curr_ref_traj_sample_quat;
+    curr_ref_traj_sample_quat.setRPY(0, 0, interpolated_ref_traj[2][i]);
+    marker.pose.orientation = tf2::toMsg(curr_ref_traj_sample_quat);
+    marker.scale.x = 0.2;
+    marker.scale.y = 0.1;
+    marker.scale.z = 0.1;
+    marker.color.a = 0.8;
+    marker.color.r = 1.0;
+    marker.color.g = 0.0;
+    marker.color.b = 0.0;
+    marker_array.markers.push_back(marker);
+  }
+  interpolated_ref_traj_publisher_->publish(marker_array);
 }
 
 

@@ -153,6 +153,7 @@ public:
   }
 
   void publihTestTraj();
+  void publihInterpolatedRefTraj(std::vector<std::vector<double>> interpolated_ref_traj);
 
 private:
   // RCLCPP node
@@ -169,7 +170,10 @@ private:
   rclcpp::Time previous_time_;
   MPCController mpc_controller_;
   SolutionResult::control_input_t previous_control_;
+
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+    interpolated_ref_traj_publisher_;
 
 
 };
