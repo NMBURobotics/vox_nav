@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "builtin_interfaces/msg/duration.hpp"
+#include "botanbot_control/controller_server.hpp"
+
 #include <chrono>
 #include <cmath>
 #include <iomanip>
@@ -23,86 +26,82 @@
 #include <vector>
 #include <utility>
 
-#include "builtin_interfaces/msg/duration.hpp"
-#include "botanbot_planning/planner_server.hpp"
-
-using namespace std::chrono_literals;
-
-namespace botanbot_planning
+namespace botanbot_control
 {
-PlannerServer::PlannerServer()
-: Node("botanbot_planning_server_rclcpp_node"),
-  pc_loader_("botanbot_planning", "botanbot_planning::PlannerCore"),
-  planner_id_("SE2Planner"),
-  planner_type_("botanbot_planning::SE2Planner")
+ControllerServer::ControllerServer()
+: Node("botanbot_controller_server_rclcpp_node"),
+  pc_loader_("botanbot_control", "botanbot_control::ControlerCore"),
+  controller_id_("MPCControllerROS"),
+  controller_type_("mpc_controller::MPCControllerROS")
 {
   RCLCPP_INFO(get_logger(), "Creating");
 
   // Declare this node's parameters
-  declare_parameter("expected_planner_frequency", expected_planner_frequency_);
-  get_parameter("expected_planner_frequency", expected_planner_frequency_);
+  declare_parameter("controller_frequency", controller_frequency_);
+  get_parameter("controller_frequency", controller_frequency_);
 
-  declare_parameter("planner_plugin", planner_id_);
-  get_parameter("planner_plugin", planner_id_);
+  declare_parameter("controller_plugin", controller_id_);
+  get_parameter("controller_plugin", controller_id_);
 
-  declare_parameter(planner_id_ + ".plugin", planner_type_);
-  get_parameter(planner_id_ + ".plugin", planner_type_);
+  declare_parameter(controller_id_ + ".plugin", controller_type_);
+  get_parameter(controller_id_ + ".plugin", controller_type_);
 
   try {
-    botanbot_planning::PlannerCore::Ptr planner =
-      pc_loader_.createSharedInstance(planner_type_);
-    planner->initialize(this, planner_id_);
+    botanbot_control::ControllerCore::Ptr controller =
+      pc_loader_.createSharedInstance(controller_type_);
+    controller->initialize(this, controller_id_);
     RCLCPP_INFO(
-      get_logger(), "Created planner plugin %s of type %s",
-      planner_id_.c_str(), planner_type_.c_str());
-    planners_.insert({planner_id_, planner});
+      get_logger(), "Created controller plugin %s of type %s",
+      controller_id_.c_str(), controller_type_.c_str());
+    controllers_.insert({controller_id_, controller});
   } catch (const pluginlib::PluginlibException & ex) {
     RCLCPP_FATAL(
       get_logger(), "Failed to create planner. Exception: %s",
       ex.what());
   }
 
-  planner_ids_concat_ += planner_id_ + std::string(" ");
+  controller_ids_concat_ += controller_id_ + std::string(" ");
 
   RCLCPP_INFO(
     get_logger(),
-    "Planner Server has %s planners available.", planner_ids_concat_.c_str());
-  if (expected_planner_frequency_ > 0) {
-    max_planner_duration_ = 1 / expected_planner_frequency_;
+    "Controller Server has %s planners available.", controller_ids_concat_.c_str());
+  if (controller_frequency_ > 0) {
+    controller_duration_ = 1.0 / controller_frequency_;
   } else {
     RCLCPP_WARN(
       get_logger(),
       "The expected planner frequency parameter is %.4f Hz. The value should to be greater"
-      " than 0.0 to turn on duration overrrun warning messages", expected_planner_frequency_);
-    max_planner_duration_ = 0.0;
+      " than 0.0 to turn on duration overrrun warning messages", controller_frequency_);
+    controller_duration_ = 0.0;
   }
 
   // Initialize pubs & subs
-  plan_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("plan", 1);
+  actual_control_states_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "control", 1);
 
-  this->action_server_ = rclcpp_action::create_server<ComputePathToPose>(
+  this->action_server_ = rclcpp_action::create_server<FollowPath>(
     this->get_node_base_interface(),
     this->get_node_clock_interface(),
     this->get_node_logging_interface(),
     this->get_node_waitables_interface(),
-    "compute_path_to_pose",
-    std::bind(&PlannerServer::handle_goal, this, std::placeholders::_1, std::placeholders::_2),
-    std::bind(&PlannerServer::handle_cancel, this, std::placeholders::_1),
-    std::bind(&PlannerServer::handle_accepted, this, std::placeholders::_1));
+    "follow_path",
+    std::bind(&ControllerServer::handle_goal, this, std::placeholders::_1, std::placeholders::_2),
+    std::bind(&ControllerServer::handle_cancel, this, std::placeholders::_1),
+    std::bind(&ControllerServer::handle_accepted, this, std::placeholders::_1));
 }
 
-PlannerServer::~PlannerServer()
+ControllerServer::~ControllerServer()
 {
   RCLCPP_INFO(get_logger(), "Destroying");
-  planners_.clear();
+  controllers_.clear();
   action_server_.reset();
-  plan_publisher_.reset();
+  actual_control_states_publisher_.reset();
   RCLCPP_INFO(get_logger(), "Shutting down");
 }
 
-rclcpp_action::GoalResponse PlannerServer::handle_goal(
+rclcpp_action::GoalResponse ControllerServer::handle_goal(
   const rclcpp_action::GoalUUID & uuid,
-  std::shared_ptr<const ComputePathToPose::Goal> goal)
+  std::shared_ptr<const FollowPath::Goal> goal)
 {
   RCLCPP_INFO(
     this->get_logger(), "Received goal request in order to compute a path to pose");
@@ -110,45 +109,55 @@ rclcpp_action::GoalResponse PlannerServer::handle_goal(
   return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 }
 
-rclcpp_action::CancelResponse PlannerServer::handle_cancel(
-  const std::shared_ptr<GoalHandleComputePathToPose> goal_handle)
+rclcpp_action::CancelResponse ControllerServer::handle_cancel(
+  const std::shared_ptr<GoalHandleFollowPath> goal_handle)
 {
   RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
   (void)goal_handle;
   return rclcpp_action::CancelResponse::ACCEPT;
 }
 
-void PlannerServer::handle_accepted(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle)
+void ControllerServer::handle_accepted(
+  const std::shared_ptr<GoalHandleFollowPath> goal_handle)
 {
   // this needs to return quickly to avoid blocking the executor, so spin up a new thread
-  std::thread{std::bind(&PlannerServer::computePlan, this, std::placeholders::_1),
+  std::thread{std::bind(&ControllerServer::followPath, this, std::placeholders::_1),
     goal_handle}.detach();
 }
 
 void
-PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle)
+ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_handle)
 {
   auto start_time = steady_clock_.now();
-  rclcpp::Rate loop_rate(expected_planner_frequency_);
+  rclcpp::Rate loop_rate(controller_frequency_);
 
   const auto goal = goal_handle->get_goal();
-  auto feedback = std::make_shared<ComputePathToPose::Feedback>();
-  auto result = std::make_shared<ComputePathToPose::Result>();
+  auto feedback = std::make_shared<FollowPath::Feedback>();
+  auto result = std::make_shared<FollowPath::Result>();
 
-  geometry_msgs::msg::PoseStamped start_pose;
-  result->path = getPlan(start_pose, goal->pose, planner_id_);
-
-  if (result->path.size() == 0) {
-    RCLCPP_WARN(
-      get_logger(), "Planning algorithm %s failed to generate a valid"
-      " path to (%.2f, %.2f)", goal->planner_id.c_str(),
-      goal->pose.pose.position.x, goal->pose.pose.position.y);
-    return;
+  geometry_msgs::msg::Twist computed_velcity_commands;
+  // set Plan
+  if (controllers_.find(controller_id_) != controllers_.end()) {
+    controllers_[controller_id_]->setPlan(goal->path);
+    computed_velcity_commands = controllers_[controller_id_]->computeVelocityCommands();
+  } else {
+    if (controllers_.size() == 1 && controller_id_.empty()) {
+      RCLCPP_WARN_ONCE(
+        get_logger(), "No Controllers specified in action call. "
+        "Server will use only plugin %s in server."
+        " This warning will appear once.", controller_ids_concat_.c_str());
+      controllers_[controllers_.begin()->first]->setPlan(goal->path);
+      controllers_[controller_id_]->computeVelocityCommands();
+    } else {
+      RCLCPP_ERROR(
+        get_logger(), "controller %s is not a valid controller. "
+        "Controller names are: %s", controller_id_.c_str(),
+        controller_ids_concat_.c_str());
+    }
   }
 
   // Check if there is a cancel request
   if (goal_handle->is_canceling()) {
-    result->path = std::vector<geometry_msgs::msg::PoseStamped>();
     goal_handle->canceled(result);
     RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
     return;
@@ -156,104 +165,42 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
   // Update sequence
   auto elapsed_time = steady_clock_.now() - start_time;
   feedback->elapsed_time = elapsed_time;
+  feedback->speed = computed_velcity_commands.linear.x;
   goal_handle->publish_feedback(feedback);
 
   RCLCPP_DEBUG(
     get_logger(),
-    "Found valid path of size %u to (%.2f, %.2f)",
-    result->path.size(), goal->pose.pose.position.x,
-    goal->pose.pose.position.y);
+    "Giving velocity commands to robot linear %.2f, angular %.2f)",
+    computed_velcity_commands.linear.x,
+    computed_velcity_commands.angular.z);
 
   auto cycle_duration = steady_clock_.now() - start_time;
 
   // Check if goal is done
   if (rclcpp::ok()) {
     cycle_duration = steady_clock_.now() - start_time;
-    result->planning_time = cycle_duration;
+    result->total_time = cycle_duration;
     goal_handle->succeed(result);
-    RCLCPP_INFO(this->get_logger(), "Goal Succeeded");
+    RCLCPP_INFO(this->get_logger(), "Follow Path Succeeded");
     // Publish the plan for visualization purposes
-    publishPlan(result->path);
+    //publishPlan(result->path);
   }
   cycle_duration = steady_clock_.now() - start_time;
-  if (max_planner_duration_ && cycle_duration.seconds() > max_planner_duration_) {
+  if (controller_duration_ && cycle_duration.seconds() > controller_duration_) {
     RCLCPP_WARN(
       get_logger(),
-      "Planner loop missed its desired rate of %.4f Hz. Current loop rate is %.4f Hz",
-      1 / max_planner_duration_, 1 / cycle_duration.seconds());
+      "Controller loop missed its desired rate of %.4f Hz. Current loop rate is %.4f Hz",
+      1 / controller_duration_, 1 / cycle_duration.seconds());
   }
   loop_rate.sleep();
 }
 
-std::vector<geometry_msgs::msg::PoseStamped>
-PlannerServer::getPlan(
-  const geometry_msgs::msg::PoseStamped & start,
-  const geometry_msgs::msg::PoseStamped & goal,
-  const std::string & planner_id)
-{
-  RCLCPP_DEBUG(
-    get_logger(), "Attempting to a find path from (%.2f, %.2f) to "
-    "(%.2f, %.2f).", start.pose.position.x, start.pose.position.y,
-    goal.pose.position.x, goal.pose.position.y);
-
-  if (planners_.find(planner_id) != planners_.end()) {
-    return planners_[planner_id]->createPlan(start, goal);
-  } else {
-    if (planners_.size() == 1 && planner_id.empty()) {
-      RCLCPP_WARN_ONCE(
-        get_logger(), "No planners specified in action call. "
-        "Server will use only plugin %s in server."
-        " This warning will appear once.", planner_ids_concat_.c_str());
-      return planners_[planners_.begin()->first]->createPlan(start, goal);
-    } else {
-      RCLCPP_ERROR(
-        get_logger(), "planner %s is not a valid planner. "
-        "Planner names are: %s", planner_id.c_str(),
-        planner_ids_concat_.c_str());
-    }
-  }
-  return std::vector<geometry_msgs::msg::PoseStamped>();
-}
-
-void
-PlannerServer::publishPlan(const std::vector<geometry_msgs::msg::PoseStamped> & path)
-{
-  visualization_msgs::msg::MarkerArray marker_array;
-  auto path_idx = 0;
-  for (auto && i : path) {
-    visualization_msgs::msg::Marker marker;
-    marker.header.frame_id = "map";
-    marker.header.stamp = rclcpp::Clock().now();
-    marker.ns = "path";
-    marker.id = path_idx;
-    marker.type = visualization_msgs::msg::Marker::CUBE;
-    marker.action = visualization_msgs::msg::Marker::ADD;
-    marker.lifetime = rclcpp::Duration::from_seconds(0);
-    marker.pose.position.x = i.pose.position.x;
-    marker.pose.position.y = i.pose.position.y;
-    marker.pose.position.z = i.pose.position.z;
-    marker.pose.orientation.x = i.pose.orientation.x;
-    marker.pose.orientation.y = i.pose.orientation.y;
-    marker.pose.orientation.z = i.pose.orientation.z;
-    marker.pose.orientation.w = i.pose.orientation.w;
-    marker.scale.x = 1.0;
-    marker.scale.y = 0.7;
-    marker.scale.z = 0.4;
-    marker.color.a = 0.6;
-    marker.color.r = 0.0;
-    marker.color.g = 1.0;
-    marker.color.b = 0.0;
-    marker_array.markers.push_back(marker);
-    path_idx++;
-  }
-  plan_publisher_->publish(marker_array);
-}
-}  // namespace botanbot_planning
+}  // namespace botanbot_control
 
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<botanbot_planning::PlannerServer>();
+  auto node = std::make_shared<botanbot_control::ControllerServer>();
   rclcpp::spin(node->get_node_base_interface());
   rclcpp::shutdown();
   return 0;

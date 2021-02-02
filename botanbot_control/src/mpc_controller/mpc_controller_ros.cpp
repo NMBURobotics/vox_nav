@@ -14,6 +14,7 @@
 
 #include <nav_msgs/msg/path.hpp>
 #include <botanbot_control/mpc_controller/mpc_controller_ros.hpp>
+#include <pluginlib/class_list_macros.hpp>
 
 #include <memory>
 #include <vector>
@@ -23,30 +24,8 @@ namespace botanbot_control
 {
 namespace mpc_controller
 {
-MPCControllerROS::MPCControllerROS(rclcpp::Node::SharedPtr parent)
+MPCControllerROS::MPCControllerROS()
 {
-  node_ = parent;
-
-  cmd_vel_publisher_ =
-    node_->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
-
-  // Initialize pubs & subs
-  plan_publisher_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>("plan", 1);
-
-  interpolated_ref_traj_publisher_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "interpolated_plan", 1);
-
-  // setup TF buffer and listerner to read transforms
-  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-
-  reference_traj_ = createTestTraj();
-  previous_time_ = node_->now();
-
-  MPCControllerCore::Parameters mpc_parameters;
-  mpc_controller_ = std::make_shared<MPCControllerCore>(mpc_parameters);
-
-  solve();
 }
 
 MPCControllerROS::~MPCControllerROS()
@@ -61,7 +40,7 @@ nav_msgs::msg::Path MPCControllerROS::createTestTraj()
   for (int i = 0; i < 90; i++) {
     geometry_msgs::msg::PoseStamped test_pose;
     test_pose.header.frame_id = "map";
-    test_pose.header.stamp = node_->now();
+    test_pose.header.stamp = rclcpp::Clock().now();
     test_pose.pose.position.x = -circle_radius * std::cos(i * sample_theta_step);
     test_pose.pose.position.y = -circle_radius * std::sin(i * sample_theta_step);
     tf2::Quaternion q;
@@ -72,9 +51,31 @@ nav_msgs::msg::Path MPCControllerROS::createTestTraj()
   return test_traj;
 }
 
-void MPCControllerROS::configure(
-  const rclcpp::Node::SharedPtr & parent_node)
+void MPCControllerROS::initialize(
+  rclcpp::Node * parent,
+  const std::string & plugin_name)
 {
+
+  cmd_vel_publisher_ =
+    parent->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+
+  // Initialize pubs & subs
+  plan_publisher_ = parent->create_publisher<visualization_msgs::msg::MarkerArray>("plan", 1);
+
+  interpolated_ref_traj_publisher_ = parent->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "interpolated_plan", 1);
+
+  // setup TF buffer and listerner to read transforms
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(parent->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+  reference_traj_ = createTestTraj();
+  previous_time_ = parent->now();
+
+  MPCControllerCore::Parameters mpc_parameters;
+  mpc_controller_ = std::make_shared<MPCControllerCore>(mpc_parameters);
+
+  solve();
 }
 
 void MPCControllerROS::solve()
@@ -99,7 +100,7 @@ void MPCControllerROS::solve()
     if (!botanbot_utilities::getCurrentPose(
         curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1))
     {
-      RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
+      // RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
     }
 
     tf2::Quaternion q;
@@ -138,13 +139,69 @@ void MPCControllerROS::solve()
   }
 }
 
-geometry_msgs::msg::TwistStamped MPCControllerROS::computeVelocityCommands()
+geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands()
 {
-  return geometry_msgs::msg::TwistStamped();
+  auto regulate_max_speed = [this](double kMAX_SPEED) {
+      if (twist_.linear.x > kMAX_SPEED) {
+        twist_.linear.x = kMAX_SPEED;
+      } else if (twist_.linear.x < -kMAX_SPEED) {
+        twist_.linear.x = -kMAX_SPEED;
+      }
+    };
+  rclcpp::Duration transfrom_tolerance(std::chrono::seconds(1));
+
+  rclcpp::WallRate rate(10);
+  double dt = 1.0 / 10.0;
+  double kTARGET_SPEED = 1.0;
+  double kMAX_SPEED = 1.0;
+  double kL_F = 1.32;    // distance from rear to front axle(m)
+
+  geometry_msgs::msg::PoseStamped curr_robot_pose;
+  if (!botanbot_utilities::getCurrentPose(
+      curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1))
+  {
+    //RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
+  }
+
+  tf2::Quaternion q;
+  tf2::fromMsg(curr_robot_pose.pose.orientation, q);
+  tf2::Matrix3x3 m(q);
+  double roll, pitch, psi;
+  m.getRPY(roll, pitch, psi);
+
+  MPCControllerCore::States curr_states;
+  curr_states.x = curr_robot_pose.pose.position.x;
+  curr_states.y = curr_robot_pose.pose.position.y;
+  curr_states.psi = psi;
+  curr_states.v = kTARGET_SPEED;
+  mpc_controller_->updateCurrentStates(curr_states);
+
+  std::vector<MPCControllerCore::States> interpolated_reference_states =
+    getInterpolatedRefernceStates(
+    reference_traj_, curr_robot_pose);
+
+  mpc_controller_->updateReferences(interpolated_reference_states);
+  mpc_controller_->updatePreviousControlInput(previous_control_);
+
+  MPCControllerCore::SolutionResult res = mpc_controller_->solve();
+
+  //  The control output is acceleration but we need to publish speed
+  twist_.linear.x += res.control_input.acc * (dt);
+  //  The control output is steeering angle but we need to publish angular velocity
+  twist_.angular.z = (twist_.linear.x * res.control_input.df) / kL_F;
+
+  regulate_max_speed(kMAX_SPEED);
+  cmd_vel_publisher_->publish(twist_);
+  publishTestTraj();
+  publishInterpolatedRefernceStates(interpolated_reference_states);
+  previous_control_ = res.control_input;
+
+  return twist_;
 }
 
 void MPCControllerROS::setPlan(const nav_msgs::msg::Path & path)
 {
+  reference_traj_ = path;
 }
 
 int MPCControllerROS::nearestStateIndex(
@@ -258,16 +315,6 @@ MPCControllerROS::publishInterpolatedRefernceStates(
   }
   interpolated_ref_traj_publisher_->publish(marker_array);
 }
-
 }  // namespace mpc_controller
+PLUGINLIB_EXPORT_CLASS(mpc_controller::MPCControllerROS, botanbot_control::ControllerCore)
 }  // namespace botanbot_control
-
-int main(int argc, char ** argv)
-{
-  rclcpp::init(argc, argv);
-  auto node = std::make_shared<rclcpp::Node>("mpc");
-  botanbot_control::mpc_controller::MPCControllerROS mpc(node);
-  rclcpp::spin(node->get_node_base_interface());
-  rclcpp::shutdown();
-  return 0;
-}

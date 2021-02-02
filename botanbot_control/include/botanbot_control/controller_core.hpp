@@ -43,12 +43,14 @@ public:
   virtual ~ControllerCore() {}
 
   /**
-   * @brief Configures the controller
+   * @brief
    *
-   * @param parent_node
+   * @param parent
+   * @param plugin_name
    */
-  virtual void configure(
-    const rclcpp::Node::SharedPtr & parent_node) = 0;
+  virtual void initialize(
+    rclcpp::Node * parent,
+    const std::string & plugin_name) = 0;
 
   /**
    * @brief local setPlan - Sets the global plan
@@ -59,9 +61,9 @@ public:
   /**
    * @brief
    *
-   * @return geometry_msgs::msg::TwistStamped
+   * @return geometry_msgs::msg::Twist
    */
-  virtual geometry_msgs::msg::TwistStamped computeVelocityCommands() = 0;
+  virtual geometry_msgs::msg::Twist computeVelocityCommands() = 0;
 };
 
 }  // namespace botanbot_control

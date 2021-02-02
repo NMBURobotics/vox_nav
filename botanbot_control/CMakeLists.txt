@@ -66,15 +66,21 @@ set(dependencies
     pcl_ros
     botanbot_msgs
     botanbot_utilities)
-                     
-set(mpc_controller_exc_name botanbot_planner_server)
 
-add_executable(${mpc_controller_exc_name} src/mpc_controller/mpc_controller_core.cpp 
-                                          src/mpc_controller/mpc_controller_ros.cpp)
-ament_target_dependencies(${mpc_controller_exc_name} ${dependencies})
-target_link_libraries(${mpc_controller_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES} casadi)
 
-install(TARGETS 
+
+set(botanbot_controller_server_exc_name botanbot_controller_server)
+add_executable(${botanbot_controller_server_exc_name} src/controller_server.cpp)
+ament_target_dependencies(${botanbot_controller_server_exc_name} ${dependencies})
+target_link_libraries(${botanbot_controller_server_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
+
+set(botanbot_mpc_controller_lib_name mpc_controller)
+add_library(${botanbot_mpc_controller_lib_name} SHARED src/mpc_controller/mpc_controller_core.cpp 
+                                                       src/mpc_controller/mpc_controller_ros.cpp)
+ament_target_dependencies(${botanbot_mpc_controller_lib_name} ${dependencies})
+target_link_libraries(${botanbot_mpc_controller_lib_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES} casadi)
+
+install(TARGETS ${botanbot_mpc_controller_lib_name}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -98,5 +104,6 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_include_directories(include)
+ament_export_libraries(${mpc_controller_exc_name})
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 ament_package()

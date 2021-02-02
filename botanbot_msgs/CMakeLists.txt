@@ -16,6 +16,7 @@ find_package(sensor_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/OrientedNavSatFix.msg"
   "action/ComputePathToPose.action"
+  "action/FollowPath.action"
   DEPENDENCIES 
     builtin_interfaces 
     geometry_msgs 

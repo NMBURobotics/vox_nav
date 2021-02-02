@@ -39,9 +39,8 @@ public:
   /**
    * @brief Construct a new MPCControllerROS object
    *
-   * @param parent_node
    */
-  MPCControllerROS(rclcpp::Node::SharedPtr parent_node);
+  MPCControllerROS();
 
   /**
    * @brief Destroy the MPCControllerROS object
@@ -52,10 +51,12 @@ public:
   /**
    * @brief
    *
-   * @param parent_node
+   * @param parent
+   * @param plugin_name
    */
-  void configure(
-    const rclcpp::Node::SharedPtr & parent_node) override;
+  void initialize(
+    rclcpp::Node * parent,
+    const std::string & plugin_name) override;
 
   /**
    * @brief Set the Plan object
@@ -67,9 +68,9 @@ public:
   /**
    * @brief
    *
-   * @return geometry_msgs::msg::TwistStamped
+   * @return geometry_msgs::msg::Twist
    */
-  geometry_msgs::msg::TwistStamped computeVelocityCommands() override;
+  geometry_msgs::msg::Twist computeVelocityCommands() override;
 
   /**
    * @brief Solve th actual optimal control problem here
@@ -125,7 +126,7 @@ private:
   // Shared pointer to parent node
   rclcpp::Node::SharedPtr node_;
 
-  // ROS2 oublisher to publish velocity commands , for maual robot jogging
+  // ROS Publisher to publish velocity commands
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
   // tf buffer to get access to transfroms
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
