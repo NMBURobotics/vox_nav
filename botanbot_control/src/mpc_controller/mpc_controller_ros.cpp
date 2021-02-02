@@ -73,9 +73,7 @@ nav_msgs::msg::Path MPCControllerROS::createTestTraj()
 }
 
 void MPCControllerROS::configure(
-  const rclcpp_lifecycle::LifecycleNode::WeakPtr &,
-  std::string name, const std::shared_ptr<tf2_ros::Buffer> &
-  /*const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> &*/)
+  const rclcpp::Node::SharedPtr & parent_node)
 {
 }
 
@@ -140,9 +138,7 @@ void MPCControllerROS::solve()
   }
 }
 
-geometry_msgs::msg::TwistStamped MPCControllerROS::computeVelocityCommands(
-  const geometry_msgs::msg::PoseStamped & pose,
-  const geometry_msgs::msg::Twist & velocity)
+geometry_msgs::msg::TwistStamped MPCControllerROS::computeVelocityCommands()
 {
   return geometry_msgs::msg::TwistStamped();
 }
@@ -265,7 +261,6 @@ MPCControllerROS::publishInterpolatedRefernceStates(
 
 }  // namespace mpc_controller
 }  // namespace botanbot_control
-
 
 int main(int argc, char ** argv)
 {

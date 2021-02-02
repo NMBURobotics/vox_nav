@@ -33,21 +33,29 @@ namespace botanbot_control
 {
 namespace mpc_controller
 {
-
 class MPCControllerROS : public botanbot_control::ControllerCore
 {
 public:
-  MPCControllerROS(rclcpp::Node::SharedPtr parent);
+  /**
+   * @brief Construct a new MPCControllerROS object
+   *
+   * @param parent_node
+   */
+  MPCControllerROS(rclcpp::Node::SharedPtr parent_node);
+
+  /**
+   * @brief Destroy the MPCControllerROS object
+   *
+   */
   ~MPCControllerROS();
 
   /**
    * @brief
    *
-   * @param name
+   * @param parent_node
    */
   void configure(
-    const rclcpp_lifecycle::LifecycleNode::WeakPtr &,
-    std::string name, const std::shared_ptr<tf2_ros::Buffer> &) override;
+    const rclcpp::Node::SharedPtr & parent_node) override;
 
   /**
    * @brief Set the Plan object
@@ -59,29 +67,18 @@ public:
   /**
    * @brief
    *
-   * @param pose
-   * @param velocity
    * @return geometry_msgs::msg::TwistStamped
    */
-  geometry_msgs::msg::TwistStamped computeVelocityCommands(
-    const geometry_msgs::msg::PoseStamped & pose,
-    const geometry_msgs::msg::Twist & velocity) override;
+  geometry_msgs::msg::TwistStamped computeVelocityCommands() override;
 
   /**
-   * @brief Create a Test Traj object
-   *
-   * @return nav_msgs::msg::Path
-   */
-  nav_msgs::msg::Path createTestTraj();
-
-  /**
-   * @brief
+   * @brief Solve th actual optimal control problem here
    *
    */
   void solve();
 
   /**
-   * @brief
+   * @brief get the index of nearest trajectory state to current robot pose
    *
    * @param reference_traj
    * @param curr_robot_pose
@@ -102,14 +99,30 @@ public:
     const nav_msgs::msg::Path ref_traj,
     geometry_msgs::msg::PoseStamped curr_robot_pose);
 
+  /**
+  * @brief Create a circular test trjectory, This function is only for simple testing
+  *        to see whther robot is controlled correctly
+  * @return nav_msgs::msg::Path
+  */
+  nav_msgs::msg::Path createTestTraj();
 
+  /**
+   * @brief Publish the test Trajectory prodiced as result of createTestTraj
+   *
+   */
   void publishTestTraj();
 
+  /**
+   * @brief return cloest reference trajectory to be feed into conrol sceheme
+   *        The number of returned states will be determined according to time horizon(N)
+   *
+   * @param interpolated_ref_traj
+   */
   void publishInterpolatedRefernceStates(
     std::vector<MPCControllerCore::States> interpolated_ref_traj);
 
 private:
-  // RCLCPP node
+  // Shared pointer to parent node
   rclcpp::Node::SharedPtr node_;
 
   // ROS2 oublisher to publish velocity commands , for maual robot jogging
