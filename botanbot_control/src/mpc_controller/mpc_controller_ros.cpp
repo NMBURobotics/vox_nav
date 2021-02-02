@@ -13,17 +13,17 @@
 // limitations under the License.
 
 #include <nav_msgs/msg/path.hpp>
-#include <botanbot_control/mpc_controller/mpc_controller_wrapper.hpp>
+#include <botanbot_control/mpc_controller/mpc_controller_ros.hpp>
 
-
-using namespace std;
+#include <memory>
+#include <vector>
+#include <string>
 
 namespace botanbot_control
 {
 namespace mpc_controller
 {
-
-MPCWrapper::MPCWrapper(rclcpp::Node::SharedPtr parent)
+MPCControllerROS::MPCControllerROS(rclcpp::Node::SharedPtr parent)
 {
   node_ = parent;
 
@@ -36,7 +36,6 @@ MPCWrapper::MPCWrapper(rclcpp::Node::SharedPtr parent)
   interpolated_ref_traj_publisher_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
     "interpolated_plan", 1);
 
-
   // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
@@ -44,14 +43,17 @@ MPCWrapper::MPCWrapper(rclcpp::Node::SharedPtr parent)
   reference_traj_ = createTestTraj();
   previous_time_ = node_->now();
 
+  MPCControllerCore::Parameters mpc_parameters;
+  mpc_controller_ = std::make_shared<MPCControllerCore>(mpc_parameters);
+
   solve();
 }
 
-MPCWrapper::~MPCWrapper()
+MPCControllerROS::~MPCControllerROS()
 {
 }
 
-nav_msgs::msg::Path MPCWrapper::createTestTraj()
+nav_msgs::msg::Path MPCControllerROS::createTestTraj()
 {
   nav_msgs::msg::Path test_traj;
   double sample_theta_step = 2.0 * M_PI / 180.0;
@@ -70,14 +72,14 @@ nav_msgs::msg::Path MPCWrapper::createTestTraj()
   return test_traj;
 }
 
-void MPCWrapper::configure(
+void MPCControllerROS::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr &,
   std::string name, const std::shared_ptr<tf2_ros::Buffer> &
   /*const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> &*/)
 {
 }
 
-void MPCWrapper::solve()
+void MPCControllerROS::solve()
 {
   auto regulate_max_speed = [this](double kMAX_SPEED) {
       if (twist_.linear.x > kMAX_SPEED) {
@@ -95,7 +97,6 @@ void MPCWrapper::solve()
   double kL_F = 1.32;    // distance from rear to front axle(m)
 
   while (rclcpp::ok()) {
-
     geometry_msgs::msg::PoseStamped curr_robot_pose;
     if (!botanbot_utilities::getCurrentPose(
         curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1))
@@ -103,52 +104,54 @@ void MPCWrapper::solve()
       RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
     }
 
-    auto ref_states = intrpolateTraj(reference_traj_, curr_robot_pose);
-
     tf2::Quaternion q;
     tf2::fromMsg(curr_robot_pose.pose.orientation, q);
     tf2::Matrix3x3 m(q);
-    double r, p, psi;
-    m.getRPY(r, p, psi);
+    double roll, pitch, psi;
+    m.getRPY(roll, pitch, psi);
 
-    mpc_controller_.updateInitialCondition(
-      curr_robot_pose.pose.position.x,
-      curr_robot_pose.pose.position.y, psi, 1.0);
-    mpc_controller_.updateReference(ref_states[0], ref_states[1], ref_states[2], ref_states[3]);
-    mpc_controller_.updatePreviousInput(previous_control_.first, previous_control_.second);
-    SolutionResult res = mpc_controller_.solve();
+    MPCControllerCore::States curr_states;
+    curr_states.x = curr_robot_pose.pose.position.x;
+    curr_states.y = curr_robot_pose.pose.position.y;
+    curr_states.psi = psi;
+    curr_states.v = kTARGET_SPEED;
+    mpc_controller_->updateCurrentStates(curr_states);
+
+    std::vector<MPCControllerCore::States> interpolated_reference_states =
+      getInterpolatedRefernceStates(
+      reference_traj_, curr_robot_pose);
+
+    mpc_controller_->updateReferences(interpolated_reference_states);
+    mpc_controller_->updatePreviousControlInput(previous_control_);
+
+    MPCControllerCore::SolutionResult res = mpc_controller_->solve();
 
     //  The control output is acceleration but we need to publish speed
-    twist_.linear.x += res.control_input.first * (dt);
+    twist_.linear.x += res.control_input.acc * (dt);
     //  The control output is steeering angle but we need to publish angular velocity
-    //twist_.angular.z = twist_.linear.x / (std::tan(res.control_input.second) / kL_F);
-    twist_.angular.z = (twist_.linear.x * res.control_input.second) / kL_F;
-
-    //twist_.linear.x = res.control_input.first;
-    //twist_.angular.z = res.control_input.second;
+    twist_.angular.z = (twist_.linear.x * res.control_input.df) / kL_F;
 
     regulate_max_speed(kMAX_SPEED);
     cmd_vel_publisher_->publish(twist_);
-    publihTestTraj();
-    publihInterpolatedRefTraj(ref_states);
+    publishTestTraj();
+    publishInterpolatedRefernceStates(interpolated_reference_states);
     previous_control_ = res.control_input;
     rate.sleep();
   }
 }
 
-geometry_msgs::msg::TwistStamped MPCWrapper::computeVelocityCommands(
+geometry_msgs::msg::TwistStamped MPCControllerROS::computeVelocityCommands(
   const geometry_msgs::msg::PoseStamped & pose,
   const geometry_msgs::msg::Twist & velocity)
 {
   return geometry_msgs::msg::TwistStamped();
 }
 
-void MPCWrapper::setPlan(const nav_msgs::msg::Path & path)
+void MPCControllerROS::setPlan(const nav_msgs::msg::Path & path)
 {
-
 }
 
-int MPCWrapper::calculate_nearest_state_index(
+int MPCControllerROS::nearestStateIndex(
   nav_msgs::msg::Path reference_traj, geometry_msgs::msg::PoseStamped curr_robot_pose)
 {
   int closest_state_index = -1;
@@ -166,21 +169,21 @@ int MPCWrapper::calculate_nearest_state_index(
   return closest_state_index;
 }
 
-std::vector<std::vector<double>> MPCWrapper::intrpolateTraj(
+std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedRefernceStates(
   const nav_msgs::msg::Path ref_traj,
   geometry_msgs::msg::PoseStamped curr_robot_pose)
 {
   int nearsest_taj_state_index =
-    calculate_nearest_state_index(ref_traj, curr_robot_pose);
-
-  std::vector<double> interpolated_x_ref, interpolated_y_ref, interpolated_psi_ref;
+    nearestStateIndex(ref_traj, curr_robot_pose);
 
   int kTRAJHORIZON = 10;
   double kTRAJDT = 0.3;
   double kTARGETSPEED = 1.0;
 
-  for (int i = 0; i < kTRAJHORIZON; i++) {
+  std::vector<MPCControllerCore::States> interpolated_reference_states;
 
+  for (int i = 0; i < kTRAJHORIZON; i++) {
+    MPCControllerCore::States curr_interpolated_state;
     tf2::Quaternion curr_waypoint_psi_quat;
     tf2::fromMsg(
       ref_traj.poses[nearsest_taj_state_index + i].pose.orientation,
@@ -189,25 +192,17 @@ std::vector<std::vector<double>> MPCWrapper::intrpolateTraj(
     tf2::Matrix3x3 curr_waypoint_rot(curr_waypoint_psi_quat);
     curr_waypoint_rot.getRPY(none, none, psi);
 
-    interpolated_psi_ref.push_back(psi);
-    interpolated_x_ref.push_back(ref_traj.poses[nearsest_taj_state_index + i].pose.position.x);
-    interpolated_y_ref.push_back(ref_traj.poses[nearsest_taj_state_index + i].pose.position.y);
-
+    curr_interpolated_state.x = ref_traj.poses[nearsest_taj_state_index + i].pose.position.x;
+    curr_interpolated_state.y = ref_traj.poses[nearsest_taj_state_index + i].pose.position.y;
+    curr_interpolated_state.psi = psi;
+    curr_interpolated_state.v = kTARGETSPEED;
+    interpolated_reference_states.push_back(curr_interpolated_state);
   }
-
-  std::vector<std::vector<double>> interplated_references;
-  std::vector<double> v_ref(interpolated_x_ref.size(), kTARGETSPEED);
-
-  interplated_references.push_back(interpolated_x_ref);
-  interplated_references.push_back(interpolated_y_ref);
-  interplated_references.push_back(interpolated_psi_ref);
-  interplated_references.push_back(v_ref);
-
-  return interplated_references;
+  return interpolated_reference_states;
 }
 
 void
-MPCWrapper::publihTestTraj()
+MPCControllerROS::publishTestTraj()
 {
   visualization_msgs::msg::MarkerArray marker_array;
   auto path_idx = 0;
@@ -236,11 +231,12 @@ MPCWrapper::publihTestTraj()
 }
 
 void
-MPCWrapper::publihInterpolatedRefTraj(std::vector<std::vector<double>> interpolated_ref_traj)
+MPCControllerROS::publishInterpolatedRefernceStates(
+  std::vector<MPCControllerCore::States> interpolated_reference_states)
 {
   visualization_msgs::msg::MarkerArray marker_array;
   // iterae through Ref raj Xs
-  for (int i = 0; i < interpolated_ref_traj[0].size(); i++) {
+  for (int i = 0; i < interpolated_reference_states.size(); i++) {
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = "map";
     marker.header.stamp = rclcpp::Clock().now();
@@ -249,11 +245,11 @@ MPCWrapper::publihInterpolatedRefTraj(std::vector<std::vector<double>> interpola
     marker.type = visualization_msgs::msg::Marker::CUBE;
     marker.action = visualization_msgs::msg::Marker::ADD;
     marker.lifetime = rclcpp::Duration::from_seconds(0);
-    marker.pose.position.x = interpolated_ref_traj[0][i];
-    marker.pose.position.y = interpolated_ref_traj[1][i];
+    marker.pose.position.x = interpolated_reference_states[i].x;
+    marker.pose.position.y = interpolated_reference_states[i].y;
     marker.pose.position.z = 0.1;
     tf2::Quaternion curr_ref_traj_sample_quat;
-    curr_ref_traj_sample_quat.setRPY(0, 0, interpolated_ref_traj[2][i]);
+    curr_ref_traj_sample_quat.setRPY(0, 0, interpolated_reference_states[i].psi);
     marker.pose.orientation = tf2::toMsg(curr_ref_traj_sample_quat);
     marker.scale.x = 0.2;
     marker.scale.y = 0.1;
@@ -267,7 +263,6 @@ MPCWrapper::publihInterpolatedRefTraj(std::vector<std::vector<double>> interpola
   interpolated_ref_traj_publisher_->publish(marker_array);
 }
 
-
 }  // namespace mpc_controller
 }  // namespace botanbot_control
 
@@ -276,9 +271,8 @@ int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<rclcpp::Node>("mpc");
-  botanbot_control::mpc_controller::MPCWrapper mpc(node);
+  botanbot_control::mpc_controller::MPCControllerROS mpc(node);
   rclcpp::spin(node->get_node_base_interface());
-
   rclcpp::shutdown();
   return 0;
 }

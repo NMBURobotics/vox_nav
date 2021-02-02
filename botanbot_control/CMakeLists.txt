@@ -69,8 +69,8 @@ set(dependencies
                      
 set(mpc_controller_exc_name botanbot_planner_server)
 
-add_executable(${mpc_controller_exc_name} src/mpc_controller/mpc_controller.cpp 
-                                          src/mpc_controller/mpc_controller_wrapper.cpp)
+add_executable(${mpc_controller_exc_name} src/mpc_controller/mpc_controller_core.cpp 
+                                          src/mpc_controller/mpc_controller_ros.cpp)
 ament_target_dependencies(${mpc_controller_exc_name} ${dependencies})
 target_link_libraries(${mpc_controller_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES} casadi)
 

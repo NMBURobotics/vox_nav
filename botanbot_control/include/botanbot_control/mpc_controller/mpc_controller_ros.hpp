@@ -12,28 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include <rclcpp/rclcpp.hpp>
 #include <botanbot_control/controller_core.hpp>
 #include <botanbot_utilities/tf_helpers.hpp>
-#include <botanbot_control/mpc_controller/mpc_controller.hpp>
+#include <botanbot_control/mpc_controller/mpc_controller_core.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker_array.hpp>
 
-#include <Eigen/Dense>
+#include <string>
+#include <memory>
+#include <vector>
+
+#ifndef BOTANBOT_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
+#define BOTANBOT_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
 
 namespace botanbot_control
 {
 namespace mpc_controller
 {
-class MPCWrapper : public botanbot_control::ControllerCore
+
+class MPCControllerROS : public botanbot_control::ControllerCore
 {
 public:
-  MPCWrapper(rclcpp::Node::SharedPtr parent);
-  ~MPCWrapper();
+  MPCControllerROS(rclcpp::Node::SharedPtr parent);
+  ~MPCControllerROS();
 
   /**
    * @brief
@@ -82,78 +87,26 @@ public:
    * @param curr_robot_pose
    * @return int
    */
-  int calculate_nearest_state_index(
+  int nearestStateIndex(
     nav_msgs::msg::Path reference_traj,
     geometry_msgs::msg::PoseStamped curr_robot_pose);
 
   /**
-   * @brief
+   * @brief Get the Interpolated Refernce States object
    *
    * @param ref_traj
    * @param curr_robot_pose
-   * @return std::vector<std::vector<double>>
+   * @return std::vector<MPCControllerCore::States>
    */
-  std::vector<std::vector<double>> intrpolateTraj(
+  std::vector<MPCControllerCore::States> getInterpolatedRefernceStates(
     const nav_msgs::msg::Path ref_traj,
     geometry_msgs::msg::PoseStamped curr_robot_pose);
 
-  /**
-   * @brief
-   *
-   * @param inValue1
-   * @param inValue2
-   * @param inPercent
-   * @return constexpr double
-   */
-  constexpr double interp(double inValue1, double inValue2, double inPercent) noexcept
-  {
-    return inValue1 * (1.0 - inPercent) + inValue2 * inPercent;
-  }
 
-  /**
-   * @brief
-   *
-   * @tparam dtype
-   * @param inX
-   * @param inXp
-   * @param inFp
-   * @return std::vector<dtype>
-   */
-  template<typename dtype>
-  std::vector<dtype> interp(
-    std::vector<dtype> & inX, std::vector<dtype> & inXp,
-    std::vector<dtype> & inFp)
-  {
-    // do some error checking first
-    if (inXp.size() != inFp.size()) {
-      std::cerr << ("inXp and inFp need to be the same size().") << std::endl;
-    }
-    //sort the input inXp and inFp data
-    std::sort(inXp.begin(), inXp.end());
-    std::sort(inFp.begin(), inFp.end());
-    std::sort(inX.begin(), inX.end());
-    std::vector<dtype> returnArray(inX.size(), 1.0);
-    int currXpIdx = 0;
-    int currXidx = 0;
-    while (currXidx < inX.size()) {
+  void publishTestTraj();
 
-      if (inXp[currXpIdx] <= inX[currXidx] &&
-        inX[currXidx] <= inXp[currXpIdx + 1])
-      {
-        const double percent = static_cast<double>(inX[currXidx] - inXp[currXpIdx]) /
-          static_cast<double>(inXp[currXpIdx + 1] - inXp[currXpIdx]);
-        returnArray[currXidx++] = interp(
-          inFp[currXpIdx], inFp[currXpIdx + 1],
-          percent);
-      } else {
-        ++currXpIdx;
-      }
-    }
-    return returnArray;
-  }
-
-  void publihTestTraj();
-  void publihInterpolatedRefTraj(std::vector<std::vector<double>> interpolated_ref_traj);
+  void publishInterpolatedRefernceStates(
+    std::vector<MPCControllerCore::States> interpolated_ref_traj);
 
 private:
   // RCLCPP node
@@ -168,17 +121,17 @@ private:
   nav_msgs::msg::Path reference_traj_;
   geometry_msgs::msg::Twist twist_;
   rclcpp::Time previous_time_;
-  MPCController mpc_controller_;
-  SolutionResult::control_input_t previous_control_;
+
+  std::shared_ptr<MPCControllerCore> mpc_controller_;
+
+  MPCControllerCore::ControlInput previous_control_;
 
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     interpolated_ref_traj_publisher_;
-
-
 };
 
-
 }  // namespace mpc_controller
-
 }  // namespace botanbot_control
+
+#endif  // BOTANBOT_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
