@@ -111,7 +111,7 @@ rclcpp_action::GoalResponse ControllerServer::handle_goal(
   std::shared_ptr<const FollowPath::Goal> goal)
 {
   RCLCPP_INFO(
-    this->get_logger(), "Received goal request in order to compute a path to pose");
+    this->get_logger(), "Received goal request in order to follow a path");
   (void)uuid;
   return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 }
@@ -141,6 +141,18 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
   const auto goal = goal_handle->get_goal();
   auto feedback = std::make_shared<FollowPath::Feedback>();
   auto result = std::make_shared<FollowPath::Result>();
+
+  if (!goal->path.poses.size() > 0) {
+    RCLCPP_WARN(
+      get_logger(), "Recieved an empty path, this was probaly unintended, ignoring the request.");
+    if (rclcpp::ok()) {
+      auto cycle_duration = steady_clock_.now() - start_time;
+      result->total_time = cycle_duration;
+      goal_handle->succeed(result);
+      RCLCPP_INFO(this->get_logger(), "Follow Path Succeeded!");
+      return;
+    }
+  }
 
   geometry_msgs::msg::Twist computed_velocity_commands;
   // set Plan
