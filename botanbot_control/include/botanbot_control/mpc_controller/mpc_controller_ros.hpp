@@ -14,7 +14,6 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <botanbot_control/controller_core.hpp>
-#include <botanbot_utilities/tf_helpers.hpp>
 #include <botanbot_control/mpc_controller/mpc_controller_core.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -68,9 +67,12 @@ public:
   /**
    * @brief
    *
+   * @param curr_robot_pose
    * @return geometry_msgs::msg::Twist
    */
-  geometry_msgs::msg::Twist computeVelocityCommands() override;
+  geometry_msgs::msg::Twist computeVelocityCommands(
+    geometry_msgs::msg::PoseStamped curr_robot_pose)
+  override;
 
   /**
    * @brief Solve th actual optimal control problem here
@@ -128,9 +130,7 @@ private:
 
   // ROS Publisher to publish velocity commands
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
-  // tf buffer to get access to transfroms
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
 
   nav_msgs::msg::Path reference_traj_;
   geometry_msgs::msg::Twist twist_;

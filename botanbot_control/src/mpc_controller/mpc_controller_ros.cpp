@@ -35,7 +35,7 @@ MPCControllerROS::~MPCControllerROS()
 nav_msgs::msg::Path MPCControllerROS::createTestTraj()
 {
   nav_msgs::msg::Path test_traj;
-  double sample_theta_step = 2.0 * M_PI / 180.0;
+  /*double sample_theta_step = 2.0 * M_PI / 180.0;
   double circle_radius = 10.0;
   for (int i = 0; i < 90; i++) {
     geometry_msgs::msg::PoseStamped test_pose;
@@ -47,7 +47,7 @@ nav_msgs::msg::Path MPCControllerROS::createTestTraj()
     q.setRPY(0.0, 0.0, ((i * sample_theta_step) - M_PI_2  ));
     test_pose.pose.orientation = tf2::toMsg(q);
     test_traj.poses.push_back(test_pose);
-  }
+  }*/
   return test_traj;
 }
 
@@ -65,10 +65,6 @@ void MPCControllerROS::initialize(
   interpolated_ref_traj_publisher_ = parent->create_publisher<visualization_msgs::msg::MarkerArray>(
     "interpolated_plan", 1);
 
-  // setup TF buffer and listerner to read transforms
-  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(parent->get_clock());
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-
   reference_traj_ = createTestTraj();
   previous_time_ = parent->now();
 
@@ -80,66 +76,11 @@ void MPCControllerROS::initialize(
 
 void MPCControllerROS::solve()
 {
-  auto regulate_max_speed = [this](double kMAX_SPEED) {
-      if (twist_.linear.x > kMAX_SPEED) {
-        twist_.linear.x = kMAX_SPEED;
-      } else if (twist_.linear.x < -kMAX_SPEED) {
-        twist_.linear.x = -kMAX_SPEED;
-      }
-    };
-  rclcpp::Duration transfrom_tolerance(std::chrono::seconds(1));
 
-  rclcpp::WallRate rate(10);
-  double dt = 1.0 / 10.0;
-  double kTARGET_SPEED = 1.0;
-  double kMAX_SPEED = 1.0;
-  double kL_F = 1.32;    // distance from rear to front axle(m)
-
-  while (rclcpp::ok()) {
-    geometry_msgs::msg::PoseStamped curr_robot_pose;
-    if (!botanbot_utilities::getCurrentPose(
-        curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1))
-    {
-      // RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
-    }
-
-    tf2::Quaternion q;
-    tf2::fromMsg(curr_robot_pose.pose.orientation, q);
-    tf2::Matrix3x3 m(q);
-    double roll, pitch, psi;
-    m.getRPY(roll, pitch, psi);
-
-    MPCControllerCore::States curr_states;
-    curr_states.x = curr_robot_pose.pose.position.x;
-    curr_states.y = curr_robot_pose.pose.position.y;
-    curr_states.psi = psi;
-    curr_states.v = kTARGET_SPEED;
-    mpc_controller_->updateCurrentStates(curr_states);
-
-    std::vector<MPCControllerCore::States> interpolated_reference_states =
-      getInterpolatedRefernceStates(
-      reference_traj_, curr_robot_pose);
-
-    mpc_controller_->updateReferences(interpolated_reference_states);
-    mpc_controller_->updatePreviousControlInput(previous_control_);
-
-    MPCControllerCore::SolutionResult res = mpc_controller_->solve();
-
-    //  The control output is acceleration but we need to publish speed
-    twist_.linear.x += res.control_input.acc * (dt);
-    //  The control output is steeering angle but we need to publish angular velocity
-    twist_.angular.z = (twist_.linear.x * res.control_input.df) / kL_F;
-
-    regulate_max_speed(kMAX_SPEED);
-    cmd_vel_publisher_->publish(twist_);
-    publishTestTraj();
-    publishInterpolatedRefernceStates(interpolated_reference_states);
-    previous_control_ = res.control_input;
-    rate.sleep();
-  }
 }
 
-geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands()
+geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands(
+  geometry_msgs::msg::PoseStamped curr_robot_pose)
 {
   auto regulate_max_speed = [this](double kMAX_SPEED) {
       if (twist_.linear.x > kMAX_SPEED) {
@@ -150,18 +91,10 @@ geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands()
     };
   rclcpp::Duration transfrom_tolerance(std::chrono::seconds(1));
 
-  rclcpp::WallRate rate(10);
   double dt = 1.0 / 10.0;
   double kTARGET_SPEED = 1.0;
   double kMAX_SPEED = 1.0;
   double kL_F = 1.32;    // distance from rear to front axle(m)
-
-  geometry_msgs::msg::PoseStamped curr_robot_pose;
-  if (!botanbot_utilities::getCurrentPose(
-      curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1))
-  {
-    //RCLCPP_DEBUG(node_->get_logger(), "Current robot pose is not available.");
-  }
 
   tf2::Quaternion q;
   tf2::fromMsg(curr_robot_pose.pose.orientation, q);
@@ -244,7 +177,6 @@ std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedRefernce
     double none, psi;
     tf2::Matrix3x3 curr_waypoint_rot(curr_waypoint_psi_quat);
     curr_waypoint_rot.getRPY(none, none, psi);
-
     curr_interpolated_state.x = ref_traj.poses[nearsest_taj_state_index + i].pose.position.x;
     curr_interpolated_state.y = ref_traj.poses[nearsest_taj_state_index + i].pose.position.y;
     curr_interpolated_state.psi = psi;

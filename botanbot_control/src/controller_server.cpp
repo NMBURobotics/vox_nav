@@ -88,6 +88,10 @@ ControllerServer::ControllerServer()
     std::bind(&ControllerServer::handle_goal, this, std::placeholders::_1, std::placeholders::_2),
     std::bind(&ControllerServer::handle_cancel, this, std::placeholders::_1),
     std::bind(&ControllerServer::handle_accepted, this, std::placeholders::_1));
+
+  // setup TF buffer and listerner to read transforms
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 }
 
 ControllerServer::~ControllerServer()
@@ -139,7 +143,6 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
   // set Plan
   if (controllers_.find(controller_id_) != controllers_.end()) {
     controllers_[controller_id_]->setPlan(goal->path);
-    computed_velcity_commands = controllers_[controller_id_]->computeVelocityCommands();
   } else {
     if (controllers_.size() == 1 && controller_id_.empty()) {
       RCLCPP_WARN_ONCE(
@@ -147,7 +150,6 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
         "Server will use only plugin %s in server."
         " This warning will appear once.", controller_ids_concat_.c_str());
       controllers_[controllers_.begin()->first]->setPlan(goal->path);
-      controllers_[controller_id_]->computeVelocityCommands();
     } else {
       RCLCPP_ERROR(
         get_logger(), "controller %s is not a valid controller. "
@@ -156,26 +158,29 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
     }
   }
 
-  // Check if there is a cancel request
-  if (goal_handle->is_canceling()) {
-    goal_handle->canceled(result);
-    RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
-    return;
+  rclcpp::WallRate rate(10);
+
+  while (rclcpp::ok()) {
+    geometry_msgs::msg::PoseStamped curr_robot_pose;
+    botanbot_utilities::getCurrentPose(
+      curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1);
+    // Check if there is a cancel request
+    if (goal_handle->is_canceling()) {
+      goal_handle->canceled(result);
+      RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
+      return;
+    }
+
+    controllers_[controller_id_]->computeVelocityCommands(curr_robot_pose);
+
+    // Update sequence
+    auto elapsed_time = steady_clock_.now() - start_time;
+    feedback->elapsed_time = elapsed_time;
+    feedback->speed = computed_velcity_commands.linear.x;
+    goal_handle->publish_feedback(feedback);
+    rate.sleep();
   }
-  // Update sequence
-  auto elapsed_time = steady_clock_.now() - start_time;
-  feedback->elapsed_time = elapsed_time;
-  feedback->speed = computed_velcity_commands.linear.x;
-  goal_handle->publish_feedback(feedback);
-
-  RCLCPP_DEBUG(
-    get_logger(),
-    "Giving velocity commands to robot linear %.2f, angular %.2f)",
-    computed_velcity_commands.linear.x,
-    computed_velcity_commands.angular.z);
-
   auto cycle_duration = steady_clock_.now() - start_time;
-
   // Check if goal is done
   if (rclcpp::ok()) {
     cycle_duration = steady_clock_.now() - start_time;
@@ -185,14 +190,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
     // Publish the plan for visualization purposes
     //publishPlan(result->path);
   }
-  cycle_duration = steady_clock_.now() - start_time;
-  if (controller_duration_ && cycle_duration.seconds() > controller_duration_) {
-    RCLCPP_WARN(
-      get_logger(),
-      "Controller loop missed its desired rate of %.4f Hz. Current loop rate is %.4f Hz",
-      1 / controller_duration_, 1 / cycle_duration.seconds());
-  }
-  loop_rate.sleep();
+
 }
 
 }  // namespace botanbot_control

@@ -33,6 +33,7 @@
 #include "pluginlib/class_list_macros.hpp"
 
 #include <botanbot_control/controller_core.hpp>
+#include <botanbot_utilities/tf_helpers.hpp>
 
 namespace botanbot_control
 {
@@ -114,6 +115,10 @@ protected:
   // Publishers for the controller
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     actual_control_states_publisher_;
+
+  // tf buffer to get access to transfroms
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 };
 
 }  // namespace botanbot_control

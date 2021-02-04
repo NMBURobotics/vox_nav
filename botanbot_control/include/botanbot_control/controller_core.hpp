@@ -61,9 +61,11 @@ public:
   /**
    * @brief
    *
+   * @param curr_robot_pose
    * @return geometry_msgs::msg::Twist
    */
-  virtual geometry_msgs::msg::Twist computeVelocityCommands() = 0;
+  virtual geometry_msgs::msg::Twist computeVelocityCommands(
+    geometry_msgs::msg::PoseStamped curr_robot_pose) = 0;
 };
 
 }  // namespace botanbot_control
