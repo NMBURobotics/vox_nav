@@ -3,7 +3,7 @@ geometry_msgs/PoseStamped pose
 string planner_id
 ---
 #result definition
-geometry_msgs/PoseStamped[] path
+nav_msgs/Path path
 builtin_interfaces/Duration planning_time
 ---
 #feedback

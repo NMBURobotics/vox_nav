@@ -193,11 +193,9 @@ void NavigateToPoseServer::execute_navigate_to_pose(
     RCLCPP_ERROR(this->get_logger(), "ComputePathToPose Action server not available after waiting");
     return;
   }
-
   auto compute_path_to_pose_goal = ComputePathToPose::Goal();
   compute_path_to_pose_goal.pose = goal->pose;
   compute_path_to_pose_goal.planner_id = "default";
-
   using namespace std::placeholders;
   auto compute_path_to_pose_goal_options =
     rclcpp_action::Client<ComputePathToPose>::SendGoalOptions();
@@ -207,27 +205,73 @@ void NavigateToPoseServer::execute_navigate_to_pose(
     std::bind(&NavigateToPoseServer::compute_path_to_pose_feedback_callback, this, _1, _2);
   compute_path_to_pose_goal_options.result_callback =
     std::bind(&NavigateToPoseServer::compute_path_to_pose_result_callback, this, _1);
-
-  //this->client_ptr_->async_send_goal(goal_msg, send_goal_options);
-  compute_path_to_pose_action_client_->
-
-
-  for (int i = 1; (i < goal->order) && rclcpp::ok(); ++i) {
-    // Check if there is a cancel request
-    if (goal_handle->is_canceling()) {
-      result->sequence = sequence;
-      goal_handle->canceled(result);
-      RCLCPP_INFO(this->get_logger(), "Goal canceled");
-      return;
-    }
-    // Update sequence
-    sequence.push_back(sequence[i] + sequence[i - 1]);
-    // Publish feedback
-    goal_handle->publish_feedback(feedback);
-    RCLCPP_INFO(this->get_logger(), "Publish feedback");
-
-    loop_rate.sleep();
+  auto compute_path_to_pose_future_goal_handle =
+    compute_path_to_pose_action_client_->async_send_goal(
+    compute_path_to_pose_goal,
+    compute_path_to_pose_goal_options);
+  std::chrono::milliseconds server_timeout = std::chrono::milliseconds(500);
+  if (rclcpp::spin_until_future_complete(
+      compute_path_to_pose_node_,
+      compute_path_to_pose_future_goal_handle,
+      server_timeout) !=
+    rclcpp::executor::FutureReturnCode::SUCCESS)
+  {
+    throw std::runtime_error("compute_path_to_pose send goal failed");
+    return;
   }
+  auto compute_path_to_pose_goal_handle = compute_path_to_pose_future_goal_handle.get();
+  if (!compute_path_to_pose_goal_handle) {
+    throw std::runtime_error("Goal was rejected by the compute_path_to_pose action server");
+    return;
+  }
+
+  auto compute_path_to_pose_result = compute_path_to_pose_action_client_->async_get_result(
+    compute_path_to_pose_goal_handle);
+
+
+  if (!this->follow_path_action_client_->
+    wait_for_action_server(std::chrono::seconds(1)))
+  {
+    RCLCPP_ERROR(this->get_logger(), "FollowPath Action server not available after waiting 1s");
+    return;
+  }
+  auto folow_path_goal = FollowPath::Goal();
+  folow_path_goal.path = compute_path_to_pose_result.get().result->path;
+  folow_path_goal.controller_id = "default";
+  using namespace std::placeholders;
+  auto compute_path_to_pose_goal_options =
+    rclcpp_action::Client<FollowPath>::SendGoalOptions();
+  compute_path_to_pose_goal_options.goal_response_callback =
+    std::bind(&NavigateToPoseServer::follow_path_response_callback, this, _1);
+  compute_path_to_pose_goal_options.feedback_callback =
+    std::bind(&NavigateToPoseServer::follow_path_feedback_callback, this, _1, _2);
+  compute_path_to_pose_goal_options.result_callback =
+    std::bind(&NavigateToPoseServer::follow_path_result_callback, this, _1);
+  auto compute_path_to_pose_future_goal_handle =
+    compute_path_to_pose_action_client_->async_send_goal(
+    compute_path_to_pose_goal,
+    compute_path_to_pose_goal_options);
+  std::chrono::milliseconds server_timeout = std::chrono::milliseconds(500);
+  if (rclcpp::spin_until_future_complete(
+      compute_path_to_pose_node_,
+      compute_path_to_pose_future_goal_handle,
+      server_timeout) !=
+    rclcpp::executor::FutureReturnCode::SUCCESS)
+  {
+    throw std::runtime_error("compute_path_to_pose send goal failed");
+    return;
+  }
+  auto compute_path_to_pose_goal_handle = compute_path_to_pose_future_goal_handle.get();
+  if (!compute_path_to_pose_goal_handle) {
+    throw std::runtime_error("Goal was rejected by the compute_path_to_pose action server");
+    return;
+  }
+
+  auto result = compute_path_to_pose_action_client_->async_get_result(
+    compute_path_to_pose_goal_handle);
+  // At this point our planner has created a apln and now we will call folloow path action to follow path
+  // returned by planner
+
 
   // Check if goal is done
   if (rclcpp::ok()) {
@@ -235,5 +279,6 @@ void NavigateToPoseServer::execute_navigate_to_pose(
     goal_handle->succeed(result);
     RCLCPP_INFO(this->get_logger(), "Goal succeeded");
   }
+}
 
 }  // namespace botanbot_to_pose_navigator

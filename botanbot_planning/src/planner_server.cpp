@@ -137,9 +137,9 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
   auto result = std::make_shared<ComputePathToPose::Result>();
 
   geometry_msgs::msg::PoseStamped start_pose;
-  result->path = getPlan(start_pose, goal->pose, planner_id_);
+  result->path.poses = getPlan(start_pose, goal->pose, planner_id_);
 
-  if (result->path.size() == 0) {
+  if (result->path.poses.size() == 0) {
     RCLCPP_WARN(
       get_logger(), "Planning algorithm %s failed to generate a valid"
       " path to (%.2f, %.2f)", goal->planner_id.c_str(),
@@ -149,7 +149,7 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
 
   // Check if there is a cancel request
   if (goal_handle->is_canceling()) {
-    result->path = std::vector<geometry_msgs::msg::PoseStamped>();
+    result->path.poses = std::vector<geometry_msgs::msg::PoseStamped>();
     goal_handle->canceled(result);
     RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
     return;
@@ -162,7 +162,7 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
   RCLCPP_DEBUG(
     get_logger(),
     "Found valid path of size %u to (%.2f, %.2f)",
-    result->path.size(), goal->pose.pose.position.x,
+    result->path.poses.size(), goal->pose.pose.position.x,
     goal->pose.pose.position.y);
 
   auto cycle_duration = steady_clock_.now() - start_time;
@@ -174,7 +174,7 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
     goal_handle->succeed(result);
     RCLCPP_INFO(this->get_logger(), "Goal Succeeded");
     // Publish the plan for visualization purposes
-    publishPlan(result->path);
+    publishPlan(result->path.poses);
   }
   cycle_duration = steady_clock_.now() - start_time;
   if (max_planner_duration_ && cycle_duration.seconds() > max_planner_duration_) {
