@@ -53,7 +53,7 @@ set(dependencies
     geometry_msgs
     octomap_msgs
     sensor_msgs
-    botanbot_msgs
+    nav_msgs
     std_msgs
     tf2_eigen
     tf2_geometry_msgs
@@ -66,8 +66,6 @@ set(dependencies
     pcl_ros
     botanbot_msgs
     botanbot_utilities)
-
-
 
 set(botanbot_controller_server_exc_name botanbot_controller_server)
 add_executable(${botanbot_controller_server_exc_name} src/controller_server.cpp)
@@ -83,20 +81,17 @@ target_link_libraries(${botanbot_mpc_controller_lib_name} ${OCTOMAP_LIBRARIES} $
 install(TARGETS ${botanbot_mpc_controller_lib_name}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
+  RUNTIME DESTINATION bin)
 
-install(TARGETS ${mpc_controller_exc_name}
+install(TARGETS ${botanbot_controller_server_exc_name}
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
-  DESTINATION include/
-)
+  DESTINATION include/)
 
 install(
   DIRECTORY launch params
-  DESTINATION share/${PROJECT_NAME}
-)
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

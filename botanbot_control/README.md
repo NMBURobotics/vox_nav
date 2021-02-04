@@ -6,7 +6,7 @@ botanbot_controller_server_rclcpp_node:
     controller_plugin: "MPCControllerROS" # other options: 
     expected_controller_frequency: 5.0
     MPCControllerROS:
-      plugin: "botanbot_controller::MPCControllerROS"
+      plugin: "mpc_controller::MPCControllerROS"
       N: 10                                                       #timesteps in MPC Horizon
       DT: 0.1                                                     #discretization time between timesteps(s)    
       L_F: 0.66                                                   #distance from CoG to front axle(m)

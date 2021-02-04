@@ -30,14 +30,14 @@ namespace botanbot_control
 {
 ControllerServer::ControllerServer()
 : Node("botanbot_controller_server_rclcpp_node"),
-  pc_loader_("botanbot_control", "botanbot_control::ControlerCore"),
+  pc_loader_("botanbot_control", "botanbot_control::ControllerCore"),
   controller_id_("MPCControllerROS"),
   controller_type_("mpc_controller::MPCControllerROS")
 {
   RCLCPP_INFO(get_logger(), "Creating");
 
   // Declare this node's parameters
-  declare_parameter("controller_frequency", controller_frequency_);
+  declare_parameter("controller_frequency", 5.0);
   get_parameter("controller_frequency", controller_frequency_);
 
   declare_parameter("controller_plugin", controller_id_);
@@ -56,7 +56,7 @@ ControllerServer::ControllerServer()
     controllers_.insert({controller_id_, controller});
   } catch (const pluginlib::PluginlibException & ex) {
     RCLCPP_FATAL(
-      get_logger(), "Failed to create planner. Exception: %s",
+      get_logger(), "Failed to create controller. Exception: %s",
       ex.what());
   }
 
@@ -64,13 +64,13 @@ ControllerServer::ControllerServer()
 
   RCLCPP_INFO(
     get_logger(),
-    "Controller Server has %s planners available.", controller_ids_concat_.c_str());
+    "Controller Server has %s controller available.", controller_ids_concat_.c_str());
   if (controller_frequency_ > 0) {
     controller_duration_ = 1.0 / controller_frequency_;
   } else {
     RCLCPP_WARN(
       get_logger(),
-      "The expected planner frequency parameter is %.4f Hz. The value should to be greater"
+      "The expected controller frequency parameter is %.4f Hz. The value should to be greater"
       " than 0.0 to turn on duration overrrun warning messages", controller_frequency_);
     controller_duration_ = 0.0;
   }
