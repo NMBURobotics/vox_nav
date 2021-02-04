@@ -18,6 +18,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/OrientedNavSatFix.msg"
   "action/ComputePathToPose.action"
   "action/FollowPath.action"
+  "action/NavigateToPose.action"
   DEPENDENCIES 
     builtin_interfaces 
     geometry_msgs 
