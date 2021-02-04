@@ -92,6 +92,9 @@ ControllerServer::ControllerServer()
   // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+  cmd_vel_publisher_ =
+    this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
 }
 
 ControllerServer::~ControllerServer()
@@ -139,7 +142,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
   auto feedback = std::make_shared<FollowPath::Feedback>();
   auto result = std::make_shared<FollowPath::Result>();
 
-  geometry_msgs::msg::Twist computed_velcity_commands;
+  geometry_msgs::msg::Twist computed_velocity_commands;
   // set Plan
   if (controllers_.find(controller_id_) != controllers_.end()) {
     controllers_[controller_id_]->setPlan(goal->path);
@@ -159,7 +162,6 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
   }
 
   rclcpp::WallRate rate(10);
-
   while (rclcpp::ok()) {
     geometry_msgs::msg::PoseStamped curr_robot_pose;
     botanbot_utilities::getCurrentPose(
@@ -171,13 +173,14 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
       return;
     }
 
-    controllers_[controller_id_]->computeVelocityCommands(curr_robot_pose);
-
+    computed_velocity_commands = controllers_[controller_id_]->computeVelocityCommands(
+      curr_robot_pose);
     // Update sequence
     auto elapsed_time = steady_clock_.now() - start_time;
     feedback->elapsed_time = elapsed_time;
-    feedback->speed = computed_velcity_commands.linear.x;
+    feedback->speed = computed_velocity_commands.linear.x;
     goal_handle->publish_feedback(feedback);
+    cmd_vel_publisher_->publish(computed_velocity_commands);
     rate.sleep();
   }
   auto cycle_duration = steady_clock_.now() - start_time;
@@ -187,10 +190,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
     result->total_time = cycle_duration;
     goal_handle->succeed(result);
     RCLCPP_INFO(this->get_logger(), "Follow Path Succeeded");
-    // Publish the plan for visualization purposes
-    //publishPlan(result->path);
   }
-
 }
 
 }  // namespace botanbot_control

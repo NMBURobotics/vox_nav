@@ -32,19 +32,19 @@ import os
 
 
 def generate_launch_description():
-    share_dir = get_package_share_directory('botanbot_planning')
-    node_name = 'botanbot_planner_server_rclcpp_node'
+    share_dir = get_package_share_directory('botanbot_control')
+    node_name = 'botanbot_controller_server_rclcpp_node'
 
     parameter_file = LaunchConfiguration('params_file')
     params_declare = DeclareLaunchArgument(
         'params_file',
         default_value=os.path.join(share_dir, 'params',
-                                   'planner_server_config.yaml'),
+                                   'controller_server_config.yaml'),
         description='FPath to the ROS2 parameters file to use.')
 
     driver_node = Node(
-        package='botanbot_planning',
-        executable='botanbot_planner_server',
+        package='botanbot_control',
+        executable='botanbot_controller_server',
         name=node_name,
         namespace='',
         output='screen',

@@ -32,69 +32,70 @@ MPCControllerROS::~MPCControllerROS()
 {
 }
 
-nav_msgs::msg::Path MPCControllerROS::createTestTraj()
-{
-  nav_msgs::msg::Path test_traj;
-  /*double sample_theta_step = 2.0 * M_PI / 180.0;
-  double circle_radius = 10.0;
-  for (int i = 0; i < 90; i++) {
-    geometry_msgs::msg::PoseStamped test_pose;
-    test_pose.header.frame_id = "map";
-    test_pose.header.stamp = rclcpp::Clock().now();
-    test_pose.pose.position.x = -circle_radius * std::cos(i * sample_theta_step);
-    test_pose.pose.position.y = -circle_radius * std::sin(i * sample_theta_step);
-    tf2::Quaternion q;
-    q.setRPY(0.0, 0.0, ((i * sample_theta_step) - M_PI_2  ));
-    test_pose.pose.orientation = tf2::toMsg(q);
-    test_traj.poses.push_back(test_pose);
-  }*/
-  return test_traj;
-}
-
 void MPCControllerROS::initialize(
   rclcpp::Node * parent,
   const std::string & plugin_name)
 {
+  parent->declare_parameter(plugin_name + ".N", 10);
+  parent->declare_parameter(plugin_name + ".DT", 0.1);
+  parent->declare_parameter(plugin_name + ".L_F", 0.66);
+  parent->declare_parameter(plugin_name + ".L_R", 0.66);
+  parent->declare_parameter(plugin_name + ".V_MIN", -2.0);
+  parent->declare_parameter(plugin_name + ".V_MAX", 2.0);
+  parent->declare_parameter(plugin_name + ".A_MIN", -1.0);
+  parent->declare_parameter(plugin_name + ".A_MAX", 1.0);
+  parent->declare_parameter(plugin_name + ".DF_MIN", -0.5);
+  parent->declare_parameter(plugin_name + ".DF_MAX", 0.5);
+  parent->declare_parameter(plugin_name + ".A_DOT_MIN", -1.0);
+  parent->declare_parameter(plugin_name + ".A_DOT_MAX", 1.0);
+  parent->declare_parameter(plugin_name + ".DF_DOT_MIN", -0.4);
+  parent->declare_parameter(plugin_name + ".DF_DOT_MAX", 0.4);
+  parent->declare_parameter(plugin_name + ".Q", std::vector<double>({10.0, 10.0, 10.0, 0.0}));
+  parent->declare_parameter(plugin_name + ".R", std::vector<double>({10.0, 100.0}));
+  parent->declare_parameter(plugin_name + ".debug_mode", false);
+  parent->declare_parameter(plugin_name + ".params_configured", false);
 
-  cmd_vel_publisher_ =
-    parent->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
-
-  // Initialize pubs & subs
-  plan_publisher_ = parent->create_publisher<visualization_msgs::msg::MarkerArray>("plan", 1);
+  parent->get_parameter(plugin_name + ".N", mpc_parameters_.N);
+  parent->get_parameter(plugin_name + ".DT", mpc_parameters_.DT);
+  parent->get_parameter(plugin_name + ".L_F", mpc_parameters_.L_F);
+  parent->get_parameter(plugin_name + ".L_R", mpc_parameters_.L_R);
+  parent->get_parameter(plugin_name + ".V_MIN", mpc_parameters_.V_MIN);
+  parent->get_parameter(plugin_name + ".V_MAX", mpc_parameters_.V_MAX);
+  parent->get_parameter(plugin_name + ".A_MIN", mpc_parameters_.A_MIN);
+  parent->get_parameter(plugin_name + ".A_MAX", mpc_parameters_.A_MAX);
+  parent->get_parameter(plugin_name + ".DF_MIN", mpc_parameters_.DF_MIN);
+  parent->get_parameter(plugin_name + ".DF_MAX", mpc_parameters_.DF_MAX);
+  parent->get_parameter(plugin_name + ".A_DOT_MIN", mpc_parameters_.A_DOT_MIN);
+  parent->get_parameter(plugin_name + ".A_DOT_MAX", mpc_parameters_.A_DOT_MAX);
+  parent->get_parameter(plugin_name + ".DF_DOT_MIN", mpc_parameters_.DF_DOT_MIN);
+  parent->get_parameter(plugin_name + ".DF_DOT_MAX", mpc_parameters_.DF_DOT_MAX);
+  parent->get_parameter(plugin_name + ".Q", mpc_parameters_.Q);
+  parent->get_parameter(plugin_name + ".R", mpc_parameters_.R);
+  parent->get_parameter(plugin_name + ".debug_mode", mpc_parameters_.debug_mode);
+  parent->get_parameter(plugin_name + ".params_configured", mpc_parameters_.params_configured);
 
   interpolated_ref_traj_publisher_ = parent->create_publisher<visualization_msgs::msg::MarkerArray>(
     "interpolated_plan", 1);
 
-  reference_traj_ = createTestTraj();
-  previous_time_ = parent->now();
-
-  MPCControllerCore::Parameters mpc_parameters;
-  mpc_controller_ = std::make_shared<MPCControllerCore>(mpc_parameters);
-
-  solve();
-}
-
-void MPCControllerROS::solve()
-{
-
+  mpc_controller_ = std::make_shared<MPCControllerCore>(mpc_parameters_);
 }
 
 geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands(
   geometry_msgs::msg::PoseStamped curr_robot_pose)
 {
   auto regulate_max_speed = [this](double kMAX_SPEED) {
-      if (twist_.linear.x > kMAX_SPEED) {
-        twist_.linear.x = kMAX_SPEED;
-      } else if (twist_.linear.x < -kMAX_SPEED) {
-        twist_.linear.x = -kMAX_SPEED;
+      if (computed_velocity_.linear.x > kMAX_SPEED) {
+        computed_velocity_.linear.x = kMAX_SPEED;
+      } else if (computed_velocity_.linear.x < -kMAX_SPEED) {
+        computed_velocity_.linear.x = -kMAX_SPEED;
       }
     };
-  rclcpp::Duration transfrom_tolerance(std::chrono::seconds(1));
 
-  double dt = 1.0 / 10.0;
+  double dt = mpc_parameters_.DT;
   double kTARGET_SPEED = 1.0;
-  double kMAX_SPEED = 1.0;
-  double kL_F = 1.32;    // distance from rear to front axle(m)
+  double kMAX_SPEED = mpc_parameters_.V_MAX;
+  // distance from rear to front axle(m)
+  double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
 
   tf2::Quaternion q;
   tf2::fromMsg(curr_robot_pose.pose.orientation, q);
@@ -107,29 +108,25 @@ geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands(
   curr_states.y = curr_robot_pose.pose.position.y;
   curr_states.psi = psi;
   curr_states.v = kTARGET_SPEED;
-  mpc_controller_->updateCurrentStates(curr_states);
 
   std::vector<MPCControllerCore::States> interpolated_reference_states =
-    getInterpolatedRefernceStates(
-    reference_traj_, curr_robot_pose);
+    getInterpolatedRefernceStates(reference_traj_, curr_robot_pose);
 
+  mpc_controller_->updateCurrentStates(curr_states);
   mpc_controller_->updateReferences(interpolated_reference_states);
   mpc_controller_->updatePreviousControlInput(previous_control_);
-
   MPCControllerCore::SolutionResult res = mpc_controller_->solve();
 
   //  The control output is acceleration but we need to publish speed
-  twist_.linear.x += res.control_input.acc * (dt);
+  computed_velocity_.linear.x += res.control_input.acc * (dt);
   //  The control output is steeering angle but we need to publish angular velocity
-  twist_.angular.z = (twist_.linear.x * res.control_input.df) / kL_F;
+  computed_velocity_.angular.z = (computed_velocity_.linear.x * res.control_input.df) /
+    rear_axle_tofront_dist;
 
   regulate_max_speed(kMAX_SPEED);
-  cmd_vel_publisher_->publish(twist_);
-  publishTestTraj();
   publishInterpolatedRefernceStates(interpolated_reference_states);
   previous_control_ = res.control_input;
-
-  return twist_;
+  return computed_velocity_;
 }
 
 void MPCControllerROS::setPlan(const nav_msgs::msg::Path & path)
@@ -184,35 +181,6 @@ std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedRefernce
     interpolated_reference_states.push_back(curr_interpolated_state);
   }
   return interpolated_reference_states;
-}
-
-void
-MPCControllerROS::publishTestTraj()
-{
-  visualization_msgs::msg::MarkerArray marker_array;
-  auto path_idx = 0;
-
-  for (auto && i : reference_traj_.poses) {
-    visualization_msgs::msg::Marker marker;
-    marker.header.frame_id = "map";
-    marker.header.stamp = rclcpp::Clock().now();
-    marker.ns = "path";
-    marker.id = path_idx;
-    marker.type = visualization_msgs::msg::Marker::CUBE;
-    marker.action = visualization_msgs::msg::Marker::ADD;
-    marker.lifetime = rclcpp::Duration::from_seconds(0);
-    marker.pose = i.pose;
-    marker.scale.x = 0.5;
-    marker.scale.y = 0.2;
-    marker.scale.z = 0.2;
-    marker.color.a = 0.6;
-    marker.color.r = 0.0;
-    marker.color.g = 1.0;
-    marker.color.b = 0.0;
-    marker_array.markers.push_back(marker);
-    path_idx++;
-  }
-  plan_publisher_->publish(marker_array);
 }
 
 void

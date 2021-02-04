@@ -75,12 +75,6 @@ public:
   override;
 
   /**
-   * @brief Solve th actual optimal control problem here
-   *
-   */
-  void solve();
-
-  /**
    * @brief get the index of nearest trajectory state to current robot pose
    *
    * @param reference_traj
@@ -103,19 +97,6 @@ public:
     geometry_msgs::msg::PoseStamped curr_robot_pose);
 
   /**
-  * @brief Create a circular test trjectory, This function is only for simple testing
-  *        to see whther robot is controlled correctly
-  * @return nav_msgs::msg::Path
-  */
-  nav_msgs::msg::Path createTestTraj();
-
-  /**
-   * @brief Publish the test Trajectory prodiced as result of createTestTraj
-   *
-   */
-  void publishTestTraj();
-
-  /**
    * @brief return cloest reference trajectory to be feed into conrol sceheme
    *        The number of returned states will be determined according to time horizon(N)
    *
@@ -128,21 +109,18 @@ private:
   // Shared pointer to parent node
   rclcpp::Node::SharedPtr node_;
 
-  // ROS Publisher to publish velocity commands
-  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
-
-
   nav_msgs::msg::Path reference_traj_;
-  geometry_msgs::msg::Twist twist_;
-  rclcpp::Time previous_time_;
+
+  geometry_msgs::msg::Twist computed_velocity_;
 
   std::shared_ptr<MPCControllerCore> mpc_controller_;
-
   MPCControllerCore::ControlInput previous_control_;
 
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     interpolated_ref_traj_publisher_;
+
+  MPCControllerCore::Parameters mpc_parameters_;
+
 };
 
 }  // namespace mpc_controller
