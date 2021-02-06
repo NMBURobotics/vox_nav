@@ -1,4 +1,4 @@
-// Copyright (c) 2018 Intel Corporation
+// Copyright (c) 2019 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,71 +12,55 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <fstream>
-#include <memory>
-#include <streambuf>
-#include <string>
-#include <utility>
-#include <vector>
-#include <set>
 
-#include "botanbot_utilities/tf_helpers.hpp"
-#include "botanbot_pose_navigator/bt_conversions.hpp"
-#include "botanbot_pose_navigator/bt_navigator.hpp"
+#include <memory>
+#include <string>
+
+#include "botanbot_pose_navigator/navigate_to_pose_action_server_node.hpp"
+
 
 namespace botanbot_pose_navigator
 {
 
-const char BtNavigator::bt_xml_[] =
+// The Behavior Tree to execute
+const char NavigateToPoseActionServer::bt_xml_[] =
   R"(
   <root main_tree_to_execute="MainTree">
     <BehaviorTree ID="MainTree">
-      <PipelineSequence name="NavigateWithReplanning">
-        <RateController hz="1.0">
-          <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
-        </RateController>
-        <FollowPath path="{path}" controller_id="FollowPath"/>
-      </PipelineSequence>
+      <Sequence name="NavigateWithReplanning">
+        <ComputePathToPose pose="{pose}" path="{path}" planner_id="GridBased"/>
+        <FollowPath path="{path}"  controller_id="FollowPath"/>
+      </Sequence>
     </BehaviorTree>
   </root>
-  )";
+)";
 
-BtNavigator::BtNavigator()
-: rclcpp::Node("bt_navigator"),
-  start_time_(0)
+NavigateToPoseActionServer::NavigateToPoseActionServer()
+: Node("navigate_to_pose_server_node")
 {
+
   RCLCPP_INFO(get_logger(), "Creating");
-
-  const std::vector<std::string> plugin_libs = {
-    "nav2_compute_path_to_pose_action_bt_node",
-    "nav2_follow_path_action_bt_node"
-  };
-
-  // Support for handling the topic-based goal pose from rviz
-  client_node_ = std::make_shared<rclcpp::Node>("_");
-
-
-  using namespace std::placeholders;
-
+  // Create an action server that we implement with our print_message method
   action_server_ = rclcpp_action::create_server<ActionServer>(
     get_node_base_interface(),
     get_node_clock_interface(),
     get_node_logging_interface(),
     get_node_waitables_interface(),
     "navigate_to_pose",
-    std::bind(&BtNavigator::handle_goal, this, _1, _2),
-    std::bind(&BtNavigator::handle_cancel, this, _1),
-    std::bind(&BtNavigator::handle_accepted, this, _1)
+    std::bind(
+      &NavigateToPoseActionServer::handle_goal, this, std::placeholders::_1, std::placeholders::_2),
+    std::bind(&NavigateToPoseActionServer::handle_cancel, this, std::placeholders::_1),
+    std::bind(&NavigateToPoseActionServer::handle_accepted, this, std::placeholders::_1)
   );
 }
 
-BtNavigator::~BtNavigator()
+NavigateToPoseActionServer::~NavigateToPoseActionServer()
 {
   RCLCPP_INFO(get_logger(), "Destroying");
 }
 
 rclcpp_action::GoalResponse
-BtNavigator::handle_goal(
+NavigateToPoseActionServer::handle_goal(
   const rclcpp_action::GoalUUID & uuid,
   std::shared_ptr<const ActionServer::Goal> goal)
 {
@@ -86,7 +70,7 @@ BtNavigator::handle_goal(
 }
 
 rclcpp_action::CancelResponse
-BtNavigator::handle_cancel(const std::shared_ptr<GoalHandle> goal_handle)
+NavigateToPoseActionServer::handle_cancel(const std::shared_ptr<GoalHandle> goal_handle)
 {
   RCLCPP_INFO(this->get_logger(), "Received request to cancel goal");
   (void)goal_handle;
@@ -94,26 +78,32 @@ BtNavigator::handle_cancel(const std::shared_ptr<GoalHandle> goal_handle)
 }
 
 void
-BtNavigator::handle_accepted(
+NavigateToPoseActionServer::handle_accepted(
   const std::shared_ptr<GoalHandle> goal_handle)
 {
-  using namespace std::placeholders;
   std::thread{
-    std::bind(&BtNavigator::navigateToPose, this, _1), goal_handle
+    std::bind(&NavigateToPoseActionServer::navigate_to_pose, this, std::placeholders::_1),
+    goal_handle
   }.detach();
 }
 
 void
-BtNavigator::navigateToPose(const std::shared_ptr<GoalHandle> goal_handle)
+NavigateToPoseActionServer::navigate_to_pose(const std::shared_ptr<GoalHandle> goal_handle)
 {
-  botanbot_pose_navigator::BehaviorTree bt(bt_xml_);
+  BehaviorTree bt(bt_xml_);
   auto result = std::make_shared<ActionServer::Result>();
 
   // Get the incoming goal from the goal handle
   auto goal = goal_handle->get_goal();
+  auto blackboard = bt.blackboard();
+
+  blackboard->set<rclcpp::Node::SharedPtr>("node", this->shared_from_this());    // NOLINT
+  blackboard->set<std::chrono::milliseconds>("server_timeout", std::chrono::milliseconds(10));    // NOLINT
 
   // Pass the values from the goal to the Behavior Tree via the blackboard
-  bt.blackboard()->set<geometry_msgs::msg::PoseStamped>("pose", goal->pose);  // NOLINT
+  blackboard->set<bool>("initial_pose_received", false);  // NOLINT
+  blackboard->set<int>("number_recoveries", 0);  // NOLINT
+  blackboard->set<geometry_msgs::msg::PoseStamped>("goal", goal->pose);
 
   auto should_cancel = [goal_handle]() {return goal_handle->is_canceling();};
 
@@ -138,3 +128,20 @@ BtNavigator::navigateToPose(const std::shared_ptr<GoalHandle> goal_handle)
   }
 }
 }  // namespace botanbot_pose_navigator
+
+/**
+ * @brief
+ *
+ * @param argc
+ * @param argv
+ * @return int
+ */
+int main(int argc, char ** argv)
+{
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<botanbot_pose_navigator::NavigateToPoseActionServer>();
+  rclcpp::spin(node->get_node_base_interface());
+  rclcpp::shutdown();
+
+  return 0;
+}

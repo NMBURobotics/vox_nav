@@ -19,37 +19,56 @@
 
 #include "botanbot_msgs/action/compute_path_to_pose.hpp"
 #include "nav_msgs/msg/path.h"
-#include "botanbot_pose_navigator/bt_action_node.hpp"
+#include "botanbot_pose_navigator/action_client_node.hpp"
 
 namespace botanbot_pose_navigator
 {
 
-class ComputePathToPoseAction : public BtActionNode<botanbot_msgs::action::ComputePathToPose>
+using ComputePathToPose = botanbot_msgs::action::ComputePathToPose;
+
+class ComputePathToPoseNode : public BtActionNode<ComputePathToPose>
 {
 public:
-  ComputePathToPoseAction(
+  explicit ComputePathToPoseNode(
     const std::string & xml_tag_name,
     const std::string & action_name,
-    const BT::NodeConfiguration & conf);
-
-  void on_tick() override;
-
-  BT::NodeStatus on_success() override;
+    const BT::NodeConfiguration & conf)
+  : BtActionNode<ComputePathToPose>(xml_tag_name, action_name, conf)
+  {
+  }
 
   static BT::PortsList providedPorts()
   {
     return providedBasicPorts(
       {
         BT::OutputPort<nav_msgs::msg::Path>("path", "Path created by ComputePathToPose node"),
-        BT::InputPort<geometry_msgs::msg::PoseStamped>("goal", "Destination to plan to"),
+        BT::InputPort<geometry_msgs::msg::PoseStamped>("pose", "Destination to plan to"),
         BT::InputPort<std::string>("planner_id", ""),
       });
+  }
+
+  void  on_tick()
+  {
+    getInput("goal", goal_.pose);
+    getInput("planner_id", goal_.planner_id);
+  }
+
+  BT::NodeStatus on_success()
+  {
+    setOutput("path", result_.result->path);
+
+    if (first_time_) {
+      first_time_ = false;
+    } else {
+      config().blackboard->set("path_updated", true);
+    }
+    return BT::NodeStatus::SUCCESS;
   }
 
 private:
   bool first_time_{true};
 };
-
 }  // namespace botanbot_pose_navigator
+
 
 #endif  // botanbot_pose_navigator__PLUGINS__ACTION__COMPUTE_PATH_TO_POSE_ACTION_HPP_

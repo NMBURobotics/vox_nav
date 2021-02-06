@@ -34,7 +34,9 @@ class BehaviorTree
 public:
   explicit BehaviorTree(
     const std::string & bt_xml,
-    const std::vector<std::string> & plugin_library_names = {"botanbot_pose_navigator_nodes"}
+    const std::vector<std::string> & plugin_library_names = {
+      "compute_path_to_pose_action_bt_node",
+      "follow_path_action_bt_node"}
   );
   BehaviorTree() = delete;
   virtual ~BehaviorTree() {}

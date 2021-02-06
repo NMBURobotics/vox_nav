@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.5)
-project(botanbot_pose_navigator)
+project(botanbot_pose_navigator CXX)
+
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -16,22 +24,10 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(builtin_interfaces REQUIRED)
 
 include_directories(
   include
-)
-
-set(executable_name bt_navigator)
-
-add_executable(${executable_name}
-  src/main.cpp
-)
-
-set(library_name ${executable_name}_core)
-
-add_library(${library_name} SHARED
-  src/behavior_tree.cpp
-  src/bt_navigator.cpp
 )
 
 set(dependencies
@@ -49,25 +45,16 @@ tf2_ros
 tf2_geometry_msgs
 std_msgs
 std_srvs
+builtin_interfaces
 )
 
-ament_target_dependencies(${executable_name}
-  ${dependencies}
-)
-
-target_link_libraries(${executable_name} ${library_name})
-
-ament_target_dependencies(${library_name}
-  ${dependencies}
-)
-
-add_library(compute_path_to_pose_action_bt_node SHARED src/plugins/compute_path_to_pose_action.cpp)
+add_library(compute_path_to_pose_action_bt_node SHARED src/compute_path_to_pose.cpp)
 list(APPEND plugin_libs compute_path_to_pose_action_bt_node)
 
-add_library(follow_path_action_bt_node SHARED src/plugins/follow_path_action.cpp)
+add_library(follow_path_action_bt_node SHARED src/follow_path.cpp)
 list(APPEND plugin_libs follow_path_action_bt_node)
- 
-add_library(navigate_to_pose_action_bt_node SHARED src/plugins/navigate_to_pose_action.cpp)
+
+add_library(navigate_to_pose_action_bt_node SHARED src/navigate_to_pose.cpp)
 list(APPEND plugin_libs navigate_to_pose_action_bt_node)
 
 foreach(bt_plugin ${plugin_libs})
@@ -75,22 +62,29 @@ foreach(bt_plugin ${plugin_libs})
   target_compile_definitions(${bt_plugin} PRIVATE BT_PLUGIN_EXPORT)
 endforeach()
 
-install(TARGETS ${library_name}
-                ${plugin_libs}
+set(library_name behavior_tree_lib)
+add_library(${library_name} SHARED src/behavior_tree.cpp)
+ament_target_dependencies(${library_name} ${dependencies})
+
+add_executable(navigate_to_pose_server_node src/navigate_to_pose_action_server_node.cpp)
+ament_target_dependencies(navigate_to_pose_server_node ${dependencies})
+target_link_libraries(navigate_to_pose_server_node ${library_name} ${plugin_libs})
+
+install(TARGETS ${library_name} 
+                ${plugin_libs} 
+                navigate_to_pose_server_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
-install(TARGETS ${executable_name}
+install(TARGETS
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
 install(DIRECTORY include/
   DESTINATION include/
 )
-
-install(DIRECTORY behavior_trees DESTINATION share/${PROJECT_NAME})
 install(FILES botanbot_tree_nodes.xml DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
@@ -99,5 +93,7 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_include_directories(include)
-
+ament_export_libraries(${library_name} 
+                       ${plugin_libs})
+ament_export_dependencies(${dependencies})
 ament_package()
