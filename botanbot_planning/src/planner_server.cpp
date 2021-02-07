@@ -203,14 +203,22 @@ PlannerServer::getPlan(
     goal.pose.position.x, goal.pose.position.y);
 
   if (planners_.find(planner_id) != planners_.end()) {
-    return planners_[planner_id]->createPlan(start, goal);
+
+    std::vector<geometry_msgs::msg::PoseStamped> plan =
+      planners_[planner_id]->createPlan(goal, start);
+    std::reverse(plan.begin(), plan.end());
+    return plan;
   } else {
     if (planners_.size() == 1 && planner_id.empty()) {
       RCLCPP_WARN_ONCE(
         get_logger(), "No planners specified in action call. "
         "Server will use only plugin %s in server."
         " This warning will appear once.", planner_ids_concat_.c_str());
-      return planners_[planners_.begin()->first]->createPlan(start, goal);
+
+      std::vector<geometry_msgs::msg::PoseStamped> plan =
+        planners_[planners_.begin()->first]->createPlan(goal, start);
+      std::reverse(plan.begin(), plan.end());
+      return plan;
     } else {
       RCLCPP_ERROR(
         get_logger(), "planner %s is not a valid planner. "
@@ -232,7 +240,7 @@ PlannerServer::publishPlan(const std::vector<geometry_msgs::msg::PoseStamped> & 
     marker.header.stamp = rclcpp::Clock().now();
     marker.ns = "path";
     marker.id = path_idx;
-    marker.type = visualization_msgs::msg::Marker::CUBE;
+    marker.type = visualization_msgs::msg::Marker::ARROW;
     marker.action = visualization_msgs::msg::Marker::ADD;
     marker.lifetime = rclcpp::Duration::from_seconds(0);
     marker.pose.position.x = i.pose.position.x;
@@ -242,9 +250,9 @@ PlannerServer::publishPlan(const std::vector<geometry_msgs::msg::PoseStamped> & 
     marker.pose.orientation.y = i.pose.orientation.y;
     marker.pose.orientation.z = i.pose.orientation.z;
     marker.pose.orientation.w = i.pose.orientation.w;
-    marker.scale.x = 1.0;
-    marker.scale.y = 0.7;
-    marker.scale.z = 0.4;
+    marker.scale.x = 0.15;
+    marker.scale.y = 0.1;
+    marker.scale.z = 0.1;
     marker.color.a = 0.6;
     marker.color.r = 0.0;
     marker.color.g = 1.0;
