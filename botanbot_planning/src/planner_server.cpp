@@ -214,7 +214,6 @@ PlannerServer::getPlan(
         get_logger(), "No planners specified in action call. "
         "Server will use only plugin %s in server."
         " This warning will appear once.", planner_ids_concat_.c_str());
-
       std::vector<geometry_msgs::msg::PoseStamped> plan =
         planners_[planners_.begin()->first]->createPlan(goal, start);
       std::reverse(plan.begin(), plan.end());

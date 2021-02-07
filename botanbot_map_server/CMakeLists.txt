@@ -53,7 +53,7 @@ install(DIRECTORY include/
   DESTINATION include/)
 
 install(
-  DIRECTORY launch params 
+  DIRECTORY 
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)

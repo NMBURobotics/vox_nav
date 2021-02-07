@@ -94,7 +94,7 @@ install(DIRECTORY include/
 )
 
 install(
-  DIRECTORY launch params
+  DIRECTORY  
   DESTINATION share/${PROJECT_NAME}
 )
 
