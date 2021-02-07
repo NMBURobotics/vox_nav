@@ -110,7 +110,7 @@ void BotanbotMapManager::timerCallback()
   std::call_once(
     align_static_map_once_, [this]() {
       while (!tf_buffer_->canTransform("utm", "map", rclcpp::Time(0))) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         RCLCPP_INFO(this->get_logger(), "Waiting for utm to map Transform to be available.");
       }
       RCLCPP_INFO(
