@@ -28,7 +28,7 @@ GAZEBO_WORLD = os.environ['GAZEBO_WORLD']
 
 def generate_launch_description():
     # Get the launch directory
-    bringup_dir = get_package_share_directory('botanbot_navigation2')
+    bringup_dir = get_package_share_directory('botanbot_bringup')
     localization_dir = get_package_share_directory(
         'botanbot_robot_localization')
 
@@ -80,7 +80,7 @@ def generate_launch_description():
 
     declare_params_file_cmd = DeclareLaunchArgument(
         'params_file',
-        default_value=os.path.join(params_dir, 'nav2_params.yaml'),
+        default_value=os.path.join(params_dir, 'params.yaml'),
         description=
         'Full path to the ROS2 parameters file to use for all launched nodes')
 
@@ -98,7 +98,7 @@ def generate_launch_description():
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         'rviz_config_file',
         default_value=os.path.join(bringup_dir, 'rviz',
-                                   'nav2_default_view.rviz'),
+                                   'botanbot_default_view.rviz'),
         description='Full path to the RVIZ config file to use')
 
     declare_use_simulator_cmd = DeclareLaunchArgument(
@@ -170,7 +170,7 @@ def generate_launch_description():
                                         }.items())
 
     bringup_cmd = IncludeLaunchDescription(PythonLaunchDescriptionSource(
-        os.path.join(launch_dir, 'bringup_launch.py')),
+        os.path.join(launch_dir, 'bringup.launch.py')),
                                            launch_arguments={
                                                'namespace': namespace,
                                                'use_namespace': use_namespace,

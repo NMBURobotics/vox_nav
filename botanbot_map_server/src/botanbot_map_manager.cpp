@@ -89,6 +89,10 @@ BotanbotMapManager::BotanbotMapManager()
   robot_localization_fromLL_client_ =
     robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
 
+  // setup TF buffer and listerner to read transforms
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
   RCLCPP_INFO(
     this->get_logger(),
     "Created an Instance of BotanbotMapManager");
@@ -105,10 +109,13 @@ void BotanbotMapManager::timerCallback()
 {
   std::call_once(
     align_static_map_once_, [this]() {
+      while (!tf_buffer_->canTransform("utm", "map", rclcpp::Time(0))) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        RCLCPP_INFO(this->get_logger(), "Waiting for utm to map Transform to be available.");
+      }
       RCLCPP_INFO(
         get_logger(), "Going to align the static map to map frames once,"
         " But the map and octomap will be published at %i frequncy rate", octomap_publish_frequency_);
-
       auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
       auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
       request->ll_point.latitude = static_map_gps_pose_->position.latitude;

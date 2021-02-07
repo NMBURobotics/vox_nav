@@ -143,6 +143,9 @@ protected:
   bool publish_octomap_as_pointcloud_;
   // we need to align static map to map only once, since it is static !
   std::once_flag align_static_map_once_;
+  // tf buffer to get access to transfroms
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 };
 }  // namespace botanbot_map_server
 

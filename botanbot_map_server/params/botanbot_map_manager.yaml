@@ -1,6 +1,6 @@
 botanbot_map_manager_rclcpp_node:
   ros__parameters:
-    octomap_filename: "/home/ros2-foxy/f.bt"
+    octomap_filename: "/home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_bringup/maps/f.bt"
     octomap_voxel_size: 0.2
     octomap_publish_frequency: 50
     provide_utm_to_map_transform: true

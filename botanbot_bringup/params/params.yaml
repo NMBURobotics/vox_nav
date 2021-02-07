@@ -1,0 +1,116 @@
+botanbot_planner_server_rclcpp_node:
+  ros__parameters:
+    planner_plugin: "SE2Planner" # other options: "SE2Planner", "SE3Planner" ,"SE2PlannerControlSpace"
+    expected_planner_frequency: 5.0
+    SE2Planner:
+      plugin: "botanbot_planning::SE2Planner"
+      planner_name: "RRTStar" # other options: RRTStar, RRTConnect, KPIECE1
+      planner_timeout: 1.0
+      interpolation_parameter: 50
+      octomap_filename: "/home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_bringup/maps/f.bt"
+      octomap_voxel_size: 0.1
+      state_space_boundries:
+        minx: -50.0
+        maxx: 50.0
+        miny: -50.0
+        maxy: 50.0
+        minz: 0.0
+        maxz: 3.0
+      robot_body_dimens:
+        x: 1.0
+        y: 0.5
+        z: 0.4
+    SE3Planner:
+      plugin: "botanbot_planning::SE3Planner"
+      planner_name: "PRMStar"  # other options: PRMStar  RRTConnect, KPIECE1
+      planner_timeout: 1.0
+      interpolation_parameter: 50
+      octomap_filename: "/home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_bringup/maps/f.bt"
+      octomap_voxel_size: 0.1
+      state_space_boundries:
+        minx: -50.0
+        maxx: 50.0
+        miny: -50.0
+        maxy: 50.0
+        minz: 0.0
+        maxz: 3.0
+      robot_body_dimens:
+        x: 1.0
+        y: 0.5
+        z: 0.4    
+    SE2PlannerControlSpace:
+      plugin: "botanbot_planning::SE2PlannerControlSpace"
+      planner_name: "RRT"  # other options: SST , EST, KPIECE1
+      planner_timeout: 1.0
+      interpolation_parameter: 50
+      octomap_filename: "../maps/f.bt"
+      octomap_voxel_size: 0.1
+      state_space_boundries:
+        minx: -50.0
+        maxx: 50.0
+        miny: -50.0
+        maxy: 50.0
+        minz: 0.0
+        maxz: 3.0
+      robot_body_dimens:
+        x: 1.0
+        y: 0.5
+        z: 0.4      
+
+botanbot_controller_server_rclcpp_node:
+  ros__parameters:
+    controller_plugin: "MPCControllerROS" # other options: 
+    controller_frequency: 5.0
+    MPCControllerROS:
+      plugin: "mpc_controller::MPCControllerROS"
+      N: 10                                                       #timesteps in MPC Horizon
+      DT: 0.1                                                     #discretization time between timesteps(s)    
+      L_F: 0.66                                                   #distance from CoG to front axle(m)
+      L_R: 0.66                                                   #distance from CoG to rear axle(m)
+      V_MIN: -2.0                                                 #min / max velocity constraint(m / s)
+      V_MAX:  2.0
+      A_MIN:  -1.0                                                #min / max acceleration constraint(m / s ^ 2)
+      A_MAX:   1.0
+      DF_MIN:  -0.5                                               #min / max front steer angle constraint(rad)
+      DF_MAX:   0.5
+      A_DOT_MIN: -1.0                                             #min / max jerk constraint(m / s ^ 3)
+      A_DOT_MAX:  1.0
+      DF_DOT_MIN: -0.4                                            #min / max front steer angle rate constraint(rad / s)
+      DF_DOT_MAX: 0.4
+      Q: [10.0, 10.0, 10.0, 0.0]                                  #weights on x, y, psi, and v.
+      R: [10.0, 100.0]                                            #weights on jerk and slew rate(steering angle derivative)
+      debug_mode: False                                            #enable/disable debug messages
+      params_configured: True      
+
+botanbot_map_server_rclcpp_node:
+  ros__parameters:
+    octomap_filename: "/home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_bringup/maps/f.bt"
+    octomap_voxel_size: 0.2
+    octomap_publish_frequency: 50
+    provide_utm_to_map_transform: true
+    publish_octomap_as_pointcloud: true
+    octomap_publish_topic_name: "octomap" # octomap_msgs::msg::Octomap type of message topic name 
+    octomap_point_cloud_publish_topic: "octomap_pointcloud" # sensor_msgs::msg::PoinCloud2 that represents octomap
+    map_frame_id: "map"
+    static_map_frame_id: "static_map"
+    utm_frame_id: "utm"
+    yaw_offset: 1.57 #see navsat_transform_node from robot_localization, this offset is needed to recorrect orientation of static map
+    map_coordinates:
+      latitude: 49.89998651126992
+      longitude: 8.90004175541922
+      altitude: 0.6342219080730283
+      quaternion:
+        x: -0.0002674302377596963
+        y: -7.804134265664371e-05
+        z: 0.7068408908205831
+        w: 0.7073725167509558
+    use_robot_datum: false # we typically get this from live sensor , so set it to false in default and get from live sensor data
+    robot_datum_coordinates:
+      latitude: 49.89998651126992
+      longitude: 8.90004175541922
+      altitude: 0.6342219080730283
+      quaternion:
+        x: -0.0002674302377596963
+        y: -7.804134265664371e-05
+        z: 0.7068408908205831
+        w: 0.7073725167509558
