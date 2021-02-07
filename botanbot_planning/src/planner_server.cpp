@@ -136,6 +136,10 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
   auto feedback = std::make_shared<ComputePathToPose::Feedback>();
   auto result = std::make_shared<ComputePathToPose::Result>();
 
+  RCLCPP_INFO(
+    this->get_logger(), "Received a planning request to (%.3f, %.3f)",
+    goal->pose.pose.position.x, goal->pose.pose.position.y);
+
   geometry_msgs::msg::PoseStamped start_pose;
   result->path.poses = getPlan(start_pose, goal->pose, planner_id_);
 
@@ -166,6 +170,7 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
     goal->pose.pose.position.y);
 
   auto cycle_duration = steady_clock_.now() - start_time;
+
 
   // Check if goal is done
   if (rclcpp::ok()) {

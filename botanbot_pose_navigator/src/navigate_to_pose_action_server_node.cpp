@@ -103,7 +103,7 @@ NavigateToPoseActionServer::navigate_to_pose(const std::shared_ptr<GoalHandle> g
   // Pass the values from the goal to the Behavior Tree via the blackboard
   blackboard->set<bool>("initial_pose_received", false);  // NOLINT
   blackboard->set<int>("number_recoveries", 0);  // NOLINT
-  blackboard->set<geometry_msgs::msg::PoseStamped>("goal", goal->pose);
+  blackboard->set<geometry_msgs::msg::PoseStamped>("pose", goal->pose);
 
   auto should_cancel = [goal_handle]() {return goal_handle->is_canceling();};
 

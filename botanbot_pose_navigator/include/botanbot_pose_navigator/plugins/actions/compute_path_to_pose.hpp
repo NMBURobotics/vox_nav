@@ -50,7 +50,7 @@ public:
 
   void  on_tick()
   {
-    getInput("goal", goal_.pose);
+    getInput("pose", goal_.pose);
     getInput("planner_id", goal_.planner_id);
   }
 

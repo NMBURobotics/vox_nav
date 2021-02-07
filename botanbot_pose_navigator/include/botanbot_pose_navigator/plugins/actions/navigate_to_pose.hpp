@@ -23,9 +23,7 @@
 
 namespace botanbot_pose_navigator
 {
-
 using NavigateToPose = botanbot_msgs::action::NavigateToPose;
-
 class NavigateToPoseNode : public BaseActionClientNode<NavigateToPose>
 {
 public:
@@ -41,28 +39,22 @@ public:
   {
     return providedBasicPorts(
       {
-        BT::InputPort<geometry_msgs::msg::Point>("position", "Position"),
-        BT::InputPort<geometry_msgs::msg::Quaternion>("orientation", "Orientation")
+        BT::InputPort<geometry_msgs::msg::PoseStamped>("pose", "pose"),
       });
   }
 
   void on_tick()
   {
     // Use the position and orientation fields from the XML attributes to initialize the goal
-    geometry_msgs::msg::Point position;
-    geometry_msgs::msg::Quaternion orientation;
-
-    if (!getInput("position", position) || !getInput("orientation", orientation)) {
+    geometry_msgs::msg::PoseStamped pose;
+    if (!getInput("pose", pose)) {
       RCLCPP_ERROR(
         node_->get_logger(),
-        "NavigateToPoseNode: position or orientation not provided");
+        "NavigateToPoseNode: pose not provided");
       return;
     }
-
-    goal_.pose.pose.position = position;
-    goal_.pose.pose.orientation = orientation;
+    goal_.pose = pose;
   }
-
 };
 
 } // namespace botanbot_pose_navigator
