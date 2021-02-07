@@ -31,6 +31,7 @@
 #include <tf2_ros/transform_listener.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_ros/create_timer_interface.h>
+#include <botanbot_msgs/action/navigate_to_pose.hpp>
 // STL headers
 #include <vector>
 #include <memory>
@@ -53,10 +54,9 @@ class RobotController
 {
 public:
   // type shorteneings
-  using ClientT = nav2_msgs::action::NavigateToPose;
+  using ClientT = botanbot_msgs::action::NavigateToPose;
   using ActionClient = rclcpp_action::Client<ClientT>;
-  using NavigationGoalHandle =
-    rclcpp_action::ClientGoalHandle<nav2_msgs::action::NavigateToPose>;
+  using NavigationGoalHandle = rclcpp_action::ClientGoalHandle<ClientT>;
 
   /**
    * @brief Construct a new Robot Controller object

@@ -23,11 +23,11 @@ RobotController::RobotController(/* args */)
   node_->set_parameter(rclcpp::Parameter("use_sim_time", true));
 
   nav_to_pose_client_ =
-    rclcpp_action::create_client<nav2_msgs::action::NavigateToPose>(
+    rclcpp_action::create_client<ClientT>(
     node_, "navigate_to_pose");
-  waypoint_follower_action_client_ =
+  /*waypoint_follower_action_client_ =
     rclcpp_action::create_client<nav2_msgs::action::FollowWaypoints>(
-    node_, "FollowWaypoints");
+    node_, "FollowWaypoints");*/
 
   rclcpp::Clock::SharedPtr
     clock = std::make_shared<rclcpp::Clock>(RCL_SYSTEM_TIME);
@@ -49,17 +49,17 @@ void RobotController::toTargetPose(geometry_msgs::msg::PoseStamped pose)
     nav_to_pose_client_->wait_for_action_server(std::chrono::seconds(5));
   if (!is_action_server_ready) {
     RCLCPP_ERROR(
-      node_->get_logger(), "FollowWaypoints action server is not available."
-      " Is the initial pose set?");
+      node_->get_logger(), "navigate_to_pose action server is not available."
+    );
     return;
   }
 
-  nav2_msgs::action::NavigateToPose::Goal navigation_goal;
+  botanbot_msgs::action::NavigateToPose::Goal navigation_goal;
   navigation_goal.pose = pose;
 
   // Enable result awareness by providing an empty lambda function
   auto send_goal_options =
-    rclcpp_action::Client<nav2_msgs::action::NavigateToPose>::SendGoalOptions();
+    rclcpp_action::Client<ClientT>::SendGoalOptions();
   send_goal_options.result_callback = [](auto) {};
 
   auto future_goal_handle =
@@ -78,7 +78,7 @@ void RobotController::toTargetPose(geometry_msgs::msg::PoseStamped pose)
 
   auto result_future = nav_to_pose_client_->async_get_result(navigation_goal_handle);
 
-  rclcpp_action::ClientGoalHandle<nav2_msgs::action::NavigateToPose>::WrappedResult wrapped_result =
+  rclcpp_action::ClientGoalHandle<ClientT>::WrappedResult wrapped_result =
     result_future.get();
 
   if (!navigation_goal_handle) {
@@ -90,17 +90,13 @@ void RobotController::toTargetPose(geometry_msgs::msg::PoseStamped pose)
 geometry_msgs::msg::TransformStamped RobotController::getRobotStates()
 {
   geometry_msgs::msg::TransformStamped current_pose;
-
   tf_buffer_->setUsingDedicatedThread(true);
-
-  /*try {
+  try {
     current_pose = tf_buffer_->lookupTransform("map", "base_link", tf2::TimePointZero);
   } catch (tf2::TransformException ex) {
     RCLCPP_ERROR(node_->get_logger(), " %s", ex.what());
-
-    //rclcpp::sleep_for(20ns);
-  }*/
-
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  }
   return current_pose;
 }
 

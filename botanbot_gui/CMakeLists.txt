@@ -29,6 +29,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(nav2_util REQUIRED)
 find_package(nav2_lifecycle_manager REQUIRED)
 find_package(nav2_msgs REQUIRED)
+find_package(botanbot_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(behaviortree_cpp_v3 REQUIRED)
 find_package(nav2_behavior_tree REQUIRED)
@@ -63,6 +64,7 @@ set(dependencies
     nav2_util
     nav2_lifecycle_manager
     nav2_msgs
+    botanbot_msgs
     nav_msgs
     pluginlib
     Qt5
