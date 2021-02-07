@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef NAV2_BEHAVIOR_TREE__BT_CONVERSIONS_HPP_
-#define NAV2_BEHAVIOR_TREE__BT_CONVERSIONS_HPP_
+#ifndef BOTANBOT_POSE_NAVIGATOR__BT_CONVERSIONS_HPP_
+#define BOTANBOT_POSE_NAVIGATOR__BT_CONVERSIONS_HPP_
 
 #include "behaviortree_cpp_v3/behavior_tree.h"
 #include "geometry_msgs/msg/point.hpp"
@@ -67,4 +67,4 @@ inline std::chrono::milliseconds convertFromString<std::chrono::milliseconds>(co
 
 }  // namespace BT
 
-#endif  // NAV2_BEHAVIOR_TREE__BT_CONVERSIONS_HPP_
+#endif  // BOTANBOT_POSE_NAVIGATOR__BT_CONVERSIONS_HPP_

@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <string>
+#include <set>
 
 #include "botanbot_pose_navigator/navigate_to_pose_action_server_node.hpp"
 
@@ -38,7 +39,6 @@ const char NavigateToPoseActionServer::bt_xml_[] =
 NavigateToPoseActionServer::NavigateToPoseActionServer()
 : Node("navigate_to_pose_server_node")
 {
-
   RCLCPP_INFO(get_logger(), "Creating");
   // Create an action server that we implement with our print_message method
   action_server_ = rclcpp_action::create_server<ActionServer>(

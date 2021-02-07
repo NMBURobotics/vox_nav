@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef botanbot_pose_navigator__BT_ACTION_NODE_HPP_
-#define botanbot_pose_navigator__BT_ACTION_NODE_HPP_
+#ifndef BOTANBOT_POSE_NAVIGATOR__PLUGINS__ACTIONS__BASE_ACTION_CLIENT_NODE_HPP_
+#define BOTANBOT_POSE_NAVIGATOR__PLUGINS__ACTIONS__BASE_ACTION_CLIENT_NODE_HPP_
 
 #include <memory>
 #include <string>
@@ -76,7 +76,8 @@ public:
     action_client_->wait_for_action_server();
   }
 
-  // Any subclass of BaseActionClientNode that accepts parameters must provide a providedPorts method
+  // Any subclass of BaseActionClientNode that accepts
+  // parameters must provide a providedPorts method
   // and call providedBasicPorts in it.
   static BT::PortsList providedBasicPorts(BT::PortsList addition)
   {
@@ -272,4 +273,4 @@ protected:
 
 }  // namespace botanbot_pose_navigator
 
-#endif  // botanbot_pose_navigator__BT_ACTION_NODE_HPP_
+#endif  // BOTANBOT_POSE_NAVIGATOR__PLUGINS__ACTIONS__BASE_ACTION_CLIENT_NODE_HPP_

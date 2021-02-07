@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef botanbot_pose_navigator__PLUGINS__ACTION__Follow_pathACTION_HPP_
-#define botanbot_pose_navigator__PLUGINS__ACTION__Follow_pathACTION_HPP_
+#ifndef BOTANBOT_POSE_NAVIGATOR__PLUGINS__ACTIONS__FOLLOW_PATH_HPP_
+#define BOTANBOT_POSE_NAVIGATOR__PLUGINS__ACTIONS__FOLLOW_PATH_HPP_
 
 #include <string>
 
@@ -67,6 +67,6 @@ public:
   }
 };
 
-} // namespace botanbot_pose_navigator
+}  // namespace botanbot_pose_navigator
 
-#endif  // botanbot_pose_navigator__PLUGINS__ACTION__Follow_pathACTION_HPP_
+#endif  // BOTANBOT_POSE_NAVIGATOR__PLUGINS__ACTIONS__FOLLOW_PATH_HPP_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef botanbot_pose_navigator__ROS2_ACTION_Server_NODE_HPP_
-#define botanbot_pose_navigator__ROS2_ACTION_Server_NODE_HPP_
+#ifndef BOTANBOT_POSE_NAVIGATOR__NAVIGATE_TO_POSE_ACTION_SERVER_NODE_HPP_
+#define BOTANBOT_POSE_NAVIGATOR__NAVIGATE_TO_POSE_ACTION_SERVER_NODE_HPP_
 
 #include <memory>
 #include <string>
@@ -61,4 +61,4 @@ protected:
 };
 }  // namespace botanbot_pose_navigator
 
-#endif  // botanbot_pose_navigator__ROS2_ACTION_Server_NODE_HPP_
+#endif  // BOTANBOT_POSE_NAVIGATOR__NAVIGATE_TO_POSE_ACTION_SERVER_NODE_HPP_

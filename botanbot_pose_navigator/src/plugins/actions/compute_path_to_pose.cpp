@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
+#include <memory>
+#include <string>
 #include "botanbot_pose_navigator/plugins/actions/compute_path_to_pose.hpp"
-
 #include "behaviortree_cpp_v3/bt_factory.h"
+
 BT_REGISTER_NODES(factory)
 {
   BT::NodeBuilder builder =
