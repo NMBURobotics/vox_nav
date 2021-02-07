@@ -36,7 +36,7 @@ public:
     const BT::NodeConfiguration & conf)
   : BT::ActionNodeBase(xml_tag_name, conf), action_name_(action_name)
   {
-    node_ = config().blackboard->get<rclcpp::Node::SharedPtr>("node");
+    node_ = rclcpp::Node::make_shared(xml_tag_name + "_node");
 
     // Get the required items from the blackboard
     server_timeout_ =
