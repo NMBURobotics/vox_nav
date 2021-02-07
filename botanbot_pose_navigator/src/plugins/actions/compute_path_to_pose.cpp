@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "botanbot_pose_navigator/plugins/navigate_to_pose.hpp"
+#include "botanbot_pose_navigator/plugins/actions/compute_path_to_pose.hpp"
 
 #include "behaviortree_cpp_v3/bt_factory.h"
 BT_REGISTER_NODES(factory)
@@ -21,10 +21,10 @@ BT_REGISTER_NODES(factory)
   BT::NodeBuilder builder =
     [](const std::string & name, const BT::NodeConfiguration & config)
     {
-      return std::make_unique<botanbot_pose_navigator::NavigateToPoseNode>(
-        name, "navigate_to_pose", config);
+      return std::make_unique<botanbot_pose_navigator::ComputePathToPoseNode>(
+        name, "/compute_path_to_pose", config);
     };
 
-  factory.registerBuilder<botanbot_pose_navigator::NavigateToPoseNode>(
-    "NavigateToPose", builder);
+  factory.registerBuilder<botanbot_pose_navigator::ComputePathToPoseNode>(
+    "ComputePathToPose", builder);
 }

@@ -19,20 +19,20 @@
 
 #include "botanbot_msgs/action/follow_path.hpp"
 #include "nav_msgs/msg/path.h"
-#include "botanbot_pose_navigator/action_client_node.hpp"
+#include "botanbot_pose_navigator/plugins/actions/base_action_client_node.hpp"
 
 namespace botanbot_pose_navigator
 {
 using FollowPath = botanbot_msgs::action::FollowPath;
 
-class FollowPathNode : public BtActionNode<FollowPath>
+class FollowPathNode : public BaseActionClientNode<FollowPath>
 {
 public:
   FollowPathNode(
     const std::string & xml_tag_name,
     const std::string & action_name,
     const BT::NodeConfiguration & conf)
-  : BtActionNode<FollowPath>(xml_tag_name, action_name, conf)
+  : BaseActionClientNode<FollowPath>(xml_tag_name, action_name, conf)
   {
     config().blackboard->set("path_updated", false);
   }

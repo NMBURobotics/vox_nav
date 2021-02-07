@@ -19,21 +19,21 @@
 
 #include "botanbot_msgs/action/navigate_to_pose.hpp"
 #include "nav_msgs/msg/path.h"
-#include "botanbot_pose_navigator/action_client_node.hpp"
+#include "botanbot_pose_navigator/plugins/actions/base_action_client_node.hpp"
 
 namespace botanbot_pose_navigator
 {
 
 using NavigateToPose = botanbot_msgs::action::NavigateToPose;
 
-class NavigateToPoseNode : public BtActionNode<NavigateToPose>
+class NavigateToPoseNode : public BaseActionClientNode<NavigateToPose>
 {
 public:
   NavigateToPoseNode(
     const std::string & xml_tag_name,
     const std::string & action_name,
     const BT::NodeConfiguration & conf)
-  : BtActionNode<NavigateToPose>(xml_tag_name, action_name, conf)
+  : BaseActionClientNode<NavigateToPose>(xml_tag_name, action_name, conf)
   {
   }
 

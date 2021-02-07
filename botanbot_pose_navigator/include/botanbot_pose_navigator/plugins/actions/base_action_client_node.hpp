@@ -19,7 +19,7 @@
 #include <string>
 
 #include "behaviortree_cpp_v3/action_node.h"
-#include "nav2_util/node_utils.hpp"
+#include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "botanbot_pose_navigator/bt_conversions.hpp"
 
@@ -27,10 +27,10 @@ namespace botanbot_pose_navigator
 {
 
 template<class ActionT>
-class BtActionNode : public BT::ActionNodeBase
+class BaseActionClientNode : public BT::ActionNodeBase
 {
 public:
-  BtActionNode(
+  BaseActionClientNode(
     const std::string & xml_tag_name,
     const std::string & action_name,
     const BT::NodeConfiguration & conf)
@@ -54,12 +54,14 @@ public:
     createActionClient(action_name_);
 
     // Give the derive class a chance to do any initialization
-    RCLCPP_INFO(node_->get_logger(), "\"%s\" BtActionNode initialized", xml_tag_name.c_str());
+    RCLCPP_INFO(
+      node_->get_logger(), "\"%s\" BaseActionClientNode initialized",
+      xml_tag_name.c_str());
   }
 
-  BtActionNode() = delete;
+  BaseActionClientNode() = delete;
 
-  virtual ~BtActionNode()
+  virtual ~BaseActionClientNode()
   {
   }
 
@@ -74,7 +76,7 @@ public:
     action_client_->wait_for_action_server();
   }
 
-  // Any subclass of BtActionNode that accepts parameters must provide a providedPorts method
+  // Any subclass of BaseActionClientNode that accepts parameters must provide a providedPorts method
   // and call providedBasicPorts in it.
   static BT::PortsList providedBasicPorts(BT::PortsList addition)
   {
@@ -174,7 +176,7 @@ public:
         return on_cancelled();
 
       default:
-        throw std::logic_error("BtActionNode::Tick: invalid status value");
+        throw std::logic_error("BaseActionClientNode::Tick: invalid status value");
     }
   }
 

@@ -15,25 +15,26 @@
 #ifndef botanbot_pose_navigator__PLUGINS__ACTION__COMPUTE_PATH_TO_POSE_ACTION_HPP_
 #define botanbot_pose_navigator__PLUGINS__ACTION__COMPUTE_PATH_TO_POSE_ACTION_HPP_
 
-#include <string>
 
-#include "botanbot_msgs/action/compute_path_to_pose.hpp"
 #include "nav_msgs/msg/path.h"
-#include "botanbot_pose_navigator/action_client_node.hpp"
+#include "botanbot_msgs/action/compute_path_to_pose.hpp"
+#include "botanbot_pose_navigator/plugins/actions/base_action_client_node.hpp"
+
+#include <string>
 
 namespace botanbot_pose_navigator
 {
 
 using ComputePathToPose = botanbot_msgs::action::ComputePathToPose;
 
-class ComputePathToPoseNode : public BtActionNode<ComputePathToPose>
+class ComputePathToPoseNode : public BaseActionClientNode<ComputePathToPose>
 {
 public:
   explicit ComputePathToPoseNode(
     const std::string & xml_tag_name,
     const std::string & action_name,
     const BT::NodeConfiguration & conf)
-  : BtActionNode<ComputePathToPose>(xml_tag_name, action_name, conf)
+  : BaseActionClientNode<ComputePathToPose>(xml_tag_name, action_name, conf)
   {
   }
 

@@ -12,17 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <memory>
 
-#include "botanbot_pose_navigator/bt_navigator.hpp"
-#include "rclcpp/rclcpp.hpp"
+#include "botanbot_pose_navigator/plugins/actions/follow_path.hpp"
 
-int main(int argc, char ** argv)
+#include "behaviortree_cpp_v3/bt_factory.h"
+BT_REGISTER_NODES(factory)
 {
-  rclcpp::init(argc, argv);
-  auto node = std::make_shared<botanbot_pose_navigator::BtNavigator>();
-  rclcpp::spin(node->get_node_base_interface());
-  rclcpp::shutdown();
+  BT::NodeBuilder builder =
+    [](const std::string & name, const BT::NodeConfiguration & config)
+    {
+      return std::make_unique<botanbot_pose_navigator::FollowPathNode>(
+        name, "follow_path", config);
+    };
 
-  return 0;
+  factory.registerBuilder<botanbot_pose_navigator::FollowPathNode>(
+    "FollowPath", builder);
 }

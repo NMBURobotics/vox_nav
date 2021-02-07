@@ -48,13 +48,13 @@ std_srvs
 builtin_interfaces
 )
 
-add_library(compute_path_to_pose_action_bt_node SHARED src/compute_path_to_pose.cpp)
+add_library(compute_path_to_pose_action_bt_node SHARED src/plugins/actions/compute_path_to_pose.cpp)
 list(APPEND plugin_libs compute_path_to_pose_action_bt_node)
 
-add_library(follow_path_action_bt_node SHARED src/follow_path.cpp)
+add_library(follow_path_action_bt_node SHARED src/plugins/actions/follow_path.cpp)
 list(APPEND plugin_libs follow_path_action_bt_node)
 
-add_library(navigate_to_pose_action_bt_node SHARED src/navigate_to_pose.cpp)
+add_library(navigate_to_pose_action_bt_node SHARED src/plugins/actions/navigate_to_pose.cpp)
 list(APPEND plugin_libs navigate_to_pose_action_bt_node)
 
 foreach(bt_plugin ${plugin_libs})
