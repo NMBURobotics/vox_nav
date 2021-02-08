@@ -7,8 +7,8 @@ botanbot_planner_server_rclcpp_node:
       planner_name: "RRTStar" # other options: RRTStar, RRTConnect, KPIECE1
       planner_timeout: 1.0
       interpolation_parameter: 50
-      octomap_filename: "/home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_bringup/maps/f.bt"
-      octomap_voxel_size: 0.1
+      octomap_topic: "octomap"
+      octomap_voxel_size: 0.2
       state_space_boundries:
         minx: -50.0
         maxx: 50.0
@@ -25,8 +25,8 @@ botanbot_planner_server_rclcpp_node:
       planner_name: "PRMStar"  # other options: PRMStar  RRTConnect, KPIECE1
       planner_timeout: 1.0
       interpolation_parameter: 50
-      octomap_filename: "/home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_bringup/maps/f.bt"
-      octomap_voxel_size: 0.1
+      octomap_topic: "octomap"
+      octomap_voxel_size: 0.2
       state_space_boundries:
         minx: -50.0
         maxx: 50.0
@@ -43,8 +43,8 @@ botanbot_planner_server_rclcpp_node:
       planner_name: "RRT"  # other options: SST , EST, KPIECE1
       planner_timeout: 1.0
       interpolation_parameter: 50
-      octomap_filename: "../maps/f.bt"
-      octomap_voxel_size: 0.1
+      octomap_topic: "octomap"
+      octomap_voxel_size: 0.2
       state_space_boundries:
         minx: -50.0
         maxx: 50.0
@@ -55,7 +55,7 @@ botanbot_planner_server_rclcpp_node:
       robot_body_dimens:
         x: 1.0
         y: 0.5
-        z: 0.4      
+        z: 0.05      
 
 botanbot_controller_server_rclcpp_node:
   ros__parameters:

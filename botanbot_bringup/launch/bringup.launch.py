@@ -67,7 +67,16 @@ def generate_launch_description():
         parameters=[parameter_file],
     )
 
+    navigate_to_pose_server_node = Node(
+        package='botanbot_pose_navigator',
+        executable='navigate_to_pose_server_node',
+        name='navigate_to_pose_server_node',
+        namespace='',
+        output='screen',
+        parameters=[parameter_file],
+    )
+
     return LaunchDescription([
         params_declare, planner_server_node, controller_server_node,
-        map_server_node
+        map_server_node, navigate_to_pose_server_node
     ])

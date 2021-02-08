@@ -148,6 +148,13 @@ public:
     const std::string & planner_name,
     const ompl::base::SpaceInformationPtr & state_space_information,
     ompl::base::PlannerPtr planner) = 0;
+
+  /**
+   * @brief Callback to subscribe ang get octomap
+   *
+   * @param octomap
+   */
+  virtual void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg) = 0;
 };
 }  // namespace botanbot_planning
 #endif  // BOTANBOT_PLANNING__PLANNER_CORE_HPP_

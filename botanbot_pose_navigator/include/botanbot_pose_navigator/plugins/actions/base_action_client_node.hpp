@@ -1,4 +1,5 @@
 // Copyright (c) 2018 Intel Corporation
+// Copyright (c) 2021 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -70,7 +71,6 @@ public:
   {
     // Now that we have the ROS node to use, create the action client for this BT action
     action_client_ = rclcpp_action::create_client<ActionT>(node_, action_name);
-
     // Make sure the server is actually there before continuing
     RCLCPP_INFO(node_->get_logger(), "Waiting for \"%s\" action server", action_name.c_str());
     action_client_->wait_for_action_server();
@@ -96,8 +96,7 @@ public:
   }
 
   // Derived classes can override any of the following methods to hook into the
-  // processing for the action: on_tick, on_wait_for_result, and on_success
-
+  // processing for the action: on_tick, on_wait_for_result, and on_successs
   // Could do dynamic checks, such as getting updates to values on the blackboard
   virtual void on_tick()
   {
@@ -140,7 +139,6 @@ public:
 
       // user defined callback
       on_tick();
-
       on_new_goal_received();
     }
 
@@ -195,7 +193,6 @@ public:
           "Failed to cancel action server for %s", action_name_.c_str());
       }
     }
-
     setStatus(BT::NodeStatus::IDLE);
   }
 
@@ -222,9 +219,6 @@ protected:
     auto send_goal_options = typename rclcpp_action::Client<ActionT>::SendGoalOptions();
     send_goal_options.result_callback =
       [this](const typename rclcpp_action::ClientGoalHandle<ActionT>::WrappedResult & result) {
-        // TODO(#1652): a work around until rcl_action interface is updated
-        // if goal ids are not matched, the older goal call this callback so ignore the result
-        // if matched, it must be processed (including aborted)
         if (this->goal_handle_->get_goal_id() == result.goal_id) {
           goal_result_available_ = true;
           result_ = result;
@@ -255,7 +249,6 @@ protected:
 
   std::string action_name_;
   typename std::shared_ptr<rclcpp_action::Client<ActionT>> action_client_;
-
   // All ROS2 actions have a goal and a result
   typename ActionT::Goal goal_;
   bool goal_updated_{false};

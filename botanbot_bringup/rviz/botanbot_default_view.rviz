@@ -57,122 +57,17 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /robot_description
-      Enabled: true
+      Enabled: false
       Links:
         All Links Enabled: true
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        base_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_bottom_screw_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_color_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_color_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_depth_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_depth_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_left_ir_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_left_ir_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_right_ir_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        camera_right_ir_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        front_left_wheel:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        front_right_wheel:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        gps:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        imu_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        rear_axle:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        rear_left_wheel:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        rear_right_wheel:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        steering_wheel:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        velodyne_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        wide_angle_camera_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
       Name: RobotModel
       TF Prefix: ""
       Update Interval: 0
-      Value: true
+      Value: false
       Visual Enabled: true
     - Class: rviz_default_plugins/TF
       Enabled: true
@@ -305,7 +200,7 @@ Visualization Manager:
           Value: true
         Value: false
       Enabled: true
-      Keep: 1000
+      Keep: 100
       Name: Global Odometry
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -343,7 +238,7 @@ Visualization Manager:
           Value: true
         Value: true
       Enabled: true
-      Keep: 1000
+      Keep: 100
       Name: OpenVSLAM Odometry
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -381,7 +276,7 @@ Visualization Manager:
           Value: true
         Value: false
       Enabled: true
-      Keep: 1000
+      Keep: 100
       Name: Local Odometry
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -521,18 +416,18 @@ Visualization Manager:
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 6.730865478515625
-        Y: 1.523441195487976
+        X: 2.2461323738098145
+        Y: 5.586672306060791
         Z: -4.4177108065923676e-05
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7147958874702454
+      Pitch: 1.0397963523864746
       Target Frame: map
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 4.2095489501953125
+      Yaw: 4.679549217224121
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016

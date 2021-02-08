@@ -18,6 +18,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <mutex>
 
 namespace botanbot_planning
 {
@@ -35,13 +36,15 @@ void SE2PlannerControlSpace::initialize(
   const std::string & plugin_name)
 {
   state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
+  octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
+  is_octomap_ready_ = false;
 
   parent->declare_parameter(plugin_name + ".enabled", true);
   parent->declare_parameter(plugin_name + ".planner_name", "PRMStar");
   parent->declare_parameter(plugin_name + ".planner_timeout", 5.0);
   parent->declare_parameter(plugin_name + ".interpolation_parameter", 50);
-  parent->declare_parameter(plugin_name + ".octomap_filename", "/home/ros2-foxy/f.bt");
-  parent->declare_parameter(plugin_name + ".octomap_voxel_size", 0.1);
+  parent->declare_parameter(plugin_name + ".octomap_topic", "octomap");
+  parent->declare_parameter(plugin_name + ".octomap_voxel_size", 0.2);
   parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -50.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 50.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
@@ -56,8 +59,9 @@ void SE2PlannerControlSpace::initialize(
   parent->get_parameter(plugin_name + ".planner_name", planner_name_);
   parent->get_parameter(plugin_name + ".planner_timeout", planner_timeout_);
   parent->get_parameter(plugin_name + ".interpolation_parameter", interpolation_parameter_);
-  parent->get_parameter(plugin_name + ".octomap_filename", octomap_filename_);
+  parent->get_parameter(plugin_name + ".octomap_topic", octomap_topic_);
   parent->get_parameter(plugin_name + ".octomap_voxel_size", octomap_voxel_size_);
+
 
   state_space_bounds_->setLow(
     parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
@@ -78,18 +82,14 @@ void SE2PlannerControlSpace::initialize(
       parent->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
       parent->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
       parent->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
+
   fcl::Transform3f tf2;
   fcl::CollisionObject robot_body_box_object(robot_body_box, tf2);
-
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
-  octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-  octomap_octree_->readBinary(octomap_filename_);
-  fcl_octree_ = std::make_shared<fcl::OcTree>(
-    std::shared_ptr<const octomap::OcTree>(
-      octomap_octree_));
-  fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
-    std::shared_ptr<fcl::CollisionGeometry>(
-      fcl_octree_));
+
+  octomap_subscriber_ = parent->create_subscription<octomap_msgs::msg::Octomap>(
+    octomap_topic_, rclcpp::SystemDefaultsQoS(),
+    std::bind(&SE2PlannerControlSpace::octomapCallback, this, std::placeholders::_1));
 
   state_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>();
   state_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds_);
@@ -222,6 +222,27 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
 
 bool SE2PlannerControlSpace::isStateValid(const ompl::base::State * state)
 {
+  if (is_octomap_ready_) {
+    std::call_once(
+      fcl_tree_from_octomap_once_, [this]() {
+        std::shared_ptr<octomap::OcTree> octomap_octree =
+        std::make_shared<octomap::OcTree>(0.2);
+        octomap_msgs::readTree<octomap::OcTree>(octomap_octree.get(), *octomap_msg_);
+        fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
+        fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
+          std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
+        RCLCPP_INFO(
+          logger_,
+          "Recieved a valid Octomap, A FCL collision tree will be created from this "
+          "octomap for state validity(aka collision check)");
+      });
+  } else {
+    RCLCPP_ERROR(
+      logger_,
+      "The Octomap has not been recieved correctly, Collision check "
+      "cannot be processed without a valid Octomap!");
+    return false;
+  }
   // cast the abstract state type to the type we expect
   const ompl::base::ReedsSheppStateSpace::StateType * red_state =
     state->as<ompl::base::ReedsSheppStateSpace::StateType>();
@@ -280,6 +301,15 @@ void SE2PlannerControlSpace::propagate(
     rot + ctrl[1] * duration);
 }
 
+void SE2PlannerControlSpace::octomapCallback(
+  const octomap_msgs::msg::Octomap::ConstSharedPtr msg)
+{
+  const std::lock_guard<std::mutex> lock(octomap_mutex_);
+  if (!is_octomap_ready_) {
+    is_octomap_ready_ = true;
+    octomap_msg_ = msg;
+  }
+}
 
 }  // namespace botanbot_planning
 

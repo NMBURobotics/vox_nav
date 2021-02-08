@@ -18,6 +18,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <mutex>
 
 #include "botanbot_planning/planner_core.hpp"
 
@@ -89,6 +90,13 @@ public:
     const ompl::base::SpaceInformationPtr & state_space_information,
     ompl::base::PlannerPtr planner) override;
 
+  /**
+  * @brief Callback to subscribe and get octomap
+  *
+  * @param octomap
+  */
+  void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg) override;
+
 protected:
   /**
    * @brief
@@ -98,14 +106,11 @@ protected:
     const ompl::base::State * start, const ompl::control::Control * control, const double duration,
     ompl::base::State * result);
 
-  rclcpp::Node::SharedPtr node_;
   rclcpp::Logger logger_{rclcpp::get_logger("se2_planner_control_space")};
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr vis_pub_;
-  rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr octomap_pointcloud_pub_;
+  rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
+  octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
 
   std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-  std::shared_ptr<octomap::OcTree> octomap_octree_;
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
 
@@ -117,15 +122,23 @@ protected:
   std::mutex global_mutex_;
   // the topic to subscribe in order capture a frame
   std::string planner_name_;
-
-  std::string octomap_filename_;
+  // The topic of octomap to subscribe, this octomap is published by map_server
+  std::string octomap_topic_;
+  // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
   double octomap_voxel_size_;
   // whether plugin is enabled
   bool is_enabled_;
   // related to density of created path
   int interpolation_parameter_;
-  //
+  // max time the planner can spend before coming up with a solution
   double planner_timeout_;
+  // whether otomap is recieved
+  volatile bool is_octomap_ready_;
+  // global mutex to guard octomap
+  std::mutex octomap_mutex_;
+  // We only need to creae a FLC cotomap collision from
+  // octomap once, because this is static map
+  std::once_flag fcl_tree_from_octomap_once_;
 };
 }  // namespace botanbot_planning
 

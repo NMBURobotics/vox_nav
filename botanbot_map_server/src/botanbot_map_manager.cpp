@@ -68,6 +68,7 @@ BotanbotMapManager::BotanbotMapManager()
   octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
   octomap_publisher_ = this->create_publisher<octomap_msgs::msg::Octomap>(
     octomap_publish_topic_name_, rclcpp::SystemDefaultsQoS());
+
   octomap_pointloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     octomap_point_cloud_publish_topic_, rclcpp::SystemDefaultsQoS());
   octomap_octree_->readBinary(octomap_filename_);
