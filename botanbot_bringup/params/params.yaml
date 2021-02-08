@@ -4,9 +4,9 @@ botanbot_planner_server_rclcpp_node:
     expected_planner_frequency: 5.0
     SE2Planner:
       plugin: "botanbot_planning::SE2Planner"
-      planner_name: "RRTStar" # other options: RRTStar, RRTConnect, KPIECE1
+      planner_name: "KPIECE1" # other options: RRTStar, RRTConnect, KPIECE1
       planner_timeout: 1.0
-      interpolation_parameter: 50
+      interpolation_parameter: 100
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
       state_space_boundries:
@@ -17,14 +17,14 @@ botanbot_planner_server_rclcpp_node:
         minz: 0.0
         maxz: 3.0
       robot_body_dimens:
-        x: 1.0
-        y: 0.5
-        z: 0.4
+        x: 1.5
+        y: 1.2
+        z: 1.0
     SE3Planner:
       plugin: "botanbot_planning::SE3Planner"
       planner_name: "PRMStar"  # other options: PRMStar  RRTConnect, KPIECE1
       planner_timeout: 1.0
-      interpolation_parameter: 50
+      interpolation_parameter: 100
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
       state_space_boundries:
@@ -35,14 +35,14 @@ botanbot_planner_server_rclcpp_node:
         minz: 0.0
         maxz: 3.0
       robot_body_dimens:
-        x: 1.0
-        y: 0.5
-        z: 0.4    
+        x: 1.5
+        y: 1.0
+        z: 0.4  
     SE2PlannerControlSpace:
       plugin: "botanbot_planning::SE2PlannerControlSpace"
       planner_name: "RRT"  # other options: SST , EST, KPIECE1
       planner_timeout: 1.0
-      interpolation_parameter: 50
+      interpolation_parameter: 100
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
       state_space_boundries:
@@ -53,9 +53,9 @@ botanbot_planner_server_rclcpp_node:
         minz: 0.0
         maxz: 3.0
       robot_body_dimens:
-        x: 1.0
-        y: 0.5
-        z: 0.05      
+        x: 1.5
+        y: 1.0
+        z: 0.4  
 
 botanbot_controller_server_rclcpp_node:
   ros__parameters:
@@ -69,17 +69,17 @@ botanbot_controller_server_rclcpp_node:
       L_R: 0.66                                                   #distance from CoG to rear axle(m)
       V_MIN: -2.0                                                 #min / max velocity constraint(m / s)
       V_MAX:  2.0
-      A_MIN:  -1.0                                                #min / max acceleration constraint(m / s ^ 2)
-      A_MAX:   1.0
-      DF_MIN:  -0.5                                               #min / max front steer angle constraint(rad)
-      DF_MAX:   0.5
+      A_MIN:  -0.5                                                #min / max acceleration constraint(m / s ^ 2)
+      A_MAX:   0.8
+      DF_MIN:  -1.0                                               #min / max front steer angle constraint(rad)
+      DF_MAX:   1.0
       A_DOT_MIN: -1.0                                             #min / max jerk constraint(m / s ^ 3)
       A_DOT_MAX:  1.0
       DF_DOT_MIN: -0.4                                            #min / max front steer angle rate constraint(rad / s)
       DF_DOT_MAX: 0.4
-      Q: [10.0, 10.0, 10.0, 0.0]                                  #weights on x, y, psi, and v.
-      R: [10.0, 100.0]                                            #weights on jerk and slew rate(steering angle derivative)
-      debug_mode: False                                            #enable/disable debug messages
+      Q: [100.0, 100.0, 10.0, 0.0]                                #weights on x, y, psi, and v.
+      R: [10.0, 100.0]                                             #weights on jerk and slew rate(steering angle derivative)
+      debug_mode: False                                           #enable/disable debug messages
       params_configured: True      
 
 botanbot_map_server_rclcpp_node:

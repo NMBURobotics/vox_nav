@@ -120,7 +120,17 @@ bool getCurrentPose(
       logger, "Failed to transform from %s to %s",
       global_frame.c_str(), robot_frame.c_str());
   }
-
   return false;
+}
+
+double getEuclidianDistBetweenPoses(
+  const geometry_msgs::msg::PoseStamped a,
+  const geometry_msgs::msg::PoseStamped b)
+{
+  double distance = std::sqrt(
+    std::pow(a.pose.position.x - b.pose.position.x, 2) +
+    std::pow(a.pose.position.y - b.pose.position.y, 2) +
+    std::pow(a.pose.position.z - b.pose.position.z, 2));
+  return distance;
 }
 }  // namespace botanbot_utilities

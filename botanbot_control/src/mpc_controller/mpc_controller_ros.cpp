@@ -158,13 +158,10 @@ std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedRefernce
 {
   int nearsest_taj_state_index =
     nearestStateIndex(ref_traj, curr_robot_pose);
-
-  int kTRAJHORIZON = 10;
-  double kTRAJDT = 0.3;
+  int kTRAJHORIZON = mpc_parameters_.N;
   double kTARGETSPEED = 1.0;
 
   std::vector<MPCControllerCore::States> interpolated_reference_states;
-
   for (int i = 0; i < kTRAJHORIZON; i++) {
     MPCControllerCore::States curr_interpolated_state;
     tf2::Quaternion curr_waypoint_psi_quat;

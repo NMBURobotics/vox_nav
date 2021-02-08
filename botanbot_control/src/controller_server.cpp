@@ -174,7 +174,10 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
   }
 
   rclcpp::WallRate rate(10);
-  while (rclcpp::ok()) {
+  double goal_tolerance_distance = 0.4;
+  volatile bool is_goal_tolerance_satisfied = false;
+  while (rclcpp::ok() && !is_goal_tolerance_satisfied) {
+
     geometry_msgs::msg::PoseStamped curr_robot_pose;
     botanbot_utilities::getCurrentPose(
       curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1);
@@ -183,6 +186,18 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
       goal_handle->canceled(result);
       RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
       return;
+    }
+
+    // check if we have arrived to goal, note the goal is last pose of path
+    if (botanbot_utilities::getEuclidianDistBetweenPoses(
+        curr_robot_pose,
+        goal->path.poses.back()) < goal_tolerance_distance)
+    {
+      // goal has been reached
+      is_goal_tolerance_satisfied = true;
+      // reset the velocity
+      cmd_vel_publisher_->publish(geometry_msgs::msg::Twist());
+      RCLCPP_INFO(this->get_logger(), "Goal has been reached");
     }
 
     computed_velocity_commands = controllers_[controller_id_]->computeVelocityCommands(

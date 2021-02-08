@@ -58,6 +58,17 @@ bool getCurrentPose(
   tf2_ros::Buffer & tf_buffer, const std::string global_frame = "map",
   const std::string robot_frame = "base_link", const double transform_timeout = 0.1);
 
+/**
+ * @brief Get the Euclidian Dist Between Poses object
+ *
+ * @param a
+ * @param b
+ * @return double
+ */
+double getEuclidianDistBetweenPoses(
+  const geometry_msgs::msg::PoseStamped a,
+  const geometry_msgs::msg::PoseStamped b);
+
 }  // namespace botanbot_utilities
 
 #endif  // BOTANBOT_UTILITIES__TF_HELPERS_HPP_
