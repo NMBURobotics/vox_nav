@@ -23,7 +23,6 @@ Panels:
       - /Current View1
     Name: Views
     Splitter Ratio: 0.5
-  - Class: nav2_rviz_plugins/Navigation 2
     Name: Navigation 2
 Visualization Manager:
   Class: ""
@@ -401,7 +400,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /clicked_point
-    - Class: nav2_rviz_plugins/GoalTool
+
   Transformation:
     Current:
       Class: rviz_default_plugins/TF

@@ -39,7 +39,6 @@ from launch.event_handlers import OnProcessExit
 from launch.events import Shutdown
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from nav2_common.launch import ReplaceString
 
 
 def generate_launch_description():

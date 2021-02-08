@@ -3,7 +3,6 @@ project(botanbot_utilities)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp)
-find_package(nav2_common REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -11,8 +10,6 @@ find_package(rclcpp REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
-find_package(nav2_msgs REQUIRED)
-find_package(nav2_util REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(PCL REQUIRED)
 find_package(OCTOMAP REQUIRED)
@@ -24,7 +21,6 @@ if(OPENMP_FOUND)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
-nav2_package()
 
 set(dependencies
   rclcpp
@@ -35,8 +31,6 @@ set(dependencies
   tf2
   tf2_ros
   tf2_geometry_msgs
-  nav2_msgs
-  nav2_util
   pcl_ros
   Eigen3
 )

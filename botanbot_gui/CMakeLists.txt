@@ -26,14 +26,10 @@ find_package(qt_gui_cpp REQUIRED)
 find_package(rqt_gui_cpp REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 #Navigation2 packages
-find_package(nav2_util REQUIRED)
-find_package(nav2_lifecycle_manager REQUIRED)
-find_package(nav2_msgs REQUIRED)
 find_package(botanbot_msgs REQUIRED)
 find_package(botanbot_utilities REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(behaviortree_cpp_v3 REQUIRED)
-find_package(nav2_behavior_tree REQUIRED)
 #QT
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets Test Concurrent)
 
@@ -62,9 +58,6 @@ set(library_name ${PROJECT_NAME})
 
 set(dependencies
     geometry_msgs
-    nav2_util
-    nav2_lifecycle_manager
-    nav2_msgs
     botanbot_msgs
     botanbot_utilities
     nav_msgs
@@ -75,7 +68,6 @@ set(dependencies
     std_msgs
     tf2_geometry_msgs
     behaviortree_cpp_v3
-    nav2_behavior_tree
     qt_gui_cpp
     rqt_gui_cpp)
 

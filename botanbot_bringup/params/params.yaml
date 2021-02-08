@@ -4,7 +4,7 @@ botanbot_planner_server_rclcpp_node:
     expected_planner_frequency: 5.0
     SE2Planner:
       plugin: "botanbot_planning::SE2Planner"
-      planner_name: "KPIECE1" # other options: RRTStar, RRTConnect, KPIECE1
+      planner_name: "RRTStar" # other options: RRTStar, RRTConnect, KPIECE1
       planner_timeout: 3.0
       interpolation_parameter: 100
       octomap_topic: "octomap"
