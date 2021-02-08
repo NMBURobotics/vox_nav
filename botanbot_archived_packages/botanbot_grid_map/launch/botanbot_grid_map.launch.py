@@ -8,7 +8,8 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Find the grid_map_demos package share directory
-    grid_map_demos_dir = get_package_share_directory('botanbot_grid_map')
+    grid_map_demos_dir = get_package_share_directory(
+        'archived_botanbot_grid_map')
 
     # Declare launch configuration variables that can access the launch arguments values
     visualization_config_file = LaunchConfiguration('visualization_config')
@@ -32,13 +33,13 @@ def generate_launch_description():
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         'rviz_config',
         default_value=os.path.join(grid_map_demos_dir, 'rviz',
-                                   'botanbot_grid_map.rviz'),
+                                   'archived_botanbot_grid_map.rviz'),
         description='Full path to the RVIZ config file to use')
 
     # Declare node actions
-    tutorial_demo_node = Node(package='botanbot_grid_map',
-                              executable='botanbot_grid_map_node',
-                              name='botanbot_grid_map_node',
+    tutorial_demo_node = Node(package='archived_botanbot_grid_map',
+                              executable='archived_botanbot_grid_map_node',
+                              name='archived_botanbot_grid_map_node',
                               output='screen',
                               parameters=[node_config_file])
 

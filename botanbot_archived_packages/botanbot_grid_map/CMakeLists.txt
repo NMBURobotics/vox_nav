@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(botanbot_grid_map)
+project(archived_botanbot_grid_map)
 
 ## Find ament_cmake macros and libraries
 find_package(ament_cmake REQUIRED)
@@ -46,10 +46,10 @@ set(dependencies
   OpenCV
 )
 
-set(grid_map_executable_name botanbot_grid_map_node)
+set(grid_map_executable_name archived_botanbot_grid_map_node)
 
 add_executable(${grid_map_executable_name}
-  src/botanbot_grid_map.cpp
+  src/archived_botanbot_grid_map.cpp
 )
 
 ament_target_dependencies(${grid_map_executable_name}

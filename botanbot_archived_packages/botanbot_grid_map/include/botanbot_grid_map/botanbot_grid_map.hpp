@@ -18,8 +18,8 @@
  *      Institute: ETH Zurich, Robotic Systems Lab
  */
 
-#ifndef BOTANBOT_GRID_MAP__BOTANBOT_GRID_MAP_HPP_
-#define BOTANBOT_GRID_MAP__BOTANBOT_GRID_MAP_HPP_
+#ifndef ARCHIVED_BOTANBOT_GRID_MAP__ARCHIVED_BOTANBOT_GRID_MAP_HPP_
+#define ARCHIVED_BOTANBOT_GRID_MAP__ARCHIVED_BOTANBOT_GRID_MAP_HPP_
 
 #include <grid_map_ros/grid_map_ros.hpp>
 
@@ -36,7 +36,7 @@
  * @brief  client package too utilize grid_map especially with prebuild maps in .pcd formats
  *
  */
-namespace botanbot_grid_map
+namespace archived_botanbot_grid_map
 {
 
 /**
@@ -162,6 +162,6 @@ protected:
 
   botanbot_utilities::RigidBodyTransformation pointloud_transform_matrix_;
 };
-}  // namespace botanbot_grid_map
+}  // namespace archived_botanbot_grid_map
 
-#endif  // BOTANBOT_GRID_MAP__BOTANBOT_GRID_MAP_HPP_
+#endif  // ARCHIVED_BOTANBOT_GRID_MAP__ARCHIVED_BOTANBOT_GRID_MAP_HPP_

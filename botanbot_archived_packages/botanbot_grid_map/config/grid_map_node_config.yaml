@@ -1,4 +1,4 @@
-botanbot_grid_map_node:
+archived_botanbot_grid_map_node:
   ros__parameters:
     resolution: 0.15
     pcd_file_full_path: /home/ros2-foxy/f.pcd

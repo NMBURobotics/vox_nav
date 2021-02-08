@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>botanbot_cartographer</name>
+  <name>archived_botanbot_cartographer</name>
   <version>0.0.2</version>
   <description>
     ROS 2 launch scripts for cartographer

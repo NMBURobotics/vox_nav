@@ -24,12 +24,12 @@
 #include <limits>
 #include <utility>
 #include <algorithm>
-#include "botanbot_grid_map/botanbot_grid_map.hpp"
+#include "archived_botanbot_grid_map/archived_botanbot_grid_map.hpp"
 
-namespace botanbot_grid_map
+namespace archived_botanbot_grid_map
 {
 BotanbotGridMap::BotanbotGridMap()
-: Node("botanbot_grid_map_node"),
+: Node("archived_botanbot_grid_map_node"),
   map_(grid_map::GridMap({"elevation", "normal_x", "normal_y", "normal_z"}))
 {
   this->declare_parameter("pcd_file_full_path", "/home/ros2-foxy/test_map.pcd");
@@ -315,7 +315,7 @@ double BotanbotGridMap::calculateElevationFromPointsInsideGridMapCell(
 
   return minClusterHeight;
 }
-}  // namespace botanbot_grid_map
+}  // namespace archived_botanbot_grid_map
 
 /**
  * @brief
@@ -329,7 +329,7 @@ int main(int argc, char const * argv[])
   rclcpp::init(argc, argv);
 
   auto gps_waypoint_follower_client_node = std::make_shared
-    <botanbot_grid_map::BotanbotGridMap>();
+    <archived_botanbot_grid_map::BotanbotGridMap>();
 
   rclcpp::spin(gps_waypoint_follower_client_node->get_node_base_interface());
 
