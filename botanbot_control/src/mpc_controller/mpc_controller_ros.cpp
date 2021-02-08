@@ -171,6 +171,7 @@ std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedRefernce
   std::vector<MPCControllerCore::States> interpolated_reference_states;
   for (int i = 0; i < kTRAJHORIZON; i++) {
     MPCControllerCore::States curr_interpolated_state;
+    curr_interpolated_state.v = kTARGETSPEED;
     tf2::Quaternion curr_waypoint_psi_quat;
     tf2::fromMsg(
       ref_traj.poses[nearsest_traj_state_index + i].pose.orientation,
@@ -181,7 +182,18 @@ std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedRefernce
     curr_interpolated_state.x = ref_traj.poses[nearsest_traj_state_index + i].pose.position.x;
     curr_interpolated_state.y = ref_traj.poses[nearsest_traj_state_index + i].pose.position.y;
     curr_interpolated_state.psi = psi;
-    curr_interpolated_state.v = kTARGETSPEED;
+    if (nearsest_traj_state_index == ref_traj.poses.size() - kTRAJHORIZON) {
+      tf2::Quaternion curr_waypoint_psi_quat;
+      tf2::fromMsg(
+        ref_traj.poses.back().pose.orientation,
+        curr_waypoint_psi_quat);
+      double none, psi;
+      tf2::Matrix3x3 curr_waypoint_rot(curr_waypoint_psi_quat);
+      curr_waypoint_rot.getRPY(none, none, psi);
+      curr_interpolated_state.x = ref_traj.poses.back().pose.position.x;
+      curr_interpolated_state.y = ref_traj.poses.back().pose.position.y;
+      curr_interpolated_state.psi = psi;
+    }
     interpolated_reference_states.push_back(curr_interpolated_state);
   }
   return interpolated_reference_states;
