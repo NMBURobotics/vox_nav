@@ -156,23 +156,30 @@ std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedRefernce
   const nav_msgs::msg::Path ref_traj,
   geometry_msgs::msg::PoseStamped curr_robot_pose)
 {
-  int nearsest_taj_state_index =
+  int nearsest_traj_state_index =
     nearestStateIndex(ref_traj, curr_robot_pose);
+
   int kTRAJHORIZON = mpc_parameters_.N;
   double kTARGETSPEED = 1.0;
+
+  if ((nearsest_traj_state_index + kTRAJHORIZON) > ref_traj.poses.size()) {
+    nearsest_traj_state_index = ref_traj.poses.size() - kTRAJHORIZON;
+    std::cout << "MPC Controller approaching to goal state..." << std::endl;
+    kTARGETSPEED = 0.1;
+  }
 
   std::vector<MPCControllerCore::States> interpolated_reference_states;
   for (int i = 0; i < kTRAJHORIZON; i++) {
     MPCControllerCore::States curr_interpolated_state;
     tf2::Quaternion curr_waypoint_psi_quat;
     tf2::fromMsg(
-      ref_traj.poses[nearsest_taj_state_index + i].pose.orientation,
+      ref_traj.poses[nearsest_traj_state_index + i].pose.orientation,
       curr_waypoint_psi_quat);
     double none, psi;
     tf2::Matrix3x3 curr_waypoint_rot(curr_waypoint_psi_quat);
     curr_waypoint_rot.getRPY(none, none, psi);
-    curr_interpolated_state.x = ref_traj.poses[nearsest_taj_state_index + i].pose.position.x;
-    curr_interpolated_state.y = ref_traj.poses[nearsest_taj_state_index + i].pose.position.y;
+    curr_interpolated_state.x = ref_traj.poses[nearsest_traj_state_index + i].pose.position.x;
+    curr_interpolated_state.y = ref_traj.poses[nearsest_traj_state_index + i].pose.position.y;
     curr_interpolated_state.psi = psi;
     curr_interpolated_state.v = kTARGETSPEED;
     interpolated_reference_states.push_back(curr_interpolated_state);

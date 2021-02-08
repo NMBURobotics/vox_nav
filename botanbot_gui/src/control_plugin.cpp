@@ -109,7 +109,7 @@ void ControlPlugin::initPlugin(qt_gui_cpp::PluginContext & context)
    */
   timer_->start(100);
   timer_->connect(timer_, SIGNAL(timeout()), this, SLOT(teleoperation()));
-  timer_->connect(timer_, SIGNAL(timeout()), this, SLOT(updateRobotStates()));
+  //timer_->connect(timer_, SIGNAL(timeout()), this, SLOT(updateRobotStates()));
 
   cmd_vel_publisher_ =
     node_->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);

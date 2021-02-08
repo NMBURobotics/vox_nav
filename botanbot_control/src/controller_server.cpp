@@ -174,7 +174,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
   }
 
   rclcpp::WallRate rate(10);
-  double goal_tolerance_distance = 0.4;
+  double goal_tolerance_distance = 0.7;
   volatile bool is_goal_tolerance_satisfied = false;
   while (rclcpp::ok() && !is_goal_tolerance_satisfied) {
 
@@ -185,6 +185,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
     if (goal_handle->is_canceling()) {
       goal_handle->canceled(result);
       RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
+      cmd_vel_publisher_->publish(geometry_msgs::msg::Twist());
       return;
     }
 
@@ -198,6 +199,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
       // reset the velocity
       cmd_vel_publisher_->publish(geometry_msgs::msg::Twist());
       RCLCPP_INFO(this->get_logger(), "Goal has been reached");
+      break;
     }
 
     computed_velocity_commands = controllers_[controller_id_]->computeVelocityCommands(
@@ -216,6 +218,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
     cycle_duration = steady_clock_.now() - start_time;
     result->total_time = cycle_duration;
     goal_handle->succeed(result);
+    cmd_vel_publisher_->publish(geometry_msgs::msg::Twist());
     RCLCPP_INFO(this->get_logger(), "Follow Path Succeeded");
   }
 }
