@@ -32,6 +32,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 find_package(botanbot_msgs REQUIRED)
+find_package(botanbot_utilities REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pluginlib REQUIRED)
 
@@ -49,6 +50,7 @@ geometry_msgs
 octomap_msgs
 sensor_msgs
 botanbot_msgs
+botanbot_utilities
 std_msgs
 tf2_eigen
 tf2_geometry_msgs

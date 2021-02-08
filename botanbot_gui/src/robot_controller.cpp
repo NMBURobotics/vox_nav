@@ -25,15 +25,9 @@ RobotController::RobotController(/* args */)
   nav_to_pose_client_ =
     rclcpp_action::create_client<ClientT>(
     node_, "navigate_to_pose");
-  /*waypoint_follower_action_client_ =
-    rclcpp_action::create_client<nav2_msgs::action::FollowWaypoints>(
-    node_, "FollowWaypoints");*/
 
   rclcpp::Clock::SharedPtr
     clock = std::make_shared<rclcpp::Clock>(RCL_SYSTEM_TIME);
-
-  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   RCLCPP_INFO(node_->get_logger(), "Creating Robot Controller Instance");
 }
@@ -87,33 +81,9 @@ void RobotController::toTargetPose(geometry_msgs::msg::PoseStamped pose)
   }
 }
 
-geometry_msgs::msg::TransformStamped RobotController::getRobotStates()
-{
-  geometry_msgs::msg::TransformStamped current_pose;
-  tf_buffer_->setUsingDedicatedThread(true);
-  try {
-    current_pose = tf_buffer_->lookupTransform("map", "base_link", tf2::TimePointZero);
-  } catch (tf2::TransformException ex) {
-    RCLCPP_ERROR(node_->get_logger(), " %s", ex.what());
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
-  return current_pose;
-}
-
 void RobotController::cancelGoals()
 {
-  auto future_cancel = waypoint_follower_action_client_->async_cancel_all_goals();
-
-  if (rclcpp::spin_until_future_complete(
-      node_,
-      future_cancel) != rclcpp::FutureReturnCode::SUCCESS)
-  {
-    RCLCPP_ERROR(node_->get_logger(), "Failed to cancel waypoint follower");
-    return;
-  }
-
-  future_cancel = nav_to_pose_client_->async_cancel_all_goals();
-
+  auto future_cancel = nav_to_pose_client_->async_cancel_all_goals();
   if (rclcpp::spin_until_future_complete(
       node_,
       future_cancel) != rclcpp::FutureReturnCode::SUCCESS)

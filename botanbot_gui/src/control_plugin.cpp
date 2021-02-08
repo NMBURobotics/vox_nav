@@ -17,7 +17,6 @@
 
 #include "pluginlib/class_list_macros.hpp"
 #include "sensor_msgs/image_encodings.hpp"
-
 #include "botanbot_gui/control_plugin.hpp"
 
 namespace botanbot_gui
@@ -118,6 +117,9 @@ void ControlPlugin::initPlugin(qt_gui_cpp::PluginContext & context)
   std::cout << "Initialized plugin . . " << std::endl;
 
   node_->set_parameter(rclcpp::Parameter("use_sim_time", true));
+
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(node_->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 }
 
 void ControlPlugin::shutdownPlugin()
@@ -221,41 +223,35 @@ void ControlPlugin::teleoperation()
 
 void ControlPlugin::updateRobotStates()
 {
-  geometry_msgs::msg::TransformStamped curr_pose =
-    robot_controller_->getRobotStates();
-
-  ui_.x->display(curr_pose.transform.translation.x);
-  ui_.y->display(curr_pose.transform.translation.y);
-
+  geometry_msgs::msg::PoseStamped curr_pose;
+  botanbot_utilities::getCurrentPose(curr_pose, *tf_buffer_, "map", "base_link", 0.1);
+  ui_.x->display(curr_pose.pose.position.x);
+  ui_.y->display(curr_pose.pose.position.y);
   tf2::Quaternion quat(
-    curr_pose.transform.rotation.x,
-    curr_pose.transform.rotation.y,
-    curr_pose.transform.rotation.z,
-    curr_pose.transform.rotation.w);
-
-  double rotation_angle = quat.getAngle() - M_PI;
-
-  ui_.theta->display(rotation_angle * 180.0 / M_PI);
+    curr_pose.pose.orientation.x,
+    curr_pose.pose.orientation.y,
+    curr_pose.pose.orientation.z,
+    curr_pose.pose.orientation.w);
+  tf2::Matrix3x3 m(quat);
+  double roll, pitch, yaw;
+  m.getRPY(roll, pitch, yaw);
+  ui_.theta->display(yaw * 180.0 / M_PI);
 }
 
 void ControlPlugin::onToSpecificPoseButtonClick()
 {
   geometry_msgs::msg::PoseStamped robot_goal_pose;
   robot_goal_pose.header.frame_id = "map";
-
   robot_goal_pose.pose.position.x = ui_.goal_x->value();
   robot_goal_pose.pose.position.y = ui_.goal_y->value();
   robot_goal_pose.header.stamp = rclcpp::Clock().now();
 
   tf2::Quaternion quat;
   quat.setRPY(0, 0, (ui_.goal_theta->value() * M_PI / 180.0));
-
   robot_goal_pose.pose.orientation = tf2::toMsg(quat);
-
   QFuture<void> future = QtConcurrent::run(
     robot_controller_, &RobotController::toTargetPose,
     robot_goal_pose);
-
   basic_timer_->start(200);
 }
 

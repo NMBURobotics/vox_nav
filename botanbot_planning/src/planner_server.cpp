@@ -90,6 +90,9 @@ PlannerServer::PlannerServer()
     std::bind(&PlannerServer::handle_goal, this, std::placeholders::_1, std::placeholders::_2),
     std::bind(&PlannerServer::handle_cancel, this, std::placeholders::_1),
     std::bind(&PlannerServer::handle_accepted, this, std::placeholders::_1));
+
+  tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 }
 
 PlannerServer::~PlannerServer()
@@ -141,6 +144,8 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
     goal->pose.pose.position.x, goal->pose.pose.position.y);
 
   geometry_msgs::msg::PoseStamped start_pose;
+  botanbot_utilities::getCurrentPose(start_pose, *tf_buffer_, "map", "base_link", 0.1);
+
   result->path.poses = getPlan(start_pose, goal->pose, planner_id_);
 
   if (result->path.poses.size() == 0) {
@@ -170,7 +175,6 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
     goal->pose.pose.position.y);
 
   auto cycle_duration = steady_clock_.now() - start_time;
-
 
   // Check if goal is done
   if (rclcpp::ok()) {
@@ -203,10 +207,8 @@ PlannerServer::getPlan(
     goal.pose.position.x, goal.pose.position.y);
 
   if (planners_.find(planner_id) != planners_.end()) {
-
     std::vector<geometry_msgs::msg::PoseStamped> plan =
-      planners_[planner_id]->createPlan(goal, start);
-    std::reverse(plan.begin(), plan.end());
+      planners_[planner_id]->createPlan(start, goal);
     return plan;
   } else {
     if (planners_.size() == 1 && planner_id.empty()) {
@@ -215,8 +217,7 @@ PlannerServer::getPlan(
         "Server will use only plugin %s in server."
         " This warning will appear once.", planner_ids_concat_.c_str());
       std::vector<geometry_msgs::msg::PoseStamped> plan =
-        planners_[planners_.begin()->first]->createPlan(goal, start);
-      std::reverse(plan.begin(), plan.end());
+        planners_[planners_.begin()->first]->createPlan(start, goal);
       return plan;
     } else {
       RCLCPP_ERROR(

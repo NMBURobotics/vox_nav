@@ -30,6 +30,7 @@ find_package(nav2_util REQUIRED)
 find_package(nav2_lifecycle_manager REQUIRED)
 find_package(nav2_msgs REQUIRED)
 find_package(botanbot_msgs REQUIRED)
+find_package(botanbot_utilities REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(behaviortree_cpp_v3 REQUIRED)
 find_package(nav2_behavior_tree REQUIRED)
@@ -65,6 +66,7 @@ set(dependencies
     nav2_lifecycle_manager
     nav2_msgs
     botanbot_msgs
+    botanbot_utilities
     nav_msgs
     pluginlib
     Qt5
@@ -78,7 +80,6 @@ set(dependencies
     rqt_gui_cpp)
 
 ament_target_dependencies(${library_name} ${dependencies})
-
 target_include_directories(${library_name} PUBLIC ${Qt5Widgets_INCLUDE_DIRS} ${OGRE_INCLUDE_DIRS})
 
 #Install Directory
