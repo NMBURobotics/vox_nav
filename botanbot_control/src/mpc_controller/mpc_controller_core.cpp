@@ -95,7 +95,11 @@ MPCControllerCore::MPCControllerCore(Parameters params)
   initializeSlackVars(initial_slack_vars);
 
   // set print level to zeros.
-  casadi::Dict opts = {{"ipopt.print_level", 0}, {"expand", true}};
+  casadi::Dict opts = {
+    {"ipopt.print_level", 0},
+    {"expand", true},
+    {"print_time", false}};
+
   opti_->solver("ipopt", opts);
   // This needs to be called at least once , then we can retrieve opti->debug() information
   solve();

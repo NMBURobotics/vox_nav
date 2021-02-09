@@ -46,13 +46,13 @@ void SE2Planner::initialize(
   parent->declare_parameter(plugin_name + ".octomap_voxel_size", 0.2);
   parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -50.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 50.0);
-  parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
-  parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -50.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 50.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
-  parent->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.0);
-  parent->declare_parameter(plugin_name + ".robot_body_dimens.y", 0.8);
-  parent->declare_parameter(plugin_name + ".robot_body_dimens.z", 0.6);
+  parent->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.5);
+  parent->declare_parameter(plugin_name + ".robot_body_dimens.y", 1.5);
+  parent->declare_parameter(plugin_name + ".robot_body_dimens.z", 0.4);
 
   parent->get_parameter(plugin_name + ".enabled", is_enabled_);
   parent->get_parameter(plugin_name + ".planner_name", planner_name_);
@@ -89,8 +89,8 @@ void SE2Planner::initialize(
     octomap_topic_, rclcpp::SystemDefaultsQoS(),
     std::bind(&SE2Planner::octomapCallback, this, std::placeholders::_1));
 
-  state_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>();
-  state_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds_);
+  state_space_ = std::make_shared<ompl::base::DubinsStateSpace>();
+  state_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*state_space_bounds_);
   state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
   state_space_information_->setStateValidityChecker(
     std::bind(&SE2Planner::isStateValid, this, std::placeholders::_1));
@@ -108,7 +108,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
     return std::vector<geometry_msgs::msg::PoseStamped>();
   }
 
-  ompl::base::ScopedState<ompl::base::SE2StateSpace> se2_start(state_space_),
+  ompl::base::ScopedState<ompl::base::DubinsStateSpace> se2_start(state_space_),
   se2_goal(state_space_);
   // set the start and goal states
   tf2::Quaternion start_quat, goal_quat;
@@ -131,6 +131,12 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
       return isStateValid(state);
     });
   simple_setup.setStartAndGoalStates(se2_start, se2_goal);
+
+  // objective is to minimize the planned path
+  ompl::base::OptimizationObjectivePtr objective(
+    new ompl::base::PathLengthOptimizationObjective(simple_setup.getSpaceInformation()));
+  simple_setup.setOptimizationObjective(objective);
+
   simple_setup.setup();
 
   // create a planner for the defined space
@@ -150,6 +156,10 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
   } else if (planner_name_ == std::string("KPIECE1")) {
     planner = ompl::base::PlannerPtr(
       new ompl::geometric::KPIECE1(
+        simple_setup.getSpaceInformation()) );
+  } else if (planner_name_ == std::string("SBL")) {
+    planner = ompl::base::PlannerPtr(
+      new ompl::geometric::SBL(
         simple_setup.getSpaceInformation()) );
   } else {
     RCLCPP_WARN(
@@ -174,8 +184,8 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
 
     for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
       // cast the abstract state type to the type we expect
-      const ompl::base::ReedsSheppStateSpace::StateType * se2state =
-        path.getState(path_idx)->as<ompl::base::ReedsSheppStateSpace::StateType>();
+      const ompl::base::DubinsStateSpace::StateType * se2state =
+        path.getState(path_idx)->as<ompl::base::DubinsStateSpace::StateType>();
 
       tf2::Quaternion this_pose_quat;
       this_pose_quat.setRPY(0, 0, se2state->getYaw());
@@ -225,8 +235,8 @@ bool SE2Planner::isStateValid(const ompl::base::State * state)
     return false;
   }
   // cast the abstract state type to the type we expect
-  const ompl::base::ReedsSheppStateSpace::StateType * red_state =
-    state->as<ompl::base::ReedsSheppStateSpace::StateType>();
+  const ompl::base::DubinsStateSpace::StateType * red_state =
+    state->as<ompl::base::DubinsStateSpace::StateType>();
   // check validity of state Fdefined by pos & rot
   fcl::Vec3f translation(red_state->getX(), red_state->getY(), 0.5);
   tf2::Quaternion myQuaternion;

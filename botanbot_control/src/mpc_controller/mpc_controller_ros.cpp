@@ -83,19 +83,20 @@ void MPCControllerROS::initialize(
 geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands(
   geometry_msgs::msg::PoseStamped curr_robot_pose)
 {
-  auto regulate_max_speed = [this](double kMAX_SPEED) {
-      if (computed_velocity_.linear.x > kMAX_SPEED) {
-        computed_velocity_.linear.x = kMAX_SPEED;
-      } else if (computed_velocity_.linear.x < -kMAX_SPEED) {
-        computed_velocity_.linear.x = -kMAX_SPEED;
+  auto regulate_max_speed = [this]() {
+      if (computed_velocity_.linear.x > mpc_parameters_.V_MAX) {
+        computed_velocity_.linear.x = mpc_parameters_.V_MAX;
+      } else if (computed_velocity_.linear.x < mpc_parameters_.V_MIN) {
+        computed_velocity_.linear.x = mpc_parameters_.V_MIN;
       }
     };
 
   double dt = mpc_parameters_.DT;
-  double kTARGET_SPEED = 1.0;
-  double kMAX_SPEED = mpc_parameters_.V_MAX;
+  double kTARGET_SPEED = 0.5;
+
   // distance from rear to front axle(m)
   double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
+
 
   tf2::Quaternion q;
   tf2::fromMsg(curr_robot_pose.pose.orientation, q);
@@ -123,7 +124,7 @@ geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands(
   computed_velocity_.angular.z = (computed_velocity_.linear.x * res.control_input.df) /
     rear_axle_tofront_dist;
 
-  regulate_max_speed(kMAX_SPEED);
+  regulate_max_speed();
   publishInterpolatedRefernceStates(interpolated_reference_states);
   previous_control_ = res.control_input;
   return computed_velocity_;
@@ -160,7 +161,7 @@ std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedRefernce
     nearestStateIndex(ref_traj, curr_robot_pose);
 
   int kTRAJHORIZON = mpc_parameters_.N;
-  double kTARGETSPEED = 1.0;
+  double kTARGETSPEED = 0.5;
 
   if ((nearsest_traj_state_index + kTRAJHORIZON) > ref_traj.poses.size()) {
     nearsest_traj_state_index = ref_traj.poses.size() - kTRAJHORIZON;

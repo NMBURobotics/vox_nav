@@ -4,7 +4,7 @@ botanbot_planner_server_rclcpp_node:
     expected_planner_frequency: 5.0
     SE2Planner:
       plugin: "botanbot_planning::SE2Planner"
-      planner_name: "RRTStar" # other options: RRTStar, RRTConnect, KPIECE1
+      planner_name: "RRTStar" # other options: RRTStar, RRTConnect, KPIECE1, SBL
       planner_timeout: 3.0
       interpolation_parameter: 100
       octomap_topic: "octomap"
@@ -18,11 +18,11 @@ botanbot_planner_server_rclcpp_node:
         maxz: 3.0
       robot_body_dimens:
         x: 1.5
-        y: 1.2
-        z: 1.0
+        y: 1.5
+        z: 0.2
     SE3Planner:
       plugin: "botanbot_planning::SE3Planner"
-      planner_name: "PRMStar"  # other options: PRMStar  RRTConnect, KPIECE1
+      planner_name: "PRMStar"  # other options: PRMStar  RRTConnect, KPIECE1, 
       planner_timeout: 1.0
       interpolation_parameter: 100
       octomap_topic: "octomap"
@@ -40,9 +40,9 @@ botanbot_planner_server_rclcpp_node:
         z: 0.4  
     SE2PlannerControlSpace:
       plugin: "botanbot_planning::SE2PlannerControlSpace"
-      planner_name: "RRT"  # other options: SST , EST, KPIECE1
-      planner_timeout: 1.0
-      interpolation_parameter: 100
+      planner_name: "KPIECE1"  # other options: SST , EST, KPIECE1, RRT
+      planner_timeout: 2.0
+      interpolation_parameter: 50
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
       state_space_boundries:
@@ -60,25 +60,25 @@ botanbot_planner_server_rclcpp_node:
 botanbot_controller_server_rclcpp_node:
   ros__parameters:
     controller_plugin: "MPCControllerROS" # other options: 
-    controller_frequency: 5.0
+    controller_frequency: 15.0
     MPCControllerROS:
       plugin: "mpc_controller::MPCControllerROS"
-      N: 10                                                       #timesteps in MPC Horizon
+      N: 20                                                       #timesteps in MPC Horizon
       DT: 0.1                                                     #discretization time between timesteps(s)    
       L_F: 0.66                                                   #distance from CoG to front axle(m)
       L_R: 0.66                                                   #distance from CoG to rear axle(m)
-      V_MIN: -2.0                                                 #min / max velocity constraint(m / s)
-      V_MAX:  2.0
-      A_MIN:  -0.5                                                #min / max acceleration constraint(m / s ^ 2)
-      A_MAX:   0.8
+      V_MIN: -0.3                                                 #min / max velocity constraint(m / s)
+      V_MAX:  1.0
+      A_MIN:  -1.0                                                #min / max acceleration constraint(m / s ^ 2)
+      A_MAX:   1.0
       DF_MIN:  -1.5                                               #min / max front steer angle constraint(rad)
       DF_MAX:   1.5
       A_DOT_MIN: -1.0                                             #min / max jerk constraint(m / s ^ 3)
       A_DOT_MAX:  1.0
       DF_DOT_MIN: -0.8                                            #min / max front steer angle rate constraint(rad / s)
       DF_DOT_MAX: 0.8
-      Q: [100.0, 100.0, 10.0, 0.0]                                #weights on x, y, psi, and v.
-      R: [10.0, 100.0]                                             #weights on jerk and slew rate(steering angle derivative)
+      Q: [10.0, 10.0, 0.1, 0.0]                                 #weights on x, y, psi, and v.
+      R: [10.0, 100.0]                                            #weights on jerk and slew rate(steering angle derivative)
       debug_mode: False                                           #enable/disable debug messages
       params_configured: True      
 
