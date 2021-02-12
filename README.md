@@ -8,3 +8,5 @@ Documentation has been moved to ; https://outdoor-nav2.readthedocs.io/en/main/
 * [Motion Planning for Autonomous All-Terrain Vehicle.](assets/presentation_2.pdf)
 * [A Botanbot Briefing of January 15, 2021.](assets/presentation_3.pdf)
 * [Localization Architecture of Botanbot.](assets/presentation_4.pdf)
+* [Trajectory Control of Ackermann Steering Robot With Nonlinear MPC.](assets/presentation_5.pdf)
+* [Behaviour Trees And Putting All Together As Complete Navigation System.](assets/presentation_6.pdf)
