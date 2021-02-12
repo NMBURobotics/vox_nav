@@ -118,8 +118,10 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
   se2_start[0] = start.pose.position.x;
   se2_start[1] = start.pose.position.y;
   se2_start[2] = start_quat.getAngle();
+
   se2_goal[0] = goal.pose.position.x;
   se2_goal[1] = goal.pose.position.y;
+
   se2_goal[2] = goal_quat.getAngle();
 
   // create a problem instance
