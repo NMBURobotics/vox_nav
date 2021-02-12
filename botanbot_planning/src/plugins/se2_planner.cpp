@@ -115,14 +115,17 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
   tf2::fromMsg(start.pose.orientation, start_quat);
   tf2::fromMsg(goal.pose.orientation, goal_quat);
 
+  double start_yaw, goal_yaw, nan;
+  botanbot_utilities::getRPYfromQuaternion(start_quat, nan, nan, start_yaw);
+  botanbot_utilities::getRPYfromQuaternion(goal_quat, nan, nan, goal_yaw);
+
   se2_start[0] = start.pose.position.x;
   se2_start[1] = start.pose.position.y;
-  se2_start[2] = start_quat.getAngle();
+  se2_start[2] = start_yaw;
 
   se2_goal[0] = goal.pose.position.x;
   se2_goal[1] = goal.pose.position.y;
-
-  se2_goal[2] = goal_quat.getAngle();
+  se2_goal[2] = goal_yaw;
 
   // create a problem instance
   // define a simple setup class
