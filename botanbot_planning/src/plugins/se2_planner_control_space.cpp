@@ -24,6 +24,9 @@ namespace botanbot_planning
 {
 
 SE2PlannerControlSpace::SE2PlannerControlSpace()
+: se2_space_(new ompl::base::SE2StateSpace()),
+  velocity_space_(new ompl::base::RealVectorStateSpace(1)),
+  space_(se2_space_ + velocity_space_)
 {
 }
 
@@ -35,9 +38,11 @@ void SE2PlannerControlSpace::initialize(
   rclcpp::Node * parent,
   const std::string & plugin_name)
 {
-  state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
   octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
   is_octomap_ready_ = false;
+
+  se2_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
+  velocity_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
 
   parent->declare_parameter(plugin_name + ".enabled", true);
   parent->declare_parameter(plugin_name + ".planner_name", "PRMStar");
@@ -51,6 +56,8 @@ void SE2PlannerControlSpace::initialize(
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
+  parent->declare_parameter(plugin_name + ".velocity_space_boundries.min_v", -0.3);
+  parent->declare_parameter(plugin_name + ".velocity_space_boundries.max_v", 0.3);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.0);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.y", 0.8);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.z", 0.6);
@@ -62,11 +69,17 @@ void SE2PlannerControlSpace::initialize(
   parent->get_parameter(plugin_name + ".octomap_topic", octomap_topic_);
   parent->get_parameter(plugin_name + ".octomap_voxel_size", octomap_voxel_size_);
 
-
-  state_space_bounds_->setLow(
+  se2_space_bounds_->setLow(
     parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
-  state_space_bounds_->setHigh(
+  se2_space_bounds_->setHigh(
     parent->get_parameter(plugin_name + ".state_space_boundries.maxx").as_double());
+  velocity_space_bounds_->setHigh(
+    parent->get_parameter(
+      plugin_name + ".velocity_space_boundries.max_v").as_double());
+  velocity_space_bounds_->setLow(
+    parent->get_parameter(
+      plugin_name + ".velocity_space_boundries.min_v").as_double());
+
 
   if (!is_enabled_) {
     RCLCPP_INFO(
@@ -91,11 +104,10 @@ void SE2PlannerControlSpace::initialize(
     octomap_topic_, rclcpp::SystemDefaultsQoS(),
     std::bind(&SE2PlannerControlSpace::octomapCallback, this, std::placeholders::_1));
 
-  state_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>();
-  state_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds_);
-  state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
-  state_space_information_->setStateValidityChecker(
-    std::bind(&SE2PlannerControlSpace::isStateValid, this, std::placeholders::_1));
+  se2_space_->as<ompl::base::SE2StateSpace>()->setBounds(*se2_space_bounds_);
+  velocity_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(*velocity_space_bounds_);
+
+  space_ = se2_space_ + velocity_space_;
 }
 
 std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
@@ -111,24 +123,23 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
   }
 
   // create a control space
-  auto control_space(std::make_shared<ompl::control::RealVectorControlSpace>(state_space_, 2));
-  // set the bounds for the control space
-  ompl::base::RealVectorBounds control_space_bounds(2);
-  control_space_bounds.setLow(-0.1);
-  control_space_bounds.setHigh(0.1);
-  control_space->setBounds(control_space_bounds);
+  ompl::control::ControlSpacePtr control_space(
+    new ompl::control::RealVectorControlSpace(space_, 2));
 
+  ompl::base::RealVectorBounds control_bounds(2);
+  control_bounds.setLow(0, -0.04);
+  control_bounds.setHigh(0, 0.3);
+  control_bounds.setLow(1, -0.2);
+  control_bounds.setHigh(1, 0.2);
+  control_space->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);
 
-  // construct an instance of  space information from this control space
-  auto control_space_information(std::make_shared<ompl::control::SpaceInformation>(
-      state_space_,
-      control_space));
+  ompl::control::SpaceInformationPtr si(new ompl::control::SpaceInformation(space_, control_space));
 
-  // set state validity checking for this space
-  control_space_information->setStateValidityChecker(
-    [this](const ompl::base::State * state) {return isStateValid(state);});
-  // set the state propagation routine
-  control_space_information->setStatePropagator(propagate);
+  si->setStatePropagator(propagate);
+
+  si->setStateValidityChecker(
+    [this](const ompl::base::State * state)
+    {return isStateValid(state);});
 
   // set the start and goal states
   tf2::Quaternion start_quat, goal_quat;
@@ -138,38 +149,45 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
   botanbot_utilities::getRPYfromQuaternion(start_quat, nan, nan, start_yaw);
   botanbot_utilities::getRPYfromQuaternion(goal_quat, nan, nan, goal_yaw);
 
+  ompl::base::ScopedState<> se2_start(space_),
+  se2_goal(space_);
 
-  ompl::base::ScopedState<ompl::base::SE2StateSpace> se2_start(state_space_),
-  se2_goal(state_space_);
 
-  se2_start->setX(start.pose.position.x);
-  se2_start->setY(start.pose.position.y);
-  se2_start->setYaw(start_yaw);
+  se2_start[0] = start.pose.position.x;
+  se2_start[1] = start.pose.position.y;
+  se2_start[2] = start_yaw;
+  se2_start[3] = 0.0;
 
-  se2_goal->setX(goal.pose.position.x);
-  se2_goal->setY(goal.pose.position.y);
-  se2_goal->setYaw(goal_yaw);
+  se2_goal[0] = goal.pose.position.x;
+  se2_goal[1] = goal.pose.position.y;
+  se2_goal[2] = goal_yaw;
+  se2_goal[3] = 0.0;
 
-  // create a problem instance
-  auto pdef(std::make_shared<ompl::base::ProblemDefinition>(control_space_information));
 
-  // set the start and goal states
-  pdef->setStartAndGoalStates(se2_start, se2_goal, 0.2);
+  ompl::base::ProblemDefinitionPtr pdef(new ompl::base::ProblemDefinition(si));
+  pdef->setStartAndGoalStates(se2_start, se2_goal, 0.05);
+
+  ompl::base::OptimizationObjectivePtr length_objective(
+    new ompl::base::PathLengthOptimizationObjective(si));
+  pdef->setOptimizationObjective(length_objective);
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
   if (planner_name_ == std::string("RRT")) {
     planner = ompl::base::PlannerPtr(
-      new ompl::control::RRT(control_space_information));
+      new ompl::control::RRT(si));
   } else if (planner_name_ == std::string("SST")) {
     planner = ompl::base::PlannerPtr(
-      new ompl::control::SST(control_space_information) );
+      new ompl::control::SST(si) );
   } else if (planner_name_ == std::string("EST")) {
     planner = ompl::base::PlannerPtr(
-      new ompl::control::EST(control_space_information) );
+      new ompl::control::EST(si) );
   } else if (planner_name_ == std::string("KPIECE1")) {
     planner = ompl::base::PlannerPtr(
-      new ompl::control::KPIECE1(control_space_information) );
+      new ompl::control::KPIECE1(si) );
+  } else if (planner_name_ == std::string("PRMstar")) {
+    planner = ompl::base::PlannerPtr(
+      new ompl::geometric::PRMstar(si) );
   } else {
     RCLCPP_WARN(
       logger_,
@@ -177,28 +195,33 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
       planner_name_.c_str());
   }
   RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
-
-  // set the problem we are trying to solve for the planner
   planner->setProblemDefinition(pdef);
-
-  // perform setup steps for the planner
   planner->setup();
 
-  // print the problem settings
-  pdef->print(std::cout);
+  ompl::base::PlannerStatus solved = planner->solve(planner_timeout_);
 
-  ompl::base::PlannerStatus solved = planner->ompl::base::Planner::solve(planner_timeout_);
   std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
 
   if (solved) {
-    ompl::geometric::PathGeometric * path =
-      pdef->getSolutionPath()->as<ompl::geometric::PathGeometric>();
-    path->interpolate(interpolation_parameter_);
 
-    for (std::size_t path_idx = 0; path_idx < path->getStateCount(); path_idx++) {
-      // cast the abstract state type to the type we expect
+    auto path_temp = pdef->getSolutionPath();
+
+    ompl::geometric::PathGeometric & path =
+      static_cast<ompl::geometric::PathGeometric &>(*path_temp);
+    path.interpolate(interpolation_parameter_);
+
+    for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
+
+      const ompl::base::CompoundStateSpace::StateType * compound_state =
+        path.getState(path_idx)->as<ompl::base::SE2StateSpace::StateType>();
+
       const ompl::base::SE2StateSpace::StateType * se2state =
-        path->getState(path_idx)->as<ompl::base::SE2StateSpace::StateType>();
+        compound_state->as<ompl::base::SE2StateSpace::StateType>(0);
+
+      fcl::Vec3f translation(se2state->getX(), se2state->getY(), 0.5);
+      tf2::Quaternion myQuaternion;
+      myQuaternion.setRPY(0, 0, se2state->getYaw());
+
 
       tf2::Quaternion this_pose_quat;
       this_pose_quat.setRPY(0, 0, se2state->getYaw());
@@ -246,17 +269,29 @@ bool SE2PlannerControlSpace::isStateValid(const ompl::base::State * state)
       "cannot be processed without a valid Octomap!");
     return false;
   }
-  // cast the abstract state type to the type we expect
-  const ompl::base::ReedsSheppStateSpace::StateType * red_state =
-    state->as<ompl::base::ReedsSheppStateSpace::StateType>();
-  // check validity of state Fdefined by pos & rot
-  fcl::Vec3f translation(red_state->getX(), red_state->getY(), 0.5);
+
+  const ompl::base::CompoundStateSpace::StateType * compound_state =
+    state->as<ompl::base::CompoundStateSpace::StateType>();
+
+  const ompl::base::SE2StateSpace::StateType * se2state =
+    compound_state->as<ompl::base::SE2StateSpace::StateType>(0);
+
+  const ompl::base::RealVectorStateSpace::StateType * v_state =
+    compound_state->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+  fcl::Vec3f translation(se2state->getX(), se2state->getY(), 0.5);
   tf2::Quaternion myQuaternion;
-  myQuaternion.setRPY(0, 0, red_state->getYaw());
-  fcl::Quaternion3f rotation(myQuaternion.getX(), myQuaternion.getY(),
-    myQuaternion.getZ(), myQuaternion.getW());
+  myQuaternion.setRPY(0, 0, se2state->getYaw());
+
+  fcl::Quaternion3f rotation(
+    myQuaternion.getX(),
+    myQuaternion.getY(),
+    myQuaternion.getZ(),
+    myQuaternion.getW());
+
   robot_collision_object_->setTransform(rotation, translation);
   fcl::CollisionRequest requestType(1, false, 1, false);
+
   fcl::CollisionResult collisionResult;
   fcl::collide(
     robot_collision_object_.get(),
@@ -294,14 +329,35 @@ void SE2PlannerControlSpace::propagate(
   ompl::base::State * result)
 {
   const auto * se2state = start->as<ompl::base::SE2StateSpace::StateType>();
+
+  const ompl::base::CompoundStateSpace::StateType * compound_state =
+    start->as<ompl::base::CompoundStateSpace::StateType>();
+
+  const ompl::base::RealVectorStateSpace::StateType * v_state =
+    compound_state->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
   const double * pos = se2state->as<ompl::base::RealVectorStateSpace::StateType>(0)->values;
   const double rot = se2state->as<ompl::base::SO2StateSpace::StateType>(1)->value;
   const double * ctrl = control->as<ompl::control::RealVectorControlSpace::ControlType>()->values;
-  result->as<ompl::base::SE2StateSpace::StateType>()->setXY(
-    pos[0] + ctrl[0] * duration * cos(rot),
-    pos[1] + ctrl[0] * duration * sin(rot));
-  result->as<ompl::base::SE2StateSpace::StateType>()->setYaw(
-    rot + ctrl[1] * duration);
+
+  double acc = ctrl[0];
+  double steer_angle = ctrl[1];
+  double velocity = (*v_state)[0];
+
+  double x_n, y_n, theta_n, velocity_n;
+  x_n = pos[0] + velocity * duration * cos(rot);
+  y_n = pos[1] + velocity * duration * sin(rot);
+  velocity_n = velocity + acc * duration;
+
+  double vehicle_length = 1.32;
+  double lengthInv = 1.0 / vehicle_length;
+  double omega = velocity * lengthInv * std::tan(steer_angle);
+  theta_n = rot + omega * duration;
+
+
+  result->as<ompl::base::SE2StateSpace::StateType>()->setXY(x_n, y_n);
+  result->as<ompl::base::SE2StateSpace::StateType>()->setYaw(theta_n);
+  v_state->values[0] = velocity_n;
 }
 
 void SE2PlannerControlSpace::octomapCallback(

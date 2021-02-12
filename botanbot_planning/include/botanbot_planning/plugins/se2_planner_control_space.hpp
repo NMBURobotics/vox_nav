@@ -114,9 +114,12 @@ protected:
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
 
-  std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
-  ompl::base::StateSpacePtr state_space_;
-  ompl::base::SpaceInformationPtr state_space_information_;
+  ompl::base::StateSpacePtr space_;
+  ompl::base::StateSpacePtr velocity_space_;
+  ompl::base::StateSpacePtr se2_space_;
+
+  std::shared_ptr<ompl::base::RealVectorBounds> velocity_space_bounds_;
+  std::shared_ptr<ompl::base::RealVectorBounds> se2_space_bounds_;
 
   // to ensure safety when accessing global var curr_frame_
   std::mutex global_mutex_;
