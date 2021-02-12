@@ -134,6 +134,9 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
   tf2::Quaternion start_quat, goal_quat;
   tf2::fromMsg(start.pose.orientation, start_quat);
   tf2::fromMsg(goal.pose.orientation, goal_quat);
+  double start_yaw, goal_yaw, nan;
+  botanbot_utilities::getRPYfromQuaternion(start_quat, nan, nan, start_yaw);
+  botanbot_utilities::getRPYfromQuaternion(goal_quat, nan, nan, goal_yaw);
 
 
   ompl::base::ScopedState<ompl::base::SE2StateSpace> se2_start(state_space_),
@@ -141,11 +144,11 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
 
   se2_start->setX(start.pose.position.x);
   se2_start->setY(start.pose.position.y);
-  se2_start->setYaw(start_quat.getAngle());
+  se2_start->setYaw(start_yaw);
 
   se2_goal->setX(goal.pose.position.x);
   se2_goal->setY(goal.pose.position.y);
-  se2_goal->setYaw(goal_quat.getAngle());
+  se2_goal->setYaw(goal_yaw);
 
   // create a problem instance
   auto pdef(std::make_shared<ompl::base::ProblemDefinition>(control_space_information));

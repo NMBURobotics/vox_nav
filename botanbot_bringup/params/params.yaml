@@ -1,6 +1,6 @@
 botanbot_planner_server_rclcpp_node:
   ros__parameters:
-    planner_plugin: "SE2Planner" # other options: "SE2Planner", "SE3Planner" ,"SE2PlannerControlSpace"
+    planner_plugin: "SE3Planner" # other options: "SE2Planner", "SE3Planner" ,"SE2PlannerControlSpace"
     expected_planner_frequency: 5.0
     SE2Planner:
       plugin: "botanbot_planning::SE2Planner"
@@ -15,7 +15,7 @@ botanbot_planner_server_rclcpp_node:
         miny: -50.0
         maxy: 50.0
         minz: 0.0
-        maxz: 3.0
+        maxz: 0.5
       robot_body_dimens:
         x: 1.5
         y: 1.5
@@ -24,7 +24,7 @@ botanbot_planner_server_rclcpp_node:
       plugin: "botanbot_planning::SE3Planner"
       planner_name: "PRMStar"  # other options: PRMStar  RRTConnect, KPIECE1, 
       planner_timeout: 1.0
-      interpolation_parameter: 100
+      interpolation_parameter: 25
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
       state_space_boundries:
@@ -33,7 +33,7 @@ botanbot_planner_server_rclcpp_node:
         miny: -50.0
         maxy: 50.0
         minz: 0.0
-        maxz: 3.0
+        maxz: 0.5
       robot_body_dimens:
         x: 1.5
         y: 1.0

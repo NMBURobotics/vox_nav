@@ -142,12 +142,28 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     return std::vector<geometry_msgs::msg::PoseStamped>();
   }
 
+  tf2::Quaternion start_quat, goal_quat;
+  tf2::fromMsg(start.pose.orientation, start_quat);
+  tf2::fromMsg(goal.pose.orientation, goal_quat);
+  double start_yaw, goal_yaw, nan;
+  botanbot_utilities::getRPYfromQuaternion(start_quat, nan, nan, start_yaw);
+  botanbot_utilities::getRPYfromQuaternion(goal_quat, nan, nan, goal_yaw);
+
   ompl::base::ScopedState<ompl::base::SE3StateSpace> se3_start(state_space_),
   se3_goal(state_space_);
   se3_start->setXYZ(start.pose.position.x, start.pose.position.y, start.pose.position.z);
-  se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->setIdentity();
+  se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
+    0,
+    0,
+    1,
+    start_yaw);
+
   se3_goal->setXYZ(goal.pose.position.x, goal.pose.position.y, goal.pose.position.z);
-  se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->setIdentity();
+  se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
+    0,
+    0,
+    1,
+    goal_yaw);
 
   // create a problem instance
   ompl::base::ProblemDefinitionPtr
@@ -201,8 +217,10 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
 
   if (solved) {
     ompl::base::PathPtr path = pdef->getSolutionPath();
+
     ompl::geometric::PathGeometric * pth =
       pdef->getSolutionPath()->as<ompl::geometric::PathGeometric>();
+    pth->interpolate(interpolation_parameter_);
 
     // Path smoothing using bspline
     ompl::geometric::PathSimplifier * pathBSpline = new ompl::geometric::PathSimplifier(
