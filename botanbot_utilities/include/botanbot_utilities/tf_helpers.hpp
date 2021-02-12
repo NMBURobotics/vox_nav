@@ -69,6 +69,26 @@ double getEuclidianDistBetweenPoses(
   const geometry_msgs::msg::PoseStamped a,
   const geometry_msgs::msg::PoseStamped b);
 
+/**
+ * @brief Provide tf2::Quaternion and get roll pitch yaw
+ *
+ * @param q
+ * @param roll
+ * @param pitch
+ * @param yaw
+ */
+void getRPYfromQuaternion(const tf2::Quaternion q, double & roll, double & pitch, double & yaw);
+
+/**
+ * @brief Get the Quaternionfrom R P Y object
+ *
+ * @param roll
+ * @param pitch
+ * @param yaw
+ * @return tf2::Quaternion
+ */
+tf2::Quaternion getQuaternionfromRPY(const double roll, const double pitch, const double yaw);
+
 }  // namespace botanbot_utilities
 
 #endif  // BOTANBOT_UTILITIES__TF_HELPERS_HPP_

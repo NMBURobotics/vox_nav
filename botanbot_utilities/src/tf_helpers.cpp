@@ -133,4 +133,19 @@ double getEuclidianDistBetweenPoses(
     std::pow(a.pose.position.z - b.pose.position.z, 2));
   return distance;
 }
+
+void getRPYfromQuaternion(const tf2::Quaternion q, double & roll, double & pitch, double & yaw)
+{
+  tf2::Matrix3x3 m(q);
+  m.getRPY(roll, pitch, yaw);
+}
+
+tf2::Quaternion getQuaternionfromRPY(const double roll, const double pitch, const double yaw)
+{
+  tf2::Quaternion q;
+  q.setRPY(roll, pitch, yaw);
+  return q;
+}
+
+
 }  // namespace botanbot_utilities
