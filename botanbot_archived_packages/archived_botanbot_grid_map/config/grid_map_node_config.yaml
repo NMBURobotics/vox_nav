@@ -1,0 +1,20 @@
+archived_botanbot_grid_map_node:
+  ros__parameters:
+    resolution: 0.15
+    pcd_file_full_path: /home/ros2-foxy/f.pcd
+    map_frame: grid_map
+    topic_name: grid_map
+    map_publish_fps: 10
+    min_points_in_cell: 1
+    cloud_transform:
+      translation:
+        x: 0.0
+        y: 0.0
+        z: 0.5
+      rotation: #intrinsic rotation X-Y-Z (r-p-y)sequence
+        r: 3.14
+        p: 1.57
+        y: 1.57
+    downsample_voxel_size: 0.01
+    remove_outlier_mean_K: 50
+    remove_outlier_stddev_threshold: 0.5
