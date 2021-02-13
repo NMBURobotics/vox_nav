@@ -558,5 +558,111 @@
             <name>tomato_95</name>
             <pose>18.0 9.9 0 0 0 0</pose>
         </include>
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_0</name>
+            <pose>-12.1128 -2.16638 -0.173407 -0.462719 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_1</name>
+            <pose>-13.2767 -2.15585 -0.173407 -0.462719 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_2</name>
+            <pose>-14.4658 -2.16915 -0.173407 -0.462719 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_3</name>
+            <pose>-15.6542 -2.17286 -0.173407 -0.462719 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_4</name>
+            <pose>-16.844 -2.19664 -0.173407 -0.462719 0 0</pose>
+        </include>  
+
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_5</name>
+            <pose>-16.8506 -0.768683 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_6</name>
+            <pose>-15.6545 -0.767698 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_7</name>
+            <pose>-14.4669 -0.731656 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_8</name>
+            <pose>-13.2859 -0.69932 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_9</name>
+            <pose>-12.1279 -0.702169 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_10</name>
+            <pose>-10.9519 -0.706976 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_11</name>
+            <pose>-9.77341 -0.72642 0.197052 -0.746686 0 0</pose>
+        </include>   
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_12</name>
+            <pose>-9.85002 0.73387 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_13</name>
+            <pose>-11.0256 0.743358 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_14</name>
+            <pose>-12.2068 0.753008 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_15</name>
+            <pose>-13.3633 0.757014 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_16</name>
+            <pose>-14.5471 0.730048 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_17</name>
+            <pose>-15.6948 0.717013 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_18</name>
+            <pose>-16.8661 0.69021 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_19</name>
+            <pose>-10.9594 -2.18571 -0.173407 -0.462719 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_20</name>
+            <pose>-9.79809 -2.20656 -0.173407 -0.462719 0 0</pose>
+        </include>  
     </world>
 </sdf>

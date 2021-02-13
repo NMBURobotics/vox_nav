@@ -1,7 +1,7 @@
 pcl2octomap_converter_rclcpp_node:
   ros__parameters:
-    input_pcd_filename: /home/ros2-foxy/f.pcd
-    output_binary_octomap_filename: /home/ros2-foxy/f.bt
+    input_pcd_filename: /home/ros2-foxy/slope_map.pcd
+    output_binary_octomap_filename: /home/ros2-foxy/slope_map.bt
     cloud_transform:
       translation:
         x: 0.0
