@@ -76,20 +76,6 @@ public:
   bool isStateValid(const ompl::base::State * state) override;
 
   /**
-   * @brief Get the Selected Planner object
-   *
-   * @param planner_name
-   * @param state_space_information
-   * @param planner
-   * @return true
-   * @return false
-   */
-  bool getSelectedPlanner(
-    const std::string & planner_name,
-    const ompl::base::SpaceInformationPtr & state_space_information,
-    ompl::base::PlannerPtr planner) override;
-
-  /**
   * @brief Callback to subscribe ang get octomap
   *
   * @param octomap

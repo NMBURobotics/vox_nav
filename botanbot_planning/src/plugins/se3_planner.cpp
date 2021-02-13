@@ -314,31 +314,6 @@ ompl::base::OptimizationObjectivePtr SE3Planner::getOptObjective(
   return obj;
 }
 
-bool SE3Planner::getSelectedPlanner(
-  const std::string & planner_name,
-  const ompl::base::SpaceInformationPtr & state_space_information,
-  ompl::base::PlannerPtr planner)
-{
-  bool found_a_valid_planner = false;
-  if (planner_name == std::string("PRMStar")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(state_space_information));
-    found_a_valid_planner = true;
-    return found_a_valid_planner;
-  } else if (planner_name == std::string("RRTStar")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(state_space_information));
-    found_a_valid_planner = true;
-    return found_a_valid_planner;
-  } else if (planner_name == std::string("RRTConnect")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTConnect(state_space_information));
-    found_a_valid_planner = true;
-    return found_a_valid_planner;
-  } else {
-    found_a_valid_planner = false;
-    return found_a_valid_planner;
-  }
-  return found_a_valid_planner;
-}
-
 void SE3Planner::octomapCallback(
   const octomap_msgs::msg::Octomap::ConstSharedPtr msg)
 {

@@ -141,20 +141,6 @@ public:
   */
   virtual bool isStateValid(const ompl::base::State * state) = 0;
 
-/**
- * @brief Get the Selected Planner object
- *
- * @param planner_name
- * @param state_space_information
- * @param planner
- * @return true
- * @return false
- */
-  virtual bool getSelectedPlanner(
-    const std::string & planner_name,
-    const ompl::base::SpaceInformationPtr & state_space_information,
-    ompl::base::PlannerPtr planner) = 0;
-
   /**
    * @brief Callback to subscribe ang get octomap
    *
