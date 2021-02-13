@@ -171,7 +171,10 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
 
   // set the start and goal states
   pdef->setStartAndGoalStates(se3_start, se3_goal);
-  pdef->setOptimizationObjective(getOptObjective(state_space_information_));
+  //pdef->setOptimizationObjective(getOptObjective(state_space_information_));
+  ompl::base::OptimizationObjectivePtr length_objective(
+    new ompl::base::PathLengthOptimizationObjective(state_space_information_));
+  pdef->setOptimizationObjective(length_objective);
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;

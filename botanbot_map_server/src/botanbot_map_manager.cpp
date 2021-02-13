@@ -22,12 +22,11 @@ namespace botanbot_map_server
 BotanbotMapManager::BotanbotMapManager()
 : Node("botanbot_map_manager_rclcpp_node")
 {
-  RCLCPP_INFO(
-    this->get_logger(),
-    "Creating..");
+  RCLCPP_INFO(this->get_logger(), "Creating..");
   octomap_ros_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
   octomap_pointcloud_ros_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
   static_map_gps_pose_ = std::make_shared<botanbot_msgs::msg::OrientedNavSatFix>();
+
   robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
     "map_manager_fromll_client_node");
 
@@ -81,7 +80,7 @@ BotanbotMapManager::BotanbotMapManager()
     std::cerr << e.what() << '\n';
     RCLCPP_ERROR(
       get_logger(),
-      "Exception while converting binary octomap  %s:", e.what());
+      "Exception while converting binary octomap %s:", e.what());
   }
   timer_ = this->create_wall_timer(
     std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
@@ -108,6 +107,7 @@ BotanbotMapManager::~BotanbotMapManager()
 
 void BotanbotMapManager::timerCallback()
 {
+  // Since this is static map we need to georefence this only once not each time
   std::call_once(
     align_static_map_once_, [this]() {
       while (!tf_buffer_->canTransform("utm", "map", rclcpp::Time(0))) {

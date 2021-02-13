@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2021 Norwegian University of Life Sciences, Fetullah Atas
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <rclcpp/service.hpp>
 #include <rclcpp/client.hpp>
+
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_eigen/tf2_eigen.h>
@@ -28,8 +29,10 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <robot_localization/srv/from_ll.hpp>
 #include <botanbot_msgs/msg/oriented_nav_sat_fix.hpp>
 
 #include <octomap_msgs/msg/octomap.hpp>
@@ -45,15 +48,16 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.hpp>
 
-#include <robot_localization/srv/from_ll.hpp>
-
 #include <vector>
 #include <string>
 #include <memory>
 #include <mutex>
 
 /**
- * @brief
+ * @brief namespace for botanbot map server. The map server reads map from disk.
+ *        The map needs to octomap native format .bt
+ *        When you created the map the origin of the map must have been saved.
+ *        Using this origin this map is georefenced and published as octomap as well as pointcloud that represents this map
  *
  */
 namespace botanbot_map_server
@@ -84,13 +88,15 @@ public:
   void timerCallback();
 
   /**
-   * @brief
+   * @brief once map is georefnced, this function
+   *  is called from timerCallback to publish map
    *
    */
   void publishAlignedMap();
 
   /**
-   * @brief
+   * @brief given GPS lat long alt coordinates uses
+   *        robot_localization service to georefence this map
    *
    * @param request
    * @param response
