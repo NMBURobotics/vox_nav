@@ -195,8 +195,10 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
     ompl::geometric::PathGeometric & path =
       static_cast<ompl::geometric::PathGeometric &>(*path_temp);
     // Path smoothing using bspline
-    ompl::geometric::PathSimplifier * pathBSpline = new ompl::geometric::PathSimplifier(si);
-    pathBSpline->smoothBSpline(path, 3);
+    ompl::geometric::PathSimplifier * path_simlifier = new ompl::geometric::PathSimplifier(si);
+    path_simlifier->smoothBSpline(path, 3);
+    path_simlifier->collapseCloseVertices(path, 3);
+    path.checkAndRepair(2);
     path.interpolate(interpolation_parameter_);
 
     for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
