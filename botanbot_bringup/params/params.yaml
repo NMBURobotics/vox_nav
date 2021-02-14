@@ -6,7 +6,7 @@ botanbot_planner_server_rclcpp_node:
       plugin: "botanbot_planning::SE2Planner"
       planner_name: "RRTStar" # other options: RRTStar, RRTConnect, KPIECE1, SBL
       planner_timeout: 3.0
-      interpolation_parameter: 100
+      interpolation_parameter: 20
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
       state_space_boundries:

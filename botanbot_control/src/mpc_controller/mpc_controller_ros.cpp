@@ -150,7 +150,7 @@ int MPCControllerROS::nearestStateIndex(
 std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedReferenceStates(
   geometry_msgs::msg::PoseStamped curr_robot_pose)
 {
-  double kGlobalPlanLookAheadDst = 2.5;
+  double kGlobalPlanLookAheadDst = 3.5;
   int kInterpolation = mpc_parameters_.N;
   double kTARGETSPEED = 0.0;
 
