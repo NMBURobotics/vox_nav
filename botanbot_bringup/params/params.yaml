@@ -40,7 +40,7 @@ botanbot_planner_server_rclcpp_node:
         z: 0.2   
     SE2PlannerControlSpace:
       plugin: "botanbot_planning::SE2PlannerControlSpace"
-      planner_name: "PRMstar"  # other options: RRT, SST, EST, KPIECE1, PRMStar 
+      planner_name: "PRMstar"  # other options: RRT, SST, EST, KPIECE1, PRMstar 
       planner_timeout: 2.0
       interpolation_parameter: 50
       octomap_topic: "octomap"
@@ -53,8 +53,8 @@ botanbot_planner_server_rclcpp_node:
         minz: 0.0
         maxz: 3.0
       velocity_space_boundries:
-        min_v: -0.3
-        max_v: 0.3 
+        min_v: -0.4
+        max_v: 0.4 
       control_input_bounds:
         min_acc: -0.3
         max_acc: 0.3

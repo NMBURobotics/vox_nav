@@ -217,11 +217,11 @@ MPCControllerROS::publishInterpolatedRefernceStates(
     marker.lifetime = rclcpp::Duration::from_seconds(0);
     marker.pose.position.x = interpolated_reference_states[i].x;
     marker.pose.position.y = interpolated_reference_states[i].y;
-    marker.pose.position.z = 0.1;
+    marker.pose.position.z = 0.6;
     tf2::Quaternion curr_ref_traj_sample_quat;
     curr_ref_traj_sample_quat.setRPY(0, 0, interpolated_reference_states[i].psi);
     marker.pose.orientation = tf2::toMsg(curr_ref_traj_sample_quat);
-    marker.scale.x = 0.2;
+    marker.scale.x = 0.25;
     marker.scale.y = 0.1;
     marker.scale.z = 0.1;
     marker.color.a = 0.8;

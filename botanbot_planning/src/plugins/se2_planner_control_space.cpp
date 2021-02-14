@@ -24,7 +24,7 @@ namespace botanbot_planning
 {
 
 SE2PlannerControlSpace::SE2PlannerControlSpace()
-: se2_space_(new ompl::base::DubinsStateSpace()),
+: se2_space_(new ompl::base::ReedsSheppStateSpace()),
   velocity_space_(new ompl::base::RealVectorStateSpace(1)),
   space_(se2_space_ + velocity_space_),
   is_octomap_ready_(false)
@@ -101,7 +101,7 @@ void SE2PlannerControlSpace::initialize(
     octomap_topic_, rclcpp::SystemDefaultsQoS(),
     std::bind(&SE2PlannerControlSpace::octomapCallback, this, std::placeholders::_1));
 
-  se2_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*se2_space_bounds_);
+  se2_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*se2_space_bounds_);
   velocity_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(*velocity_space_bounds_);
   space_ = se2_space_ + velocity_space_;
 
@@ -201,9 +201,9 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
     path.interpolate(interpolation_parameter_);
     for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
       const ompl::base::CompoundStateSpace::StateType * compound_state =
-        path.getState(path_idx)->as<ompl::base::DubinsStateSpace::StateType>();
-      const ompl::base::DubinsStateSpace::StateType * se2state =
-        compound_state->as<ompl::base::DubinsStateSpace::StateType>(0);
+        path.getState(path_idx)->as<ompl::base::ReedsSheppStateSpace::StateType>();
+      const ompl::base::ReedsSheppStateSpace::StateType * se2state =
+        compound_state->as<ompl::base::ReedsSheppStateSpace::StateType>(0);
       fcl::Vec3f translation(se2state->getX(), se2state->getY(), 0.5);
       tf2::Quaternion this_pose_quat;
       this_pose_quat.setRPY(0, 0, se2state->getYaw());
@@ -255,8 +255,8 @@ bool SE2PlannerControlSpace::isStateValid(const ompl::base::State * state)
   const ompl::base::CompoundStateSpace::StateType * compound_state =
     state->as<ompl::base::CompoundStateSpace::StateType>();
 
-  const ompl::base::DubinsStateSpace::StateType * se2state =
-    compound_state->as<ompl::base::DubinsStateSpace::StateType>(0);
+  const ompl::base::ReedsSheppStateSpace::StateType * se2state =
+    compound_state->as<ompl::base::ReedsSheppStateSpace::StateType>(0);
 
   const ompl::base::RealVectorStateSpace::StateType * v_state =
     compound_state->as<ompl::base::RealVectorStateSpace::StateType>(1);
@@ -287,8 +287,8 @@ void SE2PlannerControlSpace::propagate(
 {
   const ompl::base::CompoundStateSpace::StateType * compound_state =
     start->as<ompl::base::CompoundStateSpace::StateType>();
-  const ompl::base::DubinsStateSpace::StateType * se2state =
-    compound_state->as<ompl::base::DubinsStateSpace::StateType>(0);
+  const ompl::base::ReedsSheppStateSpace::StateType * se2state =
+    compound_state->as<ompl::base::ReedsSheppStateSpace::StateType>(0);
   const ompl::base::RealVectorStateSpace::StateType * v_state =
     compound_state->as<ompl::base::RealVectorStateSpace::StateType>(1);
 
@@ -308,8 +308,8 @@ void SE2PlannerControlSpace::propagate(
   double omega = velocity * lengthInv * std::tan(steer_angle);
   theta_n = se2state->getYaw() + omega * duration;
 
-  result->as<ompl::base::DubinsStateSpace::StateType>()->setXY(x_n, y_n);
-  result->as<ompl::base::DubinsStateSpace::StateType>()->setYaw(theta_n);
+  result->as<ompl::base::ReedsSheppStateSpace::StateType>()->setXY(x_n, y_n);
+  result->as<ompl::base::ReedsSheppStateSpace::StateType>()->setYaw(theta_n);
   v_state->values[0] = velocity_n;
 }
 
