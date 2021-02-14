@@ -85,7 +85,7 @@ botanbot_controller_server_rclcpp_node:
       A_DOT_MAX:  1.0
       DF_DOT_MIN: -0.8                                            #min / max front steer angle rate constraint(rad / s)
       DF_DOT_MAX: 0.8
-      Q: [10.0, 10.0, 0.1, 0.0]                                   #weights on x, y, psi, and v.
+      Q: [10.0, 10.0, 0.1, 0.1]                                  #weights on x, y, psi, and v.
       R: [10.0, 100.0]                                            #weights on jerk and slew rate(steering angle derivative)
       debug_mode: False                                           #enable/disable debug messages
       params_configured: True      

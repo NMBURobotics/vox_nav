@@ -92,7 +92,7 @@ geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands(
     };
 
   double dt = mpc_parameters_.DT;
-  double kTARGET_SPEED = 0.5;
+  double kTARGET_SPEED = 0.0;
 
   // distance from rear to front axle(m)
   double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
