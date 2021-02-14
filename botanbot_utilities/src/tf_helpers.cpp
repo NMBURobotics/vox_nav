@@ -134,13 +134,20 @@ double getEuclidianDistBetweenPoses(
   return distance;
 }
 
-void getRPYfromQuaternion(const tf2::Quaternion q, double & roll, double & pitch, double & yaw)
+void getRPYfromTFQuaternion(const tf2::Quaternion q, double & roll, double & pitch, double & yaw)
 {
   tf2::Matrix3x3 m(q);
   m.getRPY(roll, pitch, yaw);
 }
 
-void getRPYfromQuaternion(
+tf2::Quaternion getTFQuaternionfromRPY(const double roll, const double pitch, const double yaw)
+{
+  tf2::Quaternion q;
+  q.setRPY(roll, pitch, yaw);
+  return q;
+}
+
+void getRPYfromMsgQuaternion(
   const geometry_msgs::msg::Quaternion q_msg, double & roll, double & pitch,
   double & yaw)
 {
@@ -150,12 +157,15 @@ void getRPYfromQuaternion(
   m.getRPY(roll, pitch, yaw);
 }
 
-tf2::Quaternion getQuaternionfromRPY(const double roll, const double pitch, const double yaw)
+geometry_msgs::msg::Quaternion getMsgQuaternionfromRPY(
+  const double roll, const double pitch,
+  const double yaw)
 {
   tf2::Quaternion q;
+  geometry_msgs::msg::Quaternion q_msg;
   q.setRPY(roll, pitch, yaw);
-  return q;
+  q_msg = tf2::toMsg(q);
+  return q_msg;
 }
-
 
 }  // namespace botanbot_utilities

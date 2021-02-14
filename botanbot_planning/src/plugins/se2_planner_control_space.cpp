@@ -145,13 +145,9 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
     {return isStateValid(state);});
 
   // set the start and goal states
-  tf2::Quaternion start_quat, goal_quat;
-  tf2::fromMsg(start.pose.orientation, start_quat);
-  tf2::fromMsg(goal.pose.orientation, goal_quat);
   double start_yaw, goal_yaw, nan;
-  botanbot_utilities::getRPYfromQuaternion(start_quat, nan, nan, start_yaw);
-  botanbot_utilities::getRPYfromQuaternion(goal_quat, nan, nan, goal_yaw);
-
+  botanbot_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan, start_yaw);
+  botanbot_utilities::getRPYfromMsgQuaternion(goal.pose.orientation, nan, nan, goal_yaw);
   ompl::base::ScopedState<> start_ompl(space_), goal_ompl(space_);
 
   start_ompl[0] = start.pose.position.x;

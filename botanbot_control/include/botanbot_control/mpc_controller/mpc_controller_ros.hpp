@@ -93,14 +93,12 @@ public:
     geometry_msgs::msg::PoseStamped curr_robot_pose);
 
   /**
-   * @brief Get the Interpolated Refernce States object
+   * @brief Get the Interpolated Reference States object
    *
-   * @param ref_traj
    * @param curr_robot_pose
    * @return std::vector<MPCControllerCore::States>
    */
-  std::vector<MPCControllerCore::States> getInterpolatedRefernceStates(
-    const nav_msgs::msg::Path ref_traj,
+  std::vector<MPCControllerCore::States> getInterpolatedReferenceStates(
     geometry_msgs::msg::PoseStamped curr_robot_pose);
 
   /**
@@ -112,26 +110,21 @@ public:
   void publishInterpolatedRefernceStates(
     std::vector<MPCControllerCore::States> interpolated_ref_traj);
 
-  void fillOMPLStateFromPose(
-    ompl::base::ScopedState<ompl::base::ReedsSheppStateSpace> state,
-    const geometry_msgs::msg::PoseStamped * pose);
-
 private:
-  // Shared pointer to parent node
-  rclcpp::Node::SharedPtr node_;
-
+  // Given refernce traj to follow, this is set got from planner
   nav_msgs::msg::Path reference_traj_;
-
+  // computed velocities as result of MPC
   geometry_msgs::msg::Twist computed_velocity_;
-
+  // MPC core controller object
   std::shared_ptr<MPCControllerCore> mpc_controller_;
-  MPCControllerCore::ControlInput previous_control_;
-
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
-    interpolated_ref_traj_publisher_;
-
+  // parameters struct used for MPC controller
   MPCControllerCore::Parameters mpc_parameters_;
-
+  // Keep a copy of previously applied control inputs, this is neded
+  // by MPC algorithm
+  MPCControllerCore::ControlInput previous_control_;
+  // Publish local trajecory currently being fed to controller
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+    interpolated_local_reference_traj_publisher_;
 };
 
 }  // namespace mpc_controller

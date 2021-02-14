@@ -31,7 +31,6 @@ MPCControllerROS::MPCControllerROS()
 MPCControllerROS::~MPCControllerROS()
 {
 }
-
 void MPCControllerROS::initialize(
   rclcpp::Node * parent,
   const std::string & plugin_name)
@@ -74,9 +73,8 @@ void MPCControllerROS::initialize(
   parent->get_parameter(plugin_name + ".debug_mode", mpc_parameters_.debug_mode);
   parent->get_parameter(plugin_name + ".params_configured", mpc_parameters_.params_configured);
 
-  interpolated_ref_traj_publisher_ = parent->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "interpolated_plan", 1);
-
+  interpolated_local_reference_traj_publisher_ =
+    parent->create_publisher<visualization_msgs::msg::MarkerArray>("local_plan", 1);
   mpc_controller_ = std::make_shared<MPCControllerCore>(mpc_parameters_);
 }
 
@@ -96,11 +94,9 @@ geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands(
   // distance from rear to front axle(m)
   double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
 
-  tf2::Quaternion q;
-  tf2::fromMsg(curr_robot_pose.pose.orientation, q);
-  tf2::Matrix3x3 m(q);
   double roll, pitch, psi;
-  m.getRPY(roll, pitch, psi);
+  botanbot_utilities::getRPYfromMsgQuaternion(
+    curr_robot_pose.pose.orientation, roll, pitch, psi);
 
   MPCControllerCore::States curr_states;
   curr_states.x = curr_robot_pose.pose.position.x;
@@ -109,7 +105,7 @@ geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands(
   curr_states.v = kTARGET_SPEED;
 
   std::vector<MPCControllerCore::States> interpolated_reference_states =
-    getInterpolatedRefernceStates(reference_traj_, curr_robot_pose);
+    getInterpolatedReferenceStates(curr_robot_pose);
 
   mpc_controller_->updateCurrentStates(curr_states);
   mpc_controller_->updateReferences(interpolated_reference_states);
@@ -151,71 +147,83 @@ int MPCControllerROS::nearestStateIndex(
   return closest_state_index;
 }
 
-std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedRefernceStates(
-  const nav_msgs::msg::Path ref_traj,
+std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedReferenceStates(
   geometry_msgs::msg::PoseStamped curr_robot_pose)
 {
-  int kINTERPOLATION = mpc_parameters_.N;
+  double kGlobalPlanLookAheadDst = 2.0;
+  int kInterpolation = mpc_parameters_.N;
   double kTARGETSPEED = 0.0;
 
+  // Now lets find nearest trajectory point to robot base
+  int nearsest_traj_state_index = nearestStateIndex(reference_traj_, curr_robot_pose);
+
+  // Auto calculate interpolation steps
+  double path_euclidian_length = 0.0;
+  for (size_t i = 1; i < reference_traj_.poses.size(); i++) {
+    path_euclidian_length += botanbot_utilities::getEuclidianDistBetweenPoses(
+      reference_traj_.poses[i], reference_traj_.poses[i - 1]);
+  }
+
+  double interpolation_step_size = path_euclidian_length / reference_traj_.poses.size();
+  int states_to_see_horizon = kGlobalPlanLookAheadDst / interpolation_step_size;
+  int local_goal_state_index = nearsest_traj_state_index + states_to_see_horizon;
+  if (local_goal_state_index >= reference_traj_.poses.size() - 1) {
+    std::cout << "MPC Controller: approaching to goal state..." << std::endl;
+    local_goal_state_index = reference_traj_.poses.size() - 1;
+  }
+  // Define a state space, we basically need this only because we want to use OMPL's
+  // geometric path, And then we can interpolate this path
   std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
     std::make_shared<ompl::base::RealVectorBounds>(2);
-  state_space_bounds->setLow(-100);
-  state_space_bounds->setHigh(100);
   ompl::base::StateSpacePtr state_space =
     std::make_shared<ompl::base::ReedsSheppStateSpace>();
   state_space->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds);
   ompl::base::SpaceInformationPtr state_space_information =
     std::make_shared<ompl::base::SpaceInformation>(state_space);
-
   ompl::geometric::PathGeometric path(state_space_information);
 
-  ompl::base::ScopedState<ompl::base::ReedsSheppStateSpace> ompl_robot_curr_state(state_space);
-  // Now lets find nearest trajectory point to robot base
-  int nearsest_traj_state_index =
-    nearestStateIndex(ref_traj, curr_robot_pose);
+  ompl::base::ScopedState<ompl::base::ReedsSheppStateSpace>
+  ompl_curr_robot_state(state_space),
+  ompl_intermediate_state(state_space),
+  ompl_local_goal_state(state_space);
 
-  double nan, yaw;
-  botanbot_utilities::getRPYfromQuaternion(
-    ref_traj.poses[nearsest_traj_state_index].pose.orientation,
-    nan, nan, yaw);
-  ompl_robot_curr_state[0] = ref_traj.poses[nearsest_traj_state_index].pose.position.x;
-  ompl_robot_curr_state[1] = ref_traj.poses[nearsest_traj_state_index].pose.position.y;
-  ompl_robot_curr_state[2] = yaw;
-  // Feed first state , which is the current robo state.
-  path.append(static_cast<ompl::base::State *>(ompl_robot_curr_state.get()));
+  // Feed initial state, which is current robot state
+  double void_var, yaw;
+  botanbot_utilities::getRPYfromMsgQuaternion(
+    curr_robot_pose.pose.orientation, void_var, void_var, yaw);
+  ompl_curr_robot_state->setXY(curr_robot_pose.pose.position.x, curr_robot_pose.pose.position.y);
+  ompl_curr_robot_state->setYaw(yaw);
+  path.append(static_cast<ompl::base::State *>(ompl_curr_robot_state.get()));
 
-  ompl::base::ScopedState<ompl::base::ReedsSheppStateSpace> ompl_local_goal_state(state_space);
+  // Feed Intermediate state , which is nearest state in ref traj
+  botanbot_utilities::getRPYfromMsgQuaternion(
+    reference_traj_.poses[nearsest_traj_state_index].pose.orientation, void_var, void_var, yaw);
+  ompl_intermediate_state[0] = reference_traj_.poses[nearsest_traj_state_index].pose.position.x;
+  ompl_intermediate_state[1] = reference_traj_.poses[nearsest_traj_state_index].pose.position.y;
+  ompl_intermediate_state[2] = yaw;
+  path.append(static_cast<ompl::base::State *>(ompl_intermediate_state.get()));
 
-  double distance_to_goal = botanbot_utilities::getEuclidianDistBetweenPoses(
-    ref_traj.poses.front(), ref_traj.poses.back());
-  double interpolation_step = distance_to_goal / ref_traj.poses.size();
-
-  double kLOOKUPPATHHORIZON = 2.0;
-  int states_to_see_horizon = kLOOKUPPATHHORIZON / interpolation_step;
-
-  int local_goal_stat_index = nearsest_traj_state_index + states_to_see_horizon;
-
-  if (local_goal_stat_index >= ref_traj.poses.size() - 1) {
-    std::cout << "MPC Controller approaching to goal state..." << std::endl;
-    local_goal_stat_index = ref_traj.poses.size() - 1;
-  }
-  botanbot_utilities::getRPYfromQuaternion(
-    ref_traj.poses[local_goal_stat_index].pose.orientation,
-    nan, nan, yaw);
-  ompl_local_goal_state[0] = ref_traj.poses[local_goal_stat_index].pose.position.x;
-  ompl_local_goal_state[1] = ref_traj.poses[local_goal_stat_index].pose.position.y;
+  // Feed the final state, which the local goal for the current control effort.
+  // This is basically the state in the ref trajectory, which is closest to kGlobalPlanLookAheadDst
+  botanbot_utilities::getRPYfromMsgQuaternion(
+    reference_traj_.poses[local_goal_state_index].pose.orientation, void_var, void_var, yaw);
+  ompl_local_goal_state[0] = reference_traj_.poses[local_goal_state_index].pose.position.x;
+  ompl_local_goal_state[1] = reference_traj_.poses[local_goal_state_index].pose.position.y;
   ompl_local_goal_state[2] = yaw;
-
   path.append(static_cast<ompl::base::State *>(ompl_local_goal_state.get()));
-  path.interpolate(kINTERPOLATION);
 
+  // The local ref traj now contains only 3 states, we will interpolate this states with OMPL
+  // The count of states after interpolation must be same as horizon defined for the control problem , hence
+  // it should be mpc_parameters_.N
+  path.interpolate(kInterpolation);
+
+  // Now the local ref traj is interpolated from current robot state up to state at global look ahead distance
+  // Lets fill the native MPC type ref states and return to caller
   std::vector<MPCControllerCore::States> interpolated_reference_states;
   for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
     // cast the abstract state type to the type we expect
     const ompl::base::ReedsSheppStateSpace::StateType * interpolated_state =
       path.getState(path_idx)->as<ompl::base::ReedsSheppStateSpace::StateType>();
-
     MPCControllerCore::States curr_interpolated_state;
     curr_interpolated_state.v = kTARGETSPEED;
     curr_interpolated_state.x = interpolated_state->getX();
@@ -226,23 +234,11 @@ std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedRefernce
   return interpolated_reference_states;
 }
 
-void MPCControllerROS::fillOMPLStateFromPose(
-  ompl::base::ScopedState<ompl::base::ReedsSheppStateSpace> state,
-  const geometry_msgs::msg::PoseStamped * pose)
-{
-  double nan, yaw;
-  botanbot_utilities::getRPYfromQuaternion(pose->pose.orientation, nan, nan, yaw);
-  state[0] = pose->pose.position.x;
-  state[1] = pose->pose.position.y;
-  state[2] = yaw;
-}
-
 void
 MPCControllerROS::publishInterpolatedRefernceStates(
   std::vector<MPCControllerCore::States> interpolated_reference_states)
 {
   visualization_msgs::msg::MarkerArray marker_array;
-  // iterae through Ref raj Xs
   for (int i = 0; i < interpolated_reference_states.size(); i++) {
     visualization_msgs::msg::Marker marker;
     marker.header.frame_id = "map";
@@ -255,9 +251,8 @@ MPCControllerROS::publishInterpolatedRefernceStates(
     marker.pose.position.x = interpolated_reference_states[i].x;
     marker.pose.position.y = interpolated_reference_states[i].y;
     marker.pose.position.z = 0.6;
-    tf2::Quaternion curr_ref_traj_sample_quat;
-    curr_ref_traj_sample_quat.setRPY(0, 0, interpolated_reference_states[i].psi);
-    marker.pose.orientation = tf2::toMsg(curr_ref_traj_sample_quat);
+    marker.pose.orientation = botanbot_utilities::getMsgQuaternionfromRPY(
+      0, 0, interpolated_reference_states[i].psi);
     marker.scale.x = 0.25;
     marker.scale.y = 0.1;
     marker.scale.z = 0.1;
@@ -267,7 +262,7 @@ MPCControllerROS::publishInterpolatedRefernceStates(
     marker.color.b = 0.0;
     marker_array.markers.push_back(marker);
   }
-  interpolated_ref_traj_publisher_->publish(marker_array);
+  interpolated_local_reference_traj_publisher_->publish(marker_array);
 }
 
 }  // namespace mpc_controller
