@@ -140,6 +140,16 @@ void getRPYfromQuaternion(const tf2::Quaternion q, double & roll, double & pitch
   m.getRPY(roll, pitch, yaw);
 }
 
+void getRPYfromQuaternion(
+  const geometry_msgs::msg::Quaternion q_msg, double & roll, double & pitch,
+  double & yaw)
+{
+  tf2::Quaternion q;
+  tf2::fromMsg(q_msg, q);
+  tf2::Matrix3x3 m(q);
+  m.getRPY(roll, pitch, yaw);
+}
+
 tf2::Quaternion getQuaternionfromRPY(const double roll, const double pitch, const double yaw)
 {
   tf2::Quaternion q;

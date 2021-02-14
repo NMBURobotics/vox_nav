@@ -219,7 +219,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
     result->total_time = cycle_duration;
     goal_handle->succeed(result);
     cmd_vel_publisher_->publish(geometry_msgs::msg::Twist());
-    RCLCPP_INFO(this->get_logger(), "Follow Path Succeeded");
+    RCLCPP_INFO(this->get_logger(), "Follow Path Succeeded!");
   }
 }
 

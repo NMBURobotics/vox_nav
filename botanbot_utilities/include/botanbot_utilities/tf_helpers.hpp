@@ -89,6 +89,18 @@ void getRPYfromQuaternion(const tf2::Quaternion q, double & roll, double & pitch
  */
 tf2::Quaternion getQuaternionfromRPY(const double roll, const double pitch, const double yaw);
 
+/**
+ * @brief Provide geometry_msgs::msg::Quaternion and get roll pitch yaw
+ *
+ * @param q_msg
+ * @param roll
+ * @param pitch
+ * @param yaw
+ */
+void getRPYfromQuaternion(
+  const geometry_msgs::msg::Quaternion q_msg, double & roll, double & pitch,
+  double & yaw);
+
 }  // namespace botanbot_utilities
 
 #endif  // BOTANBOT_UTILITIES__TF_HELPERS_HPP_

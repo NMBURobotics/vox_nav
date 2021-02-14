@@ -15,15 +15,22 @@
 #include <rclcpp/rclcpp.hpp>
 #include <botanbot_control/controller_core.hpp>
 #include <botanbot_control/mpc_controller/mpc_controller_core.hpp>
+#include <botanbot_utilities/tf_helpers.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <ompl/geometric/PathGeometric.h>
+#include <ompl/base/SpaceInformation.h>
+#include <ompl/base/spaces/ReedsSheppStateSpace.h>
+#include <ompl/base/ScopedState.h>
+
 #include <string>
 #include <memory>
 #include <vector>
+
 
 #ifndef BOTANBOT_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
 #define BOTANBOT_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
@@ -104,6 +111,10 @@ public:
    */
   void publishInterpolatedRefernceStates(
     std::vector<MPCControllerCore::States> interpolated_ref_traj);
+
+  void fillOMPLStateFromPose(
+    ompl::base::ScopedState<ompl::base::ReedsSheppStateSpace> state,
+    const geometry_msgs::msg::PoseStamped * pose);
 
 private:
   // Shared pointer to parent node
