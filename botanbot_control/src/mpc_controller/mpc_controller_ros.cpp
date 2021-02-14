@@ -150,7 +150,7 @@ int MPCControllerROS::nearestStateIndex(
 std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedReferenceStates(
   geometry_msgs::msg::PoseStamped curr_robot_pose)
 {
-  double kGlobalPlanLookAheadDst = 2.0;
+  double kGlobalPlanLookAheadDst = 2.5;
   int kInterpolation = mpc_parameters_.N;
   double kTARGETSPEED = 0.0;
 
@@ -183,25 +183,19 @@ std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedReferenc
   ompl::geometric::PathGeometric path(state_space_information);
 
   ompl::base::ScopedState<ompl::base::ReedsSheppStateSpace>
-  ompl_curr_robot_state(state_space),
-  ompl_intermediate_state(state_space),
+  closest_ref_traj_state(state_space),
   ompl_local_goal_state(state_space);
 
-  // Feed initial state, which is current robot state
+  // Feed initial state, which is closest ref trajectory state
   double void_var, yaw;
-  botanbot_utilities::getRPYfromMsgQuaternion(
-    curr_robot_pose.pose.orientation, void_var, void_var, yaw);
-  ompl_curr_robot_state->setXY(curr_robot_pose.pose.position.x, curr_robot_pose.pose.position.y);
-  ompl_curr_robot_state->setYaw(yaw);
-  path.append(static_cast<ompl::base::State *>(ompl_curr_robot_state.get()));
 
   // Feed Intermediate state , which is nearest state in ref traj
   botanbot_utilities::getRPYfromMsgQuaternion(
     reference_traj_.poses[nearsest_traj_state_index].pose.orientation, void_var, void_var, yaw);
-  ompl_intermediate_state[0] = reference_traj_.poses[nearsest_traj_state_index].pose.position.x;
-  ompl_intermediate_state[1] = reference_traj_.poses[nearsest_traj_state_index].pose.position.y;
-  ompl_intermediate_state[2] = yaw;
-  path.append(static_cast<ompl::base::State *>(ompl_intermediate_state.get()));
+  closest_ref_traj_state[0] = reference_traj_.poses[nearsest_traj_state_index].pose.position.x;
+  closest_ref_traj_state[1] = reference_traj_.poses[nearsest_traj_state_index].pose.position.y;
+  closest_ref_traj_state[2] = yaw;
+  path.append(static_cast<ompl::base::State *>(closest_ref_traj_state.get()));
 
   // Feed the final state, which the local goal for the current control effort.
   // This is basically the state in the ref trajectory, which is closest to kGlobalPlanLookAheadDst
