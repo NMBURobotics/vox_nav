@@ -36,16 +36,16 @@ namespace botanbot_planning
 class SE2PlannerControlSpace : public botanbot_planning::PlannerCore
 {
 public:
-/**
- * @brief Construct a new Botanbot O M P L Experimental object
- *
- */
+  /**
+   * @brief Construct a new SE2PlannerControlSpace object
+   *
+   */
   SE2PlannerControlSpace();
 
-/**
- * @brief Destroy the Botanbot O M P L Experimental object
- *
- */
+  /**
+   * @brief Destroy the SE2PlannerControlSpace object
+   *
+   */
   ~SE2PlannerControlSpace();
 
   /**
@@ -85,7 +85,7 @@ public:
 
 protected:
   /**
-   * @brief
+   * @brief propogate the states considering dynamics
    *
    */
   static void propagate(

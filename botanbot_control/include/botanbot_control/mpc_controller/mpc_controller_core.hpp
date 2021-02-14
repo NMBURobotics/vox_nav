@@ -30,6 +30,10 @@ namespace botanbot_control
 namespace mpc_controller
 {
 
+/**
+ * @brief CASADI based MOdel Predcitive Control for Ackermann Vehicle
+ *
+ */
 class MPCControllerCore
 {
 public:
@@ -97,7 +101,7 @@ public:
   };
 
   /**
-   * @brief all parameters usd by MPC class,
+   * @brief all parameters used by MPC class,
    * user needs to create and reconfigure this
    *
    */
@@ -128,7 +132,7 @@ public:
     double DF_DOT_MAX;
     // weights on x, y, psi, and v.
     std::vector<double> Q;
-    // weights on jerk and slew rate(steering angle derivative)
+    // weights on jerk and skew rate(steering angle derivative)
     std::vector<double> R;
     // enable/disable debug messages
     bool debug_mode;

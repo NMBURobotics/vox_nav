@@ -81,7 +81,6 @@
 #include <fcl/collision.h>
 #include <fcl/broadphase/broadphase.h>
 #include <fcl/math/transform.h>
-
 // STL
 #include <string>
 #include <iostream>
@@ -92,7 +91,7 @@ namespace botanbot_planning
 {
 
 /**
- * @brief Base class for creating a plugin in order to perform a specific task at waypoint arrivals.
+ * @brief Base class for creating a planner plugins
  *
  */
 class PlannerCore
@@ -100,13 +99,13 @@ class PlannerCore
 public:
   using Ptr = std::shared_ptr<PlannerCore>;
   /**
-   * @brief Construct a new Simple Task Execution At Waypoint Base object
+   * @brief Construct a new Planner Core object
    *
    */
   PlannerCore() {}
 
   /**
-   * @brief Destroy the Simple Task Execution At Waypoint Base object
+   * @brief Destroy the Planner Core object
    *
    */
   virtual ~PlannerCore() {}
