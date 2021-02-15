@@ -10,3 +10,16 @@ Documentation has been moved to ; https://outdoor-nav2.readthedocs.io/en/main/
 * [Localization Architecture of Botanbot.](assets/presentation_4.pdf)
 * [Trajectory Control of Ackermann Steering Robot With Nonlinear MPC.](assets/presentation_5.pdf)
 * [Behaviour Trees And Putting All Together As Complete Navigation System.](assets/presentation_6.pdf)
+
+### Insightful Documents
+* [Robot Navigation Aimed for Uneven and Rough Agricultural Terrains](assets/prposal.pdf)
+
+### Videos 
+
+You can download videos and see capablities of project. See all available videos under assets.
+
+![MPC following a Trajectory](assets/mpc_3.mp4)
+
+<video width="640" height="480" controls>
+  <source src="assets/mpc_3.mp4" type="video/mp4">
+</video>
