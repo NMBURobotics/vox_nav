@@ -250,10 +250,10 @@ MPCControllerROS::publishInterpolatedRefernceStates(
     marker.scale.x = 0.25;
     marker.scale.y = 0.1;
     marker.scale.z = 0.1;
-    marker.color.a = 0.8;
-    marker.color.r = 1.0;
-    marker.color.g = 0.0;
-    marker.color.b = 0.0;
+    marker.color.a = 1.0;
+    marker.color.r = 1.0 * static_cast<double>(rclcpp::Clock().now().nanoseconds() % 10);
+    marker.color.g = 0.5 * static_cast<double>(rclcpp::Clock().now().nanoseconds() % 10);
+    marker.color.b = 0.2 * static_cast<double>(rclcpp::Clock().now().nanoseconds() % 10);
     marker_array.markers.push_back(marker);
   }
   interpolated_local_reference_traj_publisher_->publish(marker_array);

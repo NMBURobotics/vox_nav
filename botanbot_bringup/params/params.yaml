@@ -4,12 +4,12 @@ botanbot_planner_server_rclcpp_node:
     expected_planner_frequency: 10.0
     SE2Planner:
       plugin: "botanbot_planning::SE2Planner"
-      planner_name: "RRTStar" # other options: RRTStar, RRTConnect, KPIECE1, SBL
+      planner_name: "SST" # other options: RRTStar, RRTConnect, KPIECE1, SBL, SST
       planner_timeout: 3.0
       interpolation_parameter: 50
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
-      se2_space: "SE2" # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+      se2_space: "REEDS" # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       state_space_boundries:
         minx: -50.0
         maxx: 50.0
@@ -70,7 +70,7 @@ botanbot_planner_server_rclcpp_node:
 botanbot_controller_server_rclcpp_node:
   ros__parameters:
     controller_plugin: "MPCControllerROS" # other options: 
-    controller_frequency: 15.0
+    controller_frequency: 30.0
     MPCControllerROS:
       plugin: "mpc_controller::MPCControllerROS"
       N: 10                                                       #timesteps in MPC Horizon

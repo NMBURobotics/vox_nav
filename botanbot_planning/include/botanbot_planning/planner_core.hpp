@@ -32,18 +32,24 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
-// OMPL
+// OMPL GEOMETRIC
+#include <ompl/geometric/planners/sst/SST.h>
 #include <ompl/geometric/planners/sbl/SBL.h>
-#include <ompl/geometric/planners/rrt/TRRT.h>
 #include <ompl/geometric/planners/kpiece/KPIECE1.h>
+#include <ompl/geometric/planners/rrt/TRRT.h>
 #include <ompl/geometric/planners/rrt/RRT.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTsharp.h>
 #include <ompl/geometric/planners/rrt/InformedRRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/geometric/planners/prm/PRMstar.h>
+#include <ompl/geometric/planners/prm/PRM.h>
+#include <ompl/geometric/planners/prm/LazyPRMstar.h>
+#include <ompl/geometric/planners/cforest/CForest.h>
 #include <ompl/geometric/SimpleSetup.h>
+#include <ompl/base/OptimizationObjective.h>
+// OMPL CONTROL
 #include <ompl/control/ControlSpace.h>
-#include <ompl/control/spaces/RealVectorControlSpace.h>
 #include <ompl/control/spaces/RealVectorControlSpace.h>
 #include <ompl/control/planners/kpiece/KPIECE1.h>
 #include <ompl/control/planners/rrt/RRT.h>
@@ -55,20 +61,17 @@
 #include <ompl/control/planners/syclop/GridDecomposition.h>
 #include <ompl/control/SimpleSetup.h>
 #include <ompl/config.h>
+// OMPL BASE
 #include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
-#include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/base/objectives/MaximizeMinClearanceObjective.h>
 #include <ompl/base/samplers/MaximizeClearanceValidStateSampler.h>
 #include <ompl/base/objectives/StateCostIntegralObjective.h>
+#include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/base/spaces/DubinsStateSpace.h>
 #include <ompl/base/spaces/ReedsSheppStateSpace.h>
-#include <ompl/base/OptimizationObjective.h>
-#include <ompl/geometric/planners/prm/PRMstar.h>
-#include <ompl/geometric/planners/prm/PRM.h>
-#include <ompl/geometric/planners/prm/LazyPRMstar.h>
-#include <ompl/geometric/planners/cforest/CForest.h>
+#include <ompl/base/spaces/SE3StateSpace.h>
 // OCTOMAP
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>

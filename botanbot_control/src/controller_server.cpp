@@ -150,7 +150,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
   // set Plan
   controller_->setPlan(goal->path);
 
-  rclcpp::WallRate rate(10);
+  rclcpp::WallRate rate(controller_frequency_);
   double goal_tolerance_distance = 0.7;
   volatile bool is_goal_tolerance_satisfied = false;
   while (rclcpp::ok() && !is_goal_tolerance_satisfied) {

@@ -180,6 +180,10 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
     planner = ompl::base::PlannerPtr(
       new ompl::geometric::SBL(
         simple_setup.getSpaceInformation()) );
+  } else if (planner_name_ == std::string("SST")) {
+    planner = ompl::base::PlannerPtr(
+      new ompl::geometric::SST(
+        simple_setup.getSpaceInformation()) );
   } else {
     RCLCPP_WARN(
       logger_,
