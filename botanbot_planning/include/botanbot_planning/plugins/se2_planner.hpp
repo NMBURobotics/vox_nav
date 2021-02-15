@@ -90,9 +90,10 @@ protected:
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
 
-  std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
-  ompl::base::StateSpacePtr state_space_;
-  ompl::base::SpaceInformationPtr state_space_information_;
+  std::shared_ptr<ompl::base::RealVectorBounds> se2_space_bounds_;
+  // This can be DBINS,REEDS or pure SE2, set this through parameters
+  ompl::base::StateSpacePtr se2_space_;
+  ompl::base::SpaceInformationPtr se2_state_space_information_;
 
   // to ensure safety when accessing global var curr_frame_
   std::mutex global_mutex_;
@@ -115,6 +116,8 @@ protected:
   // We only need to creae a FLC cotomap collision from
   // octomap once, because this is static map
   std::once_flag fcl_tree_from_octomap_once_;
+  // Which state space is slected ? REEDS,DUBINS, SE2
+  std::string selected_se2_space_name_;
 };
 }  // namespace botanbot_planning
 

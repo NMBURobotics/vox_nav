@@ -52,8 +52,8 @@ void SE2PlannerControlSpace::initialize(
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 50.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
-  parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
-  parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.minyaw", -3.14);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.maxyaw", 3.14);
   parent->declare_parameter(plugin_name + ".velocity_space_boundries.min_v", -0.3);
   parent->declare_parameter(plugin_name + ".velocity_space_boundries.max_v", 0.3);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.0);
@@ -83,9 +83,9 @@ void SE2PlannerControlSpace::initialize(
   se2_space_bounds_->setHigh(
     1, parent->get_parameter(plugin_name + ".state_space_boundries.maxy").as_double());
   se2_space_bounds_->setLow(
-    2, -0.3);
+    2, parent->get_parameter(plugin_name + ".state_space_boundries.minyaw").as_double());
   se2_space_bounds_->setHigh(
-    2, 0.3);
+    2, parent->get_parameter(plugin_name + ".state_space_boundries.maxyaw").as_double());
 
   se2_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>();
   se2_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*se2_space_bounds_);
@@ -97,7 +97,7 @@ void SE2PlannerControlSpace::initialize(
     se2_space_ = std::make_shared<ompl::base::SE2StateSpace>();
     se2_space_->as<ompl::base::SE2StateSpace>()->setBounds(*se2_space_bounds_);
   }
-  space_ = se2_space_ + velocity_space_;
+  composite_space_ = se2_space_ + velocity_space_;
 
   octomap_subscriber_ = parent->create_subscription<octomap_msgs::msg::Octomap>(
     octomap_topic_, rclcpp::SystemDefaultsQoS(),
@@ -133,14 +133,16 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
 
   // create a control space
   ompl::control::ControlSpacePtr control_space(
-    new ompl::control::RealVectorControlSpace(space_, 2));
+    new ompl::control::RealVectorControlSpace(composite_space_, 2));
   ompl::base::RealVectorBounds control_bounds(2);
   control_bounds.setLow(0, -0.0);
   control_bounds.setHigh(0, 0.3);
   control_bounds.setLow(1, -0.1);
   control_bounds.setHigh(1, 0.1);
   control_space->as<ompl::control::RealVectorControlSpace>()->setBounds(control_bounds);
-  ompl::control::SpaceInformationPtr si(new ompl::control::SpaceInformation(space_, control_space));
+  ompl::control::SpaceInformationPtr si(new ompl::control::SpaceInformation(
+      composite_space_,
+      control_space));
 
   si->setStatePropagator(propagate);
   si->setStateValidityChecker(
@@ -151,7 +153,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
   double start_yaw, goal_yaw, nan;
   botanbot_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan, start_yaw);
   botanbot_utilities::getRPYfromMsgQuaternion(goal.pose.orientation, nan, nan, goal_yaw);
-  ompl::base::ScopedState<> start_ompl(space_), goal_ompl(space_);
+  ompl::base::ScopedState<> start_ompl(composite_space_), goal_ompl(composite_space_);
 
   start_ompl[0] = start.pose.position.x;
   start_ompl[1] = start.pose.position.y;

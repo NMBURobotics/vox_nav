@@ -34,7 +34,7 @@ void SE2Planner::initialize(
   rclcpp::Node * parent,
   const std::string & plugin_name)
 {
-  state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
+  se2_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
   octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
   is_octomap_ready_ = false;
 
@@ -44,12 +44,13 @@ void SE2Planner::initialize(
   parent->declare_parameter(plugin_name + ".interpolation_parameter", 50);
   parent->declare_parameter(plugin_name + ".octomap_topic", "octomap");
   parent->declare_parameter(plugin_name + ".octomap_voxel_size", 0.2);
+  parent->declare_parameter(plugin_name + ".se2_space", "REEDS");
   parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -50.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 50.0);
-  parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -50.0);
-  parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 50.0);
-  parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
-  parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.minyaw", -3.14);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.maxyaw", 3.14);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.5);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.y", 1.5);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.z", 0.4);
@@ -60,11 +61,31 @@ void SE2Planner::initialize(
   parent->get_parameter(plugin_name + ".interpolation_parameter", interpolation_parameter_);
   parent->get_parameter(plugin_name + ".octomap_topic", octomap_topic_);
   parent->get_parameter(plugin_name + ".octomap_voxel_size", octomap_voxel_size_);
+  parent->get_parameter(plugin_name + ".se2_space", selected_se2_space_name_);
 
-  state_space_bounds_->setLow(
-    parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
-  state_space_bounds_->setHigh(
-    parent->get_parameter(plugin_name + ".state_space_boundries.maxx").as_double());
+  se2_space_bounds_->setLow(
+    0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
+  se2_space_bounds_->setHigh(
+    0, parent->get_parameter(plugin_name + ".state_space_boundries.maxx").as_double());
+  se2_space_bounds_->setLow(
+    1, parent->get_parameter(plugin_name + ".state_space_boundries.miny").as_double());
+  se2_space_bounds_->setHigh(
+    1, parent->get_parameter(plugin_name + ".state_space_boundries.maxy").as_double());
+  se2_space_bounds_->setLow(
+    2, parent->get_parameter(plugin_name + ".state_space_boundries.minyaw").as_double());
+  se2_space_bounds_->setHigh(
+    2, parent->get_parameter(plugin_name + ".state_space_boundries.maxyaw").as_double());
+
+  se2_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>();
+  se2_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*se2_space_bounds_);
+  if (selected_se2_space_name_ == "DUBINS") {
+    se2_space_ = std::make_shared<ompl::base::DubinsStateSpace>();
+    se2_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*se2_space_bounds_);
+
+  } else if (selected_se2_space_name_ == "SE2") {
+    se2_space_ = std::make_shared<ompl::base::SE2StateSpace>();
+    se2_space_->as<ompl::base::SE2StateSpace>()->setBounds(*se2_space_bounds_);
+  }
 
   if (!is_enabled_) {
     RCLCPP_INFO(
@@ -81,18 +102,14 @@ void SE2Planner::initialize(
       parent->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
       parent->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
   fcl::Transform3f tf2;
-
   fcl::CollisionObject robot_body_box_object(robot_body_box, tf2);
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
-
   octomap_subscriber_ = parent->create_subscription<octomap_msgs::msg::Octomap>(
     octomap_topic_, rclcpp::SystemDefaultsQoS(),
     std::bind(&SE2Planner::octomapCallback, this, std::placeholders::_1));
 
-  state_space_ = std::make_shared<ompl::base::DubinsStateSpace>();
-  state_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*state_space_bounds_);
-  state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
-  state_space_information_->setStateValidityChecker(
+  se2_state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(se2_space_);
+  se2_state_space_information_->setStateValidityChecker(
     std::bind(&SE2Planner::isStateValid, this, std::placeholders::_1));
 }
 
@@ -109,8 +126,8 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
   }
 
   ompl::base::ScopedState<ompl::base::DubinsStateSpace>
-  se2_start(state_space_),
-  se2_goal(state_space_);
+  se2_start(se2_space_),
+  se2_goal(se2_space_);
   // set the start and goal states
   double start_yaw, goal_yaw, nan;
   botanbot_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan, start_yaw);
@@ -126,7 +143,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
 
   // create a problem instance
   // define a simple setup class
-  ompl::geometric::SimpleSetup simple_setup(state_space_);
+  ompl::geometric::SimpleSetup simple_setup(se2_space_);
   simple_setup.setStateValidityChecker(
     [this](const ompl::base::State * state)
     {
@@ -173,30 +190,35 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
 
   simple_setup.setPlanner(planner);
   // print the settings for this space
-  state_space_information_->printSettings(std::cout);
+  se2_state_space_information_->printSettings(std::cout);
 
   // attempt to solve the problem within one second of planning time
   ompl::base::PlannerStatus solved = simple_setup.solve(planner_timeout_);
   std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
 
   if (solved) {
-    simple_setup.simplifySolution();
     ompl::geometric::PathGeometric path = simple_setup.getSolutionPath();
+    // Path smoothing using bspline
+    ompl::geometric::PathSimplifier * path_simlifier =
+      new ompl::geometric::PathSimplifier(simple_setup.getSpaceInformation());
+    path_simlifier->smoothBSpline(path, 3);
+    path_simlifier->collapseCloseVertices(path, 3);
+    path.checkAndRepair(2);
     path.interpolate(interpolation_parameter_);
 
     for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
       // cast the abstract state type to the type we expect
-      const ompl::base::DubinsStateSpace::StateType * se2state =
-        path.getState(path_idx)->as<ompl::base::DubinsStateSpace::StateType>();
+      const ompl::base::SE2StateSpace::StateType * se2_state =
+        path.getState(path_idx)->as<ompl::base::SE2StateSpace::StateType>();
 
       tf2::Quaternion this_pose_quat;
-      this_pose_quat.setRPY(0, 0, se2state->getYaw());
+      this_pose_quat.setRPY(0, 0, se2_state->getYaw());
 
       geometry_msgs::msg::PoseStamped pose;
       pose.header.frame_id = start.header.frame_id;
       pose.header.stamp = rclcpp::Clock().now();
-      pose.pose.position.x = se2state->getX();
-      pose.pose.position.y = se2state->getY();
+      pose.pose.position.x = se2_state->getX();
+      pose.pose.position.y = se2_state->getY();
       pose.pose.position.z = 0.5;
       pose.pose.orientation.x = this_pose_quat.getX();
       pose.pose.orientation.y = this_pose_quat.getY();
@@ -237,12 +259,12 @@ bool SE2Planner::isStateValid(const ompl::base::State * state)
     return false;
   }
   // cast the abstract state type to the type we expect
-  const ompl::base::DubinsStateSpace::StateType * red_state =
-    state->as<ompl::base::DubinsStateSpace::StateType>();
+  const ompl::base::SE2StateSpace::StateType * se2_state =
+    state->as<ompl::base::SE2StateSpace::StateType>();
   // check validity of state Fdefined by pos & rot
-  fcl::Vec3f translation(red_state->getX(), red_state->getY(), 0.5);
+  fcl::Vec3f translation(se2_state->getX(), se2_state->getY(), 0.5);
   tf2::Quaternion myQuaternion;
-  myQuaternion.setRPY(0, 0, red_state->getYaw());
+  myQuaternion.setRPY(0, 0, se2_state->getYaw());
   fcl::Quaternion3f rotation(myQuaternion.getX(), myQuaternion.getY(),
     myQuaternion.getZ(), myQuaternion.getW());
   robot_collision_object_->setTransform(rotation, translation);
