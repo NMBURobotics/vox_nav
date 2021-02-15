@@ -183,6 +183,8 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
     planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
   } else if (planner_name_ == std::string("PRMstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
+  } else if (planner_name_ == std::string("RRTstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
   } else {
     RCLCPP_WARN(
       logger_,

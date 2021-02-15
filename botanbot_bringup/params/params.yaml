@@ -1,15 +1,15 @@
 botanbot_planner_server_rclcpp_node:
   ros__parameters:
-    planner_plugin: "SE2Planner" # other options: "SE2Planner", "SE3Planner" ,"SE2PlannerControlSpace"
+    planner_plugin: "SE2PlannerControlSpace" # other options: "SE2Planner", "SE3Planner" ,"SE2PlannerControlSpace"
     expected_planner_frequency: 10.0
     SE2Planner:
       plugin: "botanbot_planning::SE2Planner"
-      planner_name: "SST" # other options: RRTStar, RRTConnect, KPIECE1, SBL, SST
+      planner_name: "RRTStar" # other options: RRTStar, RRTConnect, KPIECE1, SBL, SST
       planner_timeout: 3.0
       interpolation_parameter: 50
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
-      se2_space: "REEDS" # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+      se2_space: "DUBINS" # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       state_space_boundries:
         minx: -50.0
         maxx: 50.0
@@ -23,7 +23,7 @@ botanbot_planner_server_rclcpp_node:
         z: 0.4  
     SE2PlannerControlSpace:
       plugin: "botanbot_planning::SE2PlannerControlSpace"
-      planner_name: "PRMstar"  # other options: RRT, SST, EST, KPIECE1, PRMstar 
+      planner_name: "RRTstar"  # other options: RRT, SST, EST, KPIECE1, PRMstar, RRTstar
       planner_timeout: 2.0
       interpolation_parameter: 50
       octomap_topic: "octomap"
@@ -73,7 +73,7 @@ botanbot_controller_server_rclcpp_node:
     controller_frequency: 15.0
     MPCControllerROS:
       plugin: "mpc_controller::MPCControllerROS"
-      N: 10                                                       #timesteps in MPC Horizon
+      N: 8                                                       #timesteps in MPC Horizon
       DT: 0.2                                                     #discretization time between timesteps(s)    
       L_F: 0.66                                                   #distance from CoG to front axle(m)
       L_R: 0.66                                                   #distance from CoG to rear axle(m)
