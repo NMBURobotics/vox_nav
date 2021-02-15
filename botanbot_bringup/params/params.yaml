@@ -20,24 +20,6 @@ botanbot_planner_server_rclcpp_node:
         x: 1.5
         y: 1.5
         z: 0.2
-    SE3Planner:
-      plugin: "botanbot_planning::SE3Planner"
-      planner_name: "RRTStar"  # other options: PRMStar, RRTStar, RRTConnect, KPIECE1, , 
-      planner_timeout: 1.0
-      interpolation_parameter: 25
-      octomap_topic: "octomap"
-      octomap_voxel_size: 0.2
-      state_space_boundries:
-        minx: -50.0
-        maxx: 50.0
-        miny: -50.0
-        maxy: 50.0
-        minz: 0.0
-        maxz: 2.5
-      robot_body_dimens:
-        x: 1.5
-        y: 1.0
-        z: 0.2   
     SE2PlannerControlSpace:
       plugin: "botanbot_planning::SE2PlannerControlSpace"
       planner_name: "PRMstar"  # other options: RRT, SST, EST, KPIECE1, PRMstar 
@@ -45,6 +27,7 @@ botanbot_planner_server_rclcpp_node:
       interpolation_parameter: 50
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
+      se2_space: "REEDS" # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       state_space_boundries:
         minx: -50.0
         maxx: 50.0
@@ -64,6 +47,24 @@ botanbot_planner_server_rclcpp_node:
         x: 1.5
         y: 1.0
         z: 0.4  
+    SE3Planner:
+      plugin: "botanbot_planning::SE3Planner"
+      planner_name: "RRTStar"  # other options: PRMStar, RRTStar, RRTConnect, KPIECE1, , 
+      planner_timeout: 1.0
+      interpolation_parameter: 25
+      octomap_topic: "octomap"
+      octomap_voxel_size: 0.2
+      state_space_boundries:
+        minx: -50.0
+        maxx: 50.0
+        miny: -50.0
+        maxy: 50.0
+        minz: 0.0
+        maxz: 2.5
+      robot_body_dimens:
+        x: 1.5
+        y: 1.0
+        z: 0.2   
 
 botanbot_controller_server_rclcpp_node:
   ros__parameters:

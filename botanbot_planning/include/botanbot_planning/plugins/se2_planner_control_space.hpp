@@ -128,6 +128,8 @@ protected:
   // We only need to creae a FLC cotomap collision from
   // octomap once, because this is static map
   std::once_flag fcl_tree_from_octomap_once_;
+  // Whic state space is slected ? REEDS,DUBINS, SE2
+  std::string selected_se2_space_name_;
 };
 }  // namespace botanbot_planning
 
