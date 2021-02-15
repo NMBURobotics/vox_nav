@@ -41,6 +41,13 @@ namespace botanbot_control
 {
 namespace mpc_controller
 {
+/**
+ * @brief A ROS wrapper around the Core MPC controller class.
+ *        This class interfaces MPC controller with Controller Core.
+ *        Derivatives of ControllerCore class are used to expose Controller server for use
+ *        The controller server is an ROS2 action named follow_path
+ *
+ */
 class MPCControllerROS : public botanbot_control::ControllerCore
 {
 public:
@@ -57,7 +64,7 @@ public:
   ~MPCControllerROS();
 
   /**
-   * @brief
+   * @brief gets all parameters required by MPC controller. Sets up an ROS2 stuff, publisher etc.
    *
    * @param parent
    * @param plugin_name
@@ -67,14 +74,14 @@ public:
     const std::string & plugin_name) override;
 
   /**
-   * @brief Set the Plan object
+   * @brief Set the Plan from controller server
    *
    * @param path
    */
   void setPlan(const nav_msgs::msg::Path & path) override;
 
   /**
-   * @brief
+   * @brief Compute required velocity commands to drive the robot along the reference_trajectory_
    *
    * @param curr_robot_pose
    * @return geometry_msgs::msg::Twist
@@ -95,7 +102,8 @@ public:
     geometry_msgs::msg::PoseStamped curr_robot_pose);
 
   /**
-   * @brief Get the Interpolated Reference States object
+   * @brief Get the Interpolated Reference States, This is determined by the look ahead distance set in the parameters.
+   *        As well as number of time Horizons(N)
    *
    * @param curr_robot_pose
    * @return std::vector<MPCControllerCore::States>
