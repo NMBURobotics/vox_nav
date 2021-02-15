@@ -47,11 +47,6 @@ add_library(tf_helpers SHARED
 )
 ament_target_dependencies(tf_helpers ${dependencies})
 
-add_library(navsat_conversions SHARED
-  src/navsat_conversions.cpp
-)
-ament_target_dependencies(navsat_conversions ${dependencies})
-
 add_library(gps_waypoint_collector SHARED
   src/gps_waypoint_collector.cpp
 )
@@ -66,7 +61,7 @@ add_executable(pcl2octomap_converter  src/pcl_helpers.cpp
 target_link_libraries(pcl2octomap_converter ${PCL_LIBRARIES} ${OCTOMAP_LIBRARIES})
 ament_target_dependencies(pcl2octomap_converter ${dependencies})
 
-install(TARGETS tf_helpers navsat_conversions gps_waypoint_collector
+install(TARGETS tf_helpers gps_waypoint_collector
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
@@ -81,7 +76,7 @@ install(DIRECTORY config launch
         DESTINATION share/${PROJECT_NAME})
 
 ament_export_include_directories(include ${EIGEN3_INCLUDE_DIR})
-ament_export_libraries(tf_helpers navsat_conversions gps_waypoint_collector)
+ament_export_libraries(tf_helpers gps_waypoint_collector)
 ament_export_dependencies(${dependencies})
 
 ament_package()
