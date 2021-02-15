@@ -153,8 +153,9 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
   rclcpp::WallRate rate(controller_frequency_);
   double goal_tolerance_distance = 0.7;
   volatile bool is_goal_tolerance_satisfied = false;
-  while (rclcpp::ok() && !is_goal_tolerance_satisfied) {
 
+  while (rclcpp::ok() && !is_goal_tolerance_satisfied) {
+    auto loop_start_time = steady_clock_.now();
     geometry_msgs::msg::PoseStamped curr_robot_pose;
     botanbot_utilities::getCurrentPose(
       curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1);
@@ -186,6 +187,14 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
     feedback->speed = computed_velocity_commands.linear.x;
     goal_handle->publish_feedback(feedback);
     cmd_vel_publisher_->publish(computed_velocity_commands);
+    // If loop is slower than expected , notify
+    auto cycle_duration = steady_clock_.now() - loop_start_time;
+    if (controller_duration_ && cycle_duration.seconds() > controller_duration_) {
+      RCLCPP_WARN(
+        get_logger(),
+        "Contol loop missed its desired rate of %.4f Hz. Current loop rate is %.4f Hz",
+        1 / controller_duration_, 1 / cycle_duration.seconds());
+    }
     rate.sleep();
   }
   auto cycle_duration = steady_clock_.now() - start_time;

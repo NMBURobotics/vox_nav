@@ -70,7 +70,7 @@ botanbot_planner_server_rclcpp_node:
 botanbot_controller_server_rclcpp_node:
   ros__parameters:
     controller_plugin: "MPCControllerROS" # other options: 
-    controller_frequency: 30.0
+    controller_frequency: 15.0
     MPCControllerROS:
       plugin: "mpc_controller::MPCControllerROS"
       N: 10                                                       #timesteps in MPC Horizon
