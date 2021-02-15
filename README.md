@@ -21,4 +21,3 @@ You can download videos and see capablities of project. See all available videos
 * ![MPC following a Trajectory](assets/mpc_3.mp4)
 
 * ![Full Navigation using Behaviour Trees](assets/navigation_in_action.mp4)
-

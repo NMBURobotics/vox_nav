@@ -1,5 +1,6 @@
 // Copyright (c) 2018 Intel Corporation
 // Copyright (c) 2019 Samsung Research America
+// Copyright (c) 2021 Norwegian University of Life Sciences, Fetullah Atas
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,24 +48,21 @@ ControllerServer::ControllerServer()
   get_parameter(controller_id_ + ".plugin", controller_type_);
 
   try {
-    botanbot_control::ControllerCore::Ptr controller =
+    controller_ =
       pc_loader_.createSharedInstance(controller_type_);
-    controller->initialize(this, controller_id_);
+    controller_->initialize(this, controller_id_);
     RCLCPP_INFO(
       get_logger(), "Created controller plugin %s of type %s",
       controller_id_.c_str(), controller_type_.c_str());
-    controllers_.insert({controller_id_, controller});
   } catch (const pluginlib::PluginlibException & ex) {
     RCLCPP_FATAL(
       get_logger(), "Failed to create controller. Exception: %s",
       ex.what());
   }
 
-  controller_ids_concat_ += controller_id_ + std::string(" ");
-
   RCLCPP_INFO(
     get_logger(),
-    "Controller Server has %s controller available.", controller_ids_concat_.c_str());
+    "Selected controller id: %s", controller_id_.c_str());
   if (controller_frequency_ > 0) {
     controller_duration_ = 1.0 / controller_frequency_;
   } else {
@@ -74,10 +72,6 @@ ControllerServer::ControllerServer()
       " than 0.0 to turn on duration overrrun warning messages", controller_frequency_);
     controller_duration_ = 0.0;
   }
-
-  // Initialize pubs & subs
-  actual_control_states_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "control", 1);
 
   this->action_server_ = rclcpp_action::create_server<FollowPath>(
     this->get_node_base_interface(),
@@ -100,10 +94,8 @@ ControllerServer::ControllerServer()
 ControllerServer::~ControllerServer()
 {
   RCLCPP_INFO(get_logger(), "Destroying");
-  controllers_.clear();
+  controller_.reset();
   action_server_.reset();
-  actual_control_states_publisher_.reset();
-  RCLCPP_INFO(get_logger(), "Shutting down");
 }
 
 rclcpp_action::GoalResponse ControllerServer::handle_goal(
@@ -156,22 +148,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
 
   geometry_msgs::msg::Twist computed_velocity_commands;
   // set Plan
-  if (controllers_.find(controller_id_) != controllers_.end()) {
-    controllers_[controller_id_]->setPlan(goal->path);
-  } else {
-    if (controllers_.size() == 1 && controller_id_.empty()) {
-      RCLCPP_WARN_ONCE(
-        get_logger(), "No Controllers specified in action call. "
-        "Server will use only plugin %s in server."
-        " This warning will appear once.", controller_ids_concat_.c_str());
-      controllers_[controllers_.begin()->first]->setPlan(goal->path);
-    } else {
-      RCLCPP_ERROR(
-        get_logger(), "controller %s is not a valid controller. "
-        "Controller names are: %s", controller_id_.c_str(),
-        controller_ids_concat_.c_str());
-    }
-  }
+  controller_->setPlan(goal->path);
 
   rclcpp::WallRate rate(10);
   double goal_tolerance_distance = 0.7;
@@ -202,8 +179,7 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
       break;
     }
 
-    computed_velocity_commands = controllers_[controller_id_]->computeVelocityCommands(
-      curr_robot_pose);
+    computed_velocity_commands = controller_->computeVelocityCommands(curr_robot_pose);
     // Update sequence
     auto elapsed_time = steady_clock_.now() - start_time;
     feedback->elapsed_time = elapsed_time;
@@ -222,7 +198,6 @@ ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_ha
     RCLCPP_INFO(this->get_logger(), "Follow Path Succeeded!");
   }
 }
-
 }  // namespace botanbot_control
 
 int main(int argc, char ** argv)

@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2021 Norwegian University of Life Sciences, Fetullah Atas
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -32,12 +32,11 @@
 #include "pluginlib/class_loader.hpp"
 #include "pluginlib/class_list_macros.hpp"
 
-#include <botanbot_control/controller_core.hpp>
-#include <botanbot_utilities/tf_helpers.hpp>
+#include "botanbot_control/controller_core.hpp"
+#include "botanbot_utilities/tf_helpers.hpp"
 
 namespace botanbot_control
 {
-
 class ControllerServer : public rclcpp::Node
 {
 public:
@@ -55,8 +54,6 @@ public:
    *
    */
   ~ControllerServer();
-
-  using ControllerMap = std::unordered_map<std::string, botanbot_control::ControllerCore::Ptr>;
 
   /**
    * @brief
@@ -85,36 +82,25 @@ public:
    */
   void handle_accepted(const std::shared_ptr<GoalHandleFollowPath> goal_handle);
 
-protected:
-  // Our action server implements the FollowPath action
-  rclcpp_action::Server<FollowPath>::SharedPtr action_server_;
-
   /**
    * @brief The action server callback which computes control effort
    */
   void followPath(const std::shared_ptr<GoalHandleFollowPath> goal_handle);
 
+protected:
+  // FollowPath action server
+  rclcpp_action::Server<FollowPath>::SharedPtr action_server_;
 
-  void publishControl(const std::vector<geometry_msgs::msg::PoseStamped> & path);
-
-  // Planner
-  ControllerMap controllers_;
+  // Controller, pluginized server
+  botanbot_control::ControllerCore::Ptr controller_;
   pluginlib::ClassLoader<botanbot_control::ControllerCore> pc_loader_;
   std::string controller_id_;
   std::string controller_type_;
-  std::string controller_ids_concat_;
   double controller_frequency_;
   double controller_duration_;
 
   // Clock
   rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
-
-  // TF buffer
-  std::shared_ptr<tf2_ros::Buffer> tf_;
-
-  // Publishers for the controller
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
-    actual_control_states_publisher_;
 
   // tf buffer to get access to transfroms
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
