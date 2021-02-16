@@ -101,15 +101,6 @@ void SE3Planner::initialize(
   state_space_bounds_->setHigh(
     2, parent->get_parameter(plugin_name + ".state_space_boundries.maxz").as_double());
 
-  if (!is_enabled_) {
-    RCLCPP_INFO(
-      logger_, "SE3Planner plugin is disabled.");
-  } else {
-    RCLCPP_INFO(
-      logger_, "Initializing SE3Planner plugin, selected planner is; %s",
-      planner_name_.c_str());
-  }
-
   typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
   CollisionGeometryPtr_t robot_body_box(new fcl::Box(
       parent->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
@@ -128,6 +119,12 @@ void SE3Planner::initialize(
   state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
   state_space_information_->setStateValidityChecker(
     std::bind(&SE3Planner::isStateValid, this, std::placeholders::_1));
+
+  if (!is_enabled_) {
+    RCLCPP_WARN(
+      logger_, "SE2PlannerControlSpace plugin is disabled.");
+  }
+  RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
 }
 
 std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
@@ -176,29 +173,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
-  if (planner_name_ == std::string("PRMStar")) {
-    planner = ompl::base::PlannerPtr(
-      new ompl::geometric::PRMstar(
-        state_space_information_));
-  } else if (planner_name_ == std::string("RRTStar")) {
-    planner = ompl::base::PlannerPtr(
-      new ompl::geometric::RRTstar(
-        state_space_information_) );
-  } else if (planner_name_ == std::string("RRTConnect")) {
-    planner = ompl::base::PlannerPtr(
-      new ompl::geometric::RRTstar(
-        state_space_information_) );
-  } else if (planner_name_ == std::string("KPIECE1")) {
-    planner = ompl::base::PlannerPtr(
-      new ompl::geometric::KPIECE1(
-        state_space_information_) );
-  } else {
-    RCLCPP_WARN(
-      logger_,
-      "Selected planner is not Found in available planners, using the default planner: %s",
-      planner_name_.c_str());
-  }
-  RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
+  initializeSelectedPlanner(planner, planner_name_, state_space_information_);
 
   // set the problem we are trying to solve for the planner
   planner->setProblemDefinition(pdef);
@@ -322,6 +297,27 @@ void SE3Planner::octomapCallback(
   if (!is_octomap_ready_) {
     is_octomap_ready_ = true;
     octomap_msg_ = msg;
+  }
+}
+
+void SE3Planner::initializeSelectedPlanner(
+  ompl::base::PlannerPtr & planner,
+  const std::string & selected_planner_name,
+  const ompl::base::SpaceInformationPtr & si)
+{
+  if (selected_planner_name == std::string("PRMStar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
+  } else if (selected_planner_name == std::string("RRTstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si) );
+  } else if (selected_planner_name == std::string("RRTConnect")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTConnect(si) );
+  } else if (selected_planner_name == std::string("KPIECE1")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::KPIECE1(si) );
+  } else {
+    RCLCPP_WARN(
+      logger_,
+      "Selected planner is not Found in available planners, using the default planner: KPIECE1");
+    planner = ompl::base::PlannerPtr(new ompl::geometric::KPIECE1(si));
   }
 }
 

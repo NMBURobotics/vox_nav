@@ -173,24 +173,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2PlannerControlSpace::createPlan(
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
-  if (planner_name_ == std::string("RRT")) {
-    planner = ompl::base::PlannerPtr(new ompl::control::RRT(si));
-  } else if (planner_name_ == std::string("SST")) {
-    planner = ompl::base::PlannerPtr(new ompl::control::SST(si));
-  } else if (planner_name_ == std::string("EST")) {
-    planner = ompl::base::PlannerPtr(new ompl::control::EST(si));
-  } else if (planner_name_ == std::string("KPIECE1")) {
-    planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
-  } else if (planner_name_ == std::string("PRMstar")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
-  } else if (planner_name_ == std::string("RRTstar")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
-  } else {
-    RCLCPP_WARN(
-      logger_,
-      "Selected planner is not Found in available planners, using the default planner: KPIECE1");
-    planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
-  }
+  initializeSelectedPlanner(planner, planner_name_, si);
   planner->setProblemDefinition(pdef);
   planner->setup();
 
@@ -330,6 +313,31 @@ void SE2PlannerControlSpace::octomapCallback(
   if (!is_octomap_ready_) {
     is_octomap_ready_ = true;
     octomap_msg_ = msg;
+  }
+}
+
+void SE2PlannerControlSpace::initializeSelectedPlanner(
+  ompl::base::PlannerPtr & planner,
+  const std::string & selected_planner_name,
+  const ompl::control::SpaceInformationPtr & si)
+{
+  if (selected_planner_name == std::string("RRT")) {
+    planner = ompl::base::PlannerPtr(new ompl::control::RRT(si));
+  } else if (selected_planner_name == std::string("SST")) {
+    planner = ompl::base::PlannerPtr(new ompl::control::SST(si));
+  } else if (selected_planner_name == std::string("EST")) {
+    planner = ompl::base::PlannerPtr(new ompl::control::EST(si));
+  } else if (selected_planner_name == std::string("KPIECE1")) {
+    planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
+  } else if (selected_planner_name == std::string("PRMstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
+  } else if (selected_planner_name == std::string("RRTstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
+  } else {
+    RCLCPP_WARN(
+      logger_,
+      "Selected planner is not Found in available planners, using the default planner: KPIECE1");
+    planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
   }
 }
 

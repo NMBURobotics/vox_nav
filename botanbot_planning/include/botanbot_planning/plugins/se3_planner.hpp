@@ -82,15 +82,27 @@ public:
   */
   virtual void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg) override;
 
-protected:
   /**
-   * @brief
-   *
-   * @param si
-   * @return ompl::base::OptimizationObjectivePtr
-   */
+  * @brief select a planner name from param file,
+  *
+  * @param planner planner ptr to be initialized
+  * @param selected_planner_name name of sleected planner as string
+  * @param si state space information
+  */
+  void initializeSelectedPlanner(
+    ompl::base::PlannerPtr & planner,
+    const std::string & selected_planner_name,
+    const ompl::base::SpaceInformationPtr & si);
+
+  /**
+  * @brief
+  *
+  * @param si
+  * @return ompl::base::OptimizationObjectivePtr
+  */
   ompl::base::OptimizationObjectivePtr getOptObjective(const ompl::base::SpaceInformationPtr & si);
 
+protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner")};
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
   octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;

@@ -87,15 +87,6 @@ void SE2Planner::initialize(
     se2_space_->as<ompl::base::SE2StateSpace>()->setBounds(*se2_space_bounds_);
   }
 
-  if (!is_enabled_) {
-    RCLCPP_INFO(
-      logger_, "SE2Planner plugin is disabled.");
-  } else {
-    RCLCPP_INFO(
-      logger_, "Initializing plugin named %s, selected planner is; %s",
-      plugin_name.c_str(), planner_name_.c_str());
-  }
-
   typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
   CollisionGeometryPtr_t robot_body_box(new fcl::Box(
       parent->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
@@ -111,6 +102,12 @@ void SE2Planner::initialize(
   se2_state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(se2_space_);
   se2_state_space_information_->setStateValidityChecker(
     std::bind(&SE2Planner::isStateValid, this, std::placeholders::_1));
+
+  if (!is_enabled_) {
+    RCLCPP_WARN(
+      logger_, "SE2PlannerControlSpace plugin is disabled.");
+  }
+  RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
 }
 
 std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
@@ -160,37 +157,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
-  if (planner_name_ == std::string("PRMStar")) {
-    planner = ompl::base::PlannerPtr(
-      new ompl::geometric::PRMstar(
-        simple_setup.getSpaceInformation()));
-  } else if (planner_name_ == std::string("RRTStar")) {
-    planner = ompl::base::PlannerPtr(
-      new ompl::geometric::RRTstar(
-        simple_setup.getSpaceInformation()) );
-  } else if (planner_name_ == std::string("RRTConnect")) {
-    planner = ompl::base::PlannerPtr(
-      new ompl::geometric::RRTConnect(
-        simple_setup.getSpaceInformation()) );
-  } else if (planner_name_ == std::string("KPIECE1")) {
-    planner = ompl::base::PlannerPtr(
-      new ompl::geometric::KPIECE1(
-        simple_setup.getSpaceInformation()) );
-  } else if (planner_name_ == std::string("SBL")) {
-    planner = ompl::base::PlannerPtr(
-      new ompl::geometric::SBL(
-        simple_setup.getSpaceInformation()) );
-  } else if (planner_name_ == std::string("SST")) {
-    planner = ompl::base::PlannerPtr(
-      new ompl::geometric::SST(
-        simple_setup.getSpaceInformation()) );
-  } else {
-    RCLCPP_WARN(
-      logger_,
-      "Selected planner is not Found in available planners, using the default planner: %s",
-      planner_name_.c_str());
-  }
-  RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
+  initializeSelectedPlanner(planner, planner_name_, simple_setup.getSpaceInformation());
 
   simple_setup.setPlanner(planner);
   // print the settings for this space
@@ -287,6 +254,31 @@ void SE2Planner::octomapCallback(
   if (!is_octomap_ready_) {
     is_octomap_ready_ = true;
     octomap_msg_ = msg;
+  }
+}
+
+void SE2Planner::initializeSelectedPlanner(
+  ompl::base::PlannerPtr & planner,
+  const std::string & selected_planner_name,
+  const ompl::base::SpaceInformationPtr & si)
+{
+  if (selected_planner_name == std::string("PRMStar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
+  } else if (selected_planner_name == std::string("RRTstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
+  } else if (selected_planner_name == std::string("RRTConnect")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTConnect(si));
+  } else if (selected_planner_name == std::string("KPIECE1")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::KPIECE1(si));
+  } else if (selected_planner_name == std::string("SBL")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::SBL(si));
+  } else if (selected_planner_name == std::string("SST")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::SST(si));
+  } else {
+    RCLCPP_WARN(
+      logger_,
+      "Selected planner is not Found in available planners, using the default planner: KPIECE1");
+    planner = ompl::base::PlannerPtr(new ompl::geometric::KPIECE1(si));
   }
 }
 

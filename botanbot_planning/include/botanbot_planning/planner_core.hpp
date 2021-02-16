@@ -149,6 +149,7 @@ public:
    * @param octomap
    */
   virtual void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg) = 0;
+
 };
 }  // namespace botanbot_planning
 #endif  // BOTANBOT_PLANNING__PLANNER_CORE_HPP_
