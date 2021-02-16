@@ -41,6 +41,8 @@ void RobotController::toTargetPose(geometry_msgs::msg::PoseStamped pose)
 {
   auto is_action_server_ready =
     nav_to_pose_client_->wait_for_action_server(std::chrono::seconds(5));
+  // cancel any other goals
+  cancelGoals();
   if (!is_action_server_ready) {
     RCLCPP_ERROR(
       node_->get_logger(), "navigate_to_pose action server is not available."

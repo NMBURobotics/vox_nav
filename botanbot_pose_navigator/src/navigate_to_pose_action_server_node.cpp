@@ -97,12 +97,8 @@ NavigateToPoseActionServer::navigate_to_pose(const std::shared_ptr<GoalHandle> g
   auto goal = goal_handle->get_goal();
   auto blackboard = bt.blackboard();
 
-  blackboard->set<rclcpp::Node::SharedPtr>("node", this->shared_from_this());    // NOLINT
-  blackboard->set<std::chrono::milliseconds>("server_timeout", std::chrono::milliseconds(10));    // NOLINT
-
-  // Pass the values from the goal to the Behavior Tree via the blackboard
-  blackboard->set<bool>("initial_pose_received", false);  // NOLINT
-  blackboard->set<int>("number_recoveries", 0);  // NOLINT
+  blackboard->set<std::chrono::seconds>("server_timeout", std::chrono::seconds(1));     // NOLINT
+  blackboard->set<int>("number_recoveries", 0);    // NOLINT
   blackboard->set<geometry_msgs::msg::PoseStamped>("pose", goal->pose);
 
   auto should_cancel = [goal_handle]() {return goal_handle->is_canceling();};
@@ -112,20 +108,18 @@ NavigateToPoseActionServer::navigate_to_pose(const std::shared_ptr<GoalHandle> g
       RCLCPP_INFO(get_logger(), "Behavior Tree execution succeeded");
       goal_handle->succeed(result);
       break;
-
     case botanbot_pose_navigator::BtStatus::FAILED:
       RCLCPP_ERROR(get_logger(), "Behavior Tree execution failed!");
       goal_handle->abort(result);
       break;
-
     case botanbot_pose_navigator::BtStatus::HALTED:
       RCLCPP_INFO(get_logger(), "Behavior Tree halted");
       goal_handle->canceled(result);
       break;
-
     default:
       throw std::logic_error("Invalid status return from BT");
   }
+
 }
 }  // namespace botanbot_pose_navigator
 

@@ -41,8 +41,8 @@ public:
 
     // Get the required items from the blackboard
     server_timeout_ =
-      config().blackboard->get<std::chrono::milliseconds>("server_timeout");
-    getInput<std::chrono::milliseconds>("server_timeout", server_timeout_);
+      config().blackboard->get<std::chrono::seconds>("server_timeout");
+    getInput<std::chrono::seconds>("server_timeout", server_timeout_);
 
     // Initialize the input and output messages
     goal_ = typename ActionT::Goal();
@@ -261,7 +261,7 @@ protected:
 
   // The timeout value while waiting for response from a server when a
   // new action goal is sent or canceled
-  std::chrono::milliseconds server_timeout_;
+  std::chrono::seconds server_timeout_;
 };
 
 }  // namespace botanbot_pose_navigator
