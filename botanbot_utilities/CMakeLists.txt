@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(botanbot_utilities)
 
 find_package(ament_cmake REQUIRED)
-find_package(rclcpp)
+find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -14,13 +14,12 @@ find_package(pcl_ros REQUIRED)
 find_package(PCL REQUIRED)
 find_package(OCTOMAP REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(OpenMP)
+find_package(OpenMP REQUIRED)
 
 if(OPENMP_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
-
 
 set(dependencies
   rclcpp

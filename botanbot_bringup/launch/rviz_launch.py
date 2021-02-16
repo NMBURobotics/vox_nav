@@ -44,12 +44,14 @@ def generate_launch_description():
         description='Full path to the RVIZ config file to use')
 
     # Launch rviz
-    start_rviz_cmd = Node(condition=UnlessCondition(use_namespace),
-                          package='rviz2',
-                          executable='rviz2',
-                          name='rviz2',
-                          arguments=['-d', rviz_config_file],
-                          output={'both': 'log'})
+    start_rviz_cmd = Node(
+        condition=UnlessCondition(use_namespace),
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', rviz_config_file],
+        #prefix=['xterm -e gdb -ex run --args'],
+        output='screen')
 
     exit_event_handler = RegisterEventHandler(
         condition=UnlessCondition(use_namespace),
@@ -60,13 +62,10 @@ def generate_launch_description():
     # Create the launch description and populate
     ld = LaunchDescription()
     ld.add_action(declare_use_namespace_cmd)
-
     # Declare the launch options
     ld.add_action(declare_rviz_config_file_cmd)
-
     # Add any conditioned actions
     ld.add_action(start_rviz_cmd)
-
     # Add other nodes and processes we need
     ld.add_action(exit_event_handler)
 
