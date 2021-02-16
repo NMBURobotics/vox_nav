@@ -87,16 +87,16 @@ void SE2PlannerControlSpace::initialize(
   se2_space_bounds_->setHigh(
     2, parent->get_parameter(plugin_name + ".state_space_boundries.maxyaw").as_double());
 
-  se2_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>();
+  se2_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(2.5);
   se2_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*se2_space_bounds_);
   if (selected_se2_space_name_ == "DUBINS") {
-    se2_space_ = std::make_shared<ompl::base::DubinsStateSpace>();
+    se2_space_ = std::make_shared<ompl::base::DubinsStateSpace>(2.5, false);
     se2_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*se2_space_bounds_);
-
   } else if (selected_se2_space_name_ == "SE2") {
     se2_space_ = std::make_shared<ompl::base::SE2StateSpace>();
     se2_space_->as<ompl::base::SE2StateSpace>()->setBounds(*se2_space_bounds_);
   }
+
   composite_space_ = se2_space_ + velocity_space_;
 
   octomap_subscriber_ = parent->create_subscription<octomap_msgs::msg::Octomap>(

@@ -1,6 +1,6 @@
 botanbot_planner_server_rclcpp_node:
   ros__parameters:
-    planner_plugin: "SE3Planner" # other options: "SE2Planner", "SE3Planner" ,"SE2PlannerControlSpace"
+    planner_plugin: "SE2Planner" # other options: "SE2Planner", "SE3Planner" ,"SE2PlannerControlSpace"
     expected_planner_frequency: 10.0
     SE2Planner:
       plugin: "botanbot_planning::SE2Planner"
