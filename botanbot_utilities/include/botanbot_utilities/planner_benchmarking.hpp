@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BOTANBOT_PLANNING__PLANNER_CORE_HPP_
-#define BOTANBOT_PLANNING__PLANNER_CORE_HPP_
+#ifndef BOTANBOT_UTILITIES__PLANNER_BENCHMARK_HPP_
+#define BOTANBOT_UTILITIES__PLANNER_BENCHMARK_HPP_
 #pragma once
 
 // ROS
@@ -89,49 +89,58 @@
 #include <memory>
 #include <vector>
 
-namespace botanbot_planning
+namespace botanbot_utilities
 {
+class PlannerBenchMarking : public rclcpp::Node
+{
+private:
+  std::string state_space_; // se2 ? se3
+  std::vector<std::string> selected_planners_;
+  std::string octomap_topic_;
+  std::string results_output_file_;
+  double octomap_voxel_size_;
+  double planner_timeout_;
+  int interpolation_parameter_;
 
+  geometry_msgs::msg::PoseStamped start_;
+  geometry_msgs::msg::PoseStamped goal_;
+
+  std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
+  std::shared_ptr<fcl::OcTree> fcl_octree_;
+  std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
+
+  std::shared_ptr<ompl::base::RealVectorBounds> space_bounds_;
+  ompl::base::StateSpacePtr space_;
+  ompl::base::SpaceInformationPtr state_space_information_;
+
+  rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
+  octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
+
+public:
 /**
- * @brief Base class for creating a planner plugins
+ * @brief Construct a new Planner Bench Marking object
  *
  */
-class PlannerCore
-{
-public:
-  using Ptr = std::shared_ptr<PlannerCore>;
-  /**
-   * @brief Construct a new Planner Core object
-   *
-   */
-  PlannerCore() {}
+  PlannerBenchMarking();
 
   /**
-   * @brief Destroy the Planner Core object
+   * @brief Destroy the Planner Bench Marking object
    *
    */
-  virtual ~PlannerCore() {}
+  ~PlannerBenchMarking();
 
   /**
-   * @brief
+   * @brief perfrom actual benchmark
    *
-   * @param parent
-   * @param plugin_name
    */
-  virtual void initialize(
-    rclcpp::Node * parent,
-    const std::string & plugin_name) = 0;
+  void doBenchMarking();
 
   /**
-   * @brief Method create the plan from a starting and ending goal.
-   *
-   * @param start The starting pose of the robot
-   * @param goal  The goal pose of the robot
-   * @return std::vector<geometry_msgs::msg::PoseStamped>   The sequence of poses to get from start to goal, if any
-   */
-  virtual std::vector<geometry_msgs::msg::PoseStamped> createPlan(
-    const geometry_msgs::msg::PoseStamped & start,
-    const geometry_msgs::msg::PoseStamped & goal) = 0;
+  * @brief Callback to subscribe ang get octomap
+  *
+  * @param octomap
+  */
+  void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg);
 
   /**
   * @brief
@@ -140,15 +149,18 @@ public:
   * @return true
   * @return false
   */
-  virtual bool isStateValid(const ompl::base::State * state) = 0;
+  bool isStateValidSE2(const ompl::base::State * state);
 
   /**
-   * @brief Callback to subscribe ang get octomap
-   *
-   * @param octomap
-   */
-  virtual void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg) = 0;
-
+* @brief
+*
+* @param state
+* @return true
+* @return false
+*/
+  bool isStateValidSE3(const ompl::base::State * state);
 };
-}  // namespace botanbot_planning
+}  // namespace botanbot_utilities
+
+
 #endif  // BOTANBOT_PLANNING__PLANNER_CORE_HPP_
