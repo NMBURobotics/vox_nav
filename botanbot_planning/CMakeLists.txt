@@ -7,7 +7,6 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 find_package(PkgConfig REQUIRED)
-
 pkg_check_modules(LIBFCL REQUIRED "fcl>=0.5.0")
 # replace LIBFCL_LIBRARIES with full path to the library
 find_library(LIBFCL_LIBRARIES_FULL ${LIBFCL_LIBRARIES} ${LIBFCL_LIBRARY_DIRS})

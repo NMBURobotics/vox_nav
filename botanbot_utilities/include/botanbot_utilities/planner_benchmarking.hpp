@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BOTANBOT_UTILITIES__PLANNER_BENCHMARK_HPP_
-#define BOTANBOT_UTILITIES__PLANNER_BENCHMARK_HPP_
+#ifndef BOTANBOT_UTILITIES__PLANNER_BENCHMARKING_HPP_
+#define BOTANBOT_UTILITIES__PLANNER_BENCHMARKING_HPP_
 #pragma once
 
 // ROS
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/vector3.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <botanbot_utilities/tf_helpers.hpp>
@@ -91,36 +92,69 @@
 
 namespace botanbot_utilities
 {
+
+struct SEBounds
+{
+  double minx;
+  double maxx;
+  double miny;
+  double maxy;
+  double minz;
+  double maxz;
+  double minyaw;
+  double maxyaw;
+  SEBounds()
+  : minx(0.0),
+    maxx(0.0),
+    miny(0.0),
+    maxy(0.0),
+    minz(0.0),
+    maxz(0.0),
+    minyaw(0.0),
+    maxyaw(0.0)
+  {}
+};
+
 class PlannerBenchMarking : public rclcpp::Node
 {
 private:
-  std::string state_space_; // se2 ? se3
+  std::string selected_state_space_; // se2 ? se3
+  SEBounds se_bounds_; // struct for keeping things clean
+  std::shared_ptr<ompl::base::RealVectorBounds> ompl_se_bounds_;
+  ompl::base::StateSpacePtr state_space_;
+  ompl::base::SpaceInformationPtr state_space_information_;
+
   std::vector<std::string> selected_planners_;
   std::string octomap_topic_;
   std::string results_output_file_;
   double octomap_voxel_size_;
   double planner_timeout_;
+  double is_octomap_ready_;
+  // Only used for REEDS or DUBINS
+  double min_turning_radius_;
   int interpolation_parameter_;
+  // We only need to creae a FLC cotomap collision from
+  // octomap once, because this is static map
+  std::once_flag fcl_tree_from_octomap_once_;
+  // global mutex to guard octomap
+  std::mutex octomap_mutex_;
 
   geometry_msgs::msg::PoseStamped start_;
   geometry_msgs::msg::PoseStamped goal_;
+  geometry_msgs::msg::Vector3 robot_body_dimensions_;
 
   std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
 
-  std::shared_ptr<ompl::base::RealVectorBounds> space_bounds_;
-  ompl::base::StateSpacePtr space_;
-  ompl::base::SpaceInformationPtr state_space_information_;
-
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
   octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
 
 public:
-/**
- * @brief Construct a new Planner Bench Marking object
- *
- */
+  /**
+  * @brief Construct a new Planner Bench Marking object
+  *
+  */
   PlannerBenchMarking();
 
   /**
@@ -152,15 +186,14 @@ public:
   bool isStateValidSE2(const ompl::base::State * state);
 
   /**
-* @brief
-*
-* @param state
-* @return true
-* @return false
-*/
+    * @brief
+    *
+    * @param state
+    * @return true
+    * @return false
+    */
   bool isStateValidSE3(const ompl::base::State * state);
 };
 }  // namespace botanbot_utilities
 
-
-#endif  // BOTANBOT_PLANNING__PLANNER_CORE_HPP_
+#endif  // BOTANBOT_UTILITIES__PLANNER_BENCHMARKING_HPP_

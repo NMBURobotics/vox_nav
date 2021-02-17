@@ -7,14 +7,15 @@ PlannerBenchMarking::PlannerBenchMarking()
 {
   is_octomap_ready_ = false;
   octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
-
+  ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(3);
 
   this->declare_parameter("selected_planners", std::vector<std::string>({"PRMstar"}));
   this->declare_parameter("planner_timeout", 5.0);
   this->declare_parameter("interpolation_parameter", 50);
   this->declare_parameter("octomap_topic", "octomap");
   this->declare_parameter("octomap_voxel_size", 0.2);
-  this->declare_parameter("state_space", "REEDS");
+  this->declare_parameter("selected_state_space", "REEDS");
+  this->declare_parameter("min_turning_radius", 2.5);
   this->declare_parameter("state_space_boundries.minx", -50.0);
   this->declare_parameter("state_space_boundries.maxx", 50.0);
   this->declare_parameter("state_space_boundries.miny", -10.0);
@@ -32,7 +33,68 @@ PlannerBenchMarking::PlannerBenchMarking()
   this->get_parameter("interpolation_parameter", interpolation_parameter_);
   this->get_parameter("octomap_topic", octomap_topic_);
   this->get_parameter("octomap_voxel_size", octomap_voxel_size_);
-  this->get_parameter("state_space", state_space_);
+  this->get_parameter("selected_state_space", selected_state_space_);
+  this->get_parameter("min_turning_radius", min_turning_radius_);
+  this->get_parameter("state_space_boundries.minx", se_bounds_.minx);
+  this->get_parameter("state_space_boundries.maxx", se_bounds_.maxx);
+  this->get_parameter("state_space_boundries.miny", se_bounds_.miny);
+  this->get_parameter("state_space_boundries.maxy", se_bounds_.maxy);
+  this->get_parameter("state_space_boundries.minz", se_bounds_.minz);
+  this->get_parameter("state_space_boundries.maxz", se_bounds_.maxz);
+  this->get_parameter("state_space_boundries.minyaw", se_bounds_.minyaw);
+  this->get_parameter("state_space_boundries.maxyaw", se_bounds_.maxyaw);
+  this->get_parameter("robot_body_dimens.x", robot_body_dimensions_.x);
+  this->get_parameter("robot_body_dimens.y", robot_body_dimensions_.y);
+  this->get_parameter("robot_body_dimens.z", robot_body_dimensions_.z);
+
+  ompl_se_bounds_->setLow(0, se_bounds_.minx);
+  ompl_se_bounds_->setHigh(0, se_bounds_.maxx);
+  ompl_se_bounds_->setLow(1, se_bounds_.miny);
+  ompl_se_bounds_->setHigh(1, se_bounds_.maxy);
+  ompl_se_bounds_->setLow(2, se_bounds_.minyaw);
+  ompl_se_bounds_->setHigh(2, se_bounds_.maxyaw);
+
+  if (selected_state_space_ == "REEDS") {
+    state_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(min_turning_radius_);
+    state_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*ompl_se_bounds_);
+    state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
+    state_space_information_->setStateValidityChecker(
+      std::bind(&PlannerBenchMarking::isStateValidSE2, this, std::placeholders::_1));
+  } else if (selected_state_space_ == "DUBINS") {
+    state_space_ = std::make_shared<ompl::base::DubinsStateSpace>(min_turning_radius_, false);
+    state_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*ompl_se_bounds_);
+    state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
+    state_space_information_->setStateValidityChecker(
+      std::bind(&PlannerBenchMarking::isStateValidSE2, this, std::placeholders::_1));
+  } else if (selected_state_space_ == "SE2") {
+    state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
+    state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*ompl_se_bounds_);
+    state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
+    state_space_information_->setStateValidityChecker(
+      std::bind(&PlannerBenchMarking::isStateValidSE2, this, std::placeholders::_1));
+  } else {
+    state_space_ = std::make_shared<ompl::base::SE3StateSpace>();
+    ompl_se_bounds_->setLow(2, se_bounds_.minz);
+    ompl_se_bounds_->setHigh(2, se_bounds_.maxz);
+    state_space_->as<ompl::base::SE3StateSpace>()->setBounds(*ompl_se_bounds_);
+    state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
+    state_space_information_->setStateValidityChecker(
+      std::bind(&PlannerBenchMarking::isStateValidSE3, this, std::placeholders::_1));
+  }
+
+
+  typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
+  CollisionGeometryPtr_t robot_body_box(
+    new fcl::Box(
+      robot_body_dimensions_.x,
+      robot_body_dimensions_.y,
+      robot_body_dimensions_.z));
+  fcl::Transform3f tf2;
+  fcl::CollisionObject robot_body_box_object(robot_body_box, tf2);
+  robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
+  octomap_subscriber_ = this->create_subscription<octomap_msgs::msg::Octomap>(
+    octomap_topic_, rclcpp::SystemDefaultsQoS(),
+    std::bind(&PlannerBenchMarking::octomapCallback, this, std::placeholders::_1));
 }
 
 PlannerBenchMarking::~PlannerBenchMarking()
@@ -86,7 +148,7 @@ bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
   return !collisionResult.isCollision();
 }
 
-bool PlannerBenchMarking::isStateValidS3(const ompl::base::State * state)
+bool PlannerBenchMarking::isStateValidSE3(const ompl::base::State * state)
 {
   if (is_octomap_ready_) {
     std::call_once(
@@ -130,4 +192,22 @@ bool PlannerBenchMarking::isStateValidS3(const ompl::base::State * state)
   return !collisionResult.isCollision();
 }
 
+void PlannerBenchMarking::octomapCallback(
+  const octomap_msgs::msg::Octomap::ConstSharedPtr msg)
+{
+  const std::lock_guard<std::mutex> lock(octomap_mutex_);
+  if (!is_octomap_ready_) {
+    is_octomap_ready_ = true;
+    octomap_msg_ = msg;
+  }
+}
 }  // namespace botanbot_utilities
+
+int main(int argc, char ** argv)
+{
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<botanbot_utilities::PlannerBenchMarking>();
+  rclcpp::spin(node->get_node_base_interface());
+  rclcpp::shutdown();
+  return 0;
+}
