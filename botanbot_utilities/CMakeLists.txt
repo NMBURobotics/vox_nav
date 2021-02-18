@@ -78,7 +78,7 @@ ament_target_dependencies(pcl2octomap_converter ${dependencies})
 set(planner_benchmarking_exc_name planner_benchmarking)
 add_executable(${planner_benchmarking_exc_name} src/planner_benchmarking.cpp)
 ament_target_dependencies(${planner_benchmarking_exc_name} ${dependencies})
-target_link_libraries(${planner_benchmarking_exc_name} ${LIBFCL_LIBRARIES} ${OCTOMAP_LIBRARIES} ${OMPL_LIBRARIES})
+target_link_libraries(${planner_benchmarking_exc_name} tf_helpers ${LIBFCL_LIBRARIES} ${OCTOMAP_LIBRARIES} ${OMPL_LIBRARIES})
 
 install(TARGETS tf_helpers gps_waypoint_collector 
         ARCHIVE DESTINATION lib

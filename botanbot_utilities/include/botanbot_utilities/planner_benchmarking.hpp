@@ -72,6 +72,7 @@
 #include <ompl/base/spaces/DubinsStateSpace.h>
 #include <ompl/base/spaces/ReedsSheppStateSpace.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
+#include <ompl/tools/benchmark/Benchmark.h>
 // OCTOMAP
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>
@@ -129,7 +130,6 @@ private:
   std::string results_output_file_;
   double octomap_voxel_size_;
   double planner_timeout_;
-  double is_octomap_ready_;
   // Only used for REEDS or DUBINS
   double min_turning_radius_;
   int interpolation_parameter_;
@@ -151,6 +151,7 @@ private:
   octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
 
 public:
+  double is_octomap_ready_;
   /**
   * @brief Construct a new Planner Bench Marking object
   *
