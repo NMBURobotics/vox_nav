@@ -42,8 +42,12 @@
 #include <ompl/geometric/planners/rrt/RRTsharp.h>
 #include <ompl/geometric/planners/rrt/InformedRRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/geometric/planners/rrt/BiTRRT.h>
+#include <ompl/geometric/planners/rrt/LazyRRT.h>
+#include <ompl/geometric/planners/rrt/SORRTstar.h>
 #include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/geometric/planners/prm/PRM.h>
+#include <ompl/geometric/planners/prm/SPARStwo.h>
 #include <ompl/geometric/planners/prm/LazyPRMstar.h>
 #include <ompl/geometric/planners/cforest/CForest.h>
 #include <ompl/geometric/SimpleSetup.h>
@@ -94,6 +98,20 @@
 namespace botanbot_utilities
 {
 
+struct GroundRobotPose
+{
+  double x;
+  double y;
+  double z;
+  double yaw;
+  GroundRobotPose()
+  : x(0.0),
+    y(0.0),
+    z(0.0),
+    yaw(0.0)
+  {}
+};
+
 struct SEBounds
 {
   double minx;
@@ -123,7 +141,6 @@ private:
   SEBounds se_bounds_; // struct for keeping things clean
   std::shared_ptr<ompl::base::RealVectorBounds> ompl_se_bounds_;
   ompl::base::StateSpacePtr state_space_;
-  ompl::base::SpaceInformationPtr state_space_information_;
 
   std::vector<std::string> selected_planners_;
   std::string octomap_topic_;
@@ -132,15 +149,19 @@ private:
   double planner_timeout_;
   // Only used for REEDS or DUBINS
   double min_turning_radius_;
+  double goal_tolerance_;
   int interpolation_parameter_;
+  int num_benchmark_runs_;
+  int max_memory_;
+
   // We only need to creae a FLC cotomap collision from
   // octomap once, because this is static map
   std::once_flag fcl_tree_from_octomap_once_;
   // global mutex to guard octomap
   std::mutex octomap_mutex_;
 
-  geometry_msgs::msg::PoseStamped start_;
-  geometry_msgs::msg::PoseStamped goal_;
+  GroundRobotPose start_;
+  GroundRobotPose goal_;
   geometry_msgs::msg::Vector3 robot_body_dimensions_;
 
   std::shared_ptr<fcl::CollisionObject> robot_collision_object_;

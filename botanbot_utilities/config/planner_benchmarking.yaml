@@ -19,3 +19,18 @@ planner_benchmarking_rclcpp_node:
       x: 1.5
       y: 1.0
       z: 0.4  
+    start:
+      x: 1.0
+      y: 2.0
+      z: 0.0
+      yaw: 3.14 
+    goal:
+      x: 23.0
+      y: 2.0
+      z: 0.0
+      yaw: 1.57 
+    goal_tolerance: 0.2  
+    num_benchmark_runs: 100
+    max_memory: 4096
+    results_output_file: "/home/ros2-foxy/outdoor_planbenchmarking.log"
+

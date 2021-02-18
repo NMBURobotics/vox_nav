@@ -26,6 +26,19 @@ PlannerBenchMarking::PlannerBenchMarking()
   this->declare_parameter("robot_body_dimens.x", 1.5);
   this->declare_parameter("robot_body_dimens.y", 1.5);
   this->declare_parameter("robot_body_dimens.z", 0.4);
+  this->declare_parameter("start.x", 0.0);
+  this->declare_parameter("start.y", 0.0);
+  this->declare_parameter("start.z", 0.0);
+  this->declare_parameter("start.yaw", 0.0);
+  this->declare_parameter("goal.x", 0.0);
+  this->declare_parameter("goal.y", 0.0);
+  this->declare_parameter("goal.z", 0.0);
+  this->declare_parameter("goal.yaw", 0.0);
+  this->declare_parameter("goal_tolerance", 0.2);
+  this->declare_parameter("num_benchmark_runs", 100);
+  this->declare_parameter("max_memory", 2048);
+  this->declare_parameter("results_output_file", "/home/user/get.log");
+
 
   this->get_parameter("selected_planners", selected_planners_);
   this->get_parameter("planner_timeout", planner_timeout_);
@@ -45,7 +58,18 @@ PlannerBenchMarking::PlannerBenchMarking()
   this->get_parameter("robot_body_dimens.x", robot_body_dimensions_.x);
   this->get_parameter("robot_body_dimens.y", robot_body_dimensions_.y);
   this->get_parameter("robot_body_dimens.z", robot_body_dimensions_.z);
-
+  this->get_parameter("start.x", start_.x);
+  this->get_parameter("start.y", start_.y);
+  this->get_parameter("start.z", start_.z);
+  this->get_parameter("start.yaw", start_.yaw);
+  this->get_parameter("goal.x", goal_.x);
+  this->get_parameter("goal.y", goal_.y);
+  this->get_parameter("goal.z", goal_.z);
+  this->get_parameter("goal.yaw", goal_.yaw);
+  this->get_parameter("goal_tolerance", goal_tolerance_);
+  this->get_parameter("num_benchmark_runs", num_benchmark_runs_);
+  this->get_parameter("max_memory", max_memory_);
+  this->get_parameter("results_output_file", results_output_file_);
 
   if (selected_state_space_ == "REEDS") {
     ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
@@ -57,9 +81,6 @@ PlannerBenchMarking::PlannerBenchMarking()
     ompl_se_bounds_->setHigh(2, se_bounds_.maxyaw);
     state_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(min_turning_radius_);
     state_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*ompl_se_bounds_);
-    state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
-    state_space_information_->setStateValidityChecker(
-      std::bind(&PlannerBenchMarking::isStateValidSE2, this, std::placeholders::_1));
   } else if (selected_state_space_ == "DUBINS") {
     ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
     ompl_se_bounds_->setLow(0, se_bounds_.minx);
@@ -70,9 +91,6 @@ PlannerBenchMarking::PlannerBenchMarking()
     ompl_se_bounds_->setHigh(2, se_bounds_.maxyaw);
     state_space_ = std::make_shared<ompl::base::DubinsStateSpace>(min_turning_radius_, false);
     state_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*ompl_se_bounds_);
-    state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
-    state_space_information_->setStateValidityChecker(
-      std::bind(&PlannerBenchMarking::isStateValidSE2, this, std::placeholders::_1));
   } else if (selected_state_space_ == "SE2") {
     ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
     ompl_se_bounds_->setLow(0, se_bounds_.minx);
@@ -83,9 +101,6 @@ PlannerBenchMarking::PlannerBenchMarking()
     ompl_se_bounds_->setHigh(2, se_bounds_.maxyaw);
     state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
     state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*ompl_se_bounds_);
-    state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
-    state_space_information_->setStateValidityChecker(
-      std::bind(&PlannerBenchMarking::isStateValidSE2, this, std::placeholders::_1));
   } else {
     ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(3);
     ompl_se_bounds_->setLow(0, se_bounds_.minx);
@@ -96,9 +111,6 @@ PlannerBenchMarking::PlannerBenchMarking()
     ompl_se_bounds_->setHigh(2, se_bounds_.maxz);
     state_space_ = std::make_shared<ompl::base::SE3StateSpace>();
     state_space_->as<ompl::base::SE3StateSpace>()->setBounds(*ompl_se_bounds_);
-    state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
-    state_space_information_->setStateValidityChecker(
-      std::bind(&PlannerBenchMarking::isStateValidSE3, this, std::placeholders::_1));
   }
 
   typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
@@ -122,21 +134,17 @@ PlannerBenchMarking::~PlannerBenchMarking()
 
 void PlannerBenchMarking::doBenchMarking()
 {
-  goal_.pose.position.y = 20;
   ompl::geometric::SimpleSetup ss(state_space_);
   // define start & goal states
   if ((selected_state_space_ == "REEDS") || (selected_state_space_ == "DUBINS") ||
     (selected_state_space_ == "SE2"))
   {
     ompl::base::ScopedState<ompl::base::SE2StateSpace> start(state_space_), goal(state_space_);
-    double nan, yaw;
-    botanbot_utilities::getRPYfromMsgQuaternion(start_.pose.orientation, nan, nan, yaw);
-    start->setXY(start_.pose.position.x, start_.pose.position.y);
-    start->setYaw(yaw);
-    botanbot_utilities::getRPYfromMsgQuaternion(goal_.pose.orientation, nan, nan, yaw);
-    goal->setXY(goal_.pose.position.x, goal_.pose.position.y);
-    start->setYaw(yaw);
-    ss.setStartAndGoalStates(start, goal);
+    start->setXY(start_.x, start_.y);
+    start->setYaw(start_.yaw);
+    goal->setXY(goal_.x, goal_.y);
+    start->setYaw(goal_.yaw);
+    ss.setStartAndGoalStates(start, goal, goal_tolerance_);
     ss.setStateValidityChecker(
       [this](const ompl::base::State * state)
       {
@@ -144,43 +152,33 @@ void PlannerBenchMarking::doBenchMarking()
       });
   } else {
     ompl::base::ScopedState<ompl::base::SE3StateSpace> start(state_space_), goal(state_space_);
-    double nan, yaw;
-    botanbot_utilities::getRPYfromMsgQuaternion(start_.pose.orientation, nan, nan, yaw);
-    start->setXYZ(start_.pose.position.x, start_.pose.position.y, start_.pose.position.z);
-    start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(0, 0, 1, yaw);
-    botanbot_utilities::getRPYfromMsgQuaternion(goal_.pose.orientation, nan, nan, yaw);
-    goal->setXYZ(goal_.pose.position.x, goal_.pose.position.y, goal_.pose.position.z);
-    goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(0, 0, 1, yaw);
-    ss.setStartAndGoalStates(start, goal);
+    start->setXYZ(start_.x, start_.y, start_.z);
+    start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(0, 0, 1, start_.yaw);
+    goal->setXYZ(goal_.x, goal_.y, goal_.z);
+    goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(0, 0, 1, goal_.yaw);
+    ss.setStartAndGoalStates(start, goal, goal_tolerance_);
     ss.setStateValidityChecker(
       [this](const ompl::base::State * state)
       {
         return isStateValidSE3(state);
       });
   }
-
-  // setting collision checking resolution to 0.05 (absolute)
-  ss.getSpaceInformation()->setStateValidityCheckingResolution(0.2 / 50);
   ss.getProblemDefinition()->setOptimizationObjective(
     std::make_shared<ompl::base::PathLengthOptimizationObjective>(ss.getSpaceInformation()));
 
-  // by default, use the Benchmark class
-  double memoryLimit = 4096;
-  int runCount = 100;
-
-  ompl::tools::Benchmark::Request request(planner_timeout_, memoryLimit, runCount);
-  ompl::tools::Benchmark b(ss, "outdoor_planbenchmarking");
+  ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
+  ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
 
   b.addPlanner(std::make_shared<ompl::geometric::PRMstar>(ss.getSpaceInformation()));
+  b.addPlanner(std::make_shared<ompl::geometric::LazyPRMstar>(ss.getSpaceInformation()));
   b.addPlanner(std::make_shared<ompl::geometric::RRTstar>(ss.getSpaceInformation()));
-  b.addPlanner(std::make_shared<ompl::geometric::RRTConnect>(ss.getSpaceInformation()));
+  b.addPlanner(std::make_shared<ompl::geometric::InformedRRTstar>(ss.getSpaceInformation()));
+  b.addPlanner(std::make_shared<ompl::geometric::SORRTstar>(ss.getSpaceInformation()));
+  b.addPlanner(std::make_shared<ompl::geometric::SPARStwo>(ss.getSpaceInformation()));
   b.addPlanner(std::make_shared<ompl::geometric::KPIECE1>(ss.getSpaceInformation()));
-  b.addPlanner(std::make_shared<ompl::geometric::SBL>(ss.getSpaceInformation()));
-  b.addPlanner(std::make_shared<ompl::geometric::SST>(ss.getSpaceInformation()));
   b.addPlanner(std::make_shared<ompl::geometric::CForest>(ss.getSpaceInformation()));
   b.benchmark(request);
-  b.saveResultsToFile("/home/ros2-foxy/outdoor_planbenchmarking.log");
-
+  b.saveResultsToFile(results_output_file_.c_str());
 }
 
 bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
