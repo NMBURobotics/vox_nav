@@ -3,11 +3,11 @@ run_slam_rclcpp_node:
     vocab_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_openvslam/config/orb_vocab.dbow2
     setting_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_openvslam/config/slam_config.yaml
     mask_img_path: ""
-    map_db_path : /home/ros2-foxy/slope_map.msg
+    map_db_path : /home/ros2-foxy/large_map.msg
     debug_mode: true
     eval_log: true
     write_map_info: true
-    map_info_path: "/home/ros2-foxy/slope_map_info.yaml"
+    map_info_path: "/home/ros2-foxy/large_map_info.yaml"
 run_localization_rclcpp_node:
   ros__parameters:
     vocab_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/botanbot_openvslam/config/orb_vocab.dbow2

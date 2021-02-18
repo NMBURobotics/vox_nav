@@ -29,6 +29,7 @@ PCL2OctomapConverter::PCL2OctomapConverter(/* args */)
   this->declare_parameter("cloud_transform.rotation.r", 0.0);
   this->declare_parameter("cloud_transform.rotation.p", 0.0);
   this->declare_parameter("cloud_transform.rotation.y", 0.0);
+  this->declare_parameter("apply_filters", true);
   this->declare_parameter("downsample_voxel_size", 0.05);
   this->declare_parameter("remove_outlier_mean_K", 10);
   this->declare_parameter("remove_outlier_stddev_threshold", 1.0);
@@ -53,28 +54,29 @@ PCL2OctomapConverter::PCL2OctomapConverter(/* args */)
     this->get_parameter("cloud_transform.rotation.y").as_double();
 
   downsample_voxel_size_ = this->get_parameter("downsample_voxel_size").as_double();
-
   remove_outlier_mean_K_ = this->get_parameter("remove_outlier_mean_K").as_int();
   remove_outlier_stddev_threshold_ =
     this->get_parameter("remove_outlier_stddev_threshold").as_double();
-
   remove_outlier_radius_search_ = this->get_parameter("remove_outlier_radius_search").as_double();
   remove_outlier_min_neighbors_in_radius_ =
     this->get_parameter("remove_outlier_min_neighbors_in_radius").as_int();
 
   pointcloud_ = botanbot_utilities::loadPointcloudFromPcd(input_pcd_filename_.c_str());
-  pointcloud_ = botanbot_utilities::downsampleInputCloud(pointcloud_, downsample_voxel_size_);
-  pointcloud_ = botanbot_utilities::removeOutliersFromInputCloud(
-    pointcloud_,
-    remove_outlier_mean_K_,
-    remove_outlier_stddev_threshold_,
-    botanbot_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
-  pointcloud_ = botanbot_utilities::removeOutliersFromInputCloud(
-    pointcloud_,
-    remove_outlier_min_neighbors_in_radius_,
-    remove_outlier_radius_search_,
-    botanbot_utilities::OutlierRemovalType::RadiusOutlierRemoval);
 
+  if (this->get_parameter("apply_filters").as_bool()) {
+
+    pointcloud_ = botanbot_utilities::downsampleInputCloud(pointcloud_, downsample_voxel_size_);
+    pointcloud_ = botanbot_utilities::removeOutliersFromInputCloud(
+      pointcloud_,
+      remove_outlier_mean_K_,
+      remove_outlier_stddev_threshold_,
+      botanbot_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
+    pointcloud_ = botanbot_utilities::removeOutliersFromInputCloud(
+      pointcloud_,
+      remove_outlier_min_neighbors_in_radius_,
+      remove_outlier_radius_search_,
+      botanbot_utilities::OutlierRemovalType::RadiusOutlierRemoval);
+  }
   pointcloud_ = botanbot_utilities::transformCloud(
     pointcloud_,
     botanbot_utilities::getRigidBodyTransform(

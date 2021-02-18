@@ -170,6 +170,8 @@ private:
 
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
   octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
+  // Publishers for the path
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
 
 public:
   double is_octomap_ready_;
@@ -215,6 +217,23 @@ public:
     * @return false
     */
   bool isStateValidSE3(const ompl::base::State * state);
+
+  /**
+   * @brief  make a plan with specified simple setup and planner
+   *
+   * @param planner
+   * @param si
+   * @return ompl::geometric::PathGeometric
+   */
+  ompl::geometric::PathGeometric makeAPlan(
+    const ompl::base::PlannerPtr & planner,
+    ompl::geometric::SimpleSetup & ss);
+
+  /**
+   * @brief publish sample plan from bencmarking as marker array into RVIZ
+   *
+   */
+  void publishSamplePlans(std::vector<ompl::geometric::PathGeometric> sample_paths);
 };
 }  // namespace botanbot_utilities
 

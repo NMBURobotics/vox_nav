@@ -125,6 +125,10 @@ PlannerBenchMarking::PlannerBenchMarking()
   octomap_subscriber_ = this->create_subscription<octomap_msgs::msg::Octomap>(
     octomap_topic_, rclcpp::SystemDefaultsQoS(),
     std::bind(&PlannerBenchMarking::octomapCallback, this, std::placeholders::_1));
+
+  // Initialize pubs & subs
+  plan_publisher_ =
+    this->create_publisher<visualization_msgs::msg::MarkerArray>("benchmark_plan", 1);
 }
 
 PlannerBenchMarking::~PlannerBenchMarking()
@@ -134,6 +138,7 @@ PlannerBenchMarking::~PlannerBenchMarking()
 
 void PlannerBenchMarking::doBenchMarking()
 {
+  /*Simple Setup*/
   ompl::geometric::SimpleSetup ss(state_space_);
   // define start & goal states
   if ((selected_state_space_ == "REEDS") || (selected_state_space_ == "DUBINS") ||
@@ -163,22 +168,37 @@ void PlannerBenchMarking::doBenchMarking()
         return isStateValidSE3(state);
       });
   }
+
+  /*State Space Information*/
+  auto si = ss.getSpaceInformation();
+
   ss.getProblemDefinition()->setOptimizationObjective(
-    std::make_shared<ompl::base::PathLengthOptimizationObjective>(ss.getSpaceInformation()));
+    std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
 
-  ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
+  // Create a sample plan for given problem with each planer in the benchmark
+  std::vector<ompl::geometric::PathGeometric> sample_plans;
+  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
+  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
+  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTstar>(si), ss));
+  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::InformedRRTstar>(si), ss));
+  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::SORRTstar>(si), ss));
+  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::SPARStwo>(si), ss));
+  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::KPIECE1>(si), ss));
+  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
+  publishSamplePlans(sample_plans);
+
+  /*ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
   ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
-
-  b.addPlanner(std::make_shared<ompl::geometric::PRMstar>(ss.getSpaceInformation()));
-  b.addPlanner(std::make_shared<ompl::geometric::LazyPRMstar>(ss.getSpaceInformation()));
-  b.addPlanner(std::make_shared<ompl::geometric::RRTstar>(ss.getSpaceInformation()));
-  b.addPlanner(std::make_shared<ompl::geometric::InformedRRTstar>(ss.getSpaceInformation()));
-  b.addPlanner(std::make_shared<ompl::geometric::SORRTstar>(ss.getSpaceInformation()));
-  b.addPlanner(std::make_shared<ompl::geometric::SPARStwo>(ss.getSpaceInformation()));
-  b.addPlanner(std::make_shared<ompl::geometric::KPIECE1>(ss.getSpaceInformation()));
-  b.addPlanner(std::make_shared<ompl::geometric::CForest>(ss.getSpaceInformation()));
+  b.addPlanner(std::make_shared<ompl::geometric::PRMstar>(si));
+  b.addPlanner(std::make_shared<ompl::geometric::LazyPRMstar>(si));
+  b.addPlanner(std::make_shared<ompl::geometric::RRTstar>(si));
+  b.addPlanner(std::make_shared<ompl::geometric::InformedRRTstar>(si));
+  b.addPlanner(std::make_shared<ompl::geometric::SORRTstar>(si));
+  b.addPlanner(std::make_shared<ompl::geometric::SPARStwo>(si));
+  b.addPlanner(std::make_shared<ompl::geometric::KPIECE1>(si));
+  b.addPlanner(std::make_shared<ompl::geometric::CForest>(si));
   b.benchmark(request);
-  b.saveResultsToFile(results_output_file_.c_str());
+  b.saveResultsToFile(results_output_file_.c_str());*/
 }
 
 bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
@@ -274,6 +294,77 @@ void PlannerBenchMarking::octomapCallback(
     is_octomap_ready_ = true;
     octomap_msg_ = msg;
   }
+}
+
+ompl::geometric::PathGeometric PlannerBenchMarking::makeAPlan(
+  const ompl::base::PlannerPtr & planner,
+  ompl::geometric::SimpleSetup & ss)
+{
+  ss.setPlanner(planner);
+  // attempt to solve the problem within one second of planning time
+  ompl::base::PlannerStatus solved = ss.solve(planner_timeout_);
+  ompl::geometric::PathGeometric path = ss.getSolutionPath();
+  // Path smoothing using bspline
+  ompl::geometric::PathSimplifier * path_simlifier =
+    new ompl::geometric::PathSimplifier(ss.getSpaceInformation());
+  path_simlifier->smoothBSpline(path, 3);
+  path_simlifier->collapseCloseVertices(path, 3);
+  path.checkAndRepair(2);
+  path.interpolate(interpolation_parameter_);
+  return path;
+}
+
+void PlannerBenchMarking::publishSamplePlans(
+  std::vector<ompl::geometric::PathGeometric> sample_paths)
+{
+  visualization_msgs::msg::MarkerArray marker_array;
+  for (auto && curr_path : sample_paths) {
+    auto path_from_ith_planner = 0;
+    for (std::size_t curr_path_state = 0; curr_path_state < curr_path.getStateCount();
+      curr_path_state++)
+    {
+      visualization_msgs::msg::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = rclcpp::Clock().now();
+      marker.ns = "path";
+      marker.text = std::to_string(path_from_ith_planner);
+      marker.id = curr_path_state;
+      if (selected_state_space_ == "SE3") {
+        auto se3_state =
+          curr_path.getState(curr_path_state)->as<ompl::base::SE3StateSpace::StateType>();
+        marker.pose.position.x = se3_state->getX();
+        marker.pose.position.y = se3_state->getY();
+        marker.pose.position.z = se3_state->getZ();
+        marker.pose.orientation.x = se3_state->rotation().x;
+        marker.pose.orientation.y = se3_state->rotation().y;
+        marker.pose.orientation.z = se3_state->rotation().z;
+        marker.pose.orientation.w = se3_state->rotation().w;
+      } else {
+        auto se2_state =
+          curr_path.getState(curr_path_state)->as<ompl::base::SE2StateSpace::StateType>();
+        marker.pose.position.x = se2_state->getX();
+        marker.pose.position.y = se2_state->getY();
+        marker.pose.position.z = 0.2;
+        marker.pose.orientation =
+          botanbot_utilities::getMsgQuaternionfromRPY(0, 0, se2_state->getYaw());
+      }
+      marker.scale.x = 0.5;
+      marker.scale.y = 0.2;
+      marker.scale.z = 0.2;
+      marker.color.a = 0.8;
+      marker.color.r = 0.1 * path_from_ith_planner;
+      marker.color.g = 0.1 * path_from_ith_planner;
+      marker.color.b = path_from_ith_planner / 2.0;
+      marker_array.markers.push_back(marker);
+    }
+    path_from_ith_planner++;
+  }
+  plan_publisher_->publish(marker_array);
+  plan_publisher_->publish(marker_array);
+  plan_publisher_->publish(marker_array);
+  plan_publisher_->publish(marker_array);
+  plan_publisher_->publish(marker_array);
+  plan_publisher_->publish(marker_array);
 }
 }  // namespace botanbot_utilities
 

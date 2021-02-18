@@ -28,6 +28,7 @@ find_package(Eigen3 REQUIRED)
 find_package(ompl REQUIRED)
 find_package(OCTOMAP REQUIRED)
 find_package(octomap_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)
@@ -58,6 +59,7 @@ set(dependencies
   OCTOMAP
   octomap_msgs
   ompl
+  visualization_msgs
 )
 
 add_library(tf_helpers SHARED src/tf_helpers.cpp
