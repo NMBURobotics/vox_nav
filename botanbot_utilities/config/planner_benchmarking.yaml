@@ -1,10 +1,10 @@
 planner_benchmarking_rclcpp_node:
   ros__parameters:
-    planner_timeout: 1.5
-    interpolation_parameter: 50
+    planner_timeout: 2.0
+    interpolation_parameter: 40
     octomap_topic: "octomap"
     octomap_voxel_size: 0.2
-    se2_space: "SE2" # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+    selected_state_space: "REEDS" # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
     min_turning_radius: 2.5
     state_space_boundries:
       minx: -50.0
@@ -25,10 +25,10 @@ planner_benchmarking_rclcpp_node:
       z: 0.0
       yaw: 0.0
     goal:
-      x: 115.0
+      x: 12.0
       y: 20.0
       z: 0.0
-      yaw: 0.75 
+      yaw: 1.57 
     goal_tolerance: 0.2  
     num_benchmark_runs: 100
     max_memory: 4096

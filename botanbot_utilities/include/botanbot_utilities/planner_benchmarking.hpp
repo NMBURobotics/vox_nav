@@ -24,6 +24,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <botanbot_utilities/tf_helpers.hpp>
+#include <botanbot_utilities/pcl_helpers.hpp>
 // PCL
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
@@ -94,6 +95,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <random>
 
 namespace botanbot_utilities
 {
@@ -171,7 +173,7 @@ private:
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
   octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
   // Publishers for the path
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr plan_publisher_;
 
 public:
   double is_octomap_ready_;
@@ -188,10 +190,10 @@ public:
   ~PlannerBenchMarking();
 
   /**
-   * @brief perfrom actual benchmark
+   * @brief perfrom actual benchmark and return a sample run
    *
    */
-  void doBenchMarking();
+  std::vector<ompl::geometric::PathGeometric> doBenchMarking();
 
   /**
   * @brief Callback to subscribe ang get octomap
@@ -233,7 +235,15 @@ public:
    * @brief publish sample plan from bencmarking as marker array into RVIZ
    *
    */
-  void publishSamplePlans(std::vector<ompl::geometric::PathGeometric> sample_paths);
+  void publishSamplePlans(const std::vector<ompl::geometric::PathGeometric> & sample_paths);
+
+  /**
+   * @brief Get the Color By Index object
+   *
+   * @param index
+   * @return std_msgs::msg::ColorRGBA
+   */
+  std_msgs::msg::ColorRGBA getColorByIndex(int index);
 };
 }  // namespace botanbot_utilities
 

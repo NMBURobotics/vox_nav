@@ -36,12 +36,14 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_types.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
 
 namespace botanbot_utilities
 {
@@ -144,6 +146,18 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr downsampleInputCloud(
 pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
   pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int mean_K, double stddev_thres,
   OutlierRemovalType outlier_removal_type);
+
+/**
+* @brief publish clustering objects' in one point cloud
+* @param publisher
+* @param header
+* @param cloud_clusters
+* @param trans
+*/
+void publishClustersCloud(
+  const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr & publisher,
+  const std_msgs::msg::Header & header,
+  const std::vector<typename pcl::PointCloud<pcl::PointXYZRGB>::Ptr> & clusters_array);
 
 }  // namespace botanbot_utilities
 

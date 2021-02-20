@@ -161,4 +161,54 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
   return filteredCloud;
 }
 
+/**
+ * @brief publish clustering objects' in one point cloud
+ * @param publisher
+ * @param header
+ * @param cloud_clusters
+ * @param trans
+ */
+void publishClustersCloud(
+  const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr & publisher,
+  const std_msgs::msg::Header & header,
+  const std::vector<typename pcl::PointCloud<pcl::PointXYZRGB>::Ptr> & clusters_array)
+{
+  if (clusters_array.size() <= 0) {
+    //ROS_WARN("Publish empty clusters cloud.");
+    // publish empty cloud
+    sensor_msgs::msg::PointCloud2 msg_cloud;
+    pcl::toROSMsg(*(new pcl::PointCloud<pcl::PointXYZRGB>), msg_cloud);
+    msg_cloud.header = header;
+    publisher->publish(msg_cloud);
+    return;
+  } else {
+    //ROS_INFO_STREAM("Publishing " << clusters_array.size() << " clusters in one cloud.");
+  }
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  // different clusters with different intensity
+  float step_i = 255.0f / clusters_array.size();
+  for (size_t cluster_idx = 0u; cluster_idx < clusters_array.size(); ++cluster_idx) {
+    if (clusters_array[cluster_idx]->points.size() <= 0) {
+      //ROS_WARN_STREAM("An empty cluster #" << cluster_idx << ".");
+      continue;
+    }
+    for (size_t idx = 0u; idx < clusters_array[cluster_idx]->points.size(); ++idx) {
+      pcl::PointXYZRGB point;
+      point.x = clusters_array[cluster_idx]->points[idx].x;
+      point.y = clusters_array[cluster_idx]->points[idx].y;
+      point.z = clusters_array[cluster_idx]->points[idx].z;
+      point.r = clusters_array[cluster_idx]->points[idx].r;
+      point.g = clusters_array[cluster_idx]->points[idx].g;
+      point.b = clusters_array[cluster_idx]->points[idx].b;
+      cloud->points.push_back(point);
+    }
+  }
+  if (cloud->size()) {
+    sensor_msgs::msg::PointCloud2 msg_cloud;
+    pcl::toROSMsg(*cloud, msg_cloud);
+    msg_cloud.header = header;
+    publisher->publish(msg_cloud);
+  }
+}
+
 }  // namespace botanbot_utilities

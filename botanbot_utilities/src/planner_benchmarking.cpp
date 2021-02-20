@@ -128,7 +128,9 @@ PlannerBenchMarking::PlannerBenchMarking()
 
   // Initialize pubs & subs
   plan_publisher_ =
-    this->create_publisher<visualization_msgs::msg::MarkerArray>("benchmark_plan", 1);
+    this->create_publisher<sensor_msgs::msg::PointCloud2>(
+    "benchmark_plan",
+    rclcpp::SensorDataQoS());
 }
 
 PlannerBenchMarking::~PlannerBenchMarking()
@@ -136,7 +138,7 @@ PlannerBenchMarking::~PlannerBenchMarking()
 
 }
 
-void PlannerBenchMarking::doBenchMarking()
+std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking()
 {
   /*Simple Setup*/
   ompl::geometric::SimpleSetup ss(state_space_);
@@ -177,15 +179,13 @@ void PlannerBenchMarking::doBenchMarking()
 
   // Create a sample plan for given problem with each planer in the benchmark
   std::vector<ompl::geometric::PathGeometric> sample_plans;
+  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
   sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
   sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
   sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTstar>(si), ss));
   sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::InformedRRTstar>(si), ss));
   sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::SORRTstar>(si), ss));
   sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::SPARStwo>(si), ss));
-  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::KPIECE1>(si), ss));
-  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
-  publishSamplePlans(sample_plans);
 
   /*ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
   ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
@@ -195,10 +195,10 @@ void PlannerBenchMarking::doBenchMarking()
   b.addPlanner(std::make_shared<ompl::geometric::InformedRRTstar>(si));
   b.addPlanner(std::make_shared<ompl::geometric::SORRTstar>(si));
   b.addPlanner(std::make_shared<ompl::geometric::SPARStwo>(si));
-  b.addPlanner(std::make_shared<ompl::geometric::KPIECE1>(si));
   b.addPlanner(std::make_shared<ompl::geometric::CForest>(si));
   b.benchmark(request);
   b.saveResultsToFile(results_output_file_.c_str());*/
+  return sample_plans;
 }
 
 bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
@@ -315,56 +315,142 @@ ompl::geometric::PathGeometric PlannerBenchMarking::makeAPlan(
 }
 
 void PlannerBenchMarking::publishSamplePlans(
-  std::vector<ompl::geometric::PathGeometric> sample_paths)
+  const std::vector<ompl::geometric::PathGeometric> & sample_paths)
 {
-  visualization_msgs::msg::MarkerArray marker_array;
+  int path_from_ith_planner = 0;
+
+  std_msgs::msg::Header header;
+  header.frame_id = "map";
+  header.stamp = rclcpp::Clock().now();
+  std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> benchmark_plans;
   for (auto && curr_path : sample_paths) {
-    auto path_from_ith_planner = 0;
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr
+      curr_path_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+
     for (std::size_t curr_path_state = 0; curr_path_state < curr_path.getStateCount();
       curr_path_state++)
     {
-      visualization_msgs::msg::Marker marker;
-      marker.header.frame_id = "map";
-      marker.header.stamp = rclcpp::Clock().now();
-      marker.ns = "path";
-      marker.text = std::to_string(path_from_ith_planner);
-      marker.id = curr_path_state;
+      pcl::PointXYZRGB curr_state_in_this_path;
+      auto curr_state_color = getColorByIndex(path_from_ith_planner);
+
       if (selected_state_space_ == "SE3") {
         auto se3_state =
           curr_path.getState(curr_path_state)->as<ompl::base::SE3StateSpace::StateType>();
-        marker.pose.position.x = se3_state->getX();
-        marker.pose.position.y = se3_state->getY();
-        marker.pose.position.z = se3_state->getZ();
-        marker.pose.orientation.x = se3_state->rotation().x;
-        marker.pose.orientation.y = se3_state->rotation().y;
-        marker.pose.orientation.z = se3_state->rotation().z;
-        marker.pose.orientation.w = se3_state->rotation().w;
+        // Get x,y,z values of this point from original raw point cloud
+        curr_state_in_this_path.x = se3_state->getX();
+        curr_state_in_this_path.y = se3_state->getY();
+        curr_state_in_this_path.z = se3_state->getZ();
+        // get r,g,b value of this point from segmented image
+        curr_state_in_this_path.r = curr_state_color.r;
+        curr_state_in_this_path.g = curr_state_color.g;
+        curr_state_in_this_path.b = curr_state_color.b;
       } else {
         auto se2_state =
           curr_path.getState(curr_path_state)->as<ompl::base::SE2StateSpace::StateType>();
-        marker.pose.position.x = se2_state->getX();
-        marker.pose.position.y = se2_state->getY();
-        marker.pose.position.z = 0.2;
-        marker.pose.orientation =
-          botanbot_utilities::getMsgQuaternionfromRPY(0, 0, se2_state->getYaw());
+        curr_state_in_this_path.x = se2_state->getX();
+        curr_state_in_this_path.y = se2_state->getY();
+        curr_state_in_this_path.z = 0.2;
+        // get r,g,b value of this point from segmented image
+        curr_state_in_this_path.r = curr_state_color.r;
+        curr_state_in_this_path.g = curr_state_color.g;
+        curr_state_in_this_path.b = curr_state_color.b;
       }
-      marker.scale.x = 0.5;
-      marker.scale.y = 0.2;
-      marker.scale.z = 0.2;
-      marker.color.a = 0.8;
-      marker.color.r = 0.1 * path_from_ith_planner;
-      marker.color.g = 0.1 * path_from_ith_planner;
-      marker.color.b = path_from_ith_planner / 2.0;
-      marker_array.markers.push_back(marker);
+      curr_path_cloud->points.push_back(curr_state_in_this_path);
     }
+    curr_path_cloud->header.frame_id = header.frame_id;
+    curr_path_cloud->width = 1;
+    curr_path_cloud->height = curr_path.getStateCount();
+    benchmark_plans.push_back(curr_path_cloud);
     path_from_ith_planner++;
   }
-  plan_publisher_->publish(marker_array);
-  plan_publisher_->publish(marker_array);
-  plan_publisher_->publish(marker_array);
-  plan_publisher_->publish(marker_array);
-  plan_publisher_->publish(marker_array);
-  plan_publisher_->publish(marker_array);
+  botanbot_utilities::publishClustersCloud(plan_publisher_, header, benchmark_plans);
+}
+
+std_msgs::msg::ColorRGBA PlannerBenchMarking::getColorByIndex(int index)
+{
+  std_msgs::msg::ColorRGBA result;
+  switch (index) {
+    case 0: // RED
+      result.r = 0.8;
+      result.g = 0.1;
+      result.b = 0.1;
+      result.a = 1.0;
+      break;
+    case 1: //GREEN
+      result.r = 0.1;
+      result.g = 0.8;
+      result.b = 0.1;
+      result.a = 1.0;
+      break;
+    case 2: //BLUE
+      result.r = 0.0;
+      result.g = 0.0;
+      result.b = 0.0;
+      result.a = 1.0;
+      break;
+    case 3: //DARK_GRAY
+      result.r = 0.6;
+      result.g = 0.6;
+      result.b = 0.6;
+      result.a = 1.0;
+      break;
+    case 4: //WHITE
+      result.r = 1.0;
+      result.g = 1.0;
+      result.b = 1.0;
+      result.a = 1.0;
+      break;
+    case 5: //ORANGE
+      result.r = 1.0;
+      result.g = 0.5;
+      result.b = 0.0;
+      result.a = 1.0;
+      break;
+    case 6: //BLACK
+      result.r = 0.0;
+      result.g = 0.0;
+      result.b = 0.0;
+      result.a = 1.0;
+      break;
+    case 7: //YELLOW
+      result.r = 1.0;
+      result.g = 1.0;
+      result.b = 0.0;
+      result.a = 1.0;
+      break;
+    case 8: //PINK
+      result.r = 1.0;
+      result.g = 0.4;
+      result.b = 1;
+      result.a = 1.0;
+      break;
+    case 9: //LIME_GREEN
+      result.r = 0.6;
+      result.g = 1.0;
+      result.b = 0.2;
+      result.a = 1.0;
+      break;
+    case 10: //PURPLE
+      result.r = 0.597;
+      result.g = 0.0;
+      result.b = 0.597;
+      result.a = 1.0;
+      break;
+    case 11: //CYAN
+      result.r = 0.0;
+      result.g = 1.0;
+      result.b = 1.0;
+      result.a = 1.0;
+      break;
+    case 12: //MAGENTA
+      result.r = 1.0;
+      result.g = 0.0;
+      result.b = 1.0;
+      result.a = 1.0;
+      break;
+  }
+  return result;
 }
 }  // namespace botanbot_utilities
 
@@ -383,8 +469,16 @@ int main(int argc, char ** argv)
   RCLCPP_INFO(
     node->get_logger()
     ,
-    "Octomap ready, runnin bencmark with given configurations");
-  node->doBenchMarking();
+    "Octomap ready, running bencmark with given configurations");
+  auto sample_plans = node->doBenchMarking();
+  /*while (rclcpp::ok()) {
+    node->publishSamplePlans(sample_plans);
+    rclcpp::spin_some(node->get_node_base_interface());
+    RCLCPP_INFO(
+      node->get_logger(), "publishing planner bencmarking... CTRL +X to stop");
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  }*/
+
   RCLCPP_INFO(
     node->get_logger()
     ,

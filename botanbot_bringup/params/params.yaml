@@ -94,7 +94,7 @@ botanbot_controller_server_rclcpp_node:
 
 botanbot_map_server_rclcpp_node:
   ros__parameters:
-    octomap_filename: "/home/ros2-foxy/large_map.bt"
+    octomap_filename: "/home/ros2-foxy/slope_map.bt"
     octomap_voxel_size: 0.2
     octomap_publish_frequency: 50
     provide_utm_to_map_transform: true
@@ -106,11 +106,11 @@ botanbot_map_server_rclcpp_node:
     utm_frame_id: "utm"
     yaw_offset: 1.57 #see navsat_transform_node from robot_localization, this offset is needed to recorrect orientation of static map
     map_coordinates:
-      latitude: 49.89999996757017
-      longitude: 8.899999997371747
-      altitude: 0.6391727701823612
+      latitude: 49.89996853007036
+      longitude: 8.900083512416545
+      altitude: 0.6342219080870174
       quaternion:
-        x: -0.0001960611448920198
-        y: -0.003682083159658604
-        z: 4.672499893387009e-05
-        w: 0.9999932007970892
+        x: -0.0002674301579378746
+        y: -7.80412511940006e-05
+        z: 0.7068413617683594
+        w: 0.7073720461568473

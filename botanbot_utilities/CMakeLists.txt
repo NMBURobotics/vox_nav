@@ -30,6 +30,7 @@ find_package(OCTOMAP REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
+
 find_package(OpenMP REQUIRED)
 if(OPENMP_FOUND)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
