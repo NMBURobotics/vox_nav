@@ -236,7 +236,7 @@ bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
     std::call_once(
       fcl_tree_from_octomap_once_, [this]() {
         std::shared_ptr<octomap::OcTree> octomap_octree =
-        std::make_shared<octomap::OcTree>(0.2);
+        std::make_shared<octomap::OcTree>(octomap_voxel_size_);
         octomap_msgs::readTree<octomap::OcTree>(octomap_octree.get(), *octomap_msg_);
         fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
         fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
@@ -258,9 +258,11 @@ bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
     state->as<ompl::base::SE2StateSpace::StateType>();
   // check validity of state Fdefined by pos & rot
   fcl::Vec3f translation(se2_state->getX(), se2_state->getY(), 0.6);
+
   tf2::Quaternion myQuaternion;
   myQuaternion.setRPY(0, 0, se2_state->getYaw());
-  fcl::Quaternion3f rotation(myQuaternion.getX(), myQuaternion.getY(),
+  fcl::Quaternion3f rotation(
+    myQuaternion.getX(), myQuaternion.getY(),
     myQuaternion.getZ(), myQuaternion.getW());
   robot_collision_object_->setTransform(rotation, translation);
   fcl::CollisionRequest requestType(1, false, 1, false);
@@ -277,7 +279,7 @@ bool PlannerBenchMarking::isStateValidSE3(const ompl::base::State * state)
     std::call_once(
       fcl_tree_from_octomap_once_, [this]() {
         std::shared_ptr<octomap::OcTree> octomap_octree =
-        std::make_shared<octomap::OcTree>(0.2);
+        std::make_shared<octomap::OcTree>(octomap_voxel_size_);
         octomap_msgs::readTree<octomap::OcTree>(octomap_octree.get(), *octomap_msg_);
         fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
         fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
@@ -335,9 +337,6 @@ ompl::geometric::PathGeometric PlannerBenchMarking::makeAPlan(
   ompl::geometric::PathGeometric path = ss.getSolutionPath();
   // Path smoothing using bspline
   ompl::geometric::PathSimplifier path_simlifier(ss.getSpaceInformation());
-  //path_simlifier.smoothBSpline(path, 3);
-  //path_simlifier.collapseCloseVertices(path, 3);
-  //path_simlifier.simplify(path, 1.0);
   path_simlifier.shortcutPath(path, 2, 2);
   path.interpolate(interpolation_parameter_);
   return path;
@@ -418,63 +417,45 @@ std_msgs::msg::ColorRGBA PlannerBenchMarking::getColorByIndex(int index)
       result.b = 1.0;
       result.a = 1.0;
       break;
-    case 3: //PURPLE
-      result.r = 0.597;
-      result.g = 0.0;
-      result.b = 0.597;
-      result.a = 1.0;
-      break;
-    case 4: //WHITE
+    case 3: //WHITE
       result.r = 1.0;
       result.g = 1.0;
       result.b = 1.0;
       result.a = 1.0;
       break;
-    case 5: //PINK
-      result.r = 1.0;
-      result.g = 0.4;
-      result.b = 1;
-      result.a = 1.0;
-      break;
-    case 6: //YELLOW
+    case 4: //YELLOW
       result.r = 1.0;
       result.g = 1.0;
       result.b = 0.0;
       result.a = 1.0;
       break;
-    case 7: //YELLOW
+    case 5: //MAGENTA
       result.r = 1.0;
-      result.g = 1.0;
-      result.b = 0.0;
+      result.g = 0.0;
+      result.b = 1.0;
       result.a = 1.0;
       break;
-    case 8: //PINK
-      result.r = 1.0;
-      result.g = 0.4;
-      result.b = 1;
-      result.a = 1.0;
-      break;
-    case 9: //LIME_GREEN
+    case 6: //LIME_GREEN
       result.r = 0.6;
       result.g = 1.0;
       result.b = 0.2;
       result.a = 1.0;
       break;
-    case 10: //PURPLE
+    case 7: //PINK
+      result.r = 1.0;
+      result.g = 0.4;
+      result.b = 1;
+      result.a = 1.0;
+      break;
+    case 8: //PURPLE
       result.r = 0.597;
       result.g = 0.0;
       result.b = 0.597;
       result.a = 1.0;
       break;
-    case 11: //CYAN
+    case 9: //CYAN
       result.r = 0.0;
       result.g = 1.0;
-      result.b = 1.0;
-      result.a = 1.0;
-      break;
-    case 12: //MAGENTA
-      result.r = 1.0;
-      result.g = 0.0;
       result.b = 1.0;
       result.a = 1.0;
       break;
