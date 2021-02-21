@@ -151,7 +151,7 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
     start->setXY(start_.x, start_.y);
     start->setYaw(start_.yaw);
     goal->setXY(goal_.x, goal_.y);
-    start->setYaw(goal_.yaw);
+    goal->setYaw(goal_.yaw);
     ss.setStartAndGoalStates(start, goal, goal_tolerance_);
     ss.setStateValidityChecker(
       [this](const ompl::base::State * state)
@@ -178,20 +178,42 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
 
   std::vector<ompl::geometric::PathGeometric> paths;
   // Create a sample plan for given problem with each planer in the benchmark
-  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
-  ss.clear();
-  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
-  ss.clear();
-  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTstar>(si), ss));
-  ss.clear();
-  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::InformedRRTstar>(si), ss));
-  ss.clear();
-  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::SORRTstar>(si), ss));
-  ss.clear();
-  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::SPARStwo>(si), ss));
-  ss.clear();
-  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
-  ss.clear();
+  try {
+    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
+    ss.clear();
+  } catch (const std::exception & e) {
+    std::cerr << e.what() << '\n';
+  }
+  try {
+    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
+    ss.clear();
+  } catch (const std::exception & e) {
+    std::cerr << e.what() << '\n';
+  }
+  try {
+    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTstar>(si), ss));
+    ss.clear();
+  } catch (const std::exception & e) {
+    std::cerr << e.what() << '\n';
+  }
+  try {
+    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::InformedRRTstar>(si), ss));
+    ss.clear();
+  } catch (const std::exception & e) {
+    std::cerr << e.what() << '\n';
+  }
+  try {
+    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::SORRTstar>(si), ss));
+    ss.clear();
+  } catch (const std::exception & e) {
+    std::cerr << e.what() << '\n';
+  }
+  try {
+    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
+    ss.clear();
+  } catch (const std::exception & e) {
+    std::cerr << e.what() << '\n';
+  }
 
   /*ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
   ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
@@ -235,7 +257,7 @@ bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
   const ompl::base::SE2StateSpace::StateType * se2_state =
     state->as<ompl::base::SE2StateSpace::StateType>();
   // check validity of state Fdefined by pos & rot
-  fcl::Vec3f translation(se2_state->getX(), se2_state->getY(), 0.5);
+  fcl::Vec3f translation(se2_state->getX(), se2_state->getY(), 0.6);
   tf2::Quaternion myQuaternion;
   myQuaternion.setRPY(0, 0, se2_state->getYaw());
   fcl::Quaternion3f rotation(myQuaternion.getX(), myQuaternion.getY(),
@@ -313,9 +335,10 @@ ompl::geometric::PathGeometric PlannerBenchMarking::makeAPlan(
   ompl::geometric::PathGeometric path = ss.getSolutionPath();
   // Path smoothing using bspline
   ompl::geometric::PathSimplifier path_simlifier(ss.getSpaceInformation());
-  path_simlifier.smoothBSpline(path, 3);
-  path_simlifier.collapseCloseVertices(path, 3);
-  path.checkAndRepair(2);
+  //path_simlifier.smoothBSpline(path, 3);
+  //path_simlifier.collapseCloseVertices(path, 3);
+  //path_simlifier.simplify(path, 1.0);
+  path_simlifier.shortcutPath(path, 2, 2);
   path.interpolate(interpolation_parameter_);
   return path;
 }
@@ -333,12 +356,12 @@ void PlannerBenchMarking::publishSamplePlans(
       visualization_msgs::msg::Marker marker;
       marker.header.frame_id = "map";
       marker.header.stamp = rclcpp::Clock().now();
-      marker.type = visualization_msgs::msg::Marker::CUBE;
+      marker.type = visualization_msgs::msg::Marker::ARROW;
       marker.action = visualization_msgs::msg::Marker::ADD;
       marker.lifetime = rclcpp::Duration::from_seconds(0);
-      marker.scale.x = 0.3;
-      marker.scale.y = 0.15;
-      marker.scale.z = 0.15;
+      marker.scale.x = 0.4;
+      marker.scale.y = 0.2;
+      marker.scale.z = 0.2;
       marker.id = total_poses;
       marker.color = getColorByIndex(path_index);
       marker.ns = "path" + std::to_string(path_index);
