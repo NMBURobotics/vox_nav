@@ -23,6 +23,7 @@
 #include <geometry_msgs/msg/vector3.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <nav_msgs/msg/path.hpp>
 #include <botanbot_utilities/tf_helpers.hpp>
 #include <botanbot_utilities/pcl_helpers.hpp>
 // PCL
@@ -173,7 +174,8 @@ private:
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
   octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
   // Publishers for the path
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr plan_publisher_;
+
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
 
 public:
   double is_octomap_ready_;
@@ -235,7 +237,7 @@ public:
    * @brief publish sample plan from bencmarking as marker array into RVIZ
    *
    */
-  void publishSamplePlans(const std::vector<ompl::geometric::PathGeometric> & sample_paths);
+  void publishSamplePlans(std::vector<ompl::geometric::PathGeometric> sample_paths);
 
   /**
    * @brief Get the Color By Index object

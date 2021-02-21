@@ -128,9 +128,10 @@ PlannerBenchMarking::PlannerBenchMarking()
 
   // Initialize pubs & subs
   plan_publisher_ =
-    this->create_publisher<sensor_msgs::msg::PointCloud2>(
-    "benchmark_plan",
-    rclcpp::SensorDataQoS());
+    this->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "benchmark_plan", rclcpp::SystemDefaultsQoS());
+
+
 }
 
 PlannerBenchMarking::~PlannerBenchMarking()
@@ -171,21 +172,26 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
       });
   }
 
-  /*State Space Information*/
   auto si = ss.getSpaceInformation();
-
   ss.getProblemDefinition()->setOptimizationObjective(
     std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
 
+  std::vector<ompl::geometric::PathGeometric> paths;
   // Create a sample plan for given problem with each planer in the benchmark
-  std::vector<ompl::geometric::PathGeometric> sample_plans;
-  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
-  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
-  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
-  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTstar>(si), ss));
-  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::InformedRRTstar>(si), ss));
-  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::SORRTstar>(si), ss));
-  sample_plans.push_back(makeAPlan(std::make_shared<ompl::geometric::SPARStwo>(si), ss));
+  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
+  ss.clear();
+  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
+  ss.clear();
+  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTstar>(si), ss));
+  ss.clear();
+  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::InformedRRTstar>(si), ss));
+  ss.clear();
+  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::SORRTstar>(si), ss));
+  ss.clear();
+  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::SPARStwo>(si), ss));
+  ss.clear();
+  paths.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
+  ss.clear();
 
   /*ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
   ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
@@ -198,7 +204,8 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
   b.addPlanner(std::make_shared<ompl::geometric::CForest>(si));
   b.benchmark(request);
   b.saveResultsToFile(results_output_file_.c_str());*/
-  return sample_plans;
+
+  return paths;
 }
 
 bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
@@ -305,66 +312,65 @@ ompl::geometric::PathGeometric PlannerBenchMarking::makeAPlan(
   ompl::base::PlannerStatus solved = ss.solve(planner_timeout_);
   ompl::geometric::PathGeometric path = ss.getSolutionPath();
   // Path smoothing using bspline
-  ompl::geometric::PathSimplifier * path_simlifier =
-    new ompl::geometric::PathSimplifier(ss.getSpaceInformation());
-  path_simlifier->smoothBSpline(path, 3);
-  path_simlifier->collapseCloseVertices(path, 3);
+  ompl::geometric::PathSimplifier path_simlifier(ss.getSpaceInformation());
+  path_simlifier.smoothBSpline(path, 3);
+  path_simlifier.collapseCloseVertices(path, 3);
   path.checkAndRepair(2);
   path.interpolate(interpolation_parameter_);
   return path;
 }
 
 void PlannerBenchMarking::publishSamplePlans(
-  const std::vector<ompl::geometric::PathGeometric> & sample_paths)
+  std::vector<ompl::geometric::PathGeometric> sample_paths)
 {
-  int path_from_ith_planner = 0;
-
-  std_msgs::msg::Header header;
-  header.frame_id = "map";
-  header.stamp = rclcpp::Clock().now();
-  std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> benchmark_plans;
-  for (auto && curr_path : sample_paths) {
-
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr
-      curr_path_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    for (std::size_t curr_path_state = 0; curr_path_state < curr_path.getStateCount();
+  visualization_msgs::msg::MarkerArray marker_array;
+  int path_index = 0;
+  int total_poses = 0;
+  for (auto && sample_path : sample_paths) {
+    for (std::size_t curr_path_state = 0; curr_path_state < sample_path.getStateCount();
       curr_path_state++)
     {
-      pcl::PointXYZRGB curr_state_in_this_path;
-      auto curr_state_color = getColorByIndex(path_from_ith_planner);
-
+      visualization_msgs::msg::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = rclcpp::Clock().now();
+      marker.type = visualization_msgs::msg::Marker::CUBE;
+      marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.lifetime = rclcpp::Duration::from_seconds(0);
+      marker.scale.x = 0.3;
+      marker.scale.y = 0.15;
+      marker.scale.z = 0.15;
+      marker.id = total_poses;
+      marker.color = getColorByIndex(path_index);
+      marker.ns = "path" + std::to_string(path_index);
       if (selected_state_space_ == "SE3") {
         auto se3_state =
-          curr_path.getState(curr_path_state)->as<ompl::base::SE3StateSpace::StateType>();
-        // Get x,y,z values of this point from original raw point cloud
-        curr_state_in_this_path.x = se3_state->getX();
-        curr_state_in_this_path.y = se3_state->getY();
-        curr_state_in_this_path.z = se3_state->getZ();
-        // get r,g,b value of this point from segmented image
-        curr_state_in_this_path.r = curr_state_color.r;
-        curr_state_in_this_path.g = curr_state_color.g;
-        curr_state_in_this_path.b = curr_state_color.b;
+          sample_path.getState(curr_path_state)->as<ompl::base::SE3StateSpace::StateType>();
+        geometry_msgs::msg::Point p;
+        p.x = se3_state->getX();
+        p.y = se3_state->getY();
+        p.z = se3_state->getZ();
+        marker.pose.position = p;
+        marker.pose.orientation.x = se3_state->rotation().x;
+        marker.pose.orientation.y = se3_state->rotation().y;
+        marker.pose.orientation.z = se3_state->rotation().z;
+        marker.pose.orientation.w = se3_state->rotation().w;
       } else {
         auto se2_state =
-          curr_path.getState(curr_path_state)->as<ompl::base::SE2StateSpace::StateType>();
-        curr_state_in_this_path.x = se2_state->getX();
-        curr_state_in_this_path.y = se2_state->getY();
-        curr_state_in_this_path.z = 0.2;
-        // get r,g,b value of this point from segmented image
-        curr_state_in_this_path.r = curr_state_color.r;
-        curr_state_in_this_path.g = curr_state_color.g;
-        curr_state_in_this_path.b = curr_state_color.b;
+          sample_path.getState(curr_path_state)->as<ompl::base::SE2StateSpace::StateType>();
+        geometry_msgs::msg::Point p;
+        p.x = se2_state->getX();
+        p.y = se2_state->getY();
+        p.z = 0.2;
+        marker.pose.position = p;
+        marker.pose.orientation =
+          botanbot_utilities::getMsgQuaternionfromRPY(0, 0, se2_state->getYaw());
       }
-      curr_path_cloud->points.push_back(curr_state_in_this_path);
+      marker_array.markers.push_back(marker);
+      total_poses++;
     }
-    curr_path_cloud->header.frame_id = header.frame_id;
-    curr_path_cloud->width = 1;
-    curr_path_cloud->height = curr_path.getStateCount();
-    benchmark_plans.push_back(curr_path_cloud);
-    path_from_ith_planner++;
+    path_index++;
   }
-  botanbot_utilities::publishClustersCloud(plan_publisher_, header, benchmark_plans);
+  plan_publisher_->publish(marker_array);
 }
 
 std_msgs::msg::ColorRGBA PlannerBenchMarking::getColorByIndex(int index)
@@ -386,13 +392,13 @@ std_msgs::msg::ColorRGBA PlannerBenchMarking::getColorByIndex(int index)
     case 2: //BLUE
       result.r = 0.0;
       result.g = 0.0;
-      result.b = 0.0;
+      result.b = 1.0;
       result.a = 1.0;
       break;
-    case 3: //DARK_GRAY
-      result.r = 0.6;
-      result.g = 0.6;
-      result.b = 0.6;
+    case 3: //PURPLE
+      result.r = 0.597;
+      result.g = 0.0;
+      result.b = 0.597;
       result.a = 1.0;
       break;
     case 4: //WHITE
@@ -401,15 +407,15 @@ std_msgs::msg::ColorRGBA PlannerBenchMarking::getColorByIndex(int index)
       result.b = 1.0;
       result.a = 1.0;
       break;
-    case 5: //ORANGE
+    case 5: //PINK
       result.r = 1.0;
-      result.g = 0.5;
-      result.b = 0.0;
+      result.g = 0.4;
+      result.b = 1;
       result.a = 1.0;
       break;
-    case 6: //BLACK
-      result.r = 0.0;
-      result.g = 0.0;
+    case 6: //YELLOW
+      result.r = 1.0;
+      result.g = 1.0;
       result.b = 0.0;
       result.a = 1.0;
       break;
@@ -461,8 +467,7 @@ int main(int argc, char ** argv)
   while (rclcpp::ok() && !node->is_octomap_ready_) {
     rclcpp::spin_some(node->get_node_base_interface());
     RCLCPP_INFO(
-      node->get_logger()
-      ,
+      node->get_logger(),
       "Waiting for octomap to be ready In order to run planner bencmarking... ");
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
   }
@@ -470,14 +475,14 @@ int main(int argc, char ** argv)
     node->get_logger()
     ,
     "Octomap ready, running bencmark with given configurations");
-  auto sample_plans = node->doBenchMarking();
-  /*while (rclcpp::ok()) {
-    node->publishSamplePlans(sample_plans);
+  auto paths = node->doBenchMarking();
+  while (rclcpp::ok()) {
+    node->publishSamplePlans(paths);
     rclcpp::spin_some(node->get_node_base_interface());
     RCLCPP_INFO(
       node->get_logger(), "publishing planner bencmarking... CTRL +X to stop");
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  }*/
+  }
 
   RCLCPP_INFO(
     node->get_logger()

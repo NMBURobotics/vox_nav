@@ -169,27 +169,26 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
  * @param trans
  */
 void publishClustersCloud(
-  const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr & publisher,
-  const std_msgs::msg::Header & header,
-  const std::vector<typename pcl::PointCloud<pcl::PointXYZRGB>::Ptr> & clusters_array)
+  const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
+  const std_msgs::msg::Header header,
+  const std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clusters_array)
 {
   if (clusters_array.size() <= 0) {
-    //ROS_WARN("Publish empty clusters cloud.");
-    // publish empty cloud
+    std::cout << "Publish empty clusters cloud. " << std::endl;
     sensor_msgs::msg::PointCloud2 msg_cloud;
     pcl::toROSMsg(*(new pcl::PointCloud<pcl::PointXYZRGB>), msg_cloud);
     msg_cloud.header = header;
     publisher->publish(msg_cloud);
     return;
   } else {
-    //ROS_INFO_STREAM("Publishing " << clusters_array.size() << " clusters in one cloud.");
+    std::cout << "Publishing " << clusters_array.size() << " clusters in one cloud." << std::endl;
   }
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
   // different clusters with different intensity
-  float step_i = 255.0f / clusters_array.size();
   for (size_t cluster_idx = 0u; cluster_idx < clusters_array.size(); ++cluster_idx) {
     if (clusters_array[cluster_idx]->points.size() <= 0) {
       //ROS_WARN_STREAM("An empty cluster #" << cluster_idx << ".");
+      std::cout << "An empty cluster " << cluster_idx << "." << std::endl;
       continue;
     }
     for (size_t idx = 0u; idx < clusters_array[cluster_idx]->points.size(); ++idx) {

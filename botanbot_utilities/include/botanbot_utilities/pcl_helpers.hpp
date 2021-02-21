@@ -155,9 +155,9 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
 * @param trans
 */
 void publishClustersCloud(
-  const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr & publisher,
-  const std_msgs::msg::Header & header,
-  const std::vector<typename pcl::PointCloud<pcl::PointXYZRGB>::Ptr> & clusters_array);
+  const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
+  const std_msgs::msg::Header header,
+  const std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clusters_array);
 
 }  // namespace botanbot_utilities
 
