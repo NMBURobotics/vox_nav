@@ -156,6 +156,8 @@ private:
   int interpolation_parameter_;
   int num_benchmark_runs_;
   int max_memory_;
+  bool publish_a_sample_bencmark_;
+  std::string sample_bencmark_plans_topic_;
 
   // We only need to creae a FLC cotomap collision from
   // octomap once, because this is static map

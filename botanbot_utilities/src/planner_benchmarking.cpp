@@ -38,6 +38,8 @@ PlannerBenchMarking::PlannerBenchMarking()
   this->declare_parameter("num_benchmark_runs", 100);
   this->declare_parameter("max_memory", 2048);
   this->declare_parameter("results_output_file", "/home/user/get.log");
+  this->declare_parameter("publish_a_sample_bencmark", true);
+  this->declare_parameter("sample_bencmark_plans_topic", "benchmark_plan");
 
 
   this->get_parameter("selected_planners", selected_planners_);
@@ -70,6 +72,8 @@ PlannerBenchMarking::PlannerBenchMarking()
   this->get_parameter("num_benchmark_runs", num_benchmark_runs_);
   this->get_parameter("max_memory", max_memory_);
   this->get_parameter("results_output_file", results_output_file_);
+  this->get_parameter("publish_a_sample_bencmark", publish_a_sample_bencmark_);
+  this->get_parameter("sample_bencmark_plans_topic", sample_bencmark_plans_topic_);
 
   if (selected_state_space_ == "REEDS") {
     ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
@@ -89,7 +93,7 @@ PlannerBenchMarking::PlannerBenchMarking()
     ompl_se_bounds_->setHigh(1, se_bounds_.maxy);
     ompl_se_bounds_->setLow(2, se_bounds_.minyaw);
     ompl_se_bounds_->setHigh(2, se_bounds_.maxyaw);
-    state_space_ = std::make_shared<ompl::base::DubinsStateSpace>(min_turning_radius_, false);
+    state_space_ = std::make_shared<ompl::base::DubinsStateSpace>(min_turning_radius_, true);
     state_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*ompl_se_bounds_);
   } else if (selected_state_space_ == "SE2") {
     ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
@@ -129,9 +133,7 @@ PlannerBenchMarking::PlannerBenchMarking()
   // Initialize pubs & subs
   plan_publisher_ =
     this->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "benchmark_plan", rclcpp::SystemDefaultsQoS());
-
-
+    sample_bencmark_plans_topic_.c_str(), rclcpp::SystemDefaultsQoS());
 }
 
 PlannerBenchMarking::~PlannerBenchMarking()
@@ -173,49 +175,50 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
   }
 
   auto si = ss.getSpaceInformation();
-  ss.getProblemDefinition()->setOptimizationObjective(
-    std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
+  ss.setOptimizationObjective(std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
 
   std::vector<ompl::geometric::PathGeometric> paths;
   // Create a sample plan for given problem with each planer in the benchmark
-  try {
-    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
-    ss.clear();
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << '\n';
+  if (publish_a_sample_bencmark_) {
+    try {
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
+      ss.clear();
+    } catch (const std::exception & e) {
+      std::cerr << e.what() << '\n';
+    }
+    try {
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
+      ss.clear();
+    } catch (const std::exception & e) {
+      std::cerr << e.what() << '\n';
+    }
+    try {
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTstar>(si), ss));
+      ss.clear();
+    } catch (const std::exception & e) {
+      std::cerr << e.what() << '\n';
+    }
+    try {
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::InformedRRTstar>(si), ss));
+      ss.clear();
+    } catch (const std::exception & e) {
+      std::cerr << e.what() << '\n';
+    }
+    try {
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::SORRTstar>(si), ss));
+      ss.clear();
+    } catch (const std::exception & e) {
+      std::cerr << e.what() << '\n';
+    }
+    try {
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
+      ss.clear();
+    } catch (const std::exception & e) {
+      std::cerr << e.what() << '\n';
+    }
   }
-  try {
-    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
-    ss.clear();
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << '\n';
-  }
-  try {
-    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTstar>(si), ss));
-    ss.clear();
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << '\n';
-  }
-  try {
-    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::InformedRRTstar>(si), ss));
-    ss.clear();
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << '\n';
-  }
-  try {
-    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::SORRTstar>(si), ss));
-    ss.clear();
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << '\n';
-  }
-  try {
-    paths.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
-    ss.clear();
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << '\n';
-  }
-
-  /*ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
+  /*
+  ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
   ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
   b.addPlanner(std::make_shared<ompl::geometric::PRMstar>(si));
   b.addPlanner(std::make_shared<ompl::geometric::LazyPRMstar>(si));
@@ -334,12 +337,17 @@ ompl::geometric::PathGeometric PlannerBenchMarking::makeAPlan(
   ss.setPlanner(planner);
   // attempt to solve the problem within one second of planning time
   ompl::base::PlannerStatus solved = ss.solve(planner_timeout_);
-  ompl::geometric::PathGeometric path = ss.getSolutionPath();
+  ompl::geometric::PathGeometric original_path = ss.getSolutionPath();
+  ompl::geometric::PathGeometric copy_path = ss.getSolutionPath();
+
   // Path smoothing using bspline
   ompl::geometric::PathSimplifier path_simlifier(ss.getSpaceInformation());
-  path_simlifier.shortcutPath(path, 2, 2);
-  path.interpolate(interpolation_parameter_);
-  return path;
+  if (path_simlifier.simplify(copy_path, 1.0, true)) {
+    path_simlifier.smoothBSpline(copy_path, 1, 0.005);
+    original_path = copy_path;
+  }
+  original_path.interpolate(interpolation_parameter_);
+  return original_path;
 }
 
 void PlannerBenchMarking::publishSamplePlans(

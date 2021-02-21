@@ -17,10 +17,10 @@ planner_benchmarking_rclcpp_node:
       maxyaw: 3.14
     robot_body_dimens:
       x: 1.5
-      y: 1.2
-      z: 1.0 
+      y: 1.5
+      z: 0.85
     start:
-      x: -20.0
+      x: 20.0
       y: -10.0
       z: 0.0
       yaw: 0.0
@@ -33,4 +33,5 @@ planner_benchmarking_rclcpp_node:
     num_benchmark_runs: 100
     max_memory: 4096
     results_output_file: "/home/ros2-foxy/outdoor_large_planbenchmarking.log"
-
+    publish_a_sample_bencmark: true
+    sample_bencmark_plans_topic: "benchmark_plan"
