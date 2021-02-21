@@ -4,7 +4,7 @@ planner_benchmarking_rclcpp_node:
     interpolation_parameter: 120
     octomap_topic: "octomap"
     octomap_voxel_size: 0.2
-    selected_state_space: "REEDS" # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+    selected_state_space: "SE2" # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
     min_turning_radius: 2.5
     state_space_boundries:
       minx: -50.0
