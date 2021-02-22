@@ -13,9 +13,11 @@ find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED) 
 find_package(nav_msgs REQUIRED) 
+find_package(octomap_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/OrientedNavSatFix.msg"
+  "srv/GetOctomap.srv"
   "action/ComputePathToPose.action"
   "action/FollowPath.action"
   "action/NavigateToPose.action"
@@ -25,6 +27,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     std_msgs 
     nav_msgs
     sensor_msgs
+    octomap_msgs
     rosidl_default_generators
 )
 

@@ -371,5 +371,9 @@
                 </collision>
             </link>
         </model>
+        <plugin name="gazebo_world_to_octomap" filename="libgazebo_world_to_octomap.so">
+            <octomapPubTopic>world/octomap</octomapPubTopic>
+            <octomapServiceName>world/build_octomap</octomapServiceName>
+        </plugin>
     </world>
 </sdf>
