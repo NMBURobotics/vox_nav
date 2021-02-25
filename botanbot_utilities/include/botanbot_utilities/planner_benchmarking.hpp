@@ -20,6 +20,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
@@ -35,38 +36,16 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 // OMPL GEOMETRIC
-#include <ompl/geometric/planners/sst/SST.h>
-#include <ompl/geometric/planners/sbl/SBL.h>
-#include <ompl/geometric/planners/kpiece/KPIECE1.h>
-#include <ompl/geometric/planners/rrt/TRRT.h>
-#include <ompl/geometric/planners/rrt/RRT.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTsharp.h>
-#include <ompl/geometric/planners/rrt/InformedRRTstar.h>
-#include <ompl/geometric/planners/rrt/RRTConnect.h>
-#include <ompl/geometric/planners/rrt/BiTRRT.h>
-#include <ompl/geometric/planners/rrt/LazyRRT.h>
-#include <ompl/geometric/planners/rrt/SORRTstar.h>
+#include <ompl/geometric/planners/fmt/FMT.h>
 #include <ompl/geometric/planners/prm/PRMstar.h>
-#include <ompl/geometric/planners/prm/PRM.h>
-#include <ompl/geometric/planners/prm/SPARStwo.h>
 #include <ompl/geometric/planners/prm/LazyPRMstar.h>
 #include <ompl/geometric/planners/cforest/CForest.h>
+#include <ompl/geometric/planners/informedtrees/BITstar.h>
+#include <ompl/geometric/planners/informedtrees/ABITstar.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/OptimizationObjective.h>
-// OMPL CONTROL
-#include <ompl/control/ControlSpace.h>
-#include <ompl/control/spaces/RealVectorControlSpace.h>
-#include <ompl/control/planners/kpiece/KPIECE1.h>
-#include <ompl/control/planners/rrt/RRT.h>
-#include <ompl/control/planners/sst/SST.h>
-#include <ompl/control/planners/est/EST.h>
-#include <ompl/control/planners/syclop/SyclopRRT.h>
-#include <ompl/control/planners/syclop/SyclopEST.h>
-#include <ompl/control/planners/pdst/PDST.h>
-#include <ompl/control/planners/syclop/GridDecomposition.h>
-#include <ompl/control/SimpleSetup.h>
-#include <ompl/config.h>
 // OMPL BASE
 #include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
 #include <ompl/base/OptimizationObjective.h>
@@ -178,6 +157,8 @@ private:
   // Publishers for the path
 
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
+
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr start_goal_poses_publisher_;
 
 public:
   double is_octomap_ready_;

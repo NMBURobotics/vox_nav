@@ -61,7 +61,6 @@ set(dependencies
     visualization_msgs
     OCTOMAP
     LIBFCL
-    ompl
     pcl_ros
     botanbot_msgs
     botanbot_utilities)
@@ -69,13 +68,13 @@ set(dependencies
 set(botanbot_controller_server_exc_name botanbot_controller_server)
 add_executable(${botanbot_controller_server_exc_name} src/controller_server.cpp)
 ament_target_dependencies(${botanbot_controller_server_exc_name} ${dependencies})
-target_link_libraries(${botanbot_controller_server_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES})
+target_link_libraries(${botanbot_controller_server_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
 set(botanbot_mpc_controller_lib_name mpc_controller)
 add_library(${botanbot_mpc_controller_lib_name} SHARED src/mpc_controller/mpc_controller_core.cpp 
                                                        src/mpc_controller/mpc_controller_ros.cpp)
 ament_target_dependencies(${botanbot_mpc_controller_lib_name} ${dependencies})
-target_link_libraries(${botanbot_mpc_controller_lib_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${OMPL_LIBRARIES} casadi)
+target_link_libraries(${botanbot_mpc_controller_lib_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl casadi)
 
 install(TARGETS ${botanbot_mpc_controller_lib_name}
   ARCHIVE DESTINATION lib

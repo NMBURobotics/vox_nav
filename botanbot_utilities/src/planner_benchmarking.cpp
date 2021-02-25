@@ -93,7 +93,7 @@ PlannerBenchMarking::PlannerBenchMarking()
     ompl_se_bounds_->setHigh(1, se_bounds_.maxy);
     ompl_se_bounds_->setLow(2, se_bounds_.minyaw);
     ompl_se_bounds_->setHigh(2, se_bounds_.maxyaw);
-    state_space_ = std::make_shared<ompl::base::DubinsStateSpace>(min_turning_radius_, true);
+    state_space_ = std::make_shared<ompl::base::DubinsStateSpace>(min_turning_radius_, false);
     state_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*ompl_se_bounds_);
   } else if (selected_state_space_ == "SE2") {
     ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
@@ -134,6 +134,9 @@ PlannerBenchMarking::PlannerBenchMarking()
   plan_publisher_ =
     this->create_publisher<visualization_msgs::msg::MarkerArray>(
     sample_bencmark_plans_topic_.c_str(), rclcpp::SystemDefaultsQoS());
+
+  start_goal_poses_publisher_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
+    "start_goal_poses", rclcpp::SystemDefaultsQoS());
 }
 
 PlannerBenchMarking::~PlannerBenchMarking()
@@ -176,41 +179,70 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
 
   auto si = ss.getSpaceInformation();
   ss.setOptimizationObjective(std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
+  si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
+  si->setup();
 
   std::vector<ompl::geometric::PathGeometric> paths;
+  std::mutex plan_mutex;
   // Create a sample plan for given problem with each planer in the benchmark
   if (publish_a_sample_bencmark_) {
-    try {
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
-      ss.clear();
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << '\n';
-    }
-    try {
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
-      ss.clear();
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << '\n';
-    }
     try {
       paths.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTstar>(si), ss));
       ss.clear();
     } catch (const std::exception & e) {
       std::cerr << e.what() << '\n';
     }
+
     try {
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::InformedRRTstar>(si), ss));
+      std::lock_guard<std::mutex> guard(plan_mutex);
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
       ss.clear();
     } catch (const std::exception & e) {
       std::cerr << e.what() << '\n';
     }
+
     try {
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::SORRTstar>(si), ss));
+      std::lock_guard<std::mutex> guard(plan_mutex);
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
       ss.clear();
     } catch (const std::exception & e) {
       std::cerr << e.what() << '\n';
     }
+
     try {
+      std::lock_guard<std::mutex> guard(plan_mutex);
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTXstatic>(si), ss));
+      ss.clear();
+    } catch (const std::exception & e) {
+      std::cerr << e.what() << '\n';
+    }
+
+    try {
+      std::lock_guard<std::mutex> guard(plan_mutex);
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::FMT>(si), ss));
+      ss.clear();
+    } catch (const std::exception & e) {
+      std::cerr << e.what() << '\n';
+    }
+
+    try {
+      std::lock_guard<std::mutex> guard(plan_mutex);
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::BITstar>(si), ss));
+      ss.clear();
+    } catch (const std::exception & e) {
+      std::cerr << e.what() << '\n';
+    }
+
+    try {
+      std::lock_guard<std::mutex> guard(plan_mutex);
+      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::ABITstar>(si), ss));
+      ss.clear();
+    } catch (const std::exception & e) {
+      std::cerr << e.what() << '\n';
+    }
+
+    try {
+      std::lock_guard<std::mutex> guard(plan_mutex);
       paths.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
       ss.clear();
     } catch (const std::exception & e) {
@@ -342,10 +374,8 @@ ompl::geometric::PathGeometric PlannerBenchMarking::makeAPlan(
 
   // Path smoothing using bspline
   ompl::geometric::PathSimplifier path_simlifier(ss.getSpaceInformation());
-  if (path_simlifier.simplify(copy_path, 1.0, true)) {
-    path_simlifier.smoothBSpline(copy_path, 1, 0.005);
-    original_path = copy_path;
-  }
+  path_simlifier.simplifyMax(original_path);
+  path_simlifier.smoothBSpline(original_path);
   original_path.interpolate(interpolation_parameter_);
   return original_path;
 }
@@ -401,70 +431,84 @@ void PlannerBenchMarking::publishSamplePlans(
     path_index++;
   }
   plan_publisher_->publish(marker_array);
+  geometry_msgs::msg::PoseArray start_and_goal;
+  start_and_goal.header = marker_array.markers.front().header;
+  geometry_msgs::msg::Pose start, goal;
+  start.position.x = start_.x;
+  start.position.y = start_.y;
+  start.position.z = start_.z;
+  start.orientation = botanbot_utilities::getMsgQuaternionfromRPY(0, 0, start_.yaw);
+  goal.position.x = goal_.x;
+  goal.position.y = goal_.y;
+  goal.position.z = goal_.z;
+  goal.orientation = botanbot_utilities::getMsgQuaternionfromRPY(0, 0, goal_.yaw);
+  start_and_goal.poses.push_back(start);
+  start_and_goal.poses.push_back(goal);
+  start_goal_poses_publisher_->publish(start_and_goal);
 }
 
 std_msgs::msg::ColorRGBA PlannerBenchMarking::getColorByIndex(int index)
 {
   std_msgs::msg::ColorRGBA result;
   switch (index) {
-    case 0: // RED
+    case 0:   // RED
       result.r = 0.8;
       result.g = 0.1;
       result.b = 0.1;
       result.a = 1.0;
       break;
-    case 1: //GREEN
+    case 1:   //GREEN
       result.r = 0.1;
       result.g = 0.8;
       result.b = 0.1;
       result.a = 1.0;
       break;
-    case 2: //BLUE
+    case 2:   //BLUE
       result.r = 0.0;
       result.g = 0.0;
       result.b = 1.0;
       result.a = 1.0;
       break;
-    case 3: //WHITE
+    case 3:   //WHITE
       result.r = 1.0;
       result.g = 1.0;
       result.b = 1.0;
       result.a = 1.0;
       break;
-    case 4: //YELLOW
+    case 4:   //YELLOW
       result.r = 1.0;
       result.g = 1.0;
       result.b = 0.0;
       result.a = 1.0;
       break;
-    case 5: //MAGENTA
+    case 5:   //MAGENTA
       result.r = 1.0;
       result.g = 0.0;
       result.b = 1.0;
       result.a = 1.0;
       break;
-    case 6: //LIME_GREEN
-      result.r = 0.6;
-      result.g = 1.0;
-      result.b = 0.2;
+    case 6:   //BLACK
+      result.r = 0.0;
+      result.g = 0.0;
+      result.b = 0.0;
       result.a = 1.0;
       break;
-    case 7: //PINK
+    case 7:   //CYAN
+      result.r = 0.0;
+      result.g = 1.0;
+      result.b = 1.0;
+      result.a = 1.0;
+      break;
+    case 8:   //PINK
       result.r = 1.0;
       result.g = 0.4;
       result.b = 1;
       result.a = 1.0;
       break;
-    case 8: //PURPLE
+    case 9:   //PURPLE
       result.r = 0.597;
       result.g = 0.0;
       result.b = 0.597;
-      result.a = 1.0;
-      break;
-    case 9: //CYAN
-      result.r = 0.0;
-      result.g = 1.0;
-      result.b = 1.0;
       result.a = 1.0;
       break;
   }
