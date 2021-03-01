@@ -229,6 +229,19 @@ public:
    * @return std_msgs::msg::ColorRGBA
    */
   std_msgs::msg::ColorRGBA getColorByIndex(int index);
+
+  /**
+   * @brief
+   *
+   * @param planner
+   * @param selected_planner_name
+   * @param si
+   */
+  void allocatePlannerbyName(
+    ompl::base::PlannerPtr & planner,
+    const std::string & selected_planner_name,
+    const ompl::base::SpaceInformationPtr & si);
+
 };
 }  // namespace botanbot_utilities
 

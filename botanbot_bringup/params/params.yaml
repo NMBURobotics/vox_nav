@@ -63,7 +63,7 @@ botanbot_planner_server_rclcpp_node:
         minz: 0.0
         maxz: 2.5
       robot_body_dimens:
-        x: 1.5
+        x: 1.0
         y: 1.0
         z: 0.2   
 
@@ -94,9 +94,9 @@ botanbot_controller_server_rclcpp_node:
 
 botanbot_map_server_rclcpp_node:
   ros__parameters:
-    octomap_filename: "/home/ros2-foxy/output_filename.bt"
+    octomap_filename: "/home/ros2-foxy/city_world.bt"
     octomap_voxel_size: 0.2
-    octomap_publish_frequency: 50
+    octomap_publish_frequency: 10
     provide_utm_to_map_transform: true
     publish_octomap_as_pointcloud: true
     octomap_publish_topic_name: "octomap" # octomap_msgs::msg::Octomap type of message topic name 

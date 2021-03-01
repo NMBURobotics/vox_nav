@@ -5,10 +5,12 @@ namespace botanbot_utilities
 PlannerBenchMarking::PlannerBenchMarking()
 : Node("planner_benchmarking_rclcpp_node")
 {
+  RCLCPP_INFO(this->get_logger(), "Creating:");
+
   is_octomap_ready_ = false;
   octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
 
-  this->declare_parameter("selected_planners", std::vector<std::string>({"PRMstar"}));
+  this->declare_parameter("selected_planners", std::vector<std::string>({"RRTstar", "PRMstar"}));
   this->declare_parameter("planner_timeout", 5.0);
   this->declare_parameter("interpolation_parameter", 50);
   this->declare_parameter("octomap_topic", "octomap");
@@ -40,7 +42,6 @@ PlannerBenchMarking::PlannerBenchMarking()
   this->declare_parameter("results_output_file", "/home/user/get.log");
   this->declare_parameter("publish_a_sample_bencmark", true);
   this->declare_parameter("sample_bencmark_plans_topic", "benchmark_plan");
-
 
   this->get_parameter("selected_planners", selected_planners_);
   this->get_parameter("planner_timeout", planner_timeout_);
@@ -137,15 +138,21 @@ PlannerBenchMarking::PlannerBenchMarking()
 
   start_goal_poses_publisher_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
     "start_goal_poses", rclcpp::SystemDefaultsQoS());
+
+  RCLCPP_INFO(this->get_logger(), "Selected planners for benchmarking:");
+  for (auto && i : selected_planners_) {
+    RCLCPP_INFO(this->get_logger(), " %s", i.c_str());
+  }
 }
 
 PlannerBenchMarking::~PlannerBenchMarking()
 {
-
+  RCLCPP_INFO(this->get_logger(), "Destroying:");
 }
 
 std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking()
 {
+  RCLCPP_INFO(this->get_logger(), "Running a benchmarking with provided configuration...");
   /*Simple Setup*/
   ompl::geometric::SimpleSetup ss(state_space_);
   // define start & goal states
@@ -177,6 +184,9 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
       });
   }
 
+  RCLCPP_INFO(
+    this->get_logger(), "A sample planning will be visualized for each planner in the bencmark...");
+
   auto si = ss.getSpaceInformation();
   ss.setOptimizationObjective(std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
   si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
@@ -184,84 +194,36 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
 
   std::vector<ompl::geometric::PathGeometric> paths;
   std::mutex plan_mutex;
-  // Create a sample plan for given problem with each planer in the benchmark
-  if (publish_a_sample_bencmark_) {
-    try {
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTstar>(si), ss));
-      ss.clear();
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << '\n';
-    }
+  ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
+  request.displayProgress = false;
+  ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
 
-    try {
-      std::lock_guard<std::mutex> guard(plan_mutex);
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::PRMstar>(si), ss));
-      ss.clear();
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << '\n';
-    }
-
-    try {
-      std::lock_guard<std::mutex> guard(plan_mutex);
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::LazyPRMstar>(si), ss));
-      ss.clear();
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << '\n';
-    }
-
-    try {
-      std::lock_guard<std::mutex> guard(plan_mutex);
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::RRTXstatic>(si), ss));
-      ss.clear();
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << '\n';
-    }
-
-    try {
-      std::lock_guard<std::mutex> guard(plan_mutex);
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::FMT>(si), ss));
-      ss.clear();
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << '\n';
-    }
-
-    try {
-      std::lock_guard<std::mutex> guard(plan_mutex);
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::BITstar>(si), ss));
-      ss.clear();
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << '\n';
-    }
-
-    try {
-      std::lock_guard<std::mutex> guard(plan_mutex);
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::ABITstar>(si), ss));
-      ss.clear();
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << '\n';
-    }
-
-    try {
-      std::lock_guard<std::mutex> guard(plan_mutex);
-      paths.push_back(makeAPlan(std::make_shared<ompl::geometric::CForest>(si), ss));
-      ss.clear();
-    } catch (const std::exception & e) {
-      std::cerr << e.what() << '\n';
+  for (auto && planner_name : selected_planners_) {
+    // create a planner for the defined space
+    ompl::base::PlannerPtr planner_ptr;
+    allocatePlannerbyName(planner_ptr, planner_name, si);
+    b.addPlanner(planner_ptr);
+    if (publish_a_sample_bencmark_) {
+      try {
+        std::lock_guard<std::mutex> guard(plan_mutex);
+        paths.push_back(makeAPlan(planner_ptr, ss));
+        ss.clear();
+      } catch (const std::exception & e) {
+        std::cerr << e.what() << '\n';
+      }
     }
   }
-  /*
-  ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
-  ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
-  b.addPlanner(std::make_shared<ompl::geometric::PRMstar>(si));
-  b.addPlanner(std::make_shared<ompl::geometric::LazyPRMstar>(si));
-  b.addPlanner(std::make_shared<ompl::geometric::RRTstar>(si));
-  b.addPlanner(std::make_shared<ompl::geometric::InformedRRTstar>(si));
-  b.addPlanner(std::make_shared<ompl::geometric::SORRTstar>(si));
-  b.addPlanner(std::make_shared<ompl::geometric::SPARStwo>(si));
-  b.addPlanner(std::make_shared<ompl::geometric::CForest>(si));
-  b.benchmark(request);
-  b.saveResultsToFile(results_output_file_.c_str());*/
 
+  RCLCPP_INFO(
+    this->get_logger(),
+    "Created sample plans from each planner, "
+    "Now performing actual benchmark, This might take some time.");
+
+  b.benchmark(request);
+  b.saveResultsToFile(results_output_file_.c_str());
+  RCLCPP_INFO(
+    this->get_logger(),
+    "Bencmarking results saved to given directory: %s.", results_output_file_.c_str());
   return paths;
 }
 
@@ -292,7 +254,7 @@ bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
   const ompl::base::SE2StateSpace::StateType * se2_state =
     state->as<ompl::base::SE2StateSpace::StateType>();
   // check validity of state Fdefined by pos & rot
-  fcl::Vec3f translation(se2_state->getX(), se2_state->getY(), 0.6);
+  fcl::Vec3f translation(se2_state->getX(), se2_state->getY(), start_.z);
 
   tf2::Quaternion myQuaternion;
   myQuaternion.setRPY(0, 0, se2_state->getYaw());
@@ -397,8 +359,8 @@ void PlannerBenchMarking::publishSamplePlans(
       marker.action = visualization_msgs::msg::Marker::ADD;
       marker.lifetime = rclcpp::Duration::from_seconds(0);
       marker.scale.x = 0.4;
-      marker.scale.y = 0.2;
-      marker.scale.z = 0.2;
+      marker.scale.y = 0.3;
+      marker.scale.z = 0.3;
       marker.id = total_poses;
       marker.color = getColorByIndex(path_index);
       marker.ns = "path" + std::to_string(path_index);
@@ -420,7 +382,7 @@ void PlannerBenchMarking::publishSamplePlans(
         geometry_msgs::msg::Point p;
         p.x = se2_state->getX();
         p.y = se2_state->getY();
-        p.z = 0.2;
+        p.z = start_.z;
         marker.pose.position = p;
         marker.pose.orientation =
           botanbot_utilities::getMsgQuaternionfromRPY(0, 0, se2_state->getYaw());
@@ -514,6 +476,36 @@ std_msgs::msg::ColorRGBA PlannerBenchMarking::getColorByIndex(int index)
   }
   return result;
 }
+
+void PlannerBenchMarking::allocatePlannerbyName(
+  ompl::base::PlannerPtr & planner,
+  const std::string & selected_planner_name,
+  const ompl::base::SpaceInformationPtr & si)
+{
+  if (selected_planner_name == std::string("RRTstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
+  } else if (selected_planner_name == std::string("PRMstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
+  } else if (selected_planner_name == std::string("LazyPRMstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::LazyPRMstar(si));
+  } else if (selected_planner_name == std::string("RRTXstatic")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTXstatic(si));
+  } else if (selected_planner_name == std::string("FMT")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::FMT(si));
+  } else if (selected_planner_name == std::string("BITstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::BITstar(si));
+  } else if (selected_planner_name == std::string("ABITstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::ABITstar(si));
+  } else if (selected_planner_name == std::string("CForest")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::CForest(si));
+  } else {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Selected planner is not Found in available planners, using the default planner: RRTstar");
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
+  }
+}
+
 }  // namespace botanbot_utilities
 
 int main(int argc, char ** argv)
