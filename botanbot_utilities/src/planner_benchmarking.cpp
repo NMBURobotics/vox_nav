@@ -150,7 +150,7 @@ PlannerBenchMarking::~PlannerBenchMarking()
   RCLCPP_INFO(this->get_logger(), "Destroying:");
 }
 
-std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking()
+std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking()
 {
   RCLCPP_INFO(this->get_logger(), "Running a benchmarking with provided configuration...");
   /*Simple Setup*/
@@ -192,12 +192,13 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
   si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
   si->setup();
 
-  std::vector<ompl::geometric::PathGeometric> paths;
+  std::map<int, ompl::geometric::PathGeometric> paths_map;
   std::mutex plan_mutex;
   ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
   request.displayProgress = false;
   ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
 
+  int index(0);
   for (auto && planner_name : selected_planners_) {
     // create a planner for the defined space
     ompl::base::PlannerPtr planner_ptr;
@@ -206,12 +207,23 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
     if (publish_a_sample_bencmark_) {
       try {
         std::lock_guard<std::mutex> guard(plan_mutex);
-        paths.push_back(makeAPlan(planner_ptr, ss));
+        ompl::geometric::PathGeometric curr_path = makeAPlan(planner_ptr, ss);
+        if (curr_path.getStateCount() == 0) {
+          RCLCPP_WARN(
+            this->get_logger(),
+            "An empty path detected!, looks like %s failed to produce a valid plan",
+            planner_name.c_str());
+        }
+
+        std::pair<int, ompl::geometric::PathGeometric> curr_pair(index, curr_path);
+        paths_map.insert(curr_pair);
+
         ss.clear();
       } catch (const std::exception & e) {
         std::cerr << e.what() << '\n';
       }
     }
+    index++;
   }
 
   RCLCPP_INFO(
@@ -224,7 +236,7 @@ std::vector<ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking(
   RCLCPP_INFO(
     this->get_logger(),
     "Bencmarking results saved to given directory: %s.", results_output_file_.c_str());
-  return paths;
+  return paths_map;
 }
 
 bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
@@ -331,6 +343,13 @@ ompl::geometric::PathGeometric PlannerBenchMarking::makeAPlan(
   ss.setPlanner(planner);
   // attempt to solve the problem within one second of planning time
   ompl::base::PlannerStatus solved = ss.solve(planner_timeout_);
+
+  if (!solved) {
+    ompl::geometric::PathGeometric empty_path = ss.getSolutionPath();
+    empty_path.clear();
+    return empty_path;
+  }
+
   ompl::geometric::PathGeometric original_path = ss.getSolutionPath();
   ompl::geometric::PathGeometric copy_path = ss.getSolutionPath();
 
@@ -343,13 +362,14 @@ ompl::geometric::PathGeometric PlannerBenchMarking::makeAPlan(
 }
 
 void PlannerBenchMarking::publishSamplePlans(
-  std::vector<ompl::geometric::PathGeometric> sample_paths)
+  std::map<int, ompl::geometric::PathGeometric> sample_paths)
 {
   visualization_msgs::msg::MarkerArray marker_array;
-  int path_index = 0;
   int total_poses = 0;
-  for (auto && sample_path : sample_paths) {
-    for (std::size_t curr_path_state = 0; curr_path_state < sample_path.getStateCount();
+
+  auto it = sample_paths.begin();
+  while (it != sample_paths.end()) {
+    for (std::size_t curr_path_state = 0; curr_path_state < it->second.getStateCount();
       curr_path_state++)
     {
       visualization_msgs::msg::Marker marker;
@@ -362,11 +382,11 @@ void PlannerBenchMarking::publishSamplePlans(
       marker.scale.y = 0.3;
       marker.scale.z = 0.3;
       marker.id = total_poses;
-      marker.color = getColorByIndex(path_index);
-      marker.ns = "path" + std::to_string(path_index);
+      marker.color = getColorByIndex(it->first);
+      marker.ns = "path" + std::to_string(it->first);
       if (selected_state_space_ == "SE3") {
         auto se3_state =
-          sample_path.getState(curr_path_state)->as<ompl::base::SE3StateSpace::StateType>();
+          it->second.getState(curr_path_state)->as<ompl::base::SE3StateSpace::StateType>();
         geometry_msgs::msg::Point p;
         p.x = se3_state->getX();
         p.y = se3_state->getY();
@@ -378,7 +398,7 @@ void PlannerBenchMarking::publishSamplePlans(
         marker.pose.orientation.w = se3_state->rotation().w;
       } else {
         auto se2_state =
-          sample_path.getState(curr_path_state)->as<ompl::base::SE2StateSpace::StateType>();
+          it->second.getState(curr_path_state)->as<ompl::base::SE2StateSpace::StateType>();
         geometry_msgs::msg::Point p;
         p.x = se2_state->getX();
         p.y = se2_state->getY();
@@ -390,7 +410,7 @@ void PlannerBenchMarking::publishSamplePlans(
       marker_array.markers.push_back(marker);
       total_poses++;
     }
-    path_index++;
+    it++;
   }
   plan_publisher_->publish(marker_array);
   geometry_msgs::msg::PoseArray start_and_goal;
@@ -523,9 +543,9 @@ int main(int argc, char ** argv)
     node->get_logger()
     ,
     "Octomap ready, running bencmark with given configurations");
-  auto paths = node->doBenchMarking();
+  auto paths_map = node->doBenchMarking();
   while (rclcpp::ok()) {
-    node->publishSamplePlans(paths);
+    node->publishSamplePlans(paths_map);
     rclcpp::spin_some(node->get_node_base_interface());
     RCLCPP_INFO(
       node->get_logger(), "publishing planner bencmarking... CTRL +X to stop");

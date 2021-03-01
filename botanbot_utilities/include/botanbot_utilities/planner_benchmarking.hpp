@@ -76,6 +76,7 @@
 #include <memory>
 #include <vector>
 #include <random>
+#include <map>
 
 namespace botanbot_utilities
 {
@@ -178,7 +179,7 @@ public:
    * @brief perfrom actual benchmark and return a sample run
    *
    */
-  std::vector<ompl::geometric::PathGeometric> doBenchMarking();
+  std::map<int, ompl::geometric::PathGeometric> doBenchMarking();
 
   /**
   * @brief Callback to subscribe ang get octomap
@@ -220,7 +221,7 @@ public:
    * @brief publish sample plan from bencmarking as marker array into RVIZ
    *
    */
-  void publishSamplePlans(std::vector<ompl::geometric::PathGeometric> sample_paths);
+  void publishSamplePlans(std::map<int, ompl::geometric::PathGeometric> sample_paths);
 
   /**
    * @brief Get the Color By Index object
