@@ -200,10 +200,21 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
 
   int index(0);
   for (auto && planner_name : selected_planners_) {
+
     // create a planner for the defined space
+    //BITstar has an issue, so I had do make this as an temporary solution
+    // see https://github.com/ompl/ompl/issues/779
     ompl::base::PlannerPtr planner_ptr;
-    allocatePlannerbyName(planner_ptr, planner_name, si);
-    b.addPlanner(planner_ptr);
+    if (planner_name == "BITstar") {
+      auto bitstar = std::make_shared<ompl::geometric::BITstar>(si);
+      bitstar->setPruning(false);
+      b.addPlanner(bitstar);
+      planner_ptr = bitstar;
+    } else {
+      allocatePlannerbyName(planner_ptr, planner_name, si);
+      b.addPlanner(planner_ptr);
+    }
+
     if (publish_a_sample_bencmark_) {
       try {
         std::lock_guard<std::mutex> guard(plan_mutex);
