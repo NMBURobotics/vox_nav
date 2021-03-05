@@ -222,14 +222,14 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
       "Checking whether a solution exists for random start and goal states .");
     ompl::base::PlannerStatus has_solution = ss.solve(5.0);
 
-    found_valid_random_start_goal =
-      (isStateValidSE2(random_start.get()) && isStateValidSE2(random_goal.get()) &&
-      distance > 45.0 && has_solution);
+    // if it gets to this point , that menas our random states are valid and already meets min dist requiremnets
+    // but now there also has to be a solution for this problem
+    found_valid_random_start_goal = has_solution;
 
     if (found_valid_random_start_goal) {
       RCLCPP_INFO(
         this->get_logger(),
-        "Found valid states!, flowing to actual benchmark.");
+        "Found valid states and a solution for the random problem!, proceeding to actual benchmark.");
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
