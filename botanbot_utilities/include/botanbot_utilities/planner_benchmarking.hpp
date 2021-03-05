@@ -134,6 +134,7 @@ private:
   // Only used for REEDS or DUBINS
   double min_turning_radius_;
   double goal_tolerance_;
+  double min_euclidean_dist_start_to_goal_;
   int interpolation_parameter_;
   int num_benchmark_runs_;
   int max_memory_;

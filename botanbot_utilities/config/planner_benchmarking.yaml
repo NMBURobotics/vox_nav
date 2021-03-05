@@ -19,18 +19,13 @@ planner_benchmarking_rclcpp_node:
     robot_body_dimens:
       x: 1.5
       y: 1.5
-      z: 0.4
+      z: 0.5
     start:
-      x: -30.0
-      y: -25.0
       z: 2.0  #3.5
-      yaw: 0.0
     goal:
-      x: 15.0
-      y: 14.0
       z: 2.0 #3.5
-      yaw: 0.0 
     goal_tolerance: 0.2  
+    min_euclidean_dist_start_to_goal: 35.0
     num_benchmark_runs: 1
     max_memory: 4096
     results_output_file: "/home/ros2-foxy/ECMR2021/benchmark_results/TEST.log"

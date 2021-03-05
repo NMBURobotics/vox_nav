@@ -28,15 +28,10 @@ PlannerBenchMarking::PlannerBenchMarking()
   this->declare_parameter("robot_body_dimens.x", 1.5);
   this->declare_parameter("robot_body_dimens.y", 1.5);
   this->declare_parameter("robot_body_dimens.z", 0.4);
-  this->declare_parameter("start.x", 0.0);
-  this->declare_parameter("start.y", 0.0);
   this->declare_parameter("start.z", 0.0);
-  this->declare_parameter("start.yaw", 0.0);
-  this->declare_parameter("goal.x", 0.0);
-  this->declare_parameter("goal.y", 0.0);
   this->declare_parameter("goal.z", 0.0);
-  this->declare_parameter("goal.yaw", 0.0);
   this->declare_parameter("goal_tolerance", 0.2);
+  this->declare_parameter("min_euclidean_dist_start_to_goal", 25.0);
   this->declare_parameter("num_benchmark_runs", 100);
   this->declare_parameter("max_memory", 2048);
   this->declare_parameter("results_output_file", "/home/user/get.log");
@@ -61,15 +56,10 @@ PlannerBenchMarking::PlannerBenchMarking()
   this->get_parameter("robot_body_dimens.x", robot_body_dimensions_.x);
   this->get_parameter("robot_body_dimens.y", robot_body_dimensions_.y);
   this->get_parameter("robot_body_dimens.z", robot_body_dimensions_.z);
-  this->get_parameter("start.x", start_.x);
-  this->get_parameter("start.y", start_.y);
   this->get_parameter("start.z", start_.z);
-  this->get_parameter("start.yaw", start_.yaw);
-  this->get_parameter("goal.x", goal_.x);
-  this->get_parameter("goal.y", goal_.y);
   this->get_parameter("goal.z", goal_.z);
-  this->get_parameter("goal.yaw", goal_.yaw);
   this->get_parameter("goal_tolerance", goal_tolerance_);
+  this->get_parameter("min_euclidean_dist_start_to_goal", min_euclidean_dist_start_to_goal_);
   this->get_parameter("num_benchmark_runs", num_benchmark_runs_);
   this->get_parameter("max_memory", max_memory_);
   this->get_parameter("results_output_file", results_output_file_);
@@ -152,14 +142,14 @@ PlannerBenchMarking::~PlannerBenchMarking()
 
 std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking()
 {
-  /*Simple Setup*/
   ompl::geometric::SimpleSetup ss(state_space_);
   ompl::base::SpaceInformationPtr si = ss.getSpaceInformation();
   ompl::base::ScopedState<ompl::base::SE2StateSpace> random_start(state_space_),
   random_goal(state_space_);
 
+  // spin until a valid random start and goal poses are found. Also
+  // make sure that a soluion exists for generated states
   volatile bool found_valid_random_start_goal = false;
-
   while (!found_valid_random_start_goal) {
     random_start->setX(getRangedRandom(se_bounds_.minx, se_bounds_.maxx));
     random_start->setY(getRangedRandom(se_bounds_.miny, se_bounds_.maxy));
@@ -169,11 +159,11 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     random_goal->setY(getRangedRandom(se_bounds_.miny, se_bounds_.maxy));
     random_goal->setYaw(getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw));
 
+    // the distance should be above a certain threshold
     double distance =
       std::sqrt(
       std::pow(random_goal->getX() - random_start->getX(), 2) +
       std::pow(random_goal->getY() - random_start->getY(), 2));
-
 
     // define start & goal states
     if ((selected_state_space_ == "REEDS") || (selected_state_space_ == "DUBINS") ||
@@ -208,7 +198,7 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
 
     found_valid_random_start_goal =
       (isStateValidSE2(random_start.get()) && isStateValidSE2(random_goal.get()) &&
-      distance > 45.0);
+      distance > min_euclidean_dist_start_to_goal_);
 
     if (!found_valid_random_start_goal) {
       RCLCPP_INFO(
@@ -223,9 +213,9 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     si->setup();
 
     // create a planner for the defined space
-    ompl::base::PlannerPtr planner;
-    planner = ompl::base::PlannerPtr(new ompl::geometric::BITstar(si));
-    ss.setPlanner(planner);
+    ompl::base::PlannerPtr bitstar_planner;
+    bitstar_planner = ompl::base::PlannerPtr(new ompl::geometric::BITstar(si));
+    ss.setPlanner(bitstar_planner);
 
     RCLCPP_INFO(
       this->get_logger(),
@@ -243,6 +233,8 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
+
+  ss.clear();
   RCLCPP_INFO(this->get_logger(), "Created valid random start and goal states");
 
   start_.x = random_start->getX();
@@ -252,28 +244,28 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
   goal_.y = random_goal->getY();
   goal_.yaw = random_goal->getYaw();
 
+  // create a planner for the defined space
+  ompl::base::PlannerPtr cforest_planner;
+  cforest_planner = ompl::base::PlannerPtr(new ompl::geometric::CForest(si));
+  ss.setPlanner(cforest_planner);
+  RCLCPP_INFO(this->get_logger(), "Creating Ground truth plan wih CFOREST");
+  ompl::base::PlannerStatus gt_plan_solved = ss.solve(10.0);
+  ompl::geometric::PathGeometric gt_plan = ss.getSolutionPath();
+
   std::map<int, ompl::geometric::PathGeometric> paths_map;
   std::mutex plan_mutex;
   ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
   request.displayProgress = false;
   ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
-  b.addExperimentParameter("gt_path_length", "REAL", "12.02");
+  b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
 
+
+  // this section is to visualize a sample benchmark into RVIZ
   int index(0);
   for (auto && planner_name : selected_planners_) {
-    // create a planner for the defined space
-    //BITstar has an issue, so I had do make this as an temporary solution
-    // see https://github.com/ompl/ompl/issues/779
     ompl::base::PlannerPtr planner_ptr;
-    if (planner_name == "BITstar") {
-      auto bitstar = std::make_shared<ompl::geometric::BITstar>(si);
-      bitstar->setPruning(false);
-      b.addPlanner(bitstar);
-      planner_ptr = bitstar;
-    } else {
-      allocatePlannerbyName(planner_ptr, planner_name, si);
-      b.addPlanner(planner_ptr);
-    }
+    allocatePlannerbyName(planner_ptr, planner_name, si);
+    b.addPlanner(planner_ptr);
 
     if (publish_a_sample_bencmark_) {
       try {
@@ -294,6 +286,7 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
         std::cerr << e.what() << '\n';
       }
     }
+
     index++;
   }
 
