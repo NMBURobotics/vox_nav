@@ -42,12 +42,15 @@ def select_specific_task(conn, priority):
     ABITstar = []
     CFOREST = []
 
-    gt_path_length = 90
+    cur.execute("SELECT gt_path_length FROM experiments")
+    gt_path_length = cur.fetchone()
+    print(gt_path_length[0])
+    gt_path_length = gt_path_length[0]
+
     range_min = gt_path_length
     range_max = range_min * 1.5
 
     for data in datas:
-        print(data)
         data = list(data)
         if data[2] != None:
             data[2] = normalize(data[2], range_min, range_max)
@@ -90,7 +93,7 @@ def normalize(value, min, max):
 
 
 if __name__ == '__main__':
-    database = "/home/ros2-foxy/ECMR2021/benchmark_results/city_reeds_benchmark.db"
+    database = "/home/ros2-foxy/ECMR2021/benchmark_results/SE2_0.db"
 
     conn = create_connection(database)
     with conn:

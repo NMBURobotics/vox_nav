@@ -251,14 +251,13 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
   RCLCPP_INFO(this->get_logger(), "Creating Ground truth plan wih CFOREST");
   ompl::base::PlannerStatus gt_plan_solved = ss.solve(10.0);
   ompl::geometric::PathGeometric gt_plan = ss.getSolutionPath();
-
+  ss.clear();
   std::map<int, ompl::geometric::PathGeometric> paths_map;
   std::mutex plan_mutex;
   ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
   request.displayProgress = false;
   ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
   b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
-
 
   // this section is to visualize a sample benchmark into RVIZ
   int index(0);
