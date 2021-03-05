@@ -152,55 +152,115 @@ PlannerBenchMarking::~PlannerBenchMarking()
 
 std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking()
 {
-  RCLCPP_INFO(this->get_logger(), "Running a benchmarking with provided configuration...");
   /*Simple Setup*/
   ompl::geometric::SimpleSetup ss(state_space_);
-  // define start & goal states
-  if ((selected_state_space_ == "REEDS") || (selected_state_space_ == "DUBINS") ||
-    (selected_state_space_ == "SE2"))
-  {
-    ompl::base::ScopedState<ompl::base::SE2StateSpace> start(state_space_), goal(state_space_);
-    start->setXY(start_.x, start_.y);
-    start->setYaw(start_.yaw);
-    goal->setXY(goal_.x, goal_.y);
-    goal->setYaw(goal_.yaw);
-    ss.setStartAndGoalStates(start, goal, goal_tolerance_);
-    ss.setStateValidityChecker(
-      [this](const ompl::base::State * state)
-      {
-        return isStateValidSE2(state);
-      });
-  } else {
-    ompl::base::ScopedState<ompl::base::SE3StateSpace> start(state_space_), goal(state_space_);
-    start->setXYZ(start_.x, start_.y, start_.z);
-    start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(0, 0, 1, start_.yaw);
-    goal->setXYZ(goal_.x, goal_.y, goal_.z);
-    goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(0, 0, 1, goal_.yaw);
-    ss.setStartAndGoalStates(start, goal, goal_tolerance_);
-    ss.setStateValidityChecker(
-      [this](const ompl::base::State * state)
-      {
-        return isStateValidSE3(state);
-      });
+  ompl::base::SpaceInformationPtr si = ss.getSpaceInformation();
+  ompl::base::ScopedState<ompl::base::SE2StateSpace> random_start(state_space_),
+  random_goal(state_space_);
+
+  volatile bool found_valid_random_start_goal = false;
+
+  while (!found_valid_random_start_goal) {
+    random_start->setX(getRangedRandom(se_bounds_.minx, se_bounds_.maxx));
+    random_start->setY(getRangedRandom(se_bounds_.miny, se_bounds_.maxy));
+    random_start->setYaw(getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw));
+
+    random_goal->setX(getRangedRandom(se_bounds_.minx, se_bounds_.maxx));
+    random_goal->setY(getRangedRandom(se_bounds_.miny, se_bounds_.maxy));
+    random_goal->setYaw(getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw));
+
+    double distance =
+      std::sqrt(
+      std::pow(random_goal->getX() - random_start->getX(), 2) +
+      std::pow(random_goal->getY() - random_start->getY(), 2));
+
+
+    // define start & goal states
+    if ((selected_state_space_ == "REEDS") || (selected_state_space_ == "DUBINS") ||
+      (selected_state_space_ == "SE2"))
+    {
+      ompl::base::ScopedState<ompl::base::SE2StateSpace> start(state_space_), goal(state_space_);
+      start->setXY(random_start->getX(), random_start->getY());
+      start->setYaw(random_start->getYaw());
+      goal->setXY(random_goal->getX(), random_goal->getY());
+      goal->setYaw(random_goal->getYaw());
+      ss.setStartAndGoalStates(start, goal, goal_tolerance_);
+      ss.setStateValidityChecker(
+        [this](const ompl::base::State * state)
+        {
+          return isStateValidSE2(state);
+        });
+    } else {
+      ompl::base::ScopedState<ompl::base::SE3StateSpace> start(state_space_), goal(state_space_);
+      start->setXYZ(random_start->getX(), random_start->getY(), start_.z);
+      start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
+        0, 0, 1, random_start->getYaw());
+      goal->setXYZ(random_goal->getX(), random_goal->getY(), goal_.z);
+      goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
+        0, 0, 1, random_goal->getYaw());
+      ss.setStartAndGoalStates(start, goal, goal_tolerance_);
+      ss.setStateValidityChecker(
+        [this](const ompl::base::State * state)
+        {
+          return isStateValidSE3(state);
+        });
+    }
+
+    found_valid_random_start_goal =
+      (isStateValidSE2(random_start.get()) && isStateValidSE2(random_goal.get()) &&
+      distance > 45.0);
+
+    if (!found_valid_random_start_goal) {
+      RCLCPP_INFO(
+        this->get_logger(), "Still Looking to sample valid random start and goal states ... ");
+      continue;
+    }
+    RCLCPP_INFO(
+      this->get_logger(), "A valid random start and goal states has been found.");
+
+    ss.setOptimizationObjective(std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
+    si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
+    si->setup();
+
+    // create a planner for the defined space
+    ompl::base::PlannerPtr planner;
+    planner = ompl::base::PlannerPtr(new ompl::geometric::BITstar(si));
+    ss.setPlanner(planner);
+
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Checking whether a solution exists for random start and goal states .");
+    ompl::base::PlannerStatus has_solution = ss.solve(5.0);
+
+    found_valid_random_start_goal =
+      (isStateValidSE2(random_start.get()) && isStateValidSE2(random_goal.get()) &&
+      distance > 45.0 && has_solution);
+
+    if (found_valid_random_start_goal) {
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Found valid states!, flowing to actual benchmark.");
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
+  RCLCPP_INFO(this->get_logger(), "Created valid random start and goal states");
 
-  RCLCPP_INFO(
-    this->get_logger(), "A sample planning will be visualized for each planner in the bencmark...");
-
-  auto si = ss.getSpaceInformation();
-  ss.setOptimizationObjective(std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
-  si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
-  si->setup();
+  start_.x = random_start->getX();
+  start_.y = random_start->getY();
+  start_.yaw = random_start->getYaw();
+  goal_.x = random_goal->getX();
+  goal_.y = random_goal->getY();
+  goal_.yaw = random_goal->getYaw();
 
   std::map<int, ompl::geometric::PathGeometric> paths_map;
   std::mutex plan_mutex;
   ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
   request.displayProgress = false;
   ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
+  b.addExperimentParameter("gt_path_length", "REAL", "12.02");
 
   int index(0);
   for (auto && planner_name : selected_planners_) {
-
     // create a planner for the defined space
     //BITstar has an issue, so I had do make this as an temporary solution
     // see https://github.com/ompl/ompl/issues/779
@@ -241,7 +301,6 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     this->get_logger(),
     "Created sample plans from each planner, "
     "Now performing actual benchmark, This might take some time.");
-
   b.benchmark(request);
   b.saveResultsToFile(results_output_file_.c_str());
   RCLCPP_INFO(
@@ -301,6 +360,8 @@ bool PlannerBenchMarking::isStateValidSE3(const ompl::base::State * state)
         std::shared_ptr<octomap::OcTree> octomap_octree =
         std::make_shared<octomap::OcTree>(octomap_voxel_size_);
         octomap_msgs::readTree<octomap::OcTree>(octomap_octree.get(), *octomap_msg_);
+
+
         fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
         fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
           std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
@@ -433,7 +494,7 @@ void PlannerBenchMarking::publishSamplePlans(
   start.orientation = botanbot_utilities::getMsgQuaternionfromRPY(0, 0, start_.yaw);
   goal.position.x = goal_.x;
   goal.position.y = goal_.y;
-  goal.position.z = goal_.z;
+  goal.position.z = start_.z;
   goal.orientation = botanbot_utilities::getMsgQuaternionfromRPY(0, 0, goal_.yaw);
   start_and_goal.poses.push_back(start);
   start_and_goal.poses.push_back(goal);
@@ -535,6 +596,15 @@ void PlannerBenchMarking::allocatePlannerbyName(
       "Selected planner is not Found in available planners, using the default planner: RRTstar");
     planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
   }
+}
+
+double PlannerBenchMarking::getRangedRandom(double min, double max)
+{
+  std::random_device rd;
+  std::default_random_engine eng(rd());
+  std::uniform_real_distribution<double> distr(min, max);
+
+  return distr(eng);
 }
 
 }  // namespace botanbot_utilities

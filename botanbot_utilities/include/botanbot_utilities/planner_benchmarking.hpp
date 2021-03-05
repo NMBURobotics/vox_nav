@@ -244,6 +244,15 @@ public:
     const std::string & selected_planner_name,
     const ompl::base::SpaceInformationPtr & si);
 
+  /**
+   * @brief Get the Ranged Random object, return a random double in min max range
+   *
+   * @param min
+   * @param max
+   * @return double
+   */
+  double getRangedRandom(double min, double max);
+
 };
 }  // namespace botanbot_utilities
 
