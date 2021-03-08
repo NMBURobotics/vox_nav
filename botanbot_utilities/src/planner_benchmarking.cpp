@@ -32,9 +32,11 @@ PlannerBenchMarking::PlannerBenchMarking()
   this->declare_parameter("goal.z", 0.0);
   this->declare_parameter("goal_tolerance", 0.2);
   this->declare_parameter("min_euclidean_dist_start_to_goal", 25.0);
-  this->declare_parameter("num_benchmark_runs", 100);
+  this->declare_parameter("batch_size", 10);
+  this->declare_parameter("epochs", 10);
   this->declare_parameter("max_memory", 2048);
-  this->declare_parameter("results_output_file", "/home/user/get.log");
+  this->declare_parameter("results_output_dir", "/home/user/");
+  this->declare_parameter("results_file_regex", "SE2");
   this->declare_parameter("publish_a_sample_bencmark", true);
   this->declare_parameter("sample_bencmark_plans_topic", "benchmark_plan");
 
@@ -60,9 +62,11 @@ PlannerBenchMarking::PlannerBenchMarking()
   this->get_parameter("goal.z", goal_.z);
   this->get_parameter("goal_tolerance", goal_tolerance_);
   this->get_parameter("min_euclidean_dist_start_to_goal", min_euclidean_dist_start_to_goal_);
-  this->get_parameter("num_benchmark_runs", num_benchmark_runs_);
+  this->get_parameter("batch_size", batch_size_);
+  this->get_parameter("epochs", epochs_);
   this->get_parameter("max_memory", max_memory_);
-  this->get_parameter("results_output_file", results_output_file_);
+  this->get_parameter("results_output_dir", results_output_dir_);
+  this->get_parameter("results_file_regex", results_file_regex_);
   this->get_parameter("publish_a_sample_bencmark", publish_a_sample_bencmark_);
   this->get_parameter("sample_bencmark_plans_topic", sample_bencmark_plans_topic_);
 
@@ -146,158 +150,175 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
   ompl::base::SpaceInformationPtr si = ss.getSpaceInformation();
   ompl::base::ScopedState<ompl::base::SE2StateSpace> random_start(state_space_),
   random_goal(state_space_);
+  std::map<int, ompl::geometric::PathGeometric> paths_map;
 
-  // spin until a valid random start and goal poses are found. Also
-  // make sure that a soluion exists for generated states
-  volatile bool found_valid_random_start_goal = false;
-  while (!found_valid_random_start_goal) {
-    random_start->setX(getRangedRandom(se_bounds_.minx, se_bounds_.maxx));
-    random_start->setY(getRangedRandom(se_bounds_.miny, se_bounds_.maxy));
-    random_start->setYaw(getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw));
+  for (int i = 0; i < epochs_; i++) {
 
-    random_goal->setX(getRangedRandom(se_bounds_.minx, se_bounds_.maxx));
-    random_goal->setY(getRangedRandom(se_bounds_.miny, se_bounds_.maxy));
-    random_goal->setYaw(getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw));
+    // spin until a valid random start and goal poses are found. Also
+    // make sure that a soluion exists for generated states
+    volatile bool found_valid_random_start_goal = false;
 
-    // the distance should be above a certain threshold
-    double distance =
-      std::sqrt(
-      std::pow(random_goal->getX() - random_start->getX(), 2) +
-      std::pow(random_goal->getY() - random_start->getY(), 2));
+    while (!found_valid_random_start_goal) {
+      random_start->setX(getRangedRandom(se_bounds_.minx, se_bounds_.maxx));
+      random_start->setY(getRangedRandom(se_bounds_.miny, se_bounds_.maxy));
+      random_start->setYaw(getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw));
 
-    // define start & goal states
-    if ((selected_state_space_ == "REEDS") || (selected_state_space_ == "DUBINS") ||
-      (selected_state_space_ == "SE2"))
-    {
-      ompl::base::ScopedState<ompl::base::SE2StateSpace> start(state_space_), goal(state_space_);
-      start->setXY(random_start->getX(), random_start->getY());
-      start->setYaw(random_start->getYaw());
-      goal->setXY(random_goal->getX(), random_goal->getY());
-      goal->setYaw(random_goal->getYaw());
-      ss.setStartAndGoalStates(start, goal, goal_tolerance_);
-      ss.setStateValidityChecker(
-        [this](const ompl::base::State * state)
-        {
-          return isStateValidSE2(state);
-        });
-    } else {
-      ompl::base::ScopedState<ompl::base::SE3StateSpace> start(state_space_), goal(state_space_);
-      start->setXYZ(random_start->getX(), random_start->getY(), start_.z);
-      start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-        0, 0, 1, random_start->getYaw());
-      goal->setXYZ(random_goal->getX(), random_goal->getY(), goal_.z);
-      goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-        0, 0, 1, random_goal->getYaw());
-      ss.setStartAndGoalStates(start, goal, goal_tolerance_);
-      ss.setStateValidityChecker(
-        [this](const ompl::base::State * state)
-        {
-          return isStateValidSE3(state);
-        });
-    }
+      random_goal->setX(getRangedRandom(se_bounds_.minx, se_bounds_.maxx));
+      random_goal->setY(getRangedRandom(se_bounds_.miny, se_bounds_.maxy));
+      random_goal->setYaw(getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw));
 
-    found_valid_random_start_goal =
-      (isStateValidSE2(random_start.get()) && isStateValidSE2(random_goal.get()) &&
-      distance > min_euclidean_dist_start_to_goal_);
+      // the distance should be above a certain threshold
+      double distance =
+        std::sqrt(
+        std::pow(random_goal->getX() - random_start->getX(), 2) +
+        std::pow(random_goal->getY() - random_start->getY(), 2));
 
-    if (!found_valid_random_start_goal) {
+      // define start & goal states
+      if ((selected_state_space_ == "REEDS") || (selected_state_space_ == "DUBINS") ||
+        (selected_state_space_ == "SE2"))
+      {
+        ompl::base::ScopedState<ompl::base::SE2StateSpace> start(state_space_), goal(state_space_);
+        start->setXY(random_start->getX(), random_start->getY());
+        start->setYaw(random_start->getYaw());
+        goal->setXY(random_goal->getX(), random_goal->getY());
+        goal->setYaw(random_goal->getYaw());
+        ss.setStartAndGoalStates(start, goal, goal_tolerance_);
+        ss.setStateValidityChecker(
+          [this](const ompl::base::State * state)
+          {
+            return isStateValidSE2(state);
+          });
+      } else {
+        ompl::base::ScopedState<ompl::base::SE3StateSpace> start(state_space_), goal(state_space_);
+        start->setXYZ(random_start->getX(), random_start->getY(), start_.z);
+        start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
+          0, 0, 1, random_start->getYaw());
+        goal->setXYZ(random_goal->getX(), random_goal->getY(), goal_.z);
+        goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
+          0, 0, 1, random_goal->getYaw());
+        ss.setStartAndGoalStates(start, goal, goal_tolerance_);
+        ss.setStateValidityChecker(
+          [this](const ompl::base::State * state)
+          {
+            return isStateValidSE3(state);
+          });
+      }
+
+      found_valid_random_start_goal =
+        (isStateValidSE2(random_start.get()) && isStateValidSE2(random_goal.get()) &&
+        distance > min_euclidean_dist_start_to_goal_);
+
+      if (!found_valid_random_start_goal) {
+        RCLCPP_INFO(
+          this->get_logger(), "Still Looking to sample valid random start and goal states ... ");
+        continue;
+      }
+
       RCLCPP_INFO(
-        this->get_logger(), "Still Looking to sample valid random start and goal states ... ");
-      continue;
-    }
-    RCLCPP_INFO(
-      this->get_logger(), "A valid random start and goal states has been found.");
+        this->get_logger(), "A valid random start and goal states has been found.");
 
+      ss.setOptimizationObjective(std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
+      si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
+      si->setup();
+
+      // create a planner for the defined space
+      ss.clear();
+      ompl::base::PlannerPtr rrtstar_planner;
+      rrtstar_planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
+      ss.setPlanner(rrtstar_planner);
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Checking whether a solution exists for random start and goal states .");
+      ompl::base::PlannerStatus has_solution = ss.solve(10.0);
+      ss.clear();
+
+      // if it gets to this point , that menas our random states are valid and already meets min dist requiremnets
+      // but now there also has to be a solution for this problem
+      found_valid_random_start_goal = (has_solution == ompl::base::PlannerStatus::EXACT_SOLUTION);
+
+      if (found_valid_random_start_goal) {
+        RCLCPP_INFO(
+          this->get_logger(),
+          "Found valid states and a solution for the random problem!, proceeding to actual benchmark.");
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    ss.clear();
+    RCLCPP_INFO(this->get_logger(), "Created valid random start and goal states");
+
+    start_.x = random_start->getX();
+    start_.y = random_start->getY();
+    start_.yaw = random_start->getYaw();
+    goal_.x = random_goal->getX();
+    goal_.y = random_goal->getY();
+    goal_.yaw = random_goal->getYaw();
+
+    // create a planner for the defined space
+    ompl::base::PlannerPtr rrtstar_planner;
+    rrtstar_planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
+    ss.setPlanner(rrtstar_planner);
+
+    RCLCPP_INFO(this->get_logger(), "Creating Ground truth plan wih RRTstar");
     ss.setOptimizationObjective(std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
     si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
     si->setup();
+    ompl::base::PlannerStatus gt_plan_solved = ss.solve(500.0);
+    ompl::geometric::PathGeometric gt_plan = ss.getSolutionPath();
+    // Path smoothing using bspline
+    ompl::geometric::PathSimplifier path_simlifier(ss.getSpaceInformation());
+    path_simlifier.simplifyMax(gt_plan);
+    path_simlifier.smoothBSpline(gt_plan);
+    gt_plan.interpolate(interpolation_parameter_);
+    path_simlifier.freeStates(true);
+    ss.clear();
 
-    // create a planner for the defined space
-    ompl::base::PlannerPtr bitstar_planner;
-    bitstar_planner = ompl::base::PlannerPtr(new ompl::geometric::BITstar(si));
-    ss.setPlanner(bitstar_planner);
+    std::mutex plan_mutex;
+    ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, batch_size_);
+    request.displayProgress = false;
+    ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
+    b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
+    b.addExperimentParameter("gt_path_smoothness", "REAL", std::to_string(gt_plan.smoothness()));
+
+    // this section is to visualize a sample benchmark into RVIZ
+    int index(0);
+    for (auto && planner_name : selected_planners_) {
+      ompl::base::PlannerPtr planner_ptr;
+      allocatePlannerbyName(planner_ptr, planner_name, si);
+      b.addPlanner(planner_ptr);
+
+      if (publish_a_sample_bencmark_) {
+        try {
+          std::lock_guard<std::mutex> guard(plan_mutex);
+          ompl::geometric::PathGeometric curr_path = makeAPlan(planner_ptr, ss);
+          if (curr_path.getStateCount() == 0) {
+            RCLCPP_WARN(
+              this->get_logger(),
+              "An empty path detected!, looks like %s failed to produce a valid plan",
+              planner_name.c_str());
+          }
+          std::pair<int, ompl::geometric::PathGeometric> curr_pair(index, curr_path);
+          paths_map.insert(curr_pair);
+          ss.clear();
+        } catch (const std::exception & e) {
+          std::cerr << e.what() << '\n';
+        }
+      }
+      index++;
+    }
 
     RCLCPP_INFO(
       this->get_logger(),
-      "Checking whether a solution exists for random start and goal states .");
-    ompl::base::PlannerStatus has_solution = ss.solve(5.0);
-
-    // if it gets to this point , that menas our random states are valid and already meets min dist requiremnets
-    // but now there also has to be a solution for this problem
-    found_valid_random_start_goal = has_solution;
-
-    if (found_valid_random_start_goal) {
-      RCLCPP_INFO(
-        this->get_logger(),
-        "Found valid states and a solution for the random problem!, proceeding to actual benchmark.");
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      "Created sample plans from each planner, "
+      "Now performing actual benchmark, This might take some time.");
+    b.benchmark(request);
+    b.saveResultsToFile(
+      (results_output_dir_ + results_file_regex_ + "_" +
+      std::to_string(i) + ".log").c_str());
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Bencmarking results saved to given directory: %s.", results_output_dir_.c_str());
   }
-
-  ss.clear();
-  RCLCPP_INFO(this->get_logger(), "Created valid random start and goal states");
-
-  start_.x = random_start->getX();
-  start_.y = random_start->getY();
-  start_.yaw = random_start->getYaw();
-  goal_.x = random_goal->getX();
-  goal_.y = random_goal->getY();
-  goal_.yaw = random_goal->getYaw();
-
-  // create a planner for the defined space
-  ompl::base::PlannerPtr cforest_planner;
-  cforest_planner = ompl::base::PlannerPtr(new ompl::geometric::CForest(si));
-  ss.setPlanner(cforest_planner);
-  RCLCPP_INFO(this->get_logger(), "Creating Ground truth plan wih CFOREST");
-  ompl::base::PlannerStatus gt_plan_solved = ss.solve(10.0);
-  ompl::geometric::PathGeometric gt_plan = ss.getSolutionPath();
-  ss.clear();
-  std::map<int, ompl::geometric::PathGeometric> paths_map;
-  std::mutex plan_mutex;
-  ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, num_benchmark_runs_);
-  request.displayProgress = false;
-  ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
-  b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
-
-  // this section is to visualize a sample benchmark into RVIZ
-  int index(0);
-  for (auto && planner_name : selected_planners_) {
-    ompl::base::PlannerPtr planner_ptr;
-    allocatePlannerbyName(planner_ptr, planner_name, si);
-    b.addPlanner(planner_ptr);
-
-    if (publish_a_sample_bencmark_) {
-      try {
-        std::lock_guard<std::mutex> guard(plan_mutex);
-        ompl::geometric::PathGeometric curr_path = makeAPlan(planner_ptr, ss);
-        if (curr_path.getStateCount() == 0) {
-          RCLCPP_WARN(
-            this->get_logger(),
-            "An empty path detected!, looks like %s failed to produce a valid plan",
-            planner_name.c_str());
-        }
-
-        std::pair<int, ompl::geometric::PathGeometric> curr_pair(index, curr_path);
-        paths_map.insert(curr_pair);
-
-        ss.clear();
-      } catch (const std::exception & e) {
-        std::cerr << e.what() << '\n';
-      }
-    }
-
-    index++;
-  }
-
-  RCLCPP_INFO(
-    this->get_logger(),
-    "Created sample plans from each planner, "
-    "Now performing actual benchmark, This might take some time.");
-  b.benchmark(request);
-  b.saveResultsToFile(results_output_file_.c_str());
-  RCLCPP_INFO(
-    this->get_logger(),
-    "Bencmarking results saved to given directory: %s.", results_output_file_.c_str());
   return paths_map;
 }
 

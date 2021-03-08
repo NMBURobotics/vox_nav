@@ -4,14 +4,14 @@ planner_benchmarking_rclcpp_node:
     interpolation_parameter: 120
     octomap_topic: "octomap"
     octomap_voxel_size: 0.2
-    selected_state_space: "SE2" # "DUBINS","REEDS", "SE2", "SE3" ### PS. Use DUBINS OR REEDS for Ackermann
+    selected_state_space: "DUBINS" # "DUBINS","REEDS", "SE2", "SE3" ### PS. Use DUBINS OR REEDS for Ackermann
     selected_planners: ["RRTstar","PRMstar","LazyPRMstar", "RRTXstatic", "FMT", "BITstar", "ABITstar", "CForest"]
     min_turning_radius: 1.5
     state_space_boundries:
-      minx: -30.0
-      maxx: 30.0
-      miny: -30.0
-      maxy: 30.0
+      minx: -35.0
+      maxx: 35.0
+      miny: -35.0
+      maxy: 35.0
       minz: -10.0
       maxz: 10.0
       minyaw: -3.14
@@ -19,15 +19,17 @@ planner_benchmarking_rclcpp_node:
     robot_body_dimens:
       x: 1.5
       y: 1.5
-      z: 0.5
+      z: 0.4
     start:
-      z: 2.0  #3.5
+      z: 2.5  #3.5
     goal:
-      z: 2.0 #3.5
-    goal_tolerance: 0.2  
-    min_euclidean_dist_start_to_goal: 35.0
-    num_benchmark_runs: 10
+      z: 2.5 #3.5
+    goal_tolerance: 0.2
+    min_euclidean_dist_start_to_goal: 60.0
+    batch_size: 20
+    epochs: 9
     max_memory: 4096
-    results_output_file: "/home/ros2-foxy/ECMR2021/benchmark_results/SE2_2.log"
+    results_output_dir: "/home/ros2-foxy/ECMR2021/benchmark_results/"   
+    results_file_regex: "DUBINS"
     publish_a_sample_bencmark: true
     sample_bencmark_plans_topic: "benchmark_plan"

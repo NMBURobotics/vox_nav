@@ -128,7 +128,9 @@ private:
 
   std::vector<std::string> selected_planners_;
   std::string octomap_topic_;
-  std::string results_output_file_;
+  std::string results_output_dir_;
+  std::string results_file_regex_;
+
   double octomap_voxel_size_;
   double planner_timeout_;
   // Only used for REEDS or DUBINS
@@ -136,7 +138,8 @@ private:
   double goal_tolerance_;
   double min_euclidean_dist_start_to_goal_;
   int interpolation_parameter_;
-  int num_benchmark_runs_;
+  int batch_size_;
+  int epochs_;
   int max_memory_;
   bool publish_a_sample_bencmark_;
   std::string sample_bencmark_plans_topic_;
