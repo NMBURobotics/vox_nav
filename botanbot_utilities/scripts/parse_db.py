@@ -6,6 +6,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.patches as mpatches
 
+
 def create_connection(db_file):
     """ create a database connection to the SQLite database
         specified by the db_file
@@ -21,7 +22,7 @@ def create_connection(db_file):
     return conn
 
 
-def plot_status():
+def plot_status(space, epochs):
     '''
     UNKNOWN = 0,
     INVALID_START,
@@ -44,15 +45,13 @@ def plot_status():
     ABITstar = []
     CFOREST = []
 
-    for i in range(0, 6, 1):
-        database = "/home/ros2-foxy/ECMR2021/benchmark_results/DUBINS_" + str(
+    for i in range(0, epochs, 1):
+        database = "/home/ros2-foxy/ECMR2021/benchmark_results/" + space + "_" + str(
             i) + ".db"
         conn = create_connection(database)
 
         cur = conn.cursor()
-        cur.execute(
-            "SELECT plannerid, status FROM runs"
-        )
+        cur.execute("SELECT plannerid, status FROM runs")
         datas = cur.fetchall()
 
         for data in datas:
@@ -74,25 +73,26 @@ def plot_status():
                     ABITstar.append(data[1])
                 if data[0] == 8:
                     CFOREST.append(data[1])
-                    
+
     unique, counts = np.unique(RRTstar, return_counts=True)
     print(dict(zip(unique, counts)))
     unique, counts = np.unique(PRMstar, return_counts=True)
     print(dict(zip(unique, counts)))
     unique, counts = np.unique(LazyPRMstar, return_counts=True)
-    print(dict(zip(unique, counts)))    
+    print(dict(zip(unique, counts)))
     unique, counts = np.unique(RRTX, return_counts=True)
-    print(dict(zip(unique, counts)))    
+    print(dict(zip(unique, counts)))
     unique, counts = np.unique(FMTstar, return_counts=True)
-    print(dict(zip(unique, counts)))    
+    print(dict(zip(unique, counts)))
     unique, counts = np.unique(BITstar, return_counts=True)
-    print(dict(zip(unique, counts)))    
+    print(dict(zip(unique, counts)))
     unique, counts = np.unique(ABITstar, return_counts=True)
-    print(dict(zip(unique, counts)))     
+    print(dict(zip(unique, counts)))
     unique, counts = np.unique(CFOREST, return_counts=True)
-    print(dict(zip(unique, counts)))     
+    print(dict(zip(unique, counts)))
 
-def plot_normalized_path_lengths():
+
+def plot_normalized_path_lengths(space, epochs):
 
     GT = []
     RRTstar = []
@@ -104,15 +104,13 @@ def plot_normalized_path_lengths():
     ABITstar = []
     CFOREST = []
 
-    for i in range(0, 6, 1):
-        database = "/home/ros2-foxy/ECMR2021/benchmark_results/DUBINS_" + str(
+    for i in range(0, epochs, 1):
+        database = "/home/ros2-foxy/ECMR2021/benchmark_results/" + space + "_" + str(
             i) + ".db"
         conn = create_connection(database)
 
         cur = conn.cursor()
-        cur.execute(
-            "SELECT plannerid, solution_length FROM runs"
-        )
+        cur.execute("SELECT plannerid, solution_length FROM runs")
         datas = cur.fetchall()
 
         cur.execute("SELECT gt_path_length FROM experiments")
@@ -158,13 +156,15 @@ def plot_normalized_path_lengths():
     ax1.set_xticklabels([
         'RRTstar', 'PRMstar', 'LazyPRMstar', ' RRTX', 'FMTstar', 'BITstar',
         'ABITstar', 'CFOREST', 'GT Length'
-    ], fontsize=20)
+    ],
+                        fontsize=20)
 
     ax1.boxplot(plot, vert=1, patch_artist=True, showfliers=False)
     plt.grid()
     plt.show()
 
-def plot_smoothness():
+
+def plot_smoothness(space, epochs):
 
     GT = []
     RRTstar = []
@@ -176,22 +176,21 @@ def plot_smoothness():
     ABITstar = []
     CFOREST = []
 
-    for i in range(0, 6, 1):
-        database = "/home/ros2-foxy/ECMR2021/benchmark_results/DUBINS_" + str(
+    for i in range(0, epochs, 1):
+        database = "/home/ros2-foxy/ECMR2021/benchmark_results/" + space + "_" + str(
             i) + ".db"
         conn = create_connection(database)
 
         cur = conn.cursor()
-        cur.execute(
-            "SELECT plannerid, solution_smoothness FROM runs"
-        )
+        cur.execute("SELECT plannerid, solution_smoothness FROM runs")
         datas = cur.fetchall()
 
-        cur.execute("SELECT gt_path_smoothness FROM experiments")
-        gt_path_smoothness = cur.fetchone()
-        gt_path_smoothness = gt_path_smoothness[0]
+        #cur.execute("SELECT gt_path_smoothness FROM experiments")
+        #gt_path_smoothness = cur.fetchone()
+        #gt_path_smoothness = gt_path_smoothness[0]
+        gt_path_smoothness = 1.0
 
-        normalization_value = 0.01
+        normalization_value = 0.0
         normalization_coeff = normalization_value / gt_path_smoothness
         gt_path_smoothness = normalization_coeff * gt_path_smoothness
         print(gt_path_smoothness)
@@ -199,7 +198,7 @@ def plot_smoothness():
         for data in datas:
             data = list(data)
             if data[1] != None:
-                data[1] = normalization_coeff * data[1]
+                #data[1] = normalization_coeff * data[1]
                 if data[0] == 1:
                     RRTstar.append(data[1])
                 if data[0] == 2:
@@ -229,7 +228,8 @@ def plot_smoothness():
     ax1.set_xticklabels([
         'RRTstar', 'PRMstar', 'LazyPRMstar', ' RRTX', 'FMTstar', 'BITstar',
         'ABITstar', 'CFOREST', 'GT Smoothness'
-    ],fontsize=18)
+    ],
+                        fontsize=18)
 
     ax1.boxplot(plot, vert=1, patch_artist=True, showfliers=False)
     plt.grid()
@@ -241,6 +241,6 @@ def normalize(value, min, max):
 
 
 if __name__ == '__main__':
-    #plot_normalized_path_lengths()
-    #plot_status()
-    plot_smoothness()
+    #plot_normalized_path_lengths("SE3", 18)
+    #plot_status("SE3", 18)
+    plot_smoothness("SE3", 18)

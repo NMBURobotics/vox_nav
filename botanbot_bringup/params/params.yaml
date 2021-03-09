@@ -94,7 +94,7 @@ botanbot_controller_server_rclcpp_node:
 
 botanbot_map_server_rclcpp_node:
   ros__parameters:
-    octomap_filename: "/home/ros2-foxy/complex_farming.bt"
+    octomap_filename: "/home/ros2-foxy/uneven_world.bt"
     octomap_voxel_size: 0.2
     octomap_publish_frequency: 10
     provide_utm_to_map_transform: true

@@ -263,7 +263,8 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     ss.setOptimizationObjective(std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
     si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
     si->setup();
-    ompl::base::PlannerStatus gt_plan_solved = ss.solve(500.0);
+
+    /*ompl::base::PlannerStatus gt_plan_solved = ss.solve(180.0);
     ompl::geometric::PathGeometric gt_plan = ss.getSolutionPath();
     // Path smoothing using bspline
     ompl::geometric::PathSimplifier path_simlifier(ss.getSpaceInformation());
@@ -273,19 +274,20 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     path_simlifier.freeStates(true);
     ss.clear();
 
-    std::mutex plan_mutex;
     ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, batch_size_);
     request.displayProgress = false;
     ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
     b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
-    b.addExperimentParameter("gt_path_smoothness", "REAL", std::to_string(gt_plan.smoothness()));
+    b.addExperimentParameter("gt_path_smoothness", "REAL", std::to_string(gt_plan.smoothness()));*/
+
+    std::mutex plan_mutex;
 
     // this section is to visualize a sample benchmark into RVIZ
     int index(0);
     for (auto && planner_name : selected_planners_) {
       ompl::base::PlannerPtr planner_ptr;
       allocatePlannerbyName(planner_ptr, planner_name, si);
-      b.addPlanner(planner_ptr);
+      //b.addPlanner(planner_ptr);
 
       if (publish_a_sample_bencmark_) {
         try {
@@ -311,13 +313,14 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
       this->get_logger(),
       "Created sample plans from each planner, "
       "Now performing actual benchmark, This might take some time.");
-    b.benchmark(request);
+
+    /*b.benchmark(request);
     b.saveResultsToFile(
       (results_output_dir_ + results_file_regex_ + "_" +
       std::to_string(i) + ".log").c_str());
     RCLCPP_INFO(
       this->get_logger(),
-      "Bencmarking results saved to given directory: %s.", results_output_dir_.c_str());
+      "Bencmarking results saved to given directory: %s.", results_output_dir_.c_str());*/
   }
   return paths_map;
 }
