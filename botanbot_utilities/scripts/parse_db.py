@@ -35,15 +35,23 @@ def plot_status(space, epochs):
     ABORT,
     TYPE_COUNT
     '''
-
-    RRTstar = []
+    # ALL SBO PLANNERS
     PRMstar = []
     LazyPRMstar = []
-    RRTX = []
-    FMTstar = []
+    RRTstar = []
+    RRTsharp = []
+    RRTXstatic = []
+    InformedRRTstar = []
     BITstar = []
     ABITstar = []
-    CFOREST = []
+    AITstar = []
+    LBTRRT = []
+    SST = []
+    SPARS = []
+    SPARStwo = []
+    FMT = []
+    CForest = []
+    AnytimePathShortening = []
 
     for i in range(0, epochs, 1):
         database = "/home/ros2-foxy/ECMR2021/benchmark_results/" + space + "_" + str(
@@ -58,51 +66,92 @@ def plot_status(space, epochs):
             data = list(data)
             if data[1] != None:
                 if data[0] == 1:
-                    RRTstar.append(data[1])
-                if data[0] == 2:
                     PRMstar.append(data[1])
-                if data[0] == 3:
+                if data[0] == 2:
                     LazyPRMstar.append(data[1])
+                if data[0] == 3:
+                    RRTstar.append(data[1])
                 if data[0] == 4:
-                    RRTX.append(data[1])
+                    RRTsharp.append(data[1])
                 if data[0] == 5:
-                    FMTstar.append(data[1])
+                    RRTXstatic.append(data[1])
                 if data[0] == 6:
-                    BITstar.append(data[1])
+                    InformedRRTstar.append(data[1])
                 if data[0] == 7:
-                    ABITstar.append(data[1])
+                    BITstar.append(data[1])
                 if data[0] == 8:
-                    CFOREST.append(data[1])
+                    ABITstar.append(data[1])
+                if data[0] == 9:
+                    AITstar.append(data[1])
+                if data[0] == 10:
+                    LBTRRT.append(data[1])
+                if data[0] == 11:
+                    SST.append(data[1])
+                if data[0] == 12:
+                    SPARS.append(data[1])
+                if data[0] == 13:
+                    SPARStwo.append(data[1])
+                if data[0] == 14:
+                    FMT.append(data[1])
+                if data[0] == 15:
+                    CForest.append(data[1])
+                if data[0] == 16:
+                    AnytimePathShortening.append(data[1])
 
-    unique, counts = np.unique(RRTstar, return_counts=True)
-    print(dict(zip(unique, counts)))
     unique, counts = np.unique(PRMstar, return_counts=True)
-    print(dict(zip(unique, counts)))
+    print("PRMstar", dict(zip(unique, counts)))
     unique, counts = np.unique(LazyPRMstar, return_counts=True)
-    print(dict(zip(unique, counts)))
-    unique, counts = np.unique(RRTX, return_counts=True)
-    print(dict(zip(unique, counts)))
-    unique, counts = np.unique(FMTstar, return_counts=True)
-    print(dict(zip(unique, counts)))
+    print("LazyPRMstar", dict(zip(unique, counts)))
+    unique, counts = np.unique(RRTstar, return_counts=True)
+    print("RRTstar", dict(zip(unique, counts)))
+    unique, counts = np.unique(RRTsharp, return_counts=True)
+    print("RRTsharp", dict(zip(unique, counts)))
+    unique, counts = np.unique(RRTXstatic, return_counts=True)
+    print("RRTXstatic", dict(zip(unique, counts)))
+    unique, counts = np.unique(InformedRRTstar, return_counts=True)
+    print("InformedRRTstar", dict(zip(unique, counts)))
     unique, counts = np.unique(BITstar, return_counts=True)
-    print(dict(zip(unique, counts)))
+    print("BITstar", dict(zip(unique, counts)))
     unique, counts = np.unique(ABITstar, return_counts=True)
-    print(dict(zip(unique, counts)))
-    unique, counts = np.unique(CFOREST, return_counts=True)
-    print(dict(zip(unique, counts)))
+    print("ABITstar", dict(zip(unique, counts)))
+    unique, counts = np.unique(AITstar, return_counts=True)
+    print("AITstar", dict(zip(unique, counts)))
+    unique, counts = np.unique(LBTRRT, return_counts=True)
+    print("LBTRRT", dict(zip(unique, counts)))
+    unique, counts = np.unique(SST, return_counts=True)
+    print("SST", dict(zip(unique, counts)))
+    unique, counts = np.unique(SPARS, return_counts=True)
+    print("SPARS", dict(zip(unique, counts)))
+    unique, counts = np.unique(SPARStwo, return_counts=True)
+    print("SPARStwo", dict(zip(unique, counts)))
+    unique, counts = np.unique(FMT, return_counts=True)
+    print("FMT", dict(zip(unique, counts)))
+    unique, counts = np.unique(CForest, return_counts=True)
+    print("CForest", dict(zip(unique, counts)))
+    unique, counts = np.unique(AnytimePathShortening, return_counts=True)
+    print("AnytimePathShortening", dict(zip(unique, counts)))
 
 
 def plot_normalized_path_lengths(space, epochs):
 
+    # ALL SBO PLANNERS
     GT = []
-    RRTstar = []
     PRMstar = []
     LazyPRMstar = []
-    RRTX = []
-    FMTstar = []
+    RRTstar = []
+    RRTsharp = []
+    RRTXstatic = []
+    InformedRRTstar = []
     BITstar = []
     ABITstar = []
-    CFOREST = []
+    AITstar = []
+    LBTRRT = []
+    SST = []
+    SPARS = []
+    SPARStwo = []
+    FMT = []
+    CForest = []
+    AnytimePathShortening = []
 
     for i in range(0, epochs, 1):
         database = "/home/ros2-foxy/ECMR2021/benchmark_results/" + space + "_" + str(
@@ -128,53 +177,87 @@ def plot_normalized_path_lengths(space, epochs):
             if data[1] != None:
                 data[1] = normalization_coeff * data[1]
                 if data[0] == 1:
-                    RRTstar.append(data[1])
-                if data[0] == 2:
                     PRMstar.append(data[1])
-                if data[0] == 3:
+                if data[0] == 2:
                     LazyPRMstar.append(data[1])
+                if data[0] == 3:
+                    RRTstar.append(data[1])
                 if data[0] == 4:
-                    RRTX.append(data[1])
+                    RRTsharp.append(data[1])
                 if data[0] == 5:
-                    FMTstar.append(data[1])
+                    RRTXstatic.append(data[1])
                 if data[0] == 6:
-                    BITstar.append(data[1])
+                    InformedRRTstar.append(data[1])
                 if data[0] == 7:
-                    ABITstar.append(data[1])
+                    BITstar.append(data[1])
                 if data[0] == 8:
-                    CFOREST.append(data[1])
+                    ABITstar.append(data[1])
+                if data[0] == 9:
+                    AITstar.append(data[1])
+                if data[0] == 10:
+                    LBTRRT.append(data[1])
+                if data[0] == 11:
+                    SST.append(data[1])
+                if data[0] == 12:
+                    SPARS.append(data[1])
+                if data[0] == 13:
+                    SPARStwo.append(data[1])
+                if data[0] == 14:
+                    FMT.append(data[1])
+                if data[0] == 15:
+                    CForest.append(data[1])
+                if data[0] == 16:
+                    AnytimePathShortening.append(data[1])
                 GT.append(gt_path_length)
 
     plot = [
-        RRTstar, PRMstar, LazyPRMstar, RRTX, FMTstar, BITstar, ABITstar,
-        CFOREST, GT
+        GT, PRMstar, LazyPRMstar, RRTstar, RRTsharp, RRTXstatic,
+        InformedRRTstar, BITstar, ABITstar, AITstar, LBTRRT, SST, SPARS,
+        SPARStwo, FMT, CForest, AnytimePathShortening
     ]
 
     fig1, ax1 = plt.subplots()
     ax1.set_title('Normalized Path Lengths')
     # x-axis labels
     ax1.set_xticklabels([
-        'RRTstar', 'PRMstar', 'LazyPRMstar', ' RRTX', 'FMTstar', 'BITstar',
-        'ABITstar', 'CFOREST', 'GT Length'
+        "GT", "PRMstar", "LazyPRMstar", "RRTstar", "RRTsharp", "RRTXstatic",
+        "InformedRRTstar", "BITstar", "ABITstar", "AITstar", "LBTRRT", "SST",
+        "SPARS", "SPARStwo", "FMT", "CForest", "AnytimePathShortening"
     ],
-                        fontsize=20)
+                        fontsize=11)
 
-    ax1.boxplot(plot, vert=1, patch_artist=True, showfliers=False)
+    ax1.boxplot(plot,
+                vert=1,
+                patch_artist=True,
+                showfliers=False,
+                showmeans=True)
+
+    plt.rcParams.update({'font.size': 30})
+    plt.xticks(rotation=90)
     plt.grid()
     plt.show()
 
 
 def plot_smoothness(space, epochs):
 
+    # ALL SBO PLANNERS
     GT = []
-    RRTstar = []
     PRMstar = []
     LazyPRMstar = []
-    RRTX = []
-    FMTstar = []
+    RRTstar = []
+    RRTsharp = []
+    RRTXstatic = []
+    InformedRRTstar = []
     BITstar = []
     ABITstar = []
-    CFOREST = []
+    AITstar = []
+    LBTRRT = []
+    SST = []
+    SPARS = []
+    SPARStwo = []
+    FMT = []
+    CForest = []
+    AnytimePathShortening = []
 
     for i in range(0, epochs, 1):
         database = "/home/ros2-foxy/ECMR2021/benchmark_results/" + space + "_" + str(
@@ -185,53 +268,71 @@ def plot_smoothness(space, epochs):
         cur.execute("SELECT plannerid, solution_smoothness FROM runs")
         datas = cur.fetchall()
 
-        #cur.execute("SELECT gt_path_smoothness FROM experiments")
-        #gt_path_smoothness = cur.fetchone()
-        #gt_path_smoothness = gt_path_smoothness[0]
         gt_path_smoothness = 1.0
 
         normalization_value = 0.0
         normalization_coeff = normalization_value / gt_path_smoothness
         gt_path_smoothness = normalization_coeff * gt_path_smoothness
-        print(gt_path_smoothness)
 
         for data in datas:
             data = list(data)
             if data[1] != None:
-                #data[1] = normalization_coeff * data[1]
                 if data[0] == 1:
-                    RRTstar.append(data[1])
-                if data[0] == 2:
                     PRMstar.append(data[1])
-                if data[0] == 3:
+                if data[0] == 2:
                     LazyPRMstar.append(data[1])
+                if data[0] == 3:
+                    RRTstar.append(data[1])
                 if data[0] == 4:
-                    RRTX.append(data[1])
+                    RRTsharp.append(data[1])
                 if data[0] == 5:
-                    FMTstar.append(data[1])
+                    RRTXstatic.append(data[1])
                 if data[0] == 6:
-                    BITstar.append(data[1])
+                    InformedRRTstar.append(data[1])
                 if data[0] == 7:
-                    ABITstar.append(data[1])
+                    BITstar.append(data[1])
                 if data[0] == 8:
-                    CFOREST.append(data[1])
+                    ABITstar.append(data[1])
+                if data[0] == 9:
+                    AITstar.append(data[1])
+                if data[0] == 10:
+                    LBTRRT.append(data[1])
+                if data[0] == 11:
+                    SST.append(data[1])
+                if data[0] == 12:
+                    SPARS.append(data[1])
+                if data[0] == 13:
+                    SPARStwo.append(data[1])
+                if data[0] == 14:
+                    FMT.append(data[1])
+                if data[0] == 15:
+                    CForest.append(data[1])
+                if data[0] == 16:
+                    AnytimePathShortening.append(data[1])
                 GT.append(gt_path_smoothness)
 
     plot = [
-        RRTstar, PRMstar, LazyPRMstar, RRTX, FMTstar, BITstar, ABITstar,
-        CFOREST, GT
+        GT, PRMstar, LazyPRMstar, RRTstar, RRTsharp, RRTXstatic,
+        InformedRRTstar, BITstar, ABITstar, AITstar, LBTRRT, SST, SPARS,
+        SPARStwo, FMT, CForest, AnytimePathShortening
     ]
 
     fig1, ax1 = plt.subplots()
-    ax1.set_title('Smoothness')
+    ax1.set_title('SMoothness')
     # x-axis labels
     ax1.set_xticklabels([
-        'RRTstar', 'PRMstar', 'LazyPRMstar', ' RRTX', 'FMTstar', 'BITstar',
-        'ABITstar', 'CFOREST', 'GT Smoothness'
+        "GT", "PRMstar", "LazyPRMstar", "RRTstar", "RRTsharp", "RRTXstatic",
+        "InformedRRTstar", "BITstar", "ABITstar", "AITstar", "LBTRRT", "SST",
+        "SPARS", "SPARStwo", "FMT", "CForest", "AnytimePathShortening"
     ],
-                        fontsize=18)
+                        fontsize=11)
 
-    ax1.boxplot(plot, vert=1, patch_artist=True, showfliers=False)
+    ax1.boxplot(plot,
+                vert=1,
+                patch_artist=True,
+                showfliers=False,
+                showmeans=True)
+    plt.xticks(rotation=90)
     plt.grid()
     plt.show()
 
@@ -241,6 +342,6 @@ def normalize(value, min, max):
 
 
 if __name__ == '__main__':
-    #plot_normalized_path_lengths("SE3", 18)
-    #plot_status("SE3", 18)
-    plot_smoothness("SE3", 18)
+    plot_normalized_path_lengths("SE3", 5)
+    #plot_status("SE3", 5)
+    #plot_smoothness("SE3", 5)

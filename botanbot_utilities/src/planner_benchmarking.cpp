@@ -264,7 +264,7 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
     si->setup();
 
-    /*ompl::base::PlannerStatus gt_plan_solved = ss.solve(180.0);
+    ompl::base::PlannerStatus gt_plan_solved = ss.solve(180.0);
     ompl::geometric::PathGeometric gt_plan = ss.getSolutionPath();
     // Path smoothing using bspline
     ompl::geometric::PathSimplifier path_simlifier(ss.getSpaceInformation());
@@ -278,7 +278,7 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     request.displayProgress = false;
     ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
     b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
-    b.addExperimentParameter("gt_path_smoothness", "REAL", std::to_string(gt_plan.smoothness()));*/
+    b.addExperimentParameter("gt_path_smoothness", "REAL", std::to_string(gt_plan.smoothness()));
 
     std::mutex plan_mutex;
 
@@ -287,7 +287,7 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     for (auto && planner_name : selected_planners_) {
       ompl::base::PlannerPtr planner_ptr;
       allocatePlannerbyName(planner_ptr, planner_name, si);
-      //b.addPlanner(planner_ptr);
+      b.addPlanner(planner_ptr);
 
       if (publish_a_sample_bencmark_) {
         try {
@@ -314,13 +314,13 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
       "Created sample plans from each planner, "
       "Now performing actual benchmark, This might take some time.");
 
-    /*b.benchmark(request);
+    b.benchmark(request);
     b.saveResultsToFile(
       (results_output_dir_ + results_file_regex_ + "_" +
       std::to_string(i) + ".log").c_str());
     RCLCPP_INFO(
       this->get_logger(),
-      "Bencmarking results saved to given directory: %s.", results_output_dir_.c_str());*/
+      "Bencmarking results saved to given directory: %s.", results_output_dir_.c_str());
   }
   return paths_map;
 }
@@ -464,11 +464,12 @@ void PlannerBenchMarking::publishSamplePlans(
       marker.header.frame_id = "map";
       marker.header.stamp = rclcpp::Clock().now();
       marker.type = visualization_msgs::msg::Marker::ARROW;
+
       marker.action = visualization_msgs::msg::Marker::ADD;
       marker.lifetime = rclcpp::Duration::from_seconds(0);
-      marker.scale.x = 0.4;
-      marker.scale.y = 0.3;
-      marker.scale.z = 0.3;
+      marker.scale.x = 0.5;
+      marker.scale.y = 0.4;
+      marker.scale.z = 0.4;
       marker.id = total_poses;
       marker.color = getColorByIndex(it->first);
       marker.ns = "path" + std::to_string(it->first);
@@ -521,66 +522,107 @@ std_msgs::msg::ColorRGBA PlannerBenchMarking::getColorByIndex(int index)
 {
   std_msgs::msg::ColorRGBA result;
   switch (index) {
-    case 0:   // RED
+    case 0: // RED:
       result.r = 0.8;
       result.g = 0.1;
       result.b = 0.1;
       result.a = 1.0;
       break;
-    case 1:   //GREEN
+    case 1: //GREEN:
       result.r = 0.1;
       result.g = 0.8;
       result.b = 0.1;
       result.a = 1.0;
       break;
-    case 2:   //BLUE
-      result.r = 0.0;
-      result.g = 0.0;
-      result.b = 1.0;
+    case 2: //GREY:
+      result.r = 0.9;
+      result.g = 0.9;
+      result.b = 0.9;
       result.a = 1.0;
       break;
-    case 3:   //WHITE
+    case 3: //DARK_GREY:
+      result.r = 0.6;
+      result.g = 0.6;
+      result.b = 0.6;
+      result.a = 1.0;
+      break;
+    case 4: //WHITE:
       result.r = 1.0;
       result.g = 1.0;
       result.b = 1.0;
       result.a = 1.0;
       break;
-    case 4:   //YELLOW
+    case 5: //ORANGE:
+      result.r = 1.0;
+      result.g = 0.5;
+      result.b = 0.0;
+      result.a = 1.0;
+      break;
+    case 6: //Maroon:
+      result.r = 0.5;
+      result.g = 0.0;
+      result.b = 0.0;
+      result.a = 1.0;
+      break;
+    case 7: //Olive:
+      result.r = 0.5;
+      result.g = 0.5;
+      result.b = 0.0;
+      result.a = 1.0;
+      break;
+    case 8: //Navy:
+      result.r = 0.0;
+      result.g = 0.0;
+      result.b = 0.5;
+      result.a = 1.0;
+      break;
+    case 9: //BLACK:
+      result.r = 0.0;
+      result.g = 0.0;
+      result.b = 0.0;
+      result.a = 1.0;
+      break;
+    case 10: //YELLOW:
       result.r = 1.0;
       result.g = 1.0;
       result.b = 0.0;
       result.a = 1.0;
       break;
-    case 5:   //MAGENTA
-      result.r = 1.0;
-      result.g = 0.0;
-      result.b = 1.0;
-      result.a = 1.0;
-      break;
-    case 6:   //BLACK
-      result.r = 0.0;
-      result.g = 0.0;
+    case 11: //BROWN:
+      result.r = 0.597;
+      result.g = 0.296;
       result.b = 0.0;
       result.a = 1.0;
       break;
-    case 7:   //CYAN
-      result.r = 0.0;
-      result.g = 1.0;
-      result.b = 1.0;
-      result.a = 1.0;
-      break;
-    case 8:   //PINK
+    case 12: //PINK:
       result.r = 1.0;
       result.g = 0.4;
       result.b = 1;
       result.a = 1.0;
       break;
-    case 9:   //PURPLE
+    case 13: //LIME_GREEN:
+      result.r = 0.6;
+      result.g = 1.0;
+      result.b = 0.2;
+      result.a = 1.0;
+      break;
+    case 14: //PURPLE:
       result.r = 0.597;
       result.g = 0.0;
       result.b = 0.597;
       result.a = 1.0;
       break;
+    case 15: //CYAN:
+      result.r = 0.0;
+      result.g = 1.0;
+      result.b = 1.0;
+      result.a = 1.0;
+      break;
+    case 16: //MAGENTA:
+      result.r = 1.0;
+      result.g = 0.0;
+      result.b = 1.0;
+      result.a = 1.0;
   }
   return result;
 }
@@ -590,22 +632,41 @@ void PlannerBenchMarking::allocatePlannerbyName(
   const std::string & selected_planner_name,
   const ompl::base::SpaceInformationPtr & si)
 {
-  if (selected_planner_name == std::string("RRTstar")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
-  } else if (selected_planner_name == std::string("PRMstar")) {
+
+  if (selected_planner_name == std::string("PRMstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
   } else if (selected_planner_name == std::string("LazyPRMstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::LazyPRMstar(si));
+  } else if (selected_planner_name == std::string("RRTstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
+  } else if (selected_planner_name == std::string("RRTsharp")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTsharp(si));
   } else if (selected_planner_name == std::string("RRTXstatic")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::RRTXstatic(si));
-  } else if (selected_planner_name == std::string("FMT")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::FMT(si));
+  } else if (selected_planner_name == std::string("InformedRRTstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::InformedRRTstar(si));
   } else if (selected_planner_name == std::string("BITstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::BITstar(si));
   } else if (selected_planner_name == std::string("ABITstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::ABITstar(si));
+  } else if (selected_planner_name == std::string("AITstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::AITstar(si));
+  } else if (selected_planner_name == std::string("LBTRRT")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::LBTRRT(si));
+  } else if (selected_planner_name == std::string("SST")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::SST(si));
+  } else if (selected_planner_name == std::string("TRRT")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::TRRT(si));
+  } else if (selected_planner_name == std::string("SPARS")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::SPARS(si));
+  } else if (selected_planner_name == std::string("SPARStwo")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::SPARStwo(si));
+  } else if (selected_planner_name == std::string("FMT")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::FMT(si));
   } else if (selected_planner_name == std::string("CForest")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::CForest(si));
+  } else if (selected_planner_name == std::string("AnytimePathShortening")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::AnytimePathShortening(si));
   } else {
     RCLCPP_WARN(
       this->get_logger(),
