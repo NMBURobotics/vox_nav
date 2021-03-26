@@ -37,6 +37,8 @@ find_package(botanbot_msgs REQUIRED)
 find_package(OCTOMAP REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(pcl_ros REQUIRED)
+find_package(PCL REQUIRED)
 
 option(ENABLE_PROFILER "Enable Ignition Profiler" TRUE)
 if(ENABLE_PROFILER)
@@ -80,7 +82,8 @@ set(dependencies
     botanbot_msgs
     OCTOMAP
     octomap_msgs
-    Eigen3)
+    Eigen3
+    pcl_ros)
 
 # BOTANBOT ACKERMANN DRIVE GAZEBO PLUGIN SHARED LIBRARY
 add_library(botanbot_ackermann_drive SHARED  src/botanbot_ackermann_drive.cpp)
@@ -109,17 +112,21 @@ ament_target_dependencies(gazebo_ros_gps ${dependencies})
 add_library(gazebo_ros_imu SHARED src/gazebo_ros_imu.cpp)
 ament_target_dependencies(gazebo_ros_imu ${dependencies})
 
-# BOTANBOT GZEBO WORLD TO OCTOMAP PLUGIN SHARED LIBRARY
+# BOTANBOT GAZEBO WORLD TO OCTOMAP PLUGIN SHARED LIBRARY
 add_library(gazebo_world_to_octomap SHARED src/gazebo_to_octomap.cpp)
 ament_target_dependencies(gazebo_world_to_octomap ${dependencies})
+
+# BOTANBOT GAZEBO WORLD TO POINTCLOUD PLUGIN SHARED LIBRARY
+add_library(gazebo_world_to_pointcloud SHARED src/gazebo_to_pointcloud.cpp)
+ament_target_dependencies(gazebo_world_to_pointcloud ${dependencies})
 
 ament_export_libraries(botanbot_ackermann_drive 
                        realsense_gazebo_plugin 
                        gazebo_ros_velodyne_laser 
                        gazebo_ros_gps
                        gazebo_ros_imu
-                       gazebo_world_to_octomap)
-
+                       gazebo_world_to_octomap
+                       gazebo_world_to_pointcloud)
 ################################################################################
 # Install
 ################################################################################
@@ -130,6 +137,7 @@ install(TARGETS
         gazebo_ros_gps
         gazebo_ros_imu
         gazebo_world_to_octomap
+        gazebo_world_to_pointcloud
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)

@@ -211,9 +211,9 @@ void OctomapFromGazeboWorld::CreateOctomap(
 
   std::cout << "Rasterizing world and checking collisions" << std::endl;
 
-  for (double x =
-    leaf_size / 2 + bounding_box_origin.X() - bounding_box_lengths.X() / 2;
-    x < bounding_box_origin.X() + bounding_box_lengths.X() / 2; x += leaf_size)
+  for (double x = leaf_size / 2 + bounding_box_origin.X() - bounding_box_lengths.X() / 2;
+    x < bounding_box_origin.X() + bounding_box_lengths.X() / 2;
+    x += leaf_size)
   {
     int progress =
       round(
