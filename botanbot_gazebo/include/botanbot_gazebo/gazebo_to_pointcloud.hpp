@@ -30,7 +30,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <botanbot_gazebo/gazebo_to_octomap_common.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <botanbot_msgs/srv/get_pointcloud.hpp>
+#include <botanbot_msgs/srv/get_point_cloud.hpp>
 #include <pcl/common/common.h>
 #include <pcl/common/pca.h>
 #include <pcl/common/transforms.h>
@@ -68,12 +68,12 @@ protected:
     const ignition::math::Vector3d & bounding_box_lengths,
     const double leaf_size);
 
-  void CreatePointCloud(const botanbot_msgs::srv::GetPointcloud::Request & msg);
+  void CreatePointCloud(const botanbot_msgs::srv::GetPointCloud::Request & msg);
 
 private:
   physics::WorldPtr world_;
   gazebo_ros::Node::SharedPtr node_;
-  rclcpp::Service<botanbot_msgs::srv::GetPointcloud>::SharedPtr srv_;
+  rclcpp::Service<botanbot_msgs::srv::GetPointCloud>::SharedPtr srv_;
   sensor_msgs::msg::PointCloud2::SharedPtr pointcloud_msg_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pointcloud_publisher_;
 

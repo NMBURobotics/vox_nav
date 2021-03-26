@@ -59,8 +59,8 @@ void PointCloudFromGazeboWorld::Load(
 
   // LAMBDA SERVICE CALLBACK
   auto service_callback = [this](
-    const std::shared_ptr<botanbot_msgs::srv::GetPointcloud::Request> req,
-    std::shared_ptr<botanbot_msgs::srv::GetPointcloud::Response> res)
+    const std::shared_ptr<botanbot_msgs::srv::GetPointCloud::Request> req,
+    std::shared_ptr<botanbot_msgs::srv::GetPointCloud::Response> res)
     {
       RCLCPP_INFO(node_->get_logger(), "Recieved an request to convert gazebo world to octomap");
       CreatePointCloud(*req);
@@ -93,7 +93,7 @@ void PointCloudFromGazeboWorld::Load(
       return true;
     };
   // Create a service that will use the callback function to handle requests.
-  srv_ = node_->create_service<botanbot_msgs::srv::GetPointcloud>(service_name, service_callback);
+  srv_ = node_->create_service<botanbot_msgs::srv::GetPointCloud>(service_name, service_callback);
 }
 
 bool PointCloudFromGazeboWorld::CheckIfInterest(
@@ -136,7 +136,7 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
 }
 
 void PointCloudFromGazeboWorld::CreatePointCloud(
-  const botanbot_msgs::srv::GetPointcloud::Request & msg)
+  const botanbot_msgs::srv::GetPointCloud::Request & msg)
 {
   const double epsilon = 0.00001;
   ignition::math::Vector3d bounding_box_origin(msg.bounding_box_origin.x,
