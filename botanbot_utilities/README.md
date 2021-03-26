@@ -20,10 +20,11 @@
 </plugin>
 ```
 
-## Generating a octomap from a gazebo world
+## Generating a pointcloud map from a gazebo world
 
 
- It is possible to generate label pointcloud data for training a network to assess traversability of a pointcloud map
+It is possible to generate label pointcloud data for training a network to assess traversability of a pointcloud map. This plugin is parelel to 
+generating an octomap from gazebo world.
 
 Call the service with following to request a conversion from gazebo world to pointcloud map
 
