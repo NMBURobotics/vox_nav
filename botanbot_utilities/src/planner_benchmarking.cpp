@@ -264,7 +264,7 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
     si->setup();
 
-    ompl::base::PlannerStatus gt_plan_solved = ss.solve(180.0);
+    /*ompl::base::PlannerStatus gt_plan_solved = ss.solve(180.0);
     ompl::geometric::PathGeometric gt_plan = ss.getSolutionPath();
     // Path smoothing using bspline
     ompl::geometric::PathSimplifier path_simlifier(ss.getSpaceInformation());
@@ -272,13 +272,15 @@ std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarkin
     path_simlifier.smoothBSpline(gt_plan);
     gt_plan.interpolate(interpolation_parameter_);
     path_simlifier.freeStates(true);
+    */
+
     ss.clear();
 
     ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, batch_size_);
     request.displayProgress = false;
     ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
-    b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
-    b.addExperimentParameter("gt_path_smoothness", "REAL", std::to_string(gt_plan.smoothness()));
+    //b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
+    //b.addExperimentParameter("gt_path_smoothness", "REAL", std::to_string(gt_plan.smoothness()));
 
     std::mutex plan_mutex;
 
@@ -467,7 +469,7 @@ void PlannerBenchMarking::publishSamplePlans(
 
       marker.action = visualization_msgs::msg::Marker::ADD;
       marker.lifetime = rclcpp::Duration::from_seconds(0);
-      marker.scale.x = 0.5;
+      marker.scale.x = 0.65;
       marker.scale.y = 0.4;
       marker.scale.z = 0.4;
       marker.id = total_poses;
