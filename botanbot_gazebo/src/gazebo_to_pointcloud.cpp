@@ -116,7 +116,11 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   // Find object to be picked and store them into objects_tobe_picked vector. Since all these
   // objects begins with pulley we chechk if the string starts with this substring which is
   // "pulley"
-  if (entity_name.substr(0, 6) == "ground" || entity_name.substr(0, 4) == "ramp") {
+  if (entity_name.substr(
+      0, 6) == "ground" ||
+    entity_name.substr(0, 4) == "ramp" ||
+    entity_name.substr(0, 4) == "road")
+  {
     // store this obejct in objects_tobe_picked
     *is_traversable = true;
   }
@@ -134,7 +138,11 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   // Find object to be picked and store them into objects_tobe_picked vector. Since all these
   // objects begins with pulley we chechk if the string starts with this substring which is
   // "pulley"
-  if (entity_name.substr(0, 6) == "ground" || entity_name.substr(0, 4) == "ramp") {
+  if (entity_name.substr(
+      0, 6) == "ground" ||
+    entity_name.substr(0, 4) == "ramp" ||
+    entity_name.substr(0, 4) == "road")
+  {
     // store this obejct in objects_tobe_picked
     *is_traversable = true;
   }
@@ -151,7 +159,11 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   // Find object to be picked and store them into objects_tobe_picked vector. Since all these
   // objects begins with pulley we chechk if the string starts with this substring which is
   // "pulley"
-  if (entity_name.substr(0, 6) == "ground" || entity_name.substr(0, 4) == "ramp") {
+  if (entity_name.substr(
+      0, 6) == "ground" ||
+    entity_name.substr(0, 4) == "ramp" ||
+    entity_name.substr(0, 4) == "road")
+  {
     // store this obejct in objects_tobe_picked
     *is_traversable = true;
   }
