@@ -12,7 +12,7 @@
           <pose>0 0.0 2.0 0.0 0.0 1.57</pose>
           <uri>model://botanbot</uri>
       </include>
-      <model name='uneven ground'>
+      <model name='ground_uneven'>
         <static>1</static>
         <link name='link'>
           <collision name='collision'>

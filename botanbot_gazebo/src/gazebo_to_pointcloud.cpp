@@ -112,6 +112,8 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   ray->SetPoints(start_point, end_point);
   ray->GetIntersection(dist, entity_name);
 
+  std::cout << "entity name: " << entity_name << std::endl;
+
   if (dist <= leaf_size) {return true;}
 
   start_point = central_point;
@@ -120,6 +122,8 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   end_point.Y() -= leaf_size / 2;
   ray->SetPoints(start_point, end_point);
   ray->GetIntersection(dist, entity_name);
+
+  std::cout << "entity name: " << entity_name << std::endl;
 
   if (dist <= leaf_size) {return true;}
 
@@ -172,8 +176,10 @@ void PointCloudFromGazeboWorld::CreatePointCloud(
       round(
       100 * (x + bounding_box_lengths.X() / 2 - bounding_box_origin.X()) /
       bounding_box_lengths.X());
-    std::cout << "\rPlacing model edges into octomap... " << progress <<
-      "%                 ";
+
+    if (static_cast<int>(x) % 5 == 0) {
+      std::cout << "Progress" << progress << std::endl;
+    }
 
     for (double y =
       leaf_size / 2 + bounding_box_origin.Y() - bounding_box_lengths.Y() / 2;
@@ -187,7 +193,6 @@ void PointCloudFromGazeboWorld::CreatePointCloud(
       {
         ignition::math::Vector3d point(x, y, z);
         if (CheckIfInterest(point, ray, leaf_size)) {
-          //octomap_->setNodeValue(x, y, z, 1);
           pcl::PointXYZRGB point;
           point.x = x;
           point.y = y;
