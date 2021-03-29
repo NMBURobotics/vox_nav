@@ -99,7 +99,8 @@ void PointCloudFromGazeboWorld::Load(
 bool PointCloudFromGazeboWorld::CheckIfInterest(
   const ignition::math::Vector3d & central_point,
   gazebo::physics::RayShapePtr ray,
-  const double leaf_size)
+  const double leaf_size,
+  bool * is_traversable)
 {
   ignition::math::Vector3d start_point = central_point;
   ignition::math::Vector3d end_point = central_point;
@@ -112,7 +113,14 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   ray->SetPoints(start_point, end_point);
   ray->GetIntersection(dist, entity_name);
 
-  std::cout << "entity name: " << entity_name << std::endl;
+  // Find object to be picked and store them into objects_tobe_picked vector. Since all these
+  // objects begins with pulley we chechk if the string starts with this substring which is
+  // "pulley"
+  if (entity_name.substr(0, 6) == "ground" || entity_name.substr(0, 4) == "ramp") {
+    // store this obejct in objects_tobe_picked
+    *is_traversable = true;
+  }
+
 
   if (dist <= leaf_size) {return true;}
 
@@ -123,7 +131,13 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   ray->SetPoints(start_point, end_point);
   ray->GetIntersection(dist, entity_name);
 
-  std::cout << "entity name: " << entity_name << std::endl;
+  // Find object to be picked and store them into objects_tobe_picked vector. Since all these
+  // objects begins with pulley we chechk if the string starts with this substring which is
+  // "pulley"
+  if (entity_name.substr(0, 6) == "ground" || entity_name.substr(0, 4) == "ramp") {
+    // store this obejct in objects_tobe_picked
+    *is_traversable = true;
+  }
 
   if (dist <= leaf_size) {return true;}
 
@@ -133,6 +147,14 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   end_point.Z() -= leaf_size / 2;
   ray->SetPoints(start_point, end_point);
   ray->GetIntersection(dist, entity_name);
+
+  // Find object to be picked and store them into objects_tobe_picked vector. Since all these
+  // objects begins with pulley we chechk if the string starts with this substring which is
+  // "pulley"
+  if (entity_name.substr(0, 6) == "ground" || entity_name.substr(0, 4) == "ramp") {
+    // store this obejct in objects_tobe_picked
+    *is_traversable = true;
+  }
 
   if (dist <= leaf_size) {return true;}
 
@@ -192,11 +214,17 @@ void PointCloudFromGazeboWorld::CreatePointCloud(
         z += leaf_size)
       {
         ignition::math::Vector3d point(x, y, z);
-        if (CheckIfInterest(point, ray, leaf_size)) {
+        bool is_traversable = false;
+        if (CheckIfInterest(point, ray, leaf_size, &is_traversable)) {
           pcl::PointXYZRGB point;
           point.x = x;
           point.y = y;
           point.z = z;
+          if (!is_traversable) {
+            point.r = 255;
+          } else {
+            point.g = 255;
+          }
           pcl_cloud.points.push_back(point);
         }
       }

@@ -60,7 +60,8 @@ protected:
   bool CheckIfInterest(
     const ignition::math::Vector3d & central_point,
     gazebo::physics::RayShapePtr ray,
-    const double leaf_size);
+    const double leaf_size,
+    bool * is_traversable);
 
   void FloodFill(
     const ignition::math::Vector3d & seed_point,
