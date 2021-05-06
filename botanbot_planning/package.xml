@@ -21,6 +21,8 @@
     <depend>libfcl-dev</depend>
     <depend>octomap</depend>
     <depend>octomap_msgs</depend>
+    <depend>ompl</depend>
+    <depend>botanbot_msgs</depend>
 
     <test_depend>ament_lint_common</test_depend>
     <test_depend>ament_lint_auto</test_depend>
