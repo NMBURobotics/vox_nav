@@ -72,7 +72,7 @@
             <uri>model://vrc_heightmap_1</uri>
         </include>
         <include>
-            <uri>model://grass_plane</uri>
+            <uri>model://ground_grass_plane</uri>
         </include>
         <include>
             <uri>model://speed_limit_sign</uri>
