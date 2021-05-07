@@ -93,8 +93,8 @@
     </light>
   </library_lights>
   <library_images>
-    <image id="texture" name="texture">
-      <init_from>texture.png</init_from>
+    <image id="Stylized_Rocks_001_basecolor_jpg" name="Stylized_Rocks_001_basecolor_jpg">
+      <init_from>Stylized_Rocks_001_basecolor.jpg</init_from>
     </image>
   </library_images>
   <library_effects>

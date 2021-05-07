@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <sdf version="1.7">
-    <world name='tomato_field_world'>
+    <world name='uneven_world'>
  
         <include>
             <uri>model://sun</uri>
@@ -35,7 +35,7 @@
         </include>
         <include>
             <pose>0 0 0 0 0 0 </pose>
-            <uri>model://mountain</uri>
+            <uri>model://ground_mountain</uri>
         </include>        
 
     </world>
