@@ -89,7 +89,7 @@ def generate_launch_description():
         'world',
         default_value=os.path.join(
             get_package_share_directory('botanbot_gazebo'), 'worlds/',
-            GAZEBO_WORLD, GAZEBO_WORLD + '.model'),
+            GAZEBO_WORLD, GAZEBO_WORLD + '.world'),
         description='Full path to world model file to load')
 
     # Specify the actions
