@@ -1,11 +1,7 @@
 <?xml version="1.0"?>
 <sdf version="1.7">
     <world name='tomato_field_world'>
-        <include>
-            <uri>model://ground_grass_plane</uri>
-            <name>ground_grass_plane</name>
-            <pose>0 0 0 0 0 0</pose>
-        </include>
+ 
         <include>
             <uri>model://sun</uri>
         </include>

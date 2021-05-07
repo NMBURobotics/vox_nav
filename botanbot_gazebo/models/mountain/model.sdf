@@ -1,25 +1,33 @@
 <?xml version="1.0" ?>
 <sdf version="1.6">
   <model name="mountain">
-    <pose>0 0 -4.8 0 0 0</pose>
+    <pose>0 0 0 0 0 0</pose>
     <static>true</static>
     <link name="link">
       <collision name="collision">
         <geometry>
           <mesh>
             <uri>model://mountain/meshes/mountain.dae</uri>
-            <scale>0.9 0.9 0.9</scale>
+            <scale>2 2 2</scale>
           </mesh>
         </geometry>
       </collision>
 
-      <visual name="visual">
+      <visual name='visual'>
+        <cast_shadows>false</cast_shadows>
         <geometry>
           <mesh>
             <uri>model://mountain/meshes/mountain.dae</uri>
-            <scale>0.9 0.9 0.9</scale>
+            <scale>2 2 2</scale>
           </mesh>
         </geometry>
+        <material>
+          <script>
+            <uri>model://mountain/materials/scripts</uri>
+            <uri>model://mountain/materials/textures</uri>
+            <name>mountain</name>
+          </script>
+        </material>
       </visual>
     </link>
   </model>
