@@ -21,7 +21,6 @@
             <scale>2 2 2</scale>
           </mesh>
         </geometry>
-
         <material>
           <script>
             <uri>model://ground_mountain/materials/scripts</uri>

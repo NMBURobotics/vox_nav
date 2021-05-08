@@ -45,7 +45,6 @@
           </heightmap>
         </geometry>
       </visual>
-
     </link>
   </model>
 </sdf>
