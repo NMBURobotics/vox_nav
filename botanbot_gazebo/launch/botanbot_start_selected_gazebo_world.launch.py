@@ -27,11 +27,11 @@ def generate_launch_description():
 
     declare_simulator_cmd = DeclareLaunchArgument(
         'headless',
-        default_value='True',
+        default_value='False',
         description='Whether to execute gzclient)')
 
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-    world_file_name = GAZEBO_WORLD + '/' + GAZEBO_WORLD + '.model'
+    world_file_name = GAZEBO_WORLD + '/' + GAZEBO_WORLD + '.world'
     world = os.path.join(get_package_share_directory('botanbot_gazebo'),
                          'worlds', world_file_name)
     launch_file_dir = os.path.join(

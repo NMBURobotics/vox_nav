@@ -1,0 +1,668 @@
+<?xml version="1.0"?>
+<sdf version="1.7">
+    <world name='tomato_field_world'>
+        <include>
+            <uri>model://ground_grass_plane</uri>
+            <name>ground_grass_plane</name>
+            <pose>0 0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://sun</uri>
+        </include>
+        <scene>
+            <shadows>false</shadows>
+        </scene>
+        <gui fullscreen='0'>
+            <camera name='user_camera'>
+                <pose>0.319654 -0.235002 9.29441 0 1.5138 0.009599</pose>
+                <view_controller>orbit</view_controller>
+                <projection_type>perspective</projection_type>
+            </camera>
+        </gui>
+        <physics type="ode">
+            <real_time_update_rate>1000.0</real_time_update_rate>
+            <max_step_size>0.001</max_step_size>
+            <real_time_factor>1</real_time_factor>
+            <ode>
+                <solver>
+                    <type>quick</type>
+                    <iters>150</iters>
+                    <precon_iters>0</precon_iters>
+                    <sor>1.400000</sor>
+                    <use_dynamic_moi_rescaling>1</use_dynamic_moi_rescaling>
+                </solver>
+                <constraints>
+                    <cfm>0.00001</cfm>
+                    <erp>0.2</erp>
+                    <contact_max_correcting_vel>2000.000000</contact_max_correcting_vel>
+                    <contact_surface_layer>0.01000</contact_surface_layer>
+                </constraints>
+            </ode>
+        </physics>
+        <include>
+            <pose>-3.5 -6.0 0.25 0.0 0.0 1.57</pose>
+            <uri>model://botanbot</uri>
+        </include>
+        <include>
+            <uri>model://lamp_post</uri>
+            <name>lamp_post_0</name>
+            <pose>0.0 23.0 0 0 0 0</pose>
+        </include>a
+        <include>
+            <uri>model://lamp_post</uri>
+            <name>lamp_post_1</name>
+            <pose>10.0 23.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://lamp_post</uri>
+            <name>lamp_post_2</name>
+            <pose>20.0 -26.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://house_1</uri>
+            <name>house_1</name>
+            <pose>16.0 23.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://house_2</uri>
+            <name>house_2</name>
+            <pose>-20.0 23.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://house_3</uri>
+            <name>house_3</name>
+            <pose>-16.0 -23.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://gas_station</uri>
+            <name>gas_station</name>
+            <pose>35.0 20.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_0</name>
+            <pose>0.0 0.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_1</name>
+            <pose>0.0 0.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_2</name>
+            <pose>0.0 1.8 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_3</name>
+            <pose>0.0 2.7 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_4</name>
+            <pose>0.0 3.6 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_5</name>
+            <pose>0.0 4.5 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_6</name>
+            <pose>0.0 5.4 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_7</name>
+            <pose>0.0 6.3 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_8</name>
+            <pose>0.0 7.2 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_9</name>
+            <pose>0.0 8.1 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_10</name>
+            <pose>0.0 9.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_11</name>
+            <pose>0.0 9.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_12</name>
+            <pose>3.0 0.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_13</name>
+            <pose>3.0 0.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_14</name>
+            <pose>3.0 1.8 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_15</name>
+            <pose>3.0 2.7 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_16</name>
+            <pose>3.0 3.6 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_17</name>
+            <pose>3.0 4.5 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_18</name>
+            <pose>3.0 5.4 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_19</name>
+            <pose>3.0 6.3 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_20</name>
+            <pose>3.0 7.2 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_21</name>
+            <pose>3.0 8.1 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_22</name>
+            <pose>3.0 9.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_23</name>
+            <pose>3.0 9.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_24</name>
+            <pose>6.0 0.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_25</name>
+            <pose>6.0 0.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_26</name>
+            <pose>6.0 1.8 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_27</name>
+            <pose>6.0 2.7 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_28</name>
+            <pose>6.0 3.6 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_29</name>
+            <pose>6.0 4.5 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_30</name>
+            <pose>6.0 5.4 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_31</name>
+            <pose>6.0 6.3 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_32</name>
+            <pose>6.0 7.2 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_33</name>
+            <pose>6.0 8.1 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_34</name>
+            <pose>6.0 9.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_35</name>
+            <pose>6.0 9.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_36</name>
+            <pose>9.0 0.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_37</name>
+            <pose>9.0 0.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_38</name>
+            <pose>9.0 1.8 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_39</name>
+            <pose>9.0 2.7 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_40</name>
+            <pose>9.0 3.6 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_41</name>
+            <pose>9.0 4.5 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_42</name>
+            <pose>9.0 5.4 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_43</name>
+            <pose>9.0 6.3 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_44</name>
+            <pose>9.0 7.2 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_45</name>
+            <pose>9.0 8.1 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_46</name>
+            <pose>9.0 9.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_47</name>
+            <pose>9.0 9.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_48</name>
+            <pose>-3.0 0.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_49</name>
+            <pose>-3.0 0.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_50</name>
+            <pose>-3.0 1.8 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_51</name>
+            <pose>-3.0 2.7 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_52</name>
+            <pose>-3.0 3.6 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_53</name>
+            <pose>-3.0 4.5 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_54</name>
+            <pose>-3.0 5.4 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_55</name>
+            <pose>-3.0 6.3 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_56</name>
+            <pose>-3.0 7.2 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_57</name>
+            <pose>-3.0 8.1 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_58</name>
+            <pose>-3.0 9.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_59</name>
+            <pose>-3.0 9.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_60</name>
+            <pose>12.0 0.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_61</name>
+            <pose>12.0 0.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_62</name>
+            <pose>12.0 1.8 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_63</name>
+            <pose>12.0 2.7 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_64</name>
+            <pose>12.0 3.6 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_65</name>
+            <pose>12.0 4.5 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_66</name>
+            <pose>12.0 5.4 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_67</name>
+            <pose>12.0 6.3 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_68</name>
+            <pose>12.0 7.2 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_69</name>
+            <pose>12.0 8.1 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_70</name>
+            <pose>12.0 9.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_71</name>
+            <pose>12.0 9.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_72</name>
+            <pose>15.0 0.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_73</name>
+            <pose>15.0 0.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_74</name>
+            <pose>15.0 1.8 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_75</name>
+            <pose>15.0 2.7 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_76</name>
+            <pose>15.0 3.6 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_77</name>
+            <pose>15.0 4.5 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_78</name>
+            <pose>15.0 5.4 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_79</name>
+            <pose>15.0 6.3 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_80</name>
+            <pose>15.0 7.2 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_81</name>
+            <pose>15.0 8.1 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_82</name>
+            <pose>15.0 9.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_83</name>
+            <pose>15.0 9.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_84</name>
+            <pose>18.0 0.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_85</name>
+            <pose>18.0 0.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_86</name>
+            <pose>18.0 1.8 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_87</name>
+            <pose>18.0 2.7 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_88</name>
+            <pose>18.0 3.6 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_89</name>
+            <pose>18.0 4.5 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_90</name>
+            <pose>18.0 5.4 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_91</name>
+            <pose>18.0 6.3 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_92</name>
+            <pose>18.0 7.2 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_93</name>
+            <pose>18.0 8.1 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_94</name>
+            <pose>18.0 9.0 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://tomato_plant_tree</uri>
+            <name>tomato_95</name>
+            <pose>18.0 9.9 0 0 0 0</pose>
+        </include>
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_0</name>
+            <pose>-12.1128 -2.16638 -0.173407 -0.462719 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_1</name>
+            <pose>-13.2767 -2.15585 -0.173407 -0.462719 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_2</name>
+            <pose>-14.4658 -2.16915 -0.173407 -0.462719 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_3</name>
+            <pose>-15.6542 -2.17286 -0.173407 -0.462719 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_4</name>
+            <pose>-16.844 -2.19664 -0.173407 -0.462719 0 0</pose>
+        </include>  
+
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_5</name>
+            <pose>-16.8506 -0.768683 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_6</name>
+            <pose>-15.6545 -0.767698 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_7</name>
+            <pose>-14.4669 -0.731656 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_8</name>
+            <pose>-13.2859 -0.69932 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_9</name>
+            <pose>-12.1279 -0.702169 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_10</name>
+            <pose>-10.9519 -0.706976 0.197052 -0.746686 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_11</name>
+            <pose>-9.77341 -0.72642 0.197052 -0.746686 0 0</pose>
+        </include>   
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_12</name>
+            <pose>-9.85002 0.73387 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_13</name>
+            <pose>-11.0256 0.743358 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_14</name>
+            <pose>-12.2068 0.753008 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_15</name>
+            <pose>-13.3633 0.757014 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_16</name>
+            <pose>-14.5471 0.730048 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_17</name>
+            <pose>-15.6948 0.717013 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_18</name>
+            <pose>-16.8661 0.69021 0.115834 -1.20271 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_19</name>
+            <pose>-10.9594 -2.18571 -0.173407 -0.462719 0 0</pose>
+        </include>  
+        <include>
+            <uri>model://ramp2</uri>
+            <name>part_20</name>
+            <pose>-9.79809 -2.20656 -0.173407 -0.462719 0 0</pose>
+        </include>  
+    </world>
+</sdf>
