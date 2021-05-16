@@ -68,26 +68,26 @@ enum class OutlierRemovalType: int {RadiusOutlierRemoval, StatisticalOutlierRemo
  * @param inputCloud
  * @return Eigen::Vector3d
  */
-Eigen::Vector3d calculateMeanOfPointPositions(pcl::PointCloud<pcl::PointXYZ>::ConstPtr inputCloud);
+Eigen::Vector3d calculateMeanOfPointPositions(pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud);
 
 /**
  * @brief
  *
  * @param inputCloud
  * @param transformMatrix
- * @return pcl::PointCloud<pcl::PointXYZ>::Ptr
+ * @return pcl::PointCloud<pcl::PointXYZRGB>::Ptr
  */
-pcl::PointCloud<pcl::PointXYZ>::Ptr transformCloud(
-  pcl::PointCloud<pcl::PointXYZ>::ConstPtr inputCloud,
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformCloud(
+  pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud,
   const Eigen::Affine3f & transformMatrix);
 
 /**
  * @brief
  *
  * @param filename
- * @return pcl::PointCloud<pcl::PointXYZ>::Ptr
+ * @return pcl::PointCloud<pcl::PointXYZRGB>::Ptr
  */
-pcl::PointCloud<pcl::PointXYZ>::Ptr loadPointcloudFromPcd(const std::string & filename);
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr loadPointcloudFromPcd(const std::string & filename);
 
 /*!
  * Finds clusters in the input cloud and returns vector point clouds.
@@ -96,8 +96,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr loadPointcloudFromPcd(const std::string & fi
  * @param[in] pointer to the pcl point cloud
  * @return vector of point clouds. Vector will be empty if no clusters are found.
  */
-std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> extractClusterCloudsFromPointcloud(
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud);
+std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> extractClusterCloudsFromPointcloud(
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud);
 
 /**
  * @brief Get the Rigid Body Transform object
@@ -132,8 +132,8 @@ Eigen::Matrix3f getRotationMatrix(
 * @param[in] Input point cloud
 * @return Downsampled point cloud
 */
-pcl::PointCloud<pcl::PointXYZ>::Ptr downsampleInputCloud(
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, double downsmaple_leaf_size);
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsampleInputCloud(
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, double downsmaple_leaf_size);
 
 /*!
 * Remove outliers from the point cloud. Function is based on
@@ -143,8 +143,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr downsampleInputCloud(
 * @param[in] Input point cloud
 * @return Point cloud where outliers have been removed.
 */
-pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int mean_K, double stddev_thres,
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliersFromInputCloud(
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int mean_K, double stddev_thres,
   OutlierRemovalType outlier_removal_type);
 
 /**

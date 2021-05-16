@@ -23,6 +23,7 @@ PCL2OctomapConverter::PCL2OctomapConverter(/* args */)
 {
   this->declare_parameter("input_pcd_filename", "/home/ros2-foxy/f.pcd");
   this->declare_parameter("output_binary_octomap_filename", "/home/ros2-foxy/f.bt");
+  this->declare_parameter("octomap_voxelsize", 0.01);
   this->declare_parameter("cloud_transform.translation.x", 0.0);
   this->declare_parameter("cloud_transform.translation.y", 0.0);
   this->declare_parameter("cloud_transform.translation.z", 0.0);
@@ -39,7 +40,8 @@ PCL2OctomapConverter::PCL2OctomapConverter(/* args */)
   input_pcd_filename_ = this->get_parameter("input_pcd_filename").as_string();
   output_binary_octomap_filename_ =
     this->get_parameter("output_binary_octomap_filename").as_string();
-
+  octomap_voxelsize_ =
+    this->get_parameter("octomap_voxelsize").as_double();
   pointloud_transform_matrix_.translation_.x() =
     this->get_parameter("cloud_transform.translation.x").as_double();
   pointloud_transform_matrix_.translation_.y() =
@@ -132,16 +134,28 @@ void PCL2OctomapConverter::outputStatistics(const octomap::OcTree tree)
 void PCL2OctomapConverter::processConversion()
 {
   octomap::Pointcloud octocloud;
-  octomap::OcTree tree(0.1);
-  for (size_t i = 0; i < pointcloud_->points.size(); i++) {
-    octomap::point3d endpoint(pointcloud_->points[i].x, pointcloud_->points[i].y,
-      pointcloud_->points[i].z);
-    octocloud.push_back(endpoint);
+  octomap::OcTree tree(octomap_voxelsize_);
+
+  for (auto && i : pointcloud_->points) {
+    octomap::point3d endpoint(i.x, i.y, i.z);
+    if (!(i.r && i.g)) {
+      octocloud.push_back(endpoint);
+    }
   }
+
   std::cout << "Octocloud size is:" << octocloud.size() << std::endl;
   octomap::point3d sensorOrigin(0, 0, 0);
   tree.insertPointCloud(octocloud, sensorOrigin);
   outputStatistics(tree);
+
+  tree.setOccupancyThres(0.5);
+  for (octomap::OcTree::iterator it = tree.begin(0),
+    end = tree.end(); it != end; ++it)
+  {
+    if (tree.isNodeOccupied(*it)) {
+      tree.setNodeValue(it.getKey(), it.getZ() * 100);
+    }
+  }
   tree.writeBinary(output_binary_octomap_filename_);
 }
 

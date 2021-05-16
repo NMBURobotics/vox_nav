@@ -26,7 +26,7 @@
 namespace botanbot_utilities
 {
 
-Eigen::Vector3d calculateMeanOfPointPositions(pcl::PointCloud<pcl::PointXYZ>::ConstPtr inputCloud)
+Eigen::Vector3d calculateMeanOfPointPositions(pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud)
 {
   Eigen::Vector3d mean = Eigen::Vector3d::Zero();
   for (const auto & point : inputCloud->points) {
@@ -37,32 +37,32 @@ Eigen::Vector3d calculateMeanOfPointPositions(pcl::PointCloud<pcl::PointXYZ>::Co
   return mean;
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr transformCloud(
-  pcl::PointCloud<pcl::PointXYZ>::ConstPtr inputCloud,
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformCloud(
+  pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud,
   const Eigen::Affine3f & transformMatrix)
 {
-  pcl::PointCloud<pcl::PointXYZ>::Ptr transformedCloud(new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformedCloud(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::transformPointCloud(*inputCloud, *transformedCloud, transformMatrix);
   return transformedCloud;
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr loadPointcloudFromPcd(const std::string & filename)
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr loadPointcloudFromPcd(const std::string & filename)
 {
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::PCLPointCloud2 cloudBlob;
   pcl::io::loadPCDFile(filename, cloudBlob);
   pcl::fromPCLPointCloud2(cloudBlob, *cloud);
   return cloud;
 }
 
-std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> extractClusterCloudsFromPointcloud(
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud)
+std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> extractClusterCloudsFromPointcloud(
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud)
 {
   // Create a kd tree to cluster the input point cloud
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+  pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZRGB>);
   tree->setInputCloud(inputCloud);
   std::vector<pcl::PointIndices> clusterIndices;
-  pcl::EuclideanClusterExtraction<pcl::PointXYZ> euclideanClusterExtraction;
+  pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> euclideanClusterExtraction;
   euclideanClusterExtraction.setClusterTolerance(0.1);
   euclideanClusterExtraction.setMinClusterSize(1);
   euclideanClusterExtraction.setMaxClusterSize(5000);
@@ -70,11 +70,11 @@ std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> extractClusterCloudsFromPointcl
   euclideanClusterExtraction.setInputCloud(inputCloud);
   euclideanClusterExtraction.extract(clusterIndices);
 
-  std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clusterClouds;
+  std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clusterClouds;
   clusterClouds.reserve(clusterIndices.size());
 
   for (const auto & indicesSet : clusterIndices) {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr clusterCloud(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr clusterCloud(new pcl::PointCloud<pcl::PointXYZRGB>());
     clusterCloud->points.reserve(indicesSet.indices.size());
     for (auto index : indicesSet.indices) {
       clusterCloud->points.push_back(inputCloud->points[index]);
@@ -127,31 +127,31 @@ Eigen::Affine3f getRigidBodyTransform(
   return rigidBodyTransform;
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr downsampleInputCloud(
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, double downsmaple_leaf_size)
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsampleInputCloud(
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, double downsmaple_leaf_size)
 {
-  pcl::VoxelGrid<pcl::PointXYZ> voxelGrid;
+  pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;
   voxelGrid.setInputCloud(inputCloud);
   voxelGrid.setLeafSize(downsmaple_leaf_size, downsmaple_leaf_size, downsmaple_leaf_size);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr downsampledCloud(new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsampledCloud(new pcl::PointCloud<pcl::PointXYZRGB>());
   voxelGrid.filter(*downsampledCloud);
   return downsampledCloud;
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
-  pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int mean_K, double stddev_thres,
+pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliersFromInputCloud(
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int mean_K, double stddev_thres,
   OutlierRemovalType outlier_removal_type)
 {
-  pcl::PointCloud<pcl::PointXYZ>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZRGB>());
 
   if (outlier_removal_type == OutlierRemovalType::StatisticalOutlierRemoval) {
-    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
     sor.setInputCloud(inputCloud);
     sor.setMeanK(mean_K);
     sor.setStddevMulThresh(stddev_thres);
     sor.filter(*filteredCloud);
   } else {
-    pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
+    pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> outrem;
     outrem.setInputCloud(inputCloud);
     outrem.setRadiusSearch(stddev_thres);
     outrem.setMinNeighborsInRadius(mean_K);
