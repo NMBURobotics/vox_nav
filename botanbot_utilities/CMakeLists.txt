@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 project(botanbot_utilities)
 
-# Default to C++14
+# Default to C++11
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD 17)
 endif()
 
 find_package(PkgConfig REQUIRED)
@@ -65,6 +65,7 @@ set(dependencies
 add_library(tf_helpers SHARED src/tf_helpers.cpp
                               src/pcl_helpers.cpp)
 ament_target_dependencies(tf_helpers ${dependencies})
+
 add_library(gps_waypoint_collector SHARED src/gps_waypoint_collector.cpp)
 ament_target_dependencies(gps_waypoint_collector ${dependencies})
 

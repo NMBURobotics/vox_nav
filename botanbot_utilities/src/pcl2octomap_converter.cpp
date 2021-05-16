@@ -89,6 +89,7 @@ PCL2OctomapConverter::PCL2OctomapConverter(/* args */)
 
 PCL2OctomapConverter::~PCL2OctomapConverter()
 {
+
 }
 
 void PCL2OctomapConverter::calcThresholdedNodes(
@@ -138,6 +139,8 @@ void PCL2OctomapConverter::processConversion()
 
   for (auto && i : pointcloud_->points) {
     octomap::point3d endpoint(i.x, i.y, i.z);
+
+    // Yellow color pints are elevated Node centers, keep them out for now
     if (!(i.r && i.g)) {
       octocloud.push_back(endpoint);
     }
@@ -146,16 +149,28 @@ void PCL2OctomapConverter::processConversion()
   std::cout << "Octocloud size is:" << octocloud.size() << std::endl;
   octomap::point3d sensorOrigin(0, 0, 0);
   tree.insertPointCloud(octocloud, sensorOrigin);
-  outputStatistics(tree);
+  tree.setOccupancyThres(0.6);
 
-  tree.setOccupancyThres(0.5);
-  for (octomap::OcTree::iterator it = tree.begin(0),
-    end = tree.end(); it != end; ++it)
-  {
-    if (tree.isNodeOccupied(*it)) {
-      tree.setNodeValue(it.getKey(), it.getZ() * 100);
+  octomap::unordered_ns::unordered_multimap<octomap::OcTreeKey, double,
+    octomap::OcTreeKey::KeyHash> node_values;
+
+  for (auto && i : pointcloud_->points) {
+    octomap::point3d crr_point(i.x, i.y, i.z);
+    double cost = static_cast<double>(i.b) / static_cast<double>(255.0);
+    // Obstacle point set the value to higghest cost
+    if (i.r) {
+      cost = 1.0;
+    }
+    if (!(i.r && i.g)) {
+      auto crr_point_node = tree.coordToKey(crr_point);
+      auto pair = std::pair<octomap::OcTreeKey, double>(crr_point_node, cost);
+      node_values.insert(pair);
+      tree.setNodeValue(crr_point_node, cost);
     }
   }
+
+  outputStatistics(tree);
+
   tree.writeBinary(output_binary_octomap_filename_);
 }
 
