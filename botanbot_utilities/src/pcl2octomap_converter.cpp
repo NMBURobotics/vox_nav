@@ -85,11 +85,23 @@ PCL2OctomapConverter::PCL2OctomapConverter(/* args */)
       pointloud_transform_matrix_.translation_,
       pointloud_transform_matrix_.rpyIntrinsic_,
       get_logger()));
+
+  octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "octomap_markers", rclcpp::SystemDefaultsQoS());
+
+  timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(static_cast<int>(1)),
+    std::bind(&PCL2OctomapConverter::timerCallback, this));
 }
 
 PCL2OctomapConverter::~PCL2OctomapConverter()
 {
 
+}
+
+void PCL2OctomapConverter::timerCallback()
+{
+  octomap_markers_publisher_->publish(octomap_markers_);
 }
 
 void PCL2OctomapConverter::calcThresholdedNodes(
@@ -149,7 +161,6 @@ void PCL2OctomapConverter::processConversion()
   std::cout << "Octocloud size is:" << octocloud.size() << std::endl;
   octomap::point3d sensorOrigin(0, 0, 0);
   tree.insertPointCloud(octocloud, sensorOrigin);
-  tree.setOccupancyThres(0.6);
 
   octomap::unordered_ns::unordered_multimap<octomap::OcTreeKey, double,
     octomap::OcTreeKey::KeyHash> node_values;
@@ -157,7 +168,7 @@ void PCL2OctomapConverter::processConversion()
   for (auto && i : pointcloud_->points) {
     octomap::point3d crr_point(i.x, i.y, i.z);
     double cost = static_cast<double>(i.b) / static_cast<double>(255.0);
-    // Obstacle point set the value to higghest cost
+    // Obstacle point set the value to highest cost
     if (i.r) {
       cost = 1.0;
     }
@@ -165,16 +176,74 @@ void PCL2OctomapConverter::processConversion()
       auto crr_point_node = tree.coordToKey(crr_point);
       auto pair = std::pair<octomap::OcTreeKey, double>(crr_point_node, cost);
       node_values.insert(pair);
-      tree.setNodeValue(crr_point_node, cost);
+
+      tree.setNodeValue(crr_point_node, cost, false);
+
+    }
+  }
+
+  auto m_treeDepth = tree.getTreeDepth();
+  octomap_markers_.markers.resize(m_treeDepth + 1);
+
+  // now, traverse all leafs in the tree:
+  for (auto it = tree.begin(m_treeDepth),
+    end = tree.end(); it != end; ++it)
+  {
+    if (tree.isNodeOccupied(*it)) {
+      double x = it.getX();
+      double y = it.getY();
+      double z = it.getZ();
+
+      unsigned idx = it.getDepth();
+      assert(idx < octomap_markers_.markers.size());
+
+      geometry_msgs::msg::Point cubeCenter;
+      cubeCenter.x = x;
+      cubeCenter.y = y;
+      cubeCenter.z = z;
+
+      octomap_markers_.markers[idx].points.push_back(cubeCenter);
+
+      std_msgs::msg::ColorRGBA _color;
+
+      // this ost is too high , it is NON-TRAVERSABLE
+      if (it->getValue() == 1.0) {
+        _color.r = it->getValue();
+      } else {
+        _color.g = 1.0 - it->getValue();
+        _color.b = it->getValue();
+      }
+      _color.a = 1.0;
+      octomap_markers_.markers[idx].colors.push_back(_color);
+    }
+  }
+  for (unsigned i = 0; i < octomap_markers_.markers.size(); ++i) {
+    double size = tree.getNodeSize(i);
+
+    octomap_markers_.markers[i].header.frame_id = "map";
+    octomap_markers_.markers[i].header.stamp = this->now();
+    octomap_markers_.markers[i].ns = "map";
+    octomap_markers_.markers[i].id = i;
+    octomap_markers_.markers[i].type =
+      visualization_msgs::msg::Marker::CUBE_LIST;
+    octomap_markers_.markers[i].scale.x = size;
+    octomap_markers_.markers[i].scale.y = size;
+    octomap_markers_.markers[i].scale.z = size;
+
+    if (octomap_markers_.markers[i].points.size() > 0) {
+      octomap_markers_.markers[i].action =
+        visualization_msgs::msg::Marker::ADD;
+    } else {
+      octomap_markers_.markers[i].action =
+        visualization_msgs::msg::Marker::DELETE;
     }
   }
 
   outputStatistics(tree);
-
   tree.writeBinary(output_binary_octomap_filename_);
 }
 
-}  // namespace botanbot_utilities
+}   // namespace botanbot_utilities
 
 int main(int argc, char const * argv[])
 {

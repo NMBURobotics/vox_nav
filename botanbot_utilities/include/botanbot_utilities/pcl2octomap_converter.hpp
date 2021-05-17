@@ -30,6 +30,7 @@
 #include <string>
 
 #include "rclcpp/rclcpp.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 #include "botanbot_utilities/pcl_helpers.hpp"
 
 
@@ -52,6 +53,10 @@ private:
   double remove_outlier_radius_search_;
   int remove_outlier_min_neighbors_in_radius_;
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud_;
+  // Used to creted a periodic callback function IOT publish transfrom/octomap/cloud etc.
+  rclcpp::TimerBase::SharedPtr timer_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr octomap_markers_publisher_;
+  visualization_msgs::msg::MarkerArray octomap_markers_;
 
 public:
 /**
@@ -90,6 +95,13 @@ public:
    *
    */
   void processConversion();
+
+  /**
+   * @brief
+   *
+   */
+  void timerCallback();
+  
 };
 
 }  // namespace botanbot_utilities
