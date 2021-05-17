@@ -2,7 +2,7 @@ pcl2octomap_converter_rclcpp_node:
   ros__parameters:
     input_pcd_filename: /home/ros2-foxy/pointnet2_pytorch/data/decomposed_traversability_cloud.pcd
     output_binary_octomap_filename: /home/ros2-foxy/decomposed_traversability_cloud.bt
-    octomap_voxelsize: 0.2
+    octomap_voxelsize: 0.4
     cloud_transform:
       translation:
         x: 0.0

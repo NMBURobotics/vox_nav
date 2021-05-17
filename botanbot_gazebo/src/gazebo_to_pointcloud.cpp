@@ -113,9 +113,6 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   ray->SetPoints(start_point, end_point);
   ray->GetIntersection(dist, entity_name);
 
-  // Find object to be picked and store them into objects_tobe_picked vector. Since all these
-  // objects begins with pulley we chechk if the string starts with this substring which is
-  // "pulley"
   if (entity_name.substr(
       0, 6) == "ground" ||
     entity_name.substr(0, 4) == "ramp" ||
@@ -135,9 +132,6 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   ray->SetPoints(start_point, end_point);
   ray->GetIntersection(dist, entity_name);
 
-  // Find object to be picked and store them into objects_tobe_picked vector. Since all these
-  // objects begins with pulley we chechk if the string starts with this substring which is
-  // "pulley"
   if (entity_name.substr(
       0, 6) == "ground" ||
     entity_name.substr(0, 4) == "ramp" ||
@@ -156,9 +150,7 @@ bool PointCloudFromGazeboWorld::CheckIfInterest(
   ray->SetPoints(start_point, end_point);
   ray->GetIntersection(dist, entity_name);
 
-  // Find object to be picked and store them into objects_tobe_picked vector. Since all these
-  // objects begins with pulley we chechk if the string starts with this substring which is
-  // "pulley"
+
   if (entity_name.substr(
       0, 6) == "ground" ||
     entity_name.substr(0, 4) == "ramp" ||
@@ -206,13 +198,10 @@ void PointCloudFromGazeboWorld::CreatePointCloud(
     x < bounding_box_origin.X() + bounding_box_lengths.X() / 2;
     x += leaf_size)
   {
-    int progress =
-      round(
-      100 * (x + bounding_box_lengths.X() / 2 - bounding_box_origin.X()) /
-      bounding_box_lengths.X());
+    int progress = round(x);
 
     if (static_cast<int>(x) % 5 == 0) {
-      std::cout << "Progress" << progress << std::endl;
+      std::cout << "Progress " << progress << std::endl;
     }
 
     for (double y =

@@ -51,9 +51,13 @@
             </ode>
         </physics>
         <include>
-            <pose>-3.5 -6.0 0.25 0.0 0.0 1.57</pose>
+            <pose>0 0 0.25 0.0 0.0 0</pose>
             <uri>model://botanbot</uri>
         </include>
+        <plugin name="gazebo_world_to_pointcloud" filename="libgazebo_world_to_pointcloud.so">
+            <pointcloudPubTopic>world/pointcloud</pointcloudPubTopic>
+            <pointcloudServiceName>world/build_pointcloud</pointcloudServiceName>
+        </plugin>
         <include>
             <pose>0 0 0 0 0 0 </pose>
             <uri>model://ground_mountain</uri>
