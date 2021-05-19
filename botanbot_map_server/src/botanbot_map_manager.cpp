@@ -51,7 +51,7 @@ BotanbotMapManager::BotanbotMapManager()
   declare_parameter("pcd_map_transform.rotation.p", 0.0);
   declare_parameter("pcd_map_transform.rotation.y", 0.0);
   declare_parameter("apply_filters", true);
-  declare_parameter("pcd_map_downsample_voxel_size", 0.05);
+  declare_parameter("pcd_map_downsample_voxel_size", 0.1);
   declare_parameter("remove_outlier_mean_K", 10);
   declare_parameter("remove_outlier_stddev_threshold", 1.0);
   declare_parameter("remove_outlier_radius_search", 0.1);

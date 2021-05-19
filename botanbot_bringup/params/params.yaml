@@ -95,6 +95,22 @@ botanbot_controller_server_rclcpp_node:
 botanbot_map_server_rclcpp_node:
   ros__parameters:
     pcd_map_filename: /home/atas/pointnet2_pytorch/data/decomposed_traversability_cloud.pcd
+    pcd_map_downsample_voxel_size: 0.1 # set to smaller if you do not want downsample
+    pcd_map_transform: # Apply an optional rigid-body transrom to pcd file
+      translation:
+        x: 0.0
+        y: 0.0
+        z: 0.0 #1.0
+      rotation: #intrinsic rotation X-Y-Z (r-p-y)sequence
+        r: 0.0 #3.14
+        p: 0.0 #1.57
+        y: 0.0 #1.57
+    apply_filters: False # Mostly for noise removal
+    remove_outlier_mean_K: 50
+    remove_outlier_stddev_threshold: 0.1
+    remove_outlier_radius_search: 0.1
+    remove_outlier_min_neighbors_in_radius: 1
+    # PCD MAP IS TRANSLATED TO OCTOMAP TO BE USED BY PLANNER
     octomap_voxel_size: 0.2
     octomap_publish_frequency: 10
     provide_utm_to_map_transform: true
@@ -114,18 +130,3 @@ botanbot_map_server_rclcpp_node:
         y: -0.003682083159658604
         z: 4.672499893387009e-05
         w: 0.9999932007970892
-    pcd_map_transform:
-      translation:
-        x: 0.0
-        y: 0.0
-        z: 0.0 #1.0
-      rotation: #intrinsic rotation X-Y-Z (r-p-y)sequence
-        r: 0.0 #3.14
-        p: 0.0 #1.57
-        y: 0.0 #1.57
-    apply_filters: True
-    downsample_voxel_size: 0.05
-    remove_outlier_mean_K: 50
-    remove_outlier_stddev_threshold: 0.1
-    remove_outlier_radius_search: 0.0
-    remove_outlier_min_neighbors_in_radius: 1
