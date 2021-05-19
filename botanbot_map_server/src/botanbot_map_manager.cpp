@@ -207,6 +207,8 @@ void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_t
       point.x = it.getX();
       point.y = it.getY();
       point.z = it.getZ();
+
+      
       aligned_octomap_cloud->points.push_back(point);
     }
   }
@@ -215,7 +217,6 @@ void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_t
     *aligned_octomap_cloud, *aligned_octomap_cloud, static_map_to_map_transfrom
   );
   pcl::toROSMsg(*aligned_octomap_cloud, *octomap_pointcloud_ros_msg_);
-
 
   std::shared_ptr<octomap::OcTree> aligned_octomap =
     std::make_shared<octomap::OcTree>(octomap_voxel_size_);

@@ -94,7 +94,7 @@ botanbot_controller_server_rclcpp_node:
 
 botanbot_map_server_rclcpp_node:
   ros__parameters:
-    octomap_filename: "/home/ros2-foxy/uneven_world.bt"
+    octomap_filename: "/home/atas/decomposed_traversability_cloud.bt"
     octomap_voxel_size: 0.2
     octomap_publish_frequency: 10
     provide_utm_to_map_transform: true
@@ -108,7 +108,7 @@ botanbot_map_server_rclcpp_node:
     map_coordinates:
       latitude: 49.89999996757017
       longitude: 8.899999997371747
-      altitude: 0.6391727701823612
+      altitude: 1.8
       quaternion:
         x: -0.0001960611448920198
         y: -0.003682083159658604

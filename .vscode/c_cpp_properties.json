@@ -1,0 +1,25 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/usr/include/**",
+        "/usr/local/include/**",
+        "/opt/ros/foxy/include/**",
+        "/home/atas/colcon_ws/install/botanbot_control/include/**",
+        "/home/atas/colcon_ws/install/botanbot_gazebo/include/**",
+        "/home/atas/colcon_ws/install/botanbot_gui/include/**",
+        "/home/atas/colcon_ws/install/botanbot_map_server/include/**",
+        "/home/atas/colcon_ws/install/botanbot_openvslam/include/**",
+        "/home/atas/colcon_ws/install/botanbot_planning/include/**",
+        "/home/atas/colcon_ws/install/botanbot_pose_navigator/include/**",
+        "/home/atas/colcon_ws/install/botanbot_msgs/include/**"
+      ],
+      "name": "ROS"
+    }
+  ],
+  "version": 4
+}
