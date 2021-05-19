@@ -25,15 +25,11 @@ BotanbotMapManager::BotanbotMapManager()
 : Node("botanbot_map_manager_rclcpp_node")
 {
   RCLCPP_INFO(this->get_logger(), "Creating..");
-  octomap_ros_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
-  octomap_pointcloud_ros_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
+  // This is populated by params, soinitialize pointer asap
   static_map_gps_pose_ = std::make_shared<botanbot_msgs::msg::OrientedNavSatFix>();
 
-  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
-    "map_manager_fromll_client_node");
-
   // Declare this node's parameters
-  declare_parameter("octomap_filename", "/home/ros2-foxy/f.bt");
+  declare_parameter("pcd_map_filename", "/home/ros2-foxy/f.pcd");
   declare_parameter("octomap_publish_topic_name", "octomap");
   declare_parameter("octomap_voxel_size", 0.2);
   declare_parameter("octomap_publish_frequency", 10);
@@ -48,9 +44,21 @@ BotanbotMapManager::BotanbotMapManager()
   declare_parameter("map_coordinates.quaternion.y", 0.0);
   declare_parameter("map_coordinates.quaternion.z", 0.0);
   declare_parameter("map_coordinates.quaternion.w", 1.0);
+  declare_parameter("pcd_map_transform.translation.x", 0.0);
+  declare_parameter("pcd_map_transform.translation.y", 0.0);
+  declare_parameter("pcd_map_transform.translation.z", 0.0);
+  declare_parameter("pcd_map_transform.rotation.r", 0.0);
+  declare_parameter("pcd_map_transform.rotation.p", 0.0);
+  declare_parameter("pcd_map_transform.rotation.y", 0.0);
+  declare_parameter("apply_filters", true);
+  declare_parameter("pcd_map_downsample_voxel_size", 0.05);
+  declare_parameter("remove_outlier_mean_K", 10);
+  declare_parameter("remove_outlier_stddev_threshold", 1.0);
+  declare_parameter("remove_outlier_radius_search", 0.1);
+  declare_parameter("remove_outlier_min_neighbors_in_radius", 1);
 
   // get this node's parameters
-  get_parameter("octomap_filename", octomap_filename_);
+  get_parameter("pcd_map_filename", pcd_map_filename_);
   get_parameter("octomap_publish_topic_name", octomap_publish_topic_name_);
   get_parameter("octomap_voxel_size", octomap_voxel_size_);
   get_parameter("octomap_publish_frequency", octomap_publish_frequency_);
@@ -65,16 +73,71 @@ BotanbotMapManager::BotanbotMapManager()
   get_parameter("map_coordinates.quaternion.y", static_map_gps_pose_->orientation.y);
   get_parameter("map_coordinates.quaternion.z", static_map_gps_pose_->orientation.z);
   get_parameter("map_coordinates.quaternion.w", static_map_gps_pose_->orientation.w);
+  get_parameter("pcd_map_transform.translation.x", pcd_map_transform_matrix_.translation_.x());
+  get_parameter("pcd_map_transform.translation.y", pcd_map_transform_matrix_.translation_.y());
+  get_parameter("pcd_map_transform.translation.z", pcd_map_transform_matrix_.translation_.z());
+  get_parameter("pcd_map_transform.rotation.r", pcd_map_transform_matrix_.rpyIntrinsic_.x());
+  get_parameter("pcd_map_transform.rotation.p", pcd_map_transform_matrix_.rpyIntrinsic_.y());
+  get_parameter("pcd_map_transform.rotation.y", pcd_map_transform_matrix_.rpyIntrinsic_.z());
+  get_parameter("apply_filters", apply_filters_);
+  get_parameter("pcd_map_downsample_voxel_size", pcd_map_downsample_voxel_size_);
+  get_parameter("remove_outlier_mean_K", remove_outlier_mean_K_);
+  get_parameter("remove_outlier_stddev_threshold", remove_outlier_stddev_threshold_);
+  get_parameter("remove_outlier_radius_search", remove_outlier_radius_search_);
+  get_parameter("remove_outlier_min_neighbors_in_radius", remove_outlier_min_neighbors_in_radius_);
 
   octomap_octree_ = std::make_shared<octomap::ColorOcTree>(octomap_voxel_size_);
+  octomap_ros_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
+  octomap_pointcloud_ros_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
 
+  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
+    "map_manager_fromll_client_node");
   octomap_publisher_ = this->create_publisher<octomap_msgs::msg::Octomap>(
     octomap_publish_topic_name_, rclcpp::SystemDefaultsQoS());
-
   octomap_pointloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     octomap_point_cloud_publish_topic_, rclcpp::SystemDefaultsQoS());
+  timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
+    std::bind(&BotanbotMapManager::timerCallback, this));
+  robot_localization_fromLL_client_ =
+    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
+  // setup TF buffer and listerner to read transforms
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  octomap_octree_->read(octomap_filename_);
+  pcd_map_pointcloud_ = botanbot_utilities::loadPointcloudFromPcd(pcd_map_filename_.c_str());
+
+  RCLCPP_INFO(
+    this->get_logger(), "Loading a PCD map with %d points",
+    pcd_map_pointcloud_->points.size());
+
+  pcd_map_pointcloud_ = botanbot_utilities::downsampleInputCloud(
+    pcd_map_pointcloud_,
+    pcd_map_downsample_voxel_size_);
+
+  RCLCPP_INFO(
+    this->get_logger(), "PCD Map downsampled, it now has %d points",
+    pcd_map_pointcloud_->points.size());
+
+  if (apply_filters_) {
+    pcd_map_pointcloud_ = botanbot_utilities::removeOutliersFromInputCloud(
+      pcd_map_pointcloud_,
+      remove_outlier_mean_K_,
+      remove_outlier_stddev_threshold_,
+      botanbot_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
+    pcd_map_pointcloud_ = botanbot_utilities::removeOutliersFromInputCloud(
+      pcd_map_pointcloud_,
+      remove_outlier_min_neighbors_in_radius_,
+      remove_outlier_radius_search_,
+      botanbot_utilities::OutlierRemovalType::RadiusOutlierRemoval);
+  }
+
+  pcd_map_pointcloud_ = botanbot_utilities::transformCloud(
+    pcd_map_pointcloud_,
+    botanbot_utilities::getRigidBodyTransform(
+      pcd_map_transform_matrix_.translation_,
+      pcd_map_transform_matrix_.rpyIntrinsic_,
+      get_logger()));
 
   bool is_octomap_successfully_converted(false);
   try {
@@ -86,17 +149,6 @@ BotanbotMapManager::BotanbotMapManager()
       get_logger(),
       "Exception while converting octomap %s:", e.what());
   }
-
-  timer_ = this->create_wall_timer(
-    std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
-    std::bind(&BotanbotMapManager::timerCallback, this));
-
-  robot_localization_fromLL_client_ =
-    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
-
-  // setup TF buffer and listerner to read transforms
-  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
-  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   RCLCPP_INFO(
     this->get_logger(),
@@ -158,6 +210,8 @@ void BotanbotMapManager::timerCallback()
       tf2::Transform static_map_to_map_transfrom = static_map_rotation *
       static_map_translation.inverse();
       alignStaticMapToMap(static_map_to_map_transfrom);
+
+      RCLCPP_INFO(get_logger(), "Aligned static ap, Georeference is UTM");
     });
 
   publishAlignedMap();
@@ -206,42 +260,44 @@ void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_t
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr aligned_octomap_cloud =
     pcl::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
 
-  for (auto it = octomap_octree_->begin(0), end = octomap_octree_->end(); it != end; ++it) {
-    if (octomap_octree_->isNodeOccupied(*it)) {
-      // insert into pointcloud:
-      pcl::PointXYZRGB point = pcl::PointXYZRGB();
-      point.x = it.getX();
-      point.y = it.getY();
-      point.z = it.getZ();
+  pcl_ros::transformPointCloud(
+    *pcd_map_pointcloud_, *aligned_octomap_cloud, static_map_to_map_transfrom
+  );
 
-      // Incorporate cost into pointcloud color
-      if (it->getValue() == 1.0) {
-        point.r = 255;
-      }
-      double cost_projected_to_cloud = static_cast<double>(it->getValue()) *
-        static_cast<double>(255.0);
-      point.g = 255 - cost_projected_to_cloud;
-      point.b = cost_projected_to_cloud;
-      aligned_octomap_cloud->points.push_back(point);
+  octomap::Pointcloud octocloud;
+
+  for (auto && i : aligned_octomap_cloud->points) {
+    octomap::point3d endpoint(i.x, i.y, i.z);
+    // Yellow color pints are elevated Node centers, keep them out for now
+    if (!(i.r && i.g)) {
+      octocloud.push_back(endpoint);
     }
   }
 
-  pcl_ros::transformPointCloud(
-    *aligned_octomap_cloud, *aligned_octomap_cloud, static_map_to_map_transfrom
-  );
+  octomap::point3d sensorOrigin(0, 0, 0);
+  octomap_octree_->insertPointCloud(octocloud, sensorOrigin);
+
+  for (auto && i : aligned_octomap_cloud->points) {
+
+    octomap::point3d crr_point(i.x, i.y, i.z);
+    double cost = static_cast<double>(i.b) / static_cast<double>(255.0);
+    // Obstacle point set the value to highest cost
+    if (i.r) {
+      cost = 1.0;
+    }
+    if (!(i.r && i.g)) {
+      auto crr_point_node = octomap_octree_->coordToKey(crr_point);
+      auto pair = std::pair<octomap::OcTreeKey, double>(crr_point_node, cost);
+
+      octomap_octree_->setNodeValue(crr_point_node, cost, false);
+      octomap_octree_->setNodeColor(crr_point_node, i.r, i.g, i.b);
+    }
+  }
+
   pcl::toROSMsg(*aligned_octomap_cloud, *octomap_pointcloud_ros_msg_);
 
-  std::shared_ptr<octomap::OcTree> aligned_octomap =
-    std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-  octomap::Pointcloud temp_octocloud;
-  for (auto && i : aligned_octomap_cloud->points) {
-    octomap::point3d octocloud_point(i.x, i.y, i.z);
-    temp_octocloud.push_back(octocloud_point);
-  }
-  octomap::point3d sensorOrigin(0, 0, 0);
-  aligned_octomap->insertPointCloud(temp_octocloud, sensorOrigin);
   try {
-    octomap_msgs::binaryMapToMsg<octomap::OcTree>(*aligned_octomap, *octomap_ros_msg_);
+    octomap_msgs::fullMapToMsg<octomap::ColorOcTree>(*octomap_octree_, *octomap_ros_msg_);
   } catch (const std::exception & e) {
     std::cerr << e.what() << '\n';
     RCLCPP_ERROR(

@@ -178,7 +178,7 @@ void PCL2OctomapConverter::processConversion()
       node_values.insert(pair);
 
       tree.setNodeValue(crr_point_node, cost, false);
-
+      tree.setNodeColor(crr_point_node, i.r, i.g, i.b);
     }
   }
 

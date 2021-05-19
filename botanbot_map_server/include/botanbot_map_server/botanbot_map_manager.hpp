@@ -34,6 +34,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <robot_localization/srv/from_ll.hpp>
 #include <botanbot_msgs/msg/oriented_nav_sat_fix.hpp>
+#include <botanbot_utilities/pcl_helpers.hpp>
 
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>
@@ -132,7 +133,9 @@ protected:
   // otree object to read and store binary octomap from disk
   std::shared_ptr<octomap::ColorOcTree> octomap_octree_;
   // rclcpp parameters from yaml file: full path to octomap file in disk
-  std::string octomap_filename_;
+  std::string pcd_map_filename_;
+  // Pointcloud map is stroed here
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcd_map_pointcloud_;
   // rclcpp parameters from yaml file: topic name for published octomap
   std::string octomap_publish_topic_name_;
   // rclcpp parameters from yaml file: topic name for published octomap as cloud
@@ -152,6 +155,17 @@ protected:
   // tf buffer to get access to transfroms
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
+  // Optional rigid body transform to apply to the cloud, if cloud
+  // is depth camera frames we need to pull cloud back to conventional ROS frames
+  botanbot_utilities::RigidBodyTransformation pcd_map_transform_matrix_;
+  // optional point cloud transformfrom yaml file
+  double pcd_map_downsample_voxel_size_;
+  int remove_outlier_mean_K_;
+  double remove_outlier_stddev_threshold_;
+  double remove_outlier_radius_search_;
+  int remove_outlier_min_neighbors_in_radius_;
+  bool apply_filters_;
 };
 }  // namespace botanbot_map_server
 
