@@ -147,7 +147,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
 
   ompl::base::ScopedState<ompl::base::SE3StateSpace> se3_start(state_space_),
   se3_goal(state_space_);
-  se3_start->setXYZ(start.pose.position.x, start.pose.position.y, start.pose.position.z + 1.6);
+  se3_start->setXYZ(start.pose.position.x, start.pose.position.y, start.pose.position.z + 3.2);
   se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
     0,
     0,

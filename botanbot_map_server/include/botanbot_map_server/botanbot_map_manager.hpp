@@ -142,6 +142,7 @@ protected:
   std::string octomap_point_cloud_publish_topic_;
   // rclcpp parameters from yaml file: frame id for map typicall: "map"
   std::string map_frame_id_;
+  std::string utm_frame_id_;
   // rclcpp parameters from yaml file: vxel size for octomap
   double octomap_voxel_size_;
   // see navsat_transform_node from robot_localization, this offset is needed to recorrect orientation of static map

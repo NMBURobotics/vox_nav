@@ -36,6 +36,7 @@ BotanbotMapManager::BotanbotMapManager()
   declare_parameter("publish_octomap_as_pointcloud", true);
   declare_parameter("octomap_point_cloud_publish_topic", "octomap_pointcloud");
   declare_parameter("map_frame_id", "map");
+  declare_parameter("utm_frame_id", "utm");
   declare_parameter("yaw_offset", 1.57);
   declare_parameter("map_coordinates.latitude", 49.0);
   declare_parameter("map_coordinates.longitude", 3.0);
@@ -65,6 +66,7 @@ BotanbotMapManager::BotanbotMapManager()
   get_parameter("publish_octomap_as_pointcloud", publish_octomap_as_pointcloud_);
   get_parameter("octomap_point_cloud_publish_topic", octomap_point_cloud_publish_topic_);
   get_parameter("map_frame_id", map_frame_id_);
+  get_parameter("utm_frame_id", utm_frame_id_);
   get_parameter("yaw_offset", yaw_offset_);
   get_parameter("map_coordinates.latitude", static_map_gps_pose_->position.latitude);
   get_parameter("map_coordinates.longitude", static_map_gps_pose_->position.longitude);
@@ -167,13 +169,16 @@ void BotanbotMapManager::timerCallback()
   // Since this is static map we need to georefence this only once not each time
   std::call_once(
     align_static_map_once_, [this]() {
-      while (!tf_buffer_->canTransform("utm", "map", rclcpp::Time(0))) {
+      while (!tf_buffer_->canTransform(utm_frame_id_, map_frame_id_, rclcpp::Time(0))) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        RCLCPP_INFO(this->get_logger(), "Waiting for utm to map Transform to be available.");
+        RCLCPP_INFO(
+          this->get_logger(), "Waiting for %s to %s Transform to be available.",
+          utm_frame_id_.c_str(), map_frame_id_.c_str() );
       }
       RCLCPP_INFO(
         get_logger(), "Going to align the static map to map frames once,"
         " But the map and octomap will be published at %i frequncy rate", octomap_publish_frequency_);
+      RCLCPP_INFO(get_logger(), "Depending on the size of map , this might tke a while..");
       auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
       auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
       request->ll_point.latitude = static_map_gps_pose_->position.latitude;
@@ -211,7 +216,7 @@ void BotanbotMapManager::timerCallback()
       static_map_translation.inverse();
       alignStaticMapToMap(static_map_to_map_transfrom);
 
-      RCLCPP_INFO(get_logger(), "Aligned static ap, Georeference is UTM");
+      RCLCPP_INFO(get_logger(), "Georeferenced given map");
     });
 
   publishAlignedMap();
@@ -223,9 +228,11 @@ void BotanbotMapManager::publishAlignedMap()
   octomap_ros_msg_->header.frame_id = map_frame_id_;
   octomap_publisher_->publish(*octomap_ros_msg_);
 
-  octomap_pointcloud_ros_msg_->header.frame_id = map_frame_id_;
-  octomap_pointcloud_ros_msg_->header.stamp = this->now();
-  octomap_pointloud_publisher_->publish(*octomap_pointcloud_ros_msg_);
+  if (publish_octomap_as_pointcloud_) {
+    octomap_pointcloud_ros_msg_->header.frame_id = map_frame_id_;
+    octomap_pointcloud_ros_msg_->header.stamp = this->now();
+    octomap_pointloud_publisher_->publish(*octomap_pointcloud_ros_msg_);
+  }
 }
 
 void BotanbotMapManager::fromGPSPoseToMapPose(
@@ -260,40 +267,38 @@ void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_t
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr aligned_octomap_cloud =
     pcl::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
 
-  pcl_ros::transformPointCloud(
-    *pcd_map_pointcloud_, *aligned_octomap_cloud, static_map_to_map_transfrom
-  );
-
-  octomap::Pointcloud octocloud;
-
-  for (auto && i : aligned_octomap_cloud->points) {
-    octomap::point3d endpoint(i.x, i.y, i.z);
-    // Yellow color pints are elevated Node centers, keep them out for now
-    if (!(i.r && i.g)) {
-      octocloud.push_back(endpoint);
+  for (auto && i : pcd_map_pointcloud_->points) {
+    if (!(i.r == 255 && i.g == 255 )) {
+      aligned_octomap_cloud->points.push_back(i);
     }
   }
 
+  pcl_ros::transformPointCloud(
+    *aligned_octomap_cloud, *aligned_octomap_cloud, static_map_to_map_transfrom
+  );
+
+  octomap::Pointcloud octocloud;
   octomap::point3d sensorOrigin(0, 0, 0);
+
+  for (auto && i : aligned_octomap_cloud->points) {
+    octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
+  }
+
   octomap_octree_->insertPointCloud(octocloud, sensorOrigin);
 
   for (auto && i : aligned_octomap_cloud->points) {
-
     octomap::point3d crr_point(i.x, i.y, i.z);
     double cost = static_cast<double>(i.b) / static_cast<double>(255.0);
     // Obstacle point set the value to highest cost
     if (i.r) {
       cost = 1.0;
     }
-    if (!(i.r && i.g)) {
-      auto crr_point_node = octomap_octree_->coordToKey(crr_point);
-      auto pair = std::pair<octomap::OcTreeKey, double>(crr_point_node, cost);
-
-      octomap_octree_->setNodeValue(crr_point_node, cost, false);
-      octomap_octree_->setNodeColor(crr_point_node, i.r, i.g, i.b);
-    }
+    auto crr_point_node = octomap_octree_->coordToKey(crr_point);
+    auto pair = std::pair<octomap::OcTreeKey, double>(crr_point_node, cost);
+    octomap_octree_->setNodeValue(crr_point_node, cost, false);
+    octomap_octree_->setNodeColor(crr_point_node, i.r, i.g, i.b);
   }
-
+  
   pcl::toROSMsg(*aligned_octomap_cloud, *octomap_pointcloud_ros_msg_);
 
   try {
