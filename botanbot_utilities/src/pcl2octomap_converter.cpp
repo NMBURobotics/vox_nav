@@ -105,14 +105,14 @@ void PCL2OctomapConverter::timerCallback()
 }
 
 void PCL2OctomapConverter::calcThresholdedNodes(
-  const octomap::OcTree tree,
+  const octomap::ColorOcTree tree,
   unsigned int & num_thresholded,
   unsigned int & num_other)
 {
   num_thresholded = 0;
   num_other = 0;
 
-  for (octomap::OcTree::tree_iterator it = tree.begin_tree(), end = tree.end_tree(); it != end;
+  for (octomap::ColorOcTree::tree_iterator it = tree.begin_tree(), end = tree.end_tree(); it != end;
     ++it)
   {
     if (tree.isNodeAtThreshold(*it)) {
@@ -123,7 +123,7 @@ void PCL2OctomapConverter::calcThresholdedNodes(
   }
 }
 
-void PCL2OctomapConverter::outputStatistics(const octomap::OcTree tree)
+void PCL2OctomapConverter::outputStatistics(const octomap::ColorOcTree tree)
 {
   unsigned int numThresholded, numOther;
   calcThresholdedNodes(tree, numThresholded, numOther);
@@ -147,7 +147,7 @@ void PCL2OctomapConverter::outputStatistics(const octomap::OcTree tree)
 void PCL2OctomapConverter::processConversion()
 {
   octomap::Pointcloud octocloud;
-  octomap::OcTree tree(octomap_voxelsize_);
+  octomap::ColorOcTree tree(octomap_voxelsize_);
 
   for (auto && i : pointcloud_->points) {
     octomap::point3d endpoint(i.x, i.y, i.z);
@@ -240,7 +240,7 @@ void PCL2OctomapConverter::processConversion()
   }
 
   outputStatistics(tree);
-  tree.writeBinary(output_binary_octomap_filename_);
+  tree.write(output_binary_octomap_filename_);
 }
 
 }   // namespace botanbot_utilities

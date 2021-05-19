@@ -130,7 +130,7 @@ protected:
   // we read gps coordinates of map from yaml
   botanbot_msgs::msg::OrientedNavSatFix::SharedPtr static_map_gps_pose_;
   // otree object to read and store binary octomap from disk
-  std::shared_ptr<octomap::OcTree> octomap_octree_;
+  std::shared_ptr<octomap::ColorOcTree> octomap_octree_;
   // rclcpp parameters from yaml file: full path to octomap file in disk
   std::string octomap_filename_;
   // rclcpp parameters from yaml file: topic name for published octomap

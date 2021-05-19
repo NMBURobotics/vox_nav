@@ -16,6 +16,8 @@
 #define BOTANBOT_UTILITIES__PCL2OCTOMAP_CONVERTER_HPP_
 
 #include <octomap/octomap.h>
+#include <octomap/ColorOcTree.h>
+
 #include <pcl/io/io.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_types.h>
@@ -79,7 +81,7 @@ public:
    * @param num_other
    */
   void calcThresholdedNodes(
-    const octomap::OcTree tree,
+    const octomap::ColorOcTree tree,
     unsigned int & num_thresholded,
     unsigned int & num_other);
 
@@ -88,7 +90,7 @@ public:
    *
    * @param tree
    */
-  void outputStatistics(const octomap::OcTree tree);
+  void outputStatistics(const octomap::ColorOcTree tree);
 
   /**
    * @brief

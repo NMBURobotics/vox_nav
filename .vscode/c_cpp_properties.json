@@ -1,24 +1,38 @@
 {
   "configurations": [
     {
+      "name": "Linux",
       "browse": {
-        "databaseFilename": "",
+        "path": [
+          "/opt/ros/foxy/include/",
+          "/usr/include/x86_64-linux-gnu/qt5/",
+          "/usr/include/x86_64-linux-gnu/qt5/QtGui/",
+          "/usr/include/x86_64-linux-gnu/qt5/QtWidgets/",
+          "/usr/include/x86_64-linux-gnu/qt5/QtUiTools/",
+          "/usr/include/x86_64-linux-gnu/qt5/QtQuickShapes/"
+        ],
         "limitSymbolsToIncludedHeaders": true
       },
       "includePath": [
+        "/opt/**",
+        "/usr/**",
         "/usr/include/**",
-        "/usr/local/include/**",
         "/opt/ros/foxy/include/**",
+        "/usr/local/include/**",
         "/home/atas/colcon_ws/install/botanbot_control/include/**",
-        "/home/atas/colcon_ws/install/botanbot_gazebo/include/**",
         "/home/atas/colcon_ws/install/botanbot_gui/include/**",
         "/home/atas/colcon_ws/install/botanbot_map_server/include/**",
-        "/home/atas/colcon_ws/install/botanbot_openvslam/include/**",
         "/home/atas/colcon_ws/install/botanbot_planning/include/**",
         "/home/atas/colcon_ws/install/botanbot_pose_navigator/include/**",
-        "/home/atas/colcon_ws/install/botanbot_msgs/include/**"
+        "/home/atas/colcon_ws/install/botanbot_msgs/include/**",
+        "/home/atas/colcon_ws/install/botanbot_utilities/include/**",
+        "/home/atas/colcon_ws/install/pcl_ros/include/**"
       ],
-      "name": "ROS"
+      "defines": [],
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "c11",
+      "cppStandard": "c++17",
+      "intelliSenseMode": "clang-x64"
     }
   ],
   "version": 4

@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
+#include "botanbot_map_server/botanbot_map_manager.hpp"
+
 #include <string>
 #include <vector>
 #include <memory>
-#include "botanbot_map_server/botanbot_map_manager.hpp"
 
 namespace botanbot_map_server
 {
@@ -64,24 +66,27 @@ BotanbotMapManager::BotanbotMapManager()
   get_parameter("map_coordinates.quaternion.z", static_map_gps_pose_->orientation.z);
   get_parameter("map_coordinates.quaternion.w", static_map_gps_pose_->orientation.w);
 
-  octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+  octomap_octree_ = std::make_shared<octomap::ColorOcTree>(octomap_voxel_size_);
+
   octomap_publisher_ = this->create_publisher<octomap_msgs::msg::Octomap>(
     octomap_publish_topic_name_, rclcpp::SystemDefaultsQoS());
 
   octomap_pointloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     octomap_point_cloud_publish_topic_, rclcpp::SystemDefaultsQoS());
-  octomap_octree_->readBinary(octomap_filename_);
+
+  octomap_octree_->read(octomap_filename_);
 
   bool is_octomap_successfully_converted(false);
   try {
-    is_octomap_successfully_converted = octomap_msgs::binaryMapToMsg<octomap::OcTree>(
+    is_octomap_successfully_converted = octomap_msgs::fullMapToMsg<octomap::ColorOcTree>(
       *octomap_octree_, *octomap_ros_msg_);
   } catch (const std::exception & e) {
     std::cerr << e.what() << '\n';
     RCLCPP_ERROR(
       get_logger(),
-      "Exception while converting binary octomap %s:", e.what());
+      "Exception while converting octomap %s:", e.what());
   }
+
   timer_ = this->create_wall_timer(
     std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
     std::bind(&BotanbotMapManager::timerCallback, this));
@@ -198,17 +203,25 @@ void BotanbotMapManager::fromGPSPoseToMapPose(
 
 void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom)
 {
-  pcl::PointCloud<pcl::PointXYZ>::Ptr aligned_octomap_cloud =
-    pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr aligned_octomap_cloud =
+    pcl::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
+
   for (auto it = octomap_octree_->begin(0), end = octomap_octree_->end(); it != end; ++it) {
     if (octomap_octree_->isNodeOccupied(*it)) {
       // insert into pointcloud:
-      pcl::PointXYZ point = pcl::PointXYZ();
+      pcl::PointXYZRGB point = pcl::PointXYZRGB();
       point.x = it.getX();
       point.y = it.getY();
       point.z = it.getZ();
 
-      
+      // Incorporate cost into pointcloud color
+      if (it->getValue() == 1.0) {
+        point.r = 255;
+      }
+      double cost_projected_to_cloud = static_cast<double>(it->getValue()) *
+        static_cast<double>(255.0);
+      point.g = 255 - cost_projected_to_cloud;
+      point.b = cost_projected_to_cloud;
       aligned_octomap_cloud->points.push_back(point);
     }
   }
