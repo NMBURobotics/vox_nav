@@ -35,6 +35,7 @@ public:
     auto s = color_octomap_octree_->size();
     std::cout << "OCTOMAP SUCESS, IT HAS " << s << std::endl;
   }
+
   ompl::base::Cost motionCost(
     const ompl::base::State * s1,
     const ompl::base::State * s2) const override
@@ -338,6 +339,10 @@ void SE3Planner::octomapCallback(
       octomap::point3d crr_point(x, y, z);
       auto crr_point_node_key = color_octomap_octree_->coordToKey(crr_point);
       octomap_octree->setNodeValue(crr_point_node_key, it->getValue(), false);
+
+      RCLCPP_INFO(
+        logger_,
+        "NODE VALUE %.4f", it->getValue());
     }
 
     fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
@@ -348,6 +353,10 @@ void SE3Planner::octomapCallback(
       logger_,
       "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
       "octomap for state validity (aka collision check)", color_octomap_octree_->size());
+
+    RCLCPP_INFO(
+      logger_,
+      "Collisison check Octomap with %d nodes", octomap_octree->size());
     is_octomap_ready_ = true;
   }
 }

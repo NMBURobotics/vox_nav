@@ -296,15 +296,7 @@ void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_t
 
   for (auto && i : aligned_octomap_cloud->points) {
     octomap::point3d crr_point(i.x, i.y, i.z);
-    double cost = static_cast<double>(i.b) / static_cast<double>(255.0);
-    // Obstacle point set the value to highest cost
-    if (i.r) {
-      cost = 1.0;
-    }
-    auto crr_point_node = octomap_octree_->coordToKey(crr_point);
-    auto pair = std::pair<octomap::OcTreeKey, double>(crr_point_node, cost);
-    octomap_octree_->setNodeValue(crr_point_node, cost, false);
-    octomap_octree_->setNodeColor(crr_point_node, i.r, i.g, i.b);
+    octomap_octree_->setNodeColor(i.x, i.y, i.z, i.r, i.g, i.b);
   }
 
   pcl::toROSMsg(*aligned_octomap_cloud, *octomap_pointcloud_ros_msg_);
@@ -330,31 +322,19 @@ void BotanbotMapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
     end = tree.end(); it != end; ++it)
   {
     if (tree.isNodeOccupied(*it)) {
-      double x = it.getX();
-      double y = it.getY();
-      double z = it.getZ();
-
       unsigned idx = it.getDepth();
       assert(idx < octomap_markers_.markers.size());
-
       geometry_msgs::msg::Point cubeCenter;
-      cubeCenter.x = x;
-      cubeCenter.y = y;
-      cubeCenter.z = z;
-
+      cubeCenter.x = it.getCoordinate().x();
+      cubeCenter.y = it.getCoordinate().y();
+      cubeCenter.z = it.getCoordinate().z();
       octomap_markers_.markers[idx].points.push_back(cubeCenter);
-
-      std_msgs::msg::ColorRGBA _color;
-
-      // this ost is too high , it is NON-TRAVERSABLE
-      if (it->getValue() == 1.0) {
-        _color.r = it->getValue();
-      } else {
-        _color.g = 1.0 - it->getValue();
-        _color.b = it->getValue();
-      }
-      _color.a = 1.0;
-      octomap_markers_.markers[idx].colors.push_back(_color);
+      std_msgs::msg::ColorRGBA color;
+      color.r = static_cast<float>(it->getColor().r / 255.0);
+      color.g = static_cast<float>(it->getColor().g / 255.0);
+      color.b = static_cast<float>(it->getColor().b / 255.0);
+      color.a = 1.0;
+      octomap_markers_.markers[idx].colors.push_back(color);
     }
   }
 
