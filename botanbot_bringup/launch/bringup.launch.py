@@ -44,7 +44,7 @@ def generate_launch_description():
         executable='botanbot_planner_server',
         name='botanbot_planner_server_rclcpp_node',
         namespace='',
-        #prefix=['xterm -e gdb -ex run --args'],
+        prefix=['xterm -e gdb -ex run --args'],
         output='screen',
         parameters=[parameter_file],
     )

@@ -35,16 +35,15 @@ namespace botanbot_planning
 class SE3Planner : public botanbot_planning::PlannerCore
 {
 public:
-
 /**
  * @brief Construct a new SE3Planner object
- * 
+ *
  */
   SE3Planner();
 
 /**
  * @brief Destroy the SE3Planner object
- * 
+ *
  */
   ~SE3Planner();
 
@@ -95,14 +94,6 @@ public:
     const std::string & selected_planner_name,
     const ompl::base::SpaceInformationPtr & si);
 
-  /**
-  * @brief
-  *
-  * @param si
-  * @return ompl::base::OptimizationObjectivePtr
-  */
-  ompl::base::OptimizationObjectivePtr getOptObjective(const ompl::base::SpaceInformationPtr & si);
-
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner")};
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
@@ -111,6 +102,7 @@ protected:
   std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
+  octomap::ColorOcTree * color_octomap_octree_;
 
   std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
   ompl::base::StateSpacePtr state_space_;

@@ -51,7 +51,7 @@ botanbot_planner_server_rclcpp_node:
     SE3Planner:
       plugin: "botanbot_planning::SE3Planner"
       planner_name: "RRTstar" # other options: PRMStar, RRTstar, RRTConnect, KPIECE1
-      planner_timeout: 1.0
+      planner_timeout: 2.0
       interpolation_parameter: 25
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
