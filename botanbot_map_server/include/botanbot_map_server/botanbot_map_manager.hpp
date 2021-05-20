@@ -19,6 +19,7 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <rclcpp/service.hpp>
 #include <rclcpp/client.hpp>
+#include "visualization_msgs/msg/marker_array.hpp"
 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/transform_datatypes.h>
@@ -96,6 +97,13 @@ public:
   void publishAlignedMap();
 
   /**
+   * @brief publishes octomap as visualization msgs
+   *
+   * @param tree
+   */
+  void fillOctomapMarkers(const octomap::ColorOcTree & tree);
+
+  /**
    * @brief given GPS lat long alt coordinates uses
    *        robot_localization service to georefence this map
    *
@@ -151,6 +159,7 @@ protected:
   int octomap_publish_frequency_;
   // rclcpp parameters from yaml file: if true, a cloud will be published which represents octomap
   bool publish_octomap_as_pointcloud_;
+  bool publish_octomap_markers_;
   // we need to align static map to map only once, since it is static !
   std::once_flag align_static_map_once_;
   // tf buffer to get access to transfroms
@@ -167,6 +176,8 @@ protected:
   double remove_outlier_radius_search_;
   int remove_outlier_min_neighbors_in_radius_;
   bool apply_filters_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr octomap_markers_publisher_;
+  visualization_msgs::msg::MarkerArray octomap_markers_;
 };
 }  // namespace botanbot_map_server
 

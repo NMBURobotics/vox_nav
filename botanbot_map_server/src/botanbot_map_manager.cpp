@@ -34,6 +34,7 @@ BotanbotMapManager::BotanbotMapManager()
   declare_parameter("octomap_voxel_size", 0.2);
   declare_parameter("octomap_publish_frequency", 10);
   declare_parameter("publish_octomap_as_pointcloud", true);
+  declare_parameter("publish_octomap_markers", true);
   declare_parameter("octomap_point_cloud_publish_topic", "octomap_pointcloud");
   declare_parameter("map_frame_id", "map");
   declare_parameter("utm_frame_id", "utm");
@@ -64,6 +65,7 @@ BotanbotMapManager::BotanbotMapManager()
   get_parameter("octomap_voxel_size", octomap_voxel_size_);
   get_parameter("octomap_publish_frequency", octomap_publish_frequency_);
   get_parameter("publish_octomap_as_pointcloud", publish_octomap_as_pointcloud_);
+  get_parameter("publish_octomap_markers", publish_octomap_markers_);
   get_parameter("octomap_point_cloud_publish_topic", octomap_point_cloud_publish_topic_);
   get_parameter("map_frame_id", map_frame_id_);
   get_parameter("utm_frame_id", utm_frame_id_);
@@ -106,6 +108,8 @@ BotanbotMapManager::BotanbotMapManager()
   // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+  octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "octomap_markers", rclcpp::SystemDefaultsQoS());
 
   pcd_map_pointcloud_ = botanbot_utilities::loadPointcloudFromPcd(pcd_map_filename_.c_str());
 
@@ -233,6 +237,10 @@ void BotanbotMapManager::publishAlignedMap()
     octomap_pointcloud_ros_msg_->header.stamp = this->now();
     octomap_pointloud_publisher_->publish(*octomap_pointcloud_ros_msg_);
   }
+
+  if (publish_octomap_markers_) {
+    octomap_markers_publisher_->publish(octomap_markers_);
+  }
 }
 
 void BotanbotMapManager::fromGPSPoseToMapPose(
@@ -298,7 +306,7 @@ void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_t
     octomap_octree_->setNodeValue(crr_point_node, cost, false);
     octomap_octree_->setNodeColor(crr_point_node, i.r, i.g, i.b);
   }
-  
+
   pcl::toROSMsg(*aligned_octomap_cloud, *octomap_pointcloud_ros_msg_);
 
   try {
@@ -308,6 +316,68 @@ void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_t
     RCLCPP_ERROR(
       get_logger(),
       "Exception while converting binary octomap  %s:", e.what());
+  }
+
+  fillOctomapMarkers(*octomap_octree_);
+}
+
+void BotanbotMapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
+{
+  auto m_treeDepth = tree.getTreeDepth();
+  octomap_markers_.markers.resize(m_treeDepth + 1);
+  // now, traverse all leafs in the tree:
+  for (auto it = tree.begin(m_treeDepth),
+    end = tree.end(); it != end; ++it)
+  {
+    if (tree.isNodeOccupied(*it)) {
+      double x = it.getX();
+      double y = it.getY();
+      double z = it.getZ();
+
+      unsigned idx = it.getDepth();
+      assert(idx < octomap_markers_.markers.size());
+
+      geometry_msgs::msg::Point cubeCenter;
+      cubeCenter.x = x;
+      cubeCenter.y = y;
+      cubeCenter.z = z;
+
+      octomap_markers_.markers[idx].points.push_back(cubeCenter);
+
+      std_msgs::msg::ColorRGBA _color;
+
+      // this ost is too high , it is NON-TRAVERSABLE
+      if (it->getValue() == 1.0) {
+        _color.r = it->getValue();
+      } else {
+        _color.g = 1.0 - it->getValue();
+        _color.b = it->getValue();
+      }
+      _color.a = 1.0;
+      octomap_markers_.markers[idx].colors.push_back(_color);
+    }
+  }
+
+  for (unsigned i = 0; i < octomap_markers_.markers.size(); ++i) {
+    double size = tree.getNodeSize(i);
+
+    octomap_markers_.markers[i].header.frame_id = map_frame_id_;
+    octomap_markers_.markers[i].header.stamp = this->now();
+    octomap_markers_.markers[i].ns = map_frame_id_;
+    octomap_markers_.markers[i].id = i;
+    octomap_markers_.markers[i].type =
+      visualization_msgs::msg::Marker::CUBE_LIST;
+    octomap_markers_.markers[i].scale.x = size;
+    octomap_markers_.markers[i].scale.y = size;
+    octomap_markers_.markers[i].scale.z = size;
+
+    if (octomap_markers_.markers[i].points.size() > 0) {
+      octomap_markers_.markers[i].action =
+        visualization_msgs::msg::Marker::ADD;
+    } else {
+      octomap_markers_.markers[i].action =
+        visualization_msgs::msg::Marker::DELETE;
+    }
   }
 }
 

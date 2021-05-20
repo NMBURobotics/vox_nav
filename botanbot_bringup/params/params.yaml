@@ -114,6 +114,7 @@ botanbot_map_server_rclcpp_node:
     octomap_voxel_size: 0.2
     octomap_publish_frequency: 10
     publish_octomap_as_pointcloud: true
+    publish_octomap_markers: true
     octomap_publish_topic_name: "octomap" # octomap_msgs::msg::Octomap type of message topic name
     octomap_point_cloud_publish_topic: "octomap_pointcloud" # sensor_msgs::msg::PoinCloud2 that represents octomap
     map_frame_id: "map"
