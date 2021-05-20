@@ -35,15 +35,16 @@ namespace botanbot_planning
 class SE3Planner : public botanbot_planning::PlannerCore
 {
 public:
+
 /**
- * @brief Construct a new Botanbot O M P L Experimental object
- *
+ * @brief Construct a new SE3Planner object
+ * 
  */
   SE3Planner();
 
 /**
- * @brief Destroy the Botanbot O M P L Experimental object
- *
+ * @brief Destroy the SE3Planner object
+ * 
  */
   ~SE3Planner();
 

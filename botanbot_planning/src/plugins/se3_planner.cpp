@@ -106,6 +106,7 @@ void SE3Planner::initialize(
       parent->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
       parent->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
       parent->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
+
   fcl::Transform3f tf2;
   fcl::CollisionObject robot_body_box_object(robot_body_box, tf2);
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
@@ -242,19 +243,25 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
 bool SE3Planner::isStateValid(const ompl::base::State * state)
 {
   if (is_octomap_ready_) {
-    std::call_once(
-      fcl_tree_from_octomap_once_, [this]() {
-        std::shared_ptr<octomap::OcTree> octomap_octree =
-        std::make_shared<octomap::OcTree>(0.2);
-        octomap_msgs::readTree<octomap::OcTree>(octomap_octree.get(), *octomap_msg_);
-        fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
-        fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
-          std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
-        RCLCPP_INFO(
-          logger_,
-          "Recieved a valid Octomap, A FCL collision tree will be created from this "
-          "octomap for state validity(aka collision check)");
-      });
+    // cast the abstract state type to the type we expect
+    const ompl::base::SE3StateSpace::StateType * se3state =
+      state->as<ompl::base::SE3StateSpace::StateType>();
+    // extract the first component of the state and cast it to what we expect
+    const ompl::base::RealVectorStateSpace::StateType * pos =
+      se3state->as<ompl::base::RealVectorStateSpace::StateType>(0);
+    // extract the second component of the state and cast it to what we expect
+    const ompl::base::SO3StateSpace::StateType * rot =
+      se3state->as<ompl::base::SO3StateSpace::StateType>(1);
+    // check validity of state Fdefined by pos & rot
+    fcl::Vec3f translation(pos->values[0], pos->values[1], pos->values[2]);
+    fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
+    robot_collision_object_->setTransform(rotation, translation);
+    fcl::CollisionRequest requestType(1, false, 1, false);
+    fcl::CollisionResult collisionResult;
+    fcl::collide(
+      robot_collision_object_.get(),
+      fcl_octree_collision_object_.get(), requestType, collisionResult);
+    return !collisionResult.isCollision();
   } else {
     RCLCPP_ERROR(
       logger_,
@@ -262,25 +269,6 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
       "cannot be processed without a valid Octomap!");
     return false;
   }
-  // cast the abstract state type to the type we expect
-  const ompl::base::SE3StateSpace::StateType * se3state =
-    state->as<ompl::base::SE3StateSpace::StateType>();
-  // extract the first component of the state and cast it to what we expect
-  const ompl::base::RealVectorStateSpace::StateType * pos =
-    se3state->as<ompl::base::RealVectorStateSpace::StateType>(0);
-  // extract the second component of the state and cast it to what we expect
-  const ompl::base::SO3StateSpace::StateType * rot =
-    se3state->as<ompl::base::SO3StateSpace::StateType>(1);
-  // check validity of state Fdefined by pos & rot
-  fcl::Vec3f translation(pos->values[0], pos->values[1], pos->values[2]);
-  fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
-  robot_collision_object_->setTransform(rotation, translation);
-  fcl::CollisionRequest requestType(1, false, 1, false);
-  fcl::CollisionResult collisionResult;
-  fcl::collide(
-    robot_collision_object_.get(),
-    fcl_octree_collision_object_.get(), requestType, collisionResult);
-  return !collisionResult.isCollision();
 }
 
 ompl::base::OptimizationObjectivePtr SE3Planner::getOptObjective(
@@ -296,8 +284,40 @@ void SE3Planner::octomapCallback(
 {
   const std::lock_guard<std::mutex> lock(octomap_mutex_);
   if (!is_octomap_ready_) {
-    is_octomap_ready_ = true;
     octomap_msg_ = msg;
+    RCLCPP_INFO(logger_, "Octomap has been recieved!");
+
+    std::shared_ptr<octomap::ColorOcTree> color_octomap_octree =
+      std::make_shared<octomap::ColorOcTree>(0.2);
+    octomap_msgs::readTree<octomap::ColorOcTree>(color_octomap_octree.get(), *octomap_msg_);
+    std::shared_ptr<octomap::OcTree> octomap_octree =
+      std::make_shared<octomap::OcTree>(0.2);
+
+    auto m_treeDepth = color_octomap_octree->getTreeDepth();
+    // now, traverse all leafs in the tree:
+    for (auto it = color_octomap_octree->begin(m_treeDepth),
+      end = color_octomap_octree->end(); it != end; ++it)
+    {
+      if (color_octomap_octree->isNodeOccupied(*it)) {
+        double x = it.getX();
+        double y = it.getY();
+        double z = it.getZ();
+        octomap::point3d crr_point(x, y, z);
+        auto crr_point_node_key = color_octomap_octree->coordToKey(crr_point);
+        octomap_octree->setNodeValue(crr_point_node_key, 1.0, false);
+      }
+    }
+
+    fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
+    fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
+      std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
+
+    RCLCPP_INFO(
+      logger_,
+      "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
+      "octomap for state validity (aka collision check)", octomap_octree->size());
+
+    is_octomap_ready_ = true;
   }
 }
 
