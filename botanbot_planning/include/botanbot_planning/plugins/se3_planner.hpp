@@ -32,18 +32,69 @@ namespace botanbot_planning
 class OctoCostOptimizationObjective : public ompl::base::StateCostIntegralObjective
 {
 public:
+/**
+ * @brief Construct a new Octo Cost Optimization Objective object
+ *
+ * @param si
+ * @param tree
+ */
   OctoCostOptimizationObjective(
     const ompl::base::SpaceInformationPtr & si,
     std::shared_ptr<octomap::ColorOcTree> tree);
-
+  /**
+   * @brief Destroy the Octo Cost Optimization Objective object
+   *
+   */
   ~OctoCostOptimizationObjective();
-
+  /**
+   * @brief
+   *
+   * @param s
+   * @return ompl::base::Cost
+   */
   ompl::base::Cost stateCost(const ompl::base::State * s) const override;
 
 private:
   std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
 };
 
+
+class OctoCellStateSampler : public ompl::base::ValidStateSampler
+{
+public:
+  /**
+   * @brief Construct a new Octo Cell State Sampler object
+   *
+   * @param si
+   * @param tree
+   */
+  OctoCellStateSampler(
+    const ompl::base::SpaceInformationPtr & si,
+    std::shared_ptr<octomap::ColorOcTree> tree);
+
+  /**
+   * @brief
+   *
+   * @param state
+   * @return true
+   * @return false
+   */
+  bool sample(ompl::base::State * state) override;
+
+  /**
+   * @brief
+   *
+   */
+  bool sampleNear(
+    ompl::base::State * /*state*/, const ompl::base::State * /*near*/,
+    const double /*distance*/) override;
+
+protected:
+  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
+
+  octomap::unordered_ns::unordered_multimap<octomap::OcTreeKey, octomap::point3d,
+    octomap::OcTreeKey::KeyHash> color_octomap_node_colors_;
+};
 
 /**
  * @brief
@@ -111,6 +162,15 @@ public:
     const std::string & selected_planner_name,
     const ompl::base::SpaceInformationPtr & si);
 
+  /**
+   * @brief
+   *
+   * @param si
+   * @return ompl::base::ValidStateSamplerPtr
+   */
+  ompl::base::ValidStateSamplerPtr allocValidStateSampler(
+    const ompl::base::SpaceInformation * si);
+
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner")};
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
@@ -119,13 +179,14 @@ protected:
   std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
-  octomap::ColorOcTree * color_octomap_octree_;
+  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
 
   std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
   ompl::base::StateSpacePtr state_space_;
   ompl::base::SpaceInformationPtr state_space_information_;
 
   ompl::base::OptimizationObjectivePtr octocost_optimization_;
+  ompl::base::ValidStateSamplerPtr octocell_state_sampler_;
 
   // to ensure safety when accessing global var curr_frame_
   std::mutex global_mutex_;

@@ -18,6 +18,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <random>
 
 namespace botanbot_planning
 {
@@ -29,7 +30,8 @@ OctoCostOptimizationObjective::OctoCostOptimizationObjective(
 {
   description_ = "OctoCost Objective";
   color_octomap_octree_ = tree;
-  std::cout << "Using a Octomap with " << color_octomap_octree_->size() << "nodes" << std::endl;
+  std::cout << "OctoCost Optimization objective bases on an Octomap with " <<
+    color_octomap_octree_->size() << " nodes" << std::endl;
 }
 
 OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
@@ -38,31 +40,87 @@ OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
 
 ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
 {
-
-  const ompl::base::SE3StateSpace::StateType * Cstate3D =
+  const ompl::base::SE3StateSpace::StateType * se3_state =
     s->as<ompl::base::SE3StateSpace::StateType>();
 
-  double x = Cstate3D->getX();
-  double y = Cstate3D->getY();
-  double z = Cstate3D->getZ();
-
-  float cost = 2.0;
-
+  double x = se3_state->getX();
+  double y = se3_state->getY();
+  double z = se3_state->getZ();
+  
+  float cost(0.0);
   auto node_at_samppled_state = color_octomap_octree_->search(x, y, z, 0);
 
   if (node_at_samppled_state) {
     if (color_octomap_octree_->isNodeOccupied(node_at_samppled_state)) {
       if (!node_at_samppled_state->getColor().r) {
-        cost = static_cast<double>(node_at_samppled_state->getColor().b);
+        cost = 10.0 * static_cast<double>(node_at_samppled_state->getColor().b);
       } else {
-        cost = 20.0;
+        cost = 50.0 * 512.0;
       }
-    } else {
-      cost = 10.0;
     }
+  } else {
+    cost = 50.0 * 512.0;
   }
 
+
   return ompl::base::Cost(cost);
+}
+
+OctoCellStateSampler::OctoCellStateSampler(
+  const ompl::base::SpaceInformationPtr & si,
+  std::shared_ptr<octomap::ColorOcTree> tree)
+: ValidStateSampler(si.get())
+{
+  name_ = "OctoCellStateSampler";
+  color_octomap_octree_ = tree;
+  std::cout << "OctoCell State Sampler bases on an Octomap with " <<
+    color_octomap_octree_->size() << " nodes" << std::endl;
+
+  auto color_tree_depth = color_octomap_octree_->getTreeDepth();
+  for (auto it = color_octomap_octree_->begin(color_tree_depth),
+    end = color_octomap_octree_->end(); it != end; ++it)
+  {
+    if (color_octomap_octree_->isNodeOccupied(*it)) {
+      auto pair = std::pair<octomap::OcTreeKey, octomap::point3d>(it.getKey(), it.getCoordinate());
+      color_octomap_node_colors_.insert(pair);
+    }
+  }
+}
+
+bool OctoCellStateSampler::sample(ompl::base::State * state)
+{
+
+  auto se3_state = static_cast<ompl::base::SE3StateSpace::StateType *>(state);
+
+  octomap::unordered_ns::unordered_multimap<
+    octomap::OcTreeKey,
+    octomap::point3d,
+    octomap::OcTreeKey::KeyHash> random_octomap_node;
+
+  std::sample(
+    color_octomap_node_colors_.begin(),
+    color_octomap_node_colors_.end(),
+    std::inserter(random_octomap_node, random_octomap_node.end()),
+    1,
+    std::mt19937{std::random_device{} ()}
+  );
+
+  se3_state->setXYZ(
+    random_octomap_node.begin()->second.x(),
+    random_octomap_node.begin()->second.y(),
+    random_octomap_node.begin()->second.z());
+
+  assert(si_->isValid(se3_state));
+
+  return true;
+}
+
+bool OctoCellStateSampler::sampleNear(
+  ompl::base::State * /*state*/, const ompl::base::State * /*near*/,
+  const double /*distance*/)
+{
+  throw ompl::Exception("OctoCellStateSampler::sampleNear", "not implemented");
+  return false;
 }
 
 SE3Planner::SE3Planner()
@@ -134,6 +192,7 @@ void SE3Planner::initialize(
   state_space_ = std::make_shared<ompl::base::SE3StateSpace>();
   state_space_->as<ompl::base::SE3StateSpace>()->setBounds(*state_space_bounds_);
   state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
+
   state_space_information_->setStateValidityChecker(
     std::bind(&SE3Planner::isStateValid, this, std::placeholders::_1));
 
@@ -178,6 +237,9 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     1,
     goal_yaw);
 
+  state_space_information_->setValidStateSamplerAllocator(
+    std::bind(&SE3Planner::allocValidStateSampler, this, std::placeholders::_1));
+
   // create a problem instance
   ompl::base::ProblemDefinitionPtr
     pdef(new ompl::base::ProblemDefinition(state_space_information_));
@@ -190,6 +252,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   // pdef->setOptimizationObjective(length_objective);
 
   pdef->setOptimizationObjective(octocost_optimization_);
+
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
@@ -254,20 +317,26 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   return plan_poses;
 }
 
+ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
+  const ompl::base::SpaceInformation * si)
+{
+  return octocell_state_sampler_;
+}
+
 bool SE3Planner::isStateValid(const ompl::base::State * state)
 {
   if (is_octomap_ready_) {
     // cast the abstract state type to the type we expect
     const ompl::base::SE3StateSpace::StateType * se3state =
       state->as<ompl::base::SE3StateSpace::StateType>();
-    // extract the first component of the state and cast it to what we expect
-    const ompl::base::RealVectorStateSpace::StateType * pos =
-      se3state->as<ompl::base::RealVectorStateSpace::StateType>(0);
+
     // extract the second component of the state and cast it to what we expect
     const ompl::base::SO3StateSpace::StateType * rot =
       se3state->as<ompl::base::SO3StateSpace::StateType>(1);
+
     // check validity of state Fdefined by pos & rot
-    fcl::Vec3f translation(pos->values[0], pos->values[1], pos->values[2]);
+    fcl::Vec3f translation(se3state->getX(), se3state->getY(), se3state->getZ());
+
     fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
     robot_collision_object_->setTransform(rotation, translation);
     fcl::CollisionRequest requestType(1, false, 1, false);
@@ -275,8 +344,8 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
     fcl::collide(
       robot_collision_object_.get(),
       fcl_octree_collision_object_.get(), requestType, collisionResult);
-    //return !collisionResult.isCollision();
-    return true;
+    return !collisionResult.isCollision();
+
   } else {
     RCLCPP_ERROR(
       logger_,
@@ -294,8 +363,10 @@ void SE3Planner::octomapCallback(
     octomap_msg_ = msg;
     RCLCPP_INFO(logger_, "Octomap has been recieved!");
     try {
-      color_octomap_octree_ =
+      auto raw_color_octomap_octree =
         dynamic_cast<octomap::ColorOcTree *>(octomap_msgs::fullMsgToMap(*octomap_msg_));
+      color_octomap_octree_ = std::make_shared<octomap::ColorOcTree>(*raw_color_octomap_octree);
+      delete raw_color_octomap_octree;
     } catch (const std::exception & e) {
       std::cerr << e.what() << '\n';
       RCLCPP_ERROR(
@@ -304,7 +375,6 @@ void SE3Planner::octomapCallback(
     }
     std::shared_ptr<octomap::OcTree> octomap_octree =
       std::make_shared<octomap::OcTree>(0.2);
-
     auto m_treeDepth = color_octomap_octree_->getTreeDepth();
     // now, traverse all leafs in the tree:
     for (auto it = color_octomap_octree_->begin(m_treeDepth),
@@ -332,7 +402,11 @@ void SE3Planner::octomapCallback(
 
     octocost_optimization_ = std::make_shared<OctoCostOptimizationObjective>(
       state_space_information_,
-      std::make_shared<octomap::ColorOcTree>(*color_octomap_octree_));
+      color_octomap_octree_);
+
+    octocell_state_sampler_ = std::make_shared<OctoCellStateSampler>(
+      state_space_information_,
+      color_octomap_octree_);
   }
 }
 

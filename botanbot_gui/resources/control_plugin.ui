@@ -778,10 +778,10 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        <item row="1" column="1">
         <widget class="QDoubleSpinBox" name="goal_y">
          <property name="minimum">
-          <double>-20.000000000000000</double>
+          <double>-100.000000000000000</double>
          </property>
          <property name="maximum">
-          <double>20.000000000000000</double>
+          <double>100.000000000000000</double>
          </property>
         </widget>
        </item>
@@ -798,10 +798,10 @@ font: 57 14pt &quot;Ubuntu&quot;;</string>
        <item row="1" column="0">
         <widget class="QDoubleSpinBox" name="goal_x">
          <property name="minimum">
-          <double>-20.000000000000000</double>
+          <double>-100.000000000000000</double>
          </property>
          <property name="maximum">
-          <double>20.000000000000000</double>
+          <double>100.000000000000000</double>
          </property>
         </widget>
        </item>

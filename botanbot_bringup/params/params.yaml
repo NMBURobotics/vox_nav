@@ -51,7 +51,7 @@ botanbot_planner_server_rclcpp_node:
     SE3Planner:
       plugin: "botanbot_planning::SE3Planner"
       planner_name: "RRTstar" # other options: PRMStar, RRTstar, RRTConnect, KPIECE1
-      planner_timeout: 15.0
+      planner_timeout: 2.0
       interpolation_parameter: 25
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
@@ -61,7 +61,7 @@ botanbot_planner_server_rclcpp_node:
         miny: -50.0
         maxy: 50.0
         minz: 0.0
-        maxz: 6.5
+        maxz: 12.0
       robot_body_dimens:
         x: 1.0
         y: 1.0
@@ -112,9 +112,9 @@ botanbot_map_server_rclcpp_node:
     remove_outlier_min_neighbors_in_radius: 1
     # PCD MAP IS TRANSLATED TO OCTOMAP TO BE USED BY PLANNER
     octomap_voxel_size: 0.2
-    octomap_publish_frequency: 10
+    octomap_publish_frequency: 1
     publish_octomap_as_pointcloud: true
-    publish_octomap_markers: true
+    publish_octomap_markers: false
     octomap_publish_topic_name: "octomap" # octomap_msgs::msg::Octomap type of message topic name
     octomap_point_cloud_publish_topic: "octomap_pointcloud" # sensor_msgs::msg::PoinCloud2 that represents octomap
     map_frame_id: "map"
