@@ -46,12 +46,15 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
   double x = se3_state->getX();
   double y = se3_state->getY();
   double z = se3_state->getZ();
-  
+
   float cost(0.0);
   auto node_at_samppled_state = color_octomap_octree_->search(x, y, z, 0);
 
   if (node_at_samppled_state) {
-    if (color_octomap_octree_->isNodeOccupied(node_at_samppled_state)) {
+
+    if (color_octomap_octree_->isNodeOccupied(node_at_samppled_state) &&
+      !(node_at_samppled_state->hasChildren()))
+    {
       if (!node_at_samppled_state->getColor().r) {
         cost = 10.0 * static_cast<double>(node_at_samppled_state->getColor().b);
       } else {
@@ -111,6 +114,7 @@ bool OctoCellStateSampler::sample(ompl::base::State * state)
     random_octomap_node.begin()->second.z());
 
   assert(si_->isValid(se3_state));
+
 
   return true;
 }
@@ -282,7 +286,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     ompl::geometric::PathGeometric path_smooth(
       dynamic_cast<const ompl::geometric::PathGeometric &>(*pdef->getSolutionPath()));
 
-    pathBSpline->smoothBSpline(path_smooth, 3);
+    //pathBSpline->smoothBSpline(path_smooth, 3);
 
     for (std::size_t path_idx = 0; path_idx < path_smooth.getStateCount(); path_idx++) {
       const ompl::base::SE3StateSpace::StateType * se3state =
