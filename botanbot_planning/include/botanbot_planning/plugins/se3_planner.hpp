@@ -28,6 +28,23 @@
 namespace botanbot_planning
 {
 
+
+class OctoCostOptimizationObjective : public ompl::base::StateCostIntegralObjective
+{
+public:
+  OctoCostOptimizationObjective(
+    const ompl::base::SpaceInformationPtr & si,
+    std::shared_ptr<octomap::ColorOcTree> tree);
+
+  ~OctoCostOptimizationObjective();
+
+  ompl::base::Cost stateCost(const ompl::base::State * s) const override;
+
+private:
+  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
+};
+
+
 /**
  * @brief
  *
@@ -107,6 +124,8 @@ protected:
   std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
   ompl::base::StateSpacePtr state_space_;
   ompl::base::SpaceInformationPtr state_space_information_;
+
+  ompl::base::OptimizationObjectivePtr octocost_optimization_;
 
   // to ensure safety when accessing global var curr_frame_
   std::mutex global_mutex_;

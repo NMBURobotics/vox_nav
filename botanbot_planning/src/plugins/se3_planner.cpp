@@ -21,60 +21,45 @@
 
 namespace botanbot_planning
 {
-class ChildOptimizationObjective : public ompl::base::OptimizationObjective
+
+OctoCostOptimizationObjective::OctoCostOptimizationObjective(
+  const ompl::base::SpaceInformationPtr & si,
+  std::shared_ptr<octomap::ColorOcTree> tree)
+: ompl::base::StateCostIntegralObjective(si, true)
 {
-public:
-  ChildOptimizationObjective(
-    const ompl::base::SpaceInformationPtr & si,
-    octomap::ColorOcTree tree)
-  : ompl::base::OptimizationObjective(si)
-  {
-    color_octomap_octree_ = &tree;
-    std::cout << "ChildOptimizationObjective Initialized, checking if Octomap is recieved" <<
-      std::endl;
-    auto s = color_octomap_octree_->size();
-    std::cout << "OCTOMAP SUCESS, IT HAS " << s << std::endl;
-  }
+  description_ = "OctoCost Objective";
+  color_octomap_octree_ = tree;
+  std::cout << "Using a Octomap with " << color_octomap_octree_->size() << "nodes" << std::endl;
+}
 
-  ompl::base::Cost motionCost(
-    const ompl::base::State * s1,
-    const ompl::base::State * s2) const override
-  {
-    ompl::base::Cost C1(stateCost(s1));
-    ompl::base::Cost C2(stateCost(s2));
-    return ompl::base::Cost(C1.value() + C2.value());
-  }
+OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
+{
+}
 
-  ompl::base::Cost stateCost(const ompl::base::State * s) const override
-  {
-    const ompl::base::SE3StateSpace::StateType * Cstate3D =
-      s->as<ompl::base::SE3StateSpace::StateType>();
-    const ompl::base::RealVectorStateSpace::StateType * state3D =
-      Cstate3D->as<ompl::base::RealVectorStateSpace::StateType>(0);
+ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
+{
 
-    double x = state3D->values[0];
-    double y = state3D->values[1];
-    double z = state3D->values[2];
+  const ompl::base::SE3StateSpace::StateType * Cstate3D =
+    s->as<ompl::base::SE3StateSpace::StateType>();
 
-    octomap::point3d crr_point(x, y, z);
-    auto crr_point_node = color_octomap_octree_->coordToKey(crr_point);
+  double x = Cstate3D->getX();
+  double y = Cstate3D->getY();
+  double z = Cstate3D->getZ();
 
-    float cost = 100;
+  float cost = 2.0;
 
-    if (color_octomap_octree_->isNodeOccupied(color_octomap_octree_->search(crr_point_node))) {
-      cost = 2.0;
-      auto c = color_octomap_octree_->search(crr_point_node)->getValue();
+  auto node_at_samppled_state = color_octomap_octree_->search(x, y, z, 0);
+
+  if (node_at_samppled_state) {
+    if (color_octomap_octree_->isNodeOccupied(node_at_samppled_state)) {
+      if (!node_at_samppled_state->getColor().r) {
+        cost = static_cast<double>(node_at_samppled_state->getColor().b);
+      }
     }
-
-    std::cout << cost << std::endl;
-
-    return ompl::base::Cost(cost);
   }
 
-private:
-  octomap::ColorOcTree * color_octomap_octree_;
-
-};
+  return ompl::base::Cost(cost);
+}
 
 SE3Planner::SE3Planner()
 {
@@ -196,14 +181,11 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   // set the start and goal states
   pdef->setStartAndGoalStates(se3_start, se3_goal);
 
-  ompl::base::OptimizationObjectivePtr length_objective(
-    new ompl::base::PathLengthOptimizationObjective(state_space_information_));
-
-  ompl::base::OptimizationObjectivePtr cost_objective(
-    new ChildOptimizationObjective(state_space_information_, *color_octomap_octree_));
-
-  pdef->setOptimizationObjective(cost_objective);
+  // ompl::base::OptimizationObjectivePtr length_objective(
+  //  new ompl::base::PathLengthOptimizationObjective(state_space_information_));
   // pdef->setOptimizationObjective(length_objective);
+
+  pdef->setOptimizationObjective(octocost_optimization_);
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
@@ -215,12 +197,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   // perform setup steps for the planner
   planner->setup();
 
-  // print the settings for this space
-  state_space_information_->printSettings(std::cout);
-
-  // print the problem settings
-  pdef->print(std::cout);
-
   // attempt to solve the problem within one second of planning time
   ompl::base::PlannerStatus solved = planner->solve(planner_timeout_);
   std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
@@ -231,18 +207,15 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     ompl::geometric::PathGeometric * pth =
       pdef->getSolutionPath()->as<ompl::geometric::PathGeometric>();
 
-    pth->interpolate(interpolation_parameter_);
+    //pth->interpolate(interpolation_parameter_);
 
     // Path smoothing using bspline
     ompl::geometric::PathSimplifier * pathBSpline = new ompl::geometric::PathSimplifier(
       state_space_information_);
     ompl::geometric::PathGeometric path_smooth(
       dynamic_cast<const ompl::geometric::PathGeometric &>(*pdef->getSolutionPath()));
-    pathBSpline->smoothBSpline(path_smooth, 3);
 
-    /*RCLCPP_INFO(
-      logger_, "Cost of resulting path is %.4f",
-      path_smooth.cost(cost_objective).value());*/
+    // pathBSpline->smoothBSpline(path_smooth, 3);
 
     for (std::size_t path_idx = 0; path_idx < path_smooth.getStateCount(); path_idx++) {
       const ompl::base::SE3StateSpace::StateType * se3state =
@@ -323,7 +296,7 @@ void SE3Planner::octomapCallback(
       std::cerr << e.what() << '\n';
       RCLCPP_ERROR(
         logger_,
-        "Exception while converting binary octomap  %s:", e.what());
+        "Exception while converting octomap  %s:", e.what());
     }
     std::shared_ptr<octomap::OcTree> octomap_octree =
       std::make_shared<octomap::OcTree>(0.2);
@@ -333,16 +306,10 @@ void SE3Planner::octomapCallback(
     for (auto it = color_octomap_octree_->begin(m_treeDepth),
       end = color_octomap_octree_->end(); it != end; ++it)
     {
-      double x = it.getX();
-      double y = it.getY();
-      double z = it.getZ();
-      octomap::point3d crr_point(x, y, z);
-      auto crr_point_node_key = color_octomap_octree_->coordToKey(crr_point);
-      octomap_octree->setNodeValue(crr_point_node_key, it->getValue(), false);
-
-      RCLCPP_INFO(
-        logger_,
-        "NODE VALUE %.4f", it->getValue());
+      if (color_octomap_octree_->isNodeOccupied(*it)) {
+        auto crr_point_node_key = color_octomap_octree_->coordToKey(it.getCoordinate());
+        octomap_octree->setNodeValue(crr_point_node_key, it->getValue(), false);
+      }
     }
 
     fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
@@ -358,6 +325,10 @@ void SE3Planner::octomapCallback(
       logger_,
       "Collisison check Octomap with %d nodes", octomap_octree->size());
     is_octomap_ready_ = true;
+
+    octocost_optimization_ = std::make_shared<OctoCostOptimizationObjective>(
+      state_space_information_,
+      std::make_shared<octomap::ColorOcTree>(*color_octomap_octree_));
   }
 }
 
