@@ -54,7 +54,11 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
     if (color_octomap_octree_->isNodeOccupied(node_at_samppled_state)) {
       if (!node_at_samppled_state->getColor().r) {
         cost = static_cast<double>(node_at_samppled_state->getColor().b);
+      } else {
+        cost = 20.0;
       }
+    } else {
+      cost = 10.0;
     }
   }
 
@@ -207,7 +211,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     ompl::geometric::PathGeometric * pth =
       pdef->getSolutionPath()->as<ompl::geometric::PathGeometric>();
 
-    //pth->interpolate(interpolation_parameter_);
+    pth->interpolate(interpolation_parameter_);
 
     // Path smoothing using bspline
     ompl::geometric::PathSimplifier * pathBSpline = new ompl::geometric::PathSimplifier(
@@ -215,7 +219,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     ompl::geometric::PathGeometric path_smooth(
       dynamic_cast<const ompl::geometric::PathGeometric &>(*pdef->getSolutionPath()));
 
-    // pathBSpline->smoothBSpline(path_smooth, 3);
+    pathBSpline->smoothBSpline(path_smooth, 3);
 
     for (std::size_t path_idx = 0; path_idx < path_smooth.getStateCount(); path_idx++) {
       const ompl::base::SE3StateSpace::StateType * se3state =
