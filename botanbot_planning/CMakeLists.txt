@@ -65,7 +65,8 @@ ament_target_dependencies(${botanbot_planner_server_exc_name} ${dependencies})
 target_link_libraries(${botanbot_planner_server_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
 set(botanbot_se3_planner_exc_name botanbot_se3_planner)
-add_library(${botanbot_se3_planner_exc_name} SHARED src/plugins/se3_planner.cpp)
+add_library(${botanbot_se3_planner_exc_name} SHARED src/plugins/se3_planner.cpp
+                                                    src/plugins/se3_planner_utils.cpp)
 ament_target_dependencies(${botanbot_se3_planner_exc_name} ${dependencies})
 target_link_libraries(${botanbot_se3_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 

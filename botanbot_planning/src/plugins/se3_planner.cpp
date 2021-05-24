@@ -23,102 +23,6 @@
 namespace botanbot_planning
 {
 
-OctoCostOptimizationObjective::OctoCostOptimizationObjective(
-  const ompl::base::SpaceInformationPtr & si,
-  std::shared_ptr<octomap::ColorOcTree> tree)
-: ompl::base::StateCostIntegralObjective(si, true)
-{
-  description_ = "OctoCost Objective";
-  color_octomap_octree_ = tree;
-  std::cout << "OctoCost Optimization objective bases on an Octomap with " <<
-    color_octomap_octree_->size() << " nodes" << std::endl;
-}
-
-OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
-{
-}
-
-ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
-{
-  const ompl::base::SE3StateSpace::StateType * se3_state =
-    s->as<ompl::base::SE3StateSpace::StateType>();
-
-  double x = se3_state->getX();
-  double y = se3_state->getY();
-  double z = se3_state->getZ();
-
-  float cost(0.0);
-  auto node_at_samppled_state = color_octomap_octree_->search(x, y, z, 0);
-
-  if (node_at_samppled_state) {
-    if (!node_at_samppled_state->getColor().r) {
-      cost = 1.0 * static_cast<double>(node_at_samppled_state->getColor().b / 255.0);
-    }
-  } else {
-    cost = 5.0;
-  }
-  return ompl::base::Cost(cost);
-}
-
-OctoCellStateSampler::OctoCellStateSampler(
-  const ompl::base::SpaceInformationPtr & si,
-  std::shared_ptr<octomap::ColorOcTree> tree)
-: ValidStateSampler(si.get())
-{
-  name_ = "OctoCellStateSampler";
-  color_octomap_octree_ = tree;
-  std::cout << "OctoCell State Sampler bases on an Octomap with " <<
-    color_octomap_octree_->size() << " nodes" << std::endl;
-
-  auto tree_depth = color_octomap_octree_->getTreeDepth();
-  for (auto it = color_octomap_octree_->begin(tree_depth),
-    end = color_octomap_octree_->end(); it != end; ++it)
-  {
-    if (color_octomap_octree_->isNodeOccupied(*it)) {
-      auto pair = std::pair<octomap::OcTreeKey, octomap::point3d>(it.getKey(), it.getCoordinate());
-      color_octomap_node_colors_.insert(pair);
-    }
-  }
-}
-
-bool OctoCellStateSampler::sample(ompl::base::State * state)
-{
-  auto se3_state = static_cast<ompl::base::SE3StateSpace::StateType *>(state);
-  unsigned int attempts = 0;
-  bool valid = false;
-  do {
-    octomap::unordered_ns::unordered_multimap<
-      octomap::OcTreeKey,
-      octomap::point3d,
-      octomap::OcTreeKey::KeyHash> random_octomap_node;
-
-    std::sample(
-      color_octomap_node_colors_.begin(),
-      color_octomap_node_colors_.end(),
-      std::inserter(random_octomap_node, random_octomap_node.end()),
-      1,
-      std::mt19937{std::random_device{} ()}
-    );
-
-    se3_state->setXYZ(
-      random_octomap_node.begin()->second.x(),
-      random_octomap_node.begin()->second.y(),
-      random_octomap_node.begin()->second.z());
-
-    valid = si_->isValid(se3_state);
-    ++attempts;
-  } while (!valid && attempts < attempts_);
-  return valid;
-}
-
-bool OctoCellStateSampler::sampleNear(
-  ompl::base::State * /*state*/, const ompl::base::State * /*near*/,
-  const double /*distance*/)
-{
-  throw ompl::Exception("OctoCellStateSampler::sampleNear", "not implemented");
-  return false;
-}
-
 SE3Planner::SE3Planner()
 {
 }
@@ -245,9 +149,9 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
 
   ompl::base::OptimizationObjectivePtr length_objective(
     new ompl::base::PathLengthOptimizationObjective(state_space_information_));
-  //pdef->setOptimizationObjective(length_objective);
+  pdef->setOptimizationObjective(length_objective);
 
-  pdef->setOptimizationObjective(octocost_optimization_);
+  //pdef->setOptimizationObjective(octocost_optimization_);
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
@@ -351,7 +255,9 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
         se3state->getZ()));
 
     if (node) {
-      is_valid = true;
+      if (color_octomap_octree_->isNodeOccupied(node)) {
+        is_valid = true;
+      }
     }
 
     return is_valid;
@@ -413,15 +319,15 @@ void SE3Planner::octomapCallback(
       state_space_information_,
       color_octomap_octree_);
 
-    octocell_state_sampler_ = std::make_shared<OctoCellStateSampler>(
+    octocell_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
       state_space_information_,
       color_octomap_octree_);
 
     state_space_information_->setStateValidityChecker(
       std::bind(&SE3Planner::isStateValid, this, std::placeholders::_1));
 
-    state_space_information_->setValidStateSamplerAllocator(
-      std::bind(&SE3Planner::allocValidStateSampler, this, std::placeholders::_1));
+    /*state_space_information_->setValidStateSamplerAllocator(
+      std::bind(&SE3Planner::allocValidStateSampler, this, std::placeholders::_1));*/
   }
 }
 

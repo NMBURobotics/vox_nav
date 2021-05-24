@@ -280,39 +280,17 @@ void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_t
   octomap::Pointcloud octocloud;
   octomap::point3d sensorOrigin(0, 0, 0);
 
-
   for (auto && i : pcd_map_pointcloud_->points) {
-    if (!(i.r == 255 && i.g == 255 )) {
-      octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
-    }
+    octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
   }
 
   octomap_octree_->insertPointCloud(octocloud, sensorOrigin);
 
   for (auto && i : pcd_map_pointcloud_->points) {
-    if (!(i.r == 255 && i.g == 255 )) {
-      octomap_octree_->setNodeColor(i.x, i.y, i.z, i.r, i.g, i.b);
-      octomap_octree_->setNodeValue(i.x, i.y, i.z, 1.0);
-    }
+    octomap_octree_->setNodeColor(i.x, i.y, i.z, i.r, i.g, i.b);
+    octomap_octree_->setNodeValue(i.x, i.y, i.z, 1.0);
   }
 
-  std::shared_ptr<octomap::ColorOcTree> occupied_octomap_octree =
-    std::make_shared<octomap::ColorOcTree>(octomap_voxel_size_);
-  auto tree_depth = octomap_octree_->getTreeDepth();
-
-  for (auto it = octomap_octree_->begin(tree_depth),
-    end = octomap_octree_->end(); it != end; ++it)
-  {
-    auto crr_point_node_key = octomap_octree_->coordToKey(it.getCoordinate());
-    occupied_octomap_octree->setNodeValue(crr_point_node_key, it->getValue(), false);
-    occupied_octomap_octree->setNodeColor(
-      crr_point_node_key,
-      it->getColor().r,
-      it->getColor().g,
-      it->getColor().b);
-  }
-
-  octomap_octree_ = occupied_octomap_octree;
   try {
     octomap_msgs::fullMapToMsg<octomap::ColorOcTree>(*octomap_octree_, *octomap_ros_msg_);
   } catch (const std::exception & e) {
@@ -345,6 +323,11 @@ void BotanbotMapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
     color.g = static_cast<float>(it->getColor().g / 255.0);
     color.b = static_cast<float>(it->getColor().b / 255.0);
     color.a = 1.0;
+
+    if (!tree.isNodeOccupied(*it)) {
+      color.a = 0.05;
+    }
+
     octomap_markers_.markers[idx].colors.push_back(color);
   }
 

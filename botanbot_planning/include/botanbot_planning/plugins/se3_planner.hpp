@@ -20,6 +20,7 @@
 #include <memory>
 
 #include "botanbot_planning/planner_core.hpp"
+#include "botanbot_planning/plugins/se3_planner_utils.hpp"
 
 /**
  * @brief
@@ -27,74 +28,6 @@
  */
 namespace botanbot_planning
 {
-
-
-class OctoCostOptimizationObjective : public ompl::base::StateCostIntegralObjective
-{
-public:
-/**
- * @brief Construct a new Octo Cost Optimization Objective object
- *
- * @param si
- * @param tree
- */
-  OctoCostOptimizationObjective(
-    const ompl::base::SpaceInformationPtr & si,
-    std::shared_ptr<octomap::ColorOcTree> tree);
-  /**
-   * @brief Destroy the Octo Cost Optimization Objective object
-   *
-   */
-  ~OctoCostOptimizationObjective();
-  /**
-   * @brief
-   *
-   * @param s
-   * @return ompl::base::Cost
-   */
-  ompl::base::Cost stateCost(const ompl::base::State * s) const override;
-
-private:
-  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
-};
-
-
-class OctoCellStateSampler : public ompl::base::ValidStateSampler
-{
-public:
-  /**
-   * @brief Construct a new Octo Cell State Sampler object
-   *
-   * @param si
-   * @param tree
-   */
-  OctoCellStateSampler(
-    const ompl::base::SpaceInformationPtr & si,
-    std::shared_ptr<octomap::ColorOcTree> tree);
-
-  /**
-   * @brief
-   *
-   * @param state
-   * @return true
-   * @return false
-   */
-  bool sample(ompl::base::State * state) override;
-
-  /**
-   * @brief
-   *
-   */
-  bool sampleNear(
-    ompl::base::State * /*state*/, const ompl::base::State * /*near*/,
-    const double /*distance*/) override;
-
-protected:
-  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
-
-  octomap::unordered_ns::unordered_multimap<octomap::OcTreeKey, octomap::point3d,
-    octomap::OcTreeKey::KeyHash> color_octomap_node_colors_;
-};
 
 /**
  * @brief
