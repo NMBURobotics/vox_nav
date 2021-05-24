@@ -171,6 +171,9 @@ public:
   ompl::base::ValidStateSamplerPtr allocValidStateSampler(
     const ompl::base::SpaceInformation * si);
 
+  geometry_msgs::msg::PoseStamped getNearstNode(
+    const geometry_msgs::msg::PoseStamped & state);
+
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner")};
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;

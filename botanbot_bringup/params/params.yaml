@@ -51,7 +51,7 @@ botanbot_planner_server_rclcpp_node:
     SE3Planner:
       plugin: "botanbot_planning::SE3Planner"
       planner_name: "RRTstar" # other options: PRMStar, RRTstar, RRTConnect, KPIECE1
-      planner_timeout: 2.0
+      planner_timeout: 15.0
       interpolation_parameter: 25
       octomap_topic: "octomap"
       octomap_voxel_size: 0.2
@@ -60,7 +60,7 @@ botanbot_planner_server_rclcpp_node:
         maxx: 50.0
         miny: -50.0
         maxy: 50.0
-        minz: 0.0
+        minz: -2.0
         maxz: 12.0
       robot_body_dimens:
         x: 1.0
@@ -114,7 +114,7 @@ botanbot_map_server_rclcpp_node:
     octomap_voxel_size: 0.2
     octomap_publish_frequency: 1
     publish_octomap_as_pointcloud: true
-    publish_octomap_markers: false
+    publish_octomap_markers: true
     octomap_publish_topic_name: "octomap" # octomap_msgs::msg::Octomap type of message topic name
     octomap_point_cloud_publish_topic: "octomap_pointcloud" # sensor_msgs::msg::PoinCloud2 that represents octomap
     map_frame_id: "map"
@@ -123,7 +123,7 @@ botanbot_map_server_rclcpp_node:
     map_coordinates:
       latitude: 49.89999996757017
       longitude: 8.899999997371747
-      altitude: 2.6
+      altitude: 1.8
       quaternion:
         x: -0.0001960611448920198
         y: -0.003682083159658604
