@@ -245,9 +245,9 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
 
   ompl::base::OptimizationObjectivePtr length_objective(
     new ompl::base::PathLengthOptimizationObjective(state_space_information_));
-  pdef->setOptimizationObjective(length_objective);
+  //pdef->setOptimizationObjective(length_objective);
 
-  //pdef->setOptimizationObjective(octocost_optimization_);
+  pdef->setOptimizationObjective(octocost_optimization_);
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
