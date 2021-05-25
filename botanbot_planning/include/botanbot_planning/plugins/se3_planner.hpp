@@ -101,11 +101,22 @@ public:
    * @param si
    * @return ompl::base::ValidStateSamplerPtr
    */
-  ompl::base::ValidStateSamplerPtr allocValidStateSampler(
-    const ompl::base::SpaceInformation * si);
+  ompl::base::ValidStateSamplerPtr allocValidStateSampler(const ompl::base::SpaceInformation * si);
 
-  geometry_msgs::msg::PoseStamped getNearstNode(
-    const geometry_msgs::msg::PoseStamped & state);
+  /**
+   * @brief Get the Opt Objective object
+   *
+   * @return ompl::base::OptimizationObjectivePtr
+   */
+  ompl::base::OptimizationObjectivePtr getOptObjective();
+
+  /**
+   * @brief Get the Nearst Node object
+   *
+   * @param state
+   * @return geometry_msgs::msg::PoseStamped
+   */
+  geometry_msgs::msg::PoseStamped getNearstNode(const geometry_msgs::msg::PoseStamped & state);
 
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner")};
@@ -116,10 +127,11 @@ protected:
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
   std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
-
   std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
+
   ompl::base::StateSpacePtr state_space_;
   ompl::base::SpaceInformationPtr state_space_information_;
+  ompl::base::ProblemDefinitionPtr problem_definition_;
 
   ompl::base::OptimizationObjectivePtr octocost_optimization_;
   ompl::base::ValidStateSamplerPtr octocell_state_sampler_;

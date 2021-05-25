@@ -15,10 +15,6 @@
 #ifndef BOTANBOT_PLANNING__PLUGINS__SE3_PLANNER_UTILS_HPP_
 #define BOTANBOT_PLANNING__PLUGINS__SE3_PLANNER_UTILS_HPP_
 
-#include <vector>
-#include <string>
-#include <memory>
-
 #include "botanbot_planning/planner_core.hpp"
 
 /**
@@ -62,14 +58,10 @@ private:
 class OctoCellSampler
 {
 public:
-  OctoCellSampler(const OctoCellSampler &) = delete;
-  OctoCellSampler & operator=(const OctoCellSampler &) = delete;
-  OctoCellSampler(const ompl::base::ProblemDefinitionPtr & problem_definition);
+  OctoCellSampler(
+    const std::shared_ptr<octomap::ColorOcTree> & tree);
 
   virtual ~OctoCellSampler() = default;
-
-  /** Helper for the OrderedInfSampler wrapper */
-  ompl::base::ProblemDefinitionPtr getProblemDefn() const;
 
   /**
    * @brief
@@ -78,7 +70,8 @@ public:
    * @return true
    * @return false
    */
-  bool sample(ompl::base::State * state);
+  bool sample(
+    ompl::base::SE3StateSpace::StateType * state);
 
   /**
    * @brief
@@ -90,17 +83,17 @@ public:
    * @return false
    */
   bool sampleNear(
-    ompl::base::State * state, const ompl::base::State * near,
+    ompl::base::SE3StateSpace::StateType * state,
+    const ompl::base::SE3StateSpace::StateType * near,
     const double distance);
 
 protected:
-  ompl::base::ProblemDefinitionPtr problem_definition_;
   ompl::base::StateSpacePtr space_;
-  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
   octomap::unordered_ns::unordered_multimap<
     octomap::OcTreeKey,
     octomap::point3d,
     octomap::OcTreeKey::KeyHash> color_octomap_node_colors_;
+  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
 };
 
 class OctoCellValidStateSampler : public ompl::base::ValidStateSampler
@@ -113,8 +106,8 @@ public:
    * @param tree
    */
   OctoCellValidStateSampler(
-    const ompl::base::SpaceInformationPtr & si,
-    std::shared_ptr<octomap::ColorOcTree> tree);
+    const ompl::base::SpaceInformation * si,
+    const std::shared_ptr<octomap::ColorOcTree> & tree);
 
   /**
    * @brief
@@ -139,7 +132,6 @@ public:
     const double distance) override;
 
 protected:
-  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
   std::shared_ptr<OctoCellSampler> octocell_sampler_;
 };
 

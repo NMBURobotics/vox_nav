@@ -95,7 +95,7 @@ void SE3Planner::initialize(
 
   if (!is_enabled_) {
     RCLCPP_WARN(
-      logger_, "SE2PlannerControlSpace plugin is disabled.");
+      logger_, "SE3Planner plugin is disabled.");
   }
 
   RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
@@ -118,74 +118,90 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   botanbot_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan, start_yaw);
   botanbot_utilities::getRPYfromMsgQuaternion(goal.pose.orientation, nan, nan, goal_yaw);
 
-  ompl::base::ScopedState<ompl::base::SE3StateSpace> se3_start(state_space_),
+  ompl::base::ScopedState<ompl::base::SE3StateSpace>
+  se3_start(state_space_),
   se3_goal(state_space_);
 
-  auto nearest_node = getNearstNode(start);
+  auto nearest_node_to_start = getNearstNode(start);
+  auto nearest_node_to_goal = getNearstNode(goal);
 
   se3_start->setXYZ(
-    nearest_node.pose.position.x,
-    nearest_node.pose.position.y,
-    nearest_node.pose.position.z);
+    nearest_node_to_start.pose.position.x,
+    nearest_node_to_start.pose.position.y,
+    nearest_node_to_start.pose.position.z);
   se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
     0,
     0,
     1,
     start_yaw);
 
-  se3_goal->setXYZ(goal.pose.position.x, goal.pose.position.y, goal.pose.position.z);
+  se3_goal->setXYZ(
+    nearest_node_to_goal.pose.position.x,
+    nearest_node_to_goal.pose.position.y,
+    nearest_node_to_goal.pose.position.z);
   se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
     0,
     0,
     1,
     goal_yaw);
 
-  // create a problem instance
-  ompl::base::ProblemDefinitionPtr
-    pdef(new ompl::base::ProblemDefinition(state_space_information_));
+  ompl::geometric::SimpleSetup ss(state_space_);
 
-  // set the start and goal states
-  pdef->setStartAndGoalStates(se3_start, se3_goal);
+  ss.setStartAndGoalStates(se3_start, se3_goal);
 
-  ompl::base::OptimizationObjectivePtr length_objective(
-    new ompl::base::PathLengthOptimizationObjective(state_space_information_));
-  pdef->setOptimizationObjective(length_objective);
+  // objective is to minimize the planned path
+  ompl::base::OptimizationObjectivePtr objective(
+    new ompl::base::PathLengthOptimizationObjective(ss.getSpaceInformation()));
 
-  //pdef->setOptimizationObjective(octocost_optimization_);
+  //ss.setOptimizationObjective(getOptObjective());
+  ss.setOptimizationObjective(objective);
+
+  ss.setStateValidityChecker(
+    [this](const ompl::base::State * state)
+    {
+      return isStateValid(state);
+    });
+
+
+  octocell_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
+    ss.getSpaceInformation().get(),
+    color_octomap_octree_);
+
+  ss.getSpaceInformation()->setValidStateSamplerAllocator(
+    [this](const ompl::base::SpaceInformation * si)
+    {
+      return allocValidStateSampler(si);
+    });
+
+  ss.setup();
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
-  initializeSelectedPlanner(planner, planner_name_, state_space_information_);
+  initializeSelectedPlanner(planner, planner_name_, ss.getSpaceInformation());
 
-  // set the problem we are trying to solve for the planner
-  planner->setProblemDefinition(pdef);
+  ss.setPlanner(planner);
 
-  // perform setup steps for the planner
-  planner->setup();
+  // print the settings for this space
+  ss.print(std::cout);
 
   // attempt to solve the problem within one second of planning time
-  ompl::base::PlannerStatus solved = planner->solve(planner_timeout_);
+  ompl::base::PlannerStatus solved = ss.solve(planner_timeout_);
   std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
 
   if (solved) {
-    ompl::base::PathPtr path = pdef->getSolutionPath();
 
-    ompl::geometric::PathGeometric * pth =
-      pdef->getSolutionPath()->as<ompl::geometric::PathGeometric>();
-
-    pth->interpolate(interpolation_parameter_);
-
+    ompl::geometric::PathGeometric path = ss.getSolutionPath();
     // Path smoothing using bspline
-    ompl::geometric::PathSimplifier * pathBSpline = new ompl::geometric::PathSimplifier(
-      state_space_information_);
-    ompl::geometric::PathGeometric path_smooth(
-      dynamic_cast<const ompl::geometric::PathGeometric &>(*pdef->getSolutionPath()));
+    ompl::geometric::PathSimplifier * path_simlifier =
+      new ompl::geometric::PathSimplifier(ss.getSpaceInformation());
+    path_simlifier->smoothBSpline(path, 3);
+    path_simlifier->collapseCloseVertices(path, 3);
+    path.checkAndRepair(2);
+    path.interpolate(interpolation_parameter_);
 
-    pathBSpline->smoothBSpline(path_smooth, 3);
-
-    for (std::size_t path_idx = 0; path_idx < path_smooth.getStateCount(); path_idx++) {
+    for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
       const ompl::base::SE3StateSpace::StateType * se3state =
-        path_smooth.getState(path_idx)->as<ompl::base::SE3StateSpace::StateType>();
+        path.getState(path_idx)->as<ompl::base::SE3StateSpace::StateType>();
 
       // extract the first component of the state and cast it to what we expect
       const ompl::base::RealVectorStateSpace::StateType * pos =
@@ -213,13 +229,8 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     RCLCPP_WARN(
       logger_, "No solution for requested path planning !");
   }
-  return plan_poses;
-}
 
-ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
-  const ompl::base::SpaceInformation * si)
-{
-  return octocell_state_sampler_;
+  return plan_poses;
 }
 
 bool SE3Planner::isStateValid(const ompl::base::State * state)
@@ -229,38 +240,31 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
     const ompl::base::SE3StateSpace::StateType * se3state =
       state->as<ompl::base::SE3StateSpace::StateType>();
 
-    // extract the second component of the state and cast it to what we expect
+    /*// extract the second component of the state and cast it to what we expect
     const ompl::base::SO3StateSpace::StateType * rot =
       se3state->as<ompl::base::SO3StateSpace::StateType>(1);
-
     // check validity of state Fdefined by pos & rot
     fcl::Vec3f translation(se3state->getX(), se3state->getY(), se3state->getZ());
-
     fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
     robot_collision_object_->setTransform(rotation, translation);
-    /* fcl::CollisionRequest requestType(1, false, 1, false);
+    fcl::CollisionRequest requestType(1, false, 1, false);
      fcl::CollisionResult collisionResult;
      fcl::collide(
        robot_collision_object_.get(),
-       fcl_octree_collision_object_.get(), requestType, collisionResult);*/
+       fcl_octree_collision_object_.get(), requestType, collisionResult);
+    return !collisionResult.isCollision();
+    */
 
-
-    //return !collisionResult.isCollision();
     bool is_valid = false;
-
     auto node = color_octomap_octree_->search(
-      octomap::point3d(
-        se3state->getX(),
-        se3state->getY(),
-        se3state->getZ()));
-
+      octomap::point3d(se3state->getX(), se3state->getY(), se3state->getZ()));
     if (node) {
       if (color_octomap_octree_->isNodeOccupied(node)) {
         is_valid = true;
       }
     }
-
     return is_valid;
+
   } else {
     RCLCPP_ERROR(
       logger_,
@@ -319,15 +323,6 @@ void SE3Planner::octomapCallback(
       state_space_information_,
       color_octomap_octree_);
 
-    octocell_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
-      state_space_information_,
-      color_octomap_octree_);
-
-    state_space_information_->setStateValidityChecker(
-      std::bind(&SE3Planner::isStateValid, this, std::placeholders::_1));
-
-    /*state_space_information_->setValidStateSamplerAllocator(
-      std::bind(&SE3Planner::allocValidStateSampler, this, std::placeholders::_1));*/
   }
 }
 
@@ -352,7 +347,6 @@ void SE3Planner::initializeSelectedPlanner(
   }
 }
 
-
 geometry_msgs::msg::PoseStamped SE3Planner::getNearstNode(
   const geometry_msgs::msg::PoseStamped & state)
 {
@@ -363,19 +357,32 @@ geometry_msgs::msg::PoseStamped SE3Planner::getNearstNode(
   for (auto it = color_octomap_octree_->begin(),
     end = color_octomap_octree_->end(); it != end; ++it)
   {
-    auto dist_to_crr_node = std::sqrt(
-      std::pow(it.getCoordinate().x() - state.pose.position.x, 2) +
-      std::pow(it.getCoordinate().y() - state.pose.position.y, 2) +
-      std::pow(it.getCoordinate().z() - state.pose.position.z, 2));
+    if (color_octomap_octree_->isNodeOccupied(*it)) {
+      auto dist_to_crr_node = std::sqrt(
+        std::pow(it.getCoordinate().x() - state.pose.position.x, 2) +
+        std::pow(it.getCoordinate().y() - state.pose.position.y, 2) +
+        std::pow(it.getCoordinate().z() - state.pose.position.z, 2));
 
-    if (dist_to_crr_node < dist) {
-      dist = dist_to_crr_node;
-      nearest_node_pose.pose.position.x = it.getCoordinate().x();
-      nearest_node_pose.pose.position.y = it.getCoordinate().y();
-      nearest_node_pose.pose.position.z = it.getCoordinate().z();
+      if (dist_to_crr_node < dist) {
+        dist = dist_to_crr_node;
+        nearest_node_pose.pose.position.x = it.getCoordinate().x();
+        nearest_node_pose.pose.position.y = it.getCoordinate().y();
+        nearest_node_pose.pose.position.z = it.getCoordinate().z();
+      }
     }
   }
   return nearest_node_pose;
+}
+
+ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
+  const ompl::base::SpaceInformation * si)
+{
+  return octocell_state_sampler_;
+}
+
+ompl::base::OptimizationObjectivePtr SE3Planner::getOptObjective()
+{
+  return octocost_optimization_;
 }
 
 }  // namespace botanbot_planning
