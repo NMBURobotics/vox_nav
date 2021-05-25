@@ -122,8 +122,8 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   se3_start(state_space_),
   se3_goal(state_space_);
 
-  auto nearest_node_to_start = getNearstNode(start);
-  auto nearest_node_to_goal = getNearstNode(goal);
+  auto nearest_node_to_start = botanbot_utilities::getNearstNode(start, color_octomap_octree_);
+  auto nearest_node_to_goal = botanbot_utilities::getNearstNode(goal, color_octomap_octree_);
 
   se3_start->setXYZ(
     nearest_node_to_start.pose.position.x,
@@ -153,8 +153,14 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   ompl::base::OptimizationObjectivePtr objective(
     new ompl::base::PathLengthOptimizationObjective(ss.getSpaceInformation()));
 
+
+  ompl::base::OptimizationObjectivePtr octocost_objective(
+    new OctoCostOptimizationObjective(
+      ss.getSpaceInformation(), color_octomap_octree_));
+
+
   //ss.setOptimizationObjective(getOptObjective());
-  ss.setOptimizationObjective(objective);
+  ss.setOptimizationObjective(octocost_objective);
 
   ss.setStateValidityChecker(
     [this](const ompl::base::State * state)
@@ -173,11 +179,16 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
       return allocValidStateSampler(si);
     });
 
+
   ss.setup();
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
-  initializeSelectedPlanner(planner, planner_name_, ss.getSpaceInformation());
+  botanbot_utilities::initializeSelectedPlanner(
+    planner,
+    planner_name_,
+    ss.getSpaceInformation(),
+    logger_);
 
   ss.setPlanner(planner);
 
@@ -319,60 +330,9 @@ void SE3Planner::octomapCallback(
       "Collisison check Octomap with %d nodes", color_octomap_octree_->size());
     is_octomap_ready_ = true;
 
-    octocost_optimization_ = std::make_shared<OctoCostOptimizationObjective>(
-      state_space_information_,
-      color_octomap_octree_);
-
   }
 }
 
-void SE3Planner::initializeSelectedPlanner(
-  ompl::base::PlannerPtr & planner,
-  const std::string & selected_planner_name,
-  const ompl::base::SpaceInformationPtr & si)
-{
-  if (selected_planner_name == std::string("PRMStar")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
-  } else if (selected_planner_name == std::string("RRTstar")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si) );
-  } else if (selected_planner_name == std::string("RRTConnect")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTConnect(si) );
-  } else if (selected_planner_name == std::string("KPIECE1")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::KPIECE1(si) );
-  } else {
-    RCLCPP_WARN(
-      logger_,
-      "Selected planner is not Found in available planners, using the default planner: KPIECE1");
-    planner = ompl::base::PlannerPtr(new ompl::geometric::KPIECE1(si));
-  }
-}
-
-geometry_msgs::msg::PoseStamped SE3Planner::getNearstNode(
-  const geometry_msgs::msg::PoseStamped & state)
-{
-
-  auto nearest_node_pose = state;
-  double dist = INFINITY;
-
-  for (auto it = color_octomap_octree_->begin(),
-    end = color_octomap_octree_->end(); it != end; ++it)
-  {
-    if (color_octomap_octree_->isNodeOccupied(*it)) {
-      auto dist_to_crr_node = std::sqrt(
-        std::pow(it.getCoordinate().x() - state.pose.position.x, 2) +
-        std::pow(it.getCoordinate().y() - state.pose.position.y, 2) +
-        std::pow(it.getCoordinate().z() - state.pose.position.z, 2));
-
-      if (dist_to_crr_node < dist) {
-        dist = dist_to_crr_node;
-        nearest_node_pose.pose.position.x = it.getCoordinate().x();
-        nearest_node_pose.pose.position.y = it.getCoordinate().y();
-        nearest_node_pose.pose.position.z = it.getCoordinate().z();
-      }
-    }
-  }
-  return nearest_node_pose;
-}
 
 ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
   const ompl::base::SpaceInformation * si)

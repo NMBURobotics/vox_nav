@@ -19,6 +19,8 @@
 #include <string>
 #include <memory>
 
+#include "botanbot_utilities/planner_helpers.hpp"
+#include "botanbot_utilities/tf_helpers.hpp"
 #include "botanbot_planning/planner_core.hpp"
 #include "botanbot_planning/plugins/se3_planner_utils.hpp"
 
@@ -84,18 +86,6 @@ public:
   virtual void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg) override;
 
   /**
-  * @brief select a planner name from param file,
-  *
-  * @param planner planner ptr to be initialized
-  * @param selected_planner_name name of sleected planner as string
-  * @param si state space information
-  */
-  void initializeSelectedPlanner(
-    ompl::base::PlannerPtr & planner,
-    const std::string & selected_planner_name,
-    const ompl::base::SpaceInformationPtr & si);
-
-  /**
    * @brief
    *
    * @param si
@@ -109,14 +99,6 @@ public:
    * @return ompl::base::OptimizationObjectivePtr
    */
   ompl::base::OptimizationObjectivePtr getOptObjective();
-
-  /**
-   * @brief Get the Nearst Node object
-   *
-   * @param state
-   * @return geometry_msgs::msg::PoseStamped
-   */
-  geometry_msgs::msg::PoseStamped getNearstNode(const geometry_msgs::msg::PoseStamped & state);
 
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner")};

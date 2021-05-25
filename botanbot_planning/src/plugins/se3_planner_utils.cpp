@@ -58,9 +58,13 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
 ///////////////////////////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 ///////////////////////////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
-OctoCellSampler::OctoCellSampler(
+OctoCellValidStateSampler::OctoCellValidStateSampler(
+  const ompl::base::SpaceInformation * si,
   const std::shared_ptr<octomap::ColorOcTree> & tree)
+: ValidStateSampler(si)
 {
+  name_ = "OctoCellValidStateSampler";
+
   color_octomap_octree_ = tree;
 
   for (auto it = tree->begin(),
@@ -72,74 +76,8 @@ OctoCellSampler::OctoCellSampler(
       color_octomap_node_colors_.insert(pair);
     }
   }
-  std::cout << "OctoCell Sampler bases on an Octomap with " <<
+  std::cout << "OctoCellValidStateSampler bases on an Octomap with " <<
     color_octomap_node_colors_.size() << " nodes" << std::endl;
-}
-
-bool OctoCellSampler::sample(
-  ompl::base::SE3StateSpace::StateType * state)
-{
-  std::cout << "yall";
-  octomap::unordered_ns::unordered_multimap<
-    octomap::OcTreeKey,
-    octomap::point3d,
-    octomap::OcTreeKey::KeyHash>
-  random_octomap_node;
-
-  std::sample(
-    color_octomap_node_colors_.begin(),
-    color_octomap_node_colors_.end(),
-    std::inserter(random_octomap_node, random_octomap_node.end()),
-    1,
-    std::mt19937{std::random_device{} ()}
-  );
-
-  state->setXYZ(
-    random_octomap_node.begin()->second.x(),
-    random_octomap_node.begin()->second.y(),
-    random_octomap_node.begin()->second.z());
-
-  return true;
-}
-
-bool OctoCellSampler::sampleNear(
-  ompl::base::SE3StateSpace::StateType * state,
-  const ompl::base::SE3StateSpace::StateType * near,
-  const double distance)
-{
-
-  octomap::unordered_ns::unordered_multimap<
-    octomap::OcTreeKey,
-    octomap::point3d,
-    octomap::OcTreeKey::KeyHash> random_octomap_node;
-
-  std::sample(
-    color_octomap_node_colors_.begin(),
-    color_octomap_node_colors_.end(),
-    std::inserter(random_octomap_node, random_octomap_node.end()),
-    1,
-    std::mt19937{std::random_device{} ()}
-  );
-
-  state->setXYZ(
-    random_octomap_node.begin()->second.x(),
-    random_octomap_node.begin()->second.y(),
-    random_octomap_node.begin()->second.z());
-
-  return true;
-}
-
-///////////////////////////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-///////////////////////////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-///////////////////////////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-
-OctoCellValidStateSampler::OctoCellValidStateSampler(
-  const ompl::base::SpaceInformation * si,
-  const std::shared_ptr<octomap::ColorOcTree> & tree)
-: ValidStateSampler(si)
-{
-  name_ = "OctoCellValidStateSampler";
-  octocell_sampler_ = std::make_shared<OctoCellSampler>(tree);
 }
 
 bool OctoCellValidStateSampler::sample(ompl::base::State * state)
@@ -148,7 +86,25 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
   unsigned int attempts = 0;
   bool valid = false;
   do {
-    octocell_sampler_->sample(se3_state);
+
+    octomap::unordered_ns::unordered_multimap<
+      octomap::OcTreeKey,
+      octomap::point3d,
+      octomap::OcTreeKey::KeyHash> random_octomap_node;
+
+    std::sample(
+      color_octomap_node_colors_.begin(),
+      color_octomap_node_colors_.end(),
+      std::inserter(random_octomap_node, random_octomap_node.end()),
+      1,
+      std::mt19937{std::random_device{} ()}
+    );
+
+    se3_state->setXYZ(
+      random_octomap_node.begin()->second.x(),
+      random_octomap_node.begin()->second.y(),
+      random_octomap_node.begin()->second.z());
+
     valid = si_->isValid(state);
     ++attempts;
   } while (!valid && attempts < attempts_);
@@ -163,9 +119,28 @@ bool OctoCellValidStateSampler::sampleNear(
   unsigned int attempts = 0;
   bool valid = false;
   do {
-    octocell_sampler_->sampleNear(se3_state, se3_state, 0.0);
+
+    octomap::unordered_ns::unordered_multimap<
+      octomap::OcTreeKey,
+      octomap::point3d,
+      octomap::OcTreeKey::KeyHash> random_octomap_node;
+
+    std::sample(
+      color_octomap_node_colors_.begin(),
+      color_octomap_node_colors_.end(),
+      std::inserter(random_octomap_node, random_octomap_node.end()),
+      1,
+      std::mt19937{std::random_device{} ()}
+    );
+
+    se3_state->setXYZ(
+      random_octomap_node.begin()->second.x(),
+      random_octomap_node.begin()->second.y(),
+      random_octomap_node.begin()->second.z());
+
     valid = si_->isValid(state);
     ++attempts;
+
   } while (!valid && attempts < attempts_);
   return valid;
 }

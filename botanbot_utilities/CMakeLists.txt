@@ -66,6 +66,9 @@ add_library(tf_helpers SHARED src/tf_helpers.cpp
                               src/pcl_helpers.cpp)
 ament_target_dependencies(tf_helpers ${dependencies})
 
+add_library(planner_helpers SHARED src/planner_helpers.cpp)
+ament_target_dependencies(planner_helpers ${dependencies})
+
 add_library(gps_waypoint_collector SHARED src/gps_waypoint_collector.cpp)
 ament_target_dependencies(gps_waypoint_collector ${dependencies})
 
@@ -83,7 +86,7 @@ add_executable(${planner_benchmarking_exc_name} src/planner_benchmarking.cpp)
 ament_target_dependencies(${planner_benchmarking_exc_name} ${dependencies})
 target_link_libraries(${planner_benchmarking_exc_name} tf_helpers ${LIBFCL_LIBRARIES} ${OCTOMAP_LIBRARIES} ompl)
 
-install(TARGETS tf_helpers gps_waypoint_collector 
+install(TARGETS tf_helpers planner_helpers gps_waypoint_collector 
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
@@ -100,7 +103,7 @@ install(DIRECTORY config launch
         DESTINATION share/${PROJECT_NAME})
 
 ament_export_include_directories(include ${EIGEN3_INCLUDE_DIR})
-ament_export_libraries(tf_helpers gps_waypoint_collector)
+ament_export_libraries(tf_helpers planner_helpers gps_waypoint_collector)
 ament_export_dependencies(${dependencies})
 
 ament_package()

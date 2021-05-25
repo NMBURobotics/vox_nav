@@ -44,7 +44,7 @@ public:
   ~OctoCostOptimizationObjective();
 
   /**
-   * @brief
+   * @brief get amount of the cost assigned to this state
    *
    * @param s
    * @return ompl::base::Cost
@@ -55,46 +55,6 @@ private:
   std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
 };
 
-class OctoCellSampler
-{
-public:
-  OctoCellSampler(
-    const std::shared_ptr<octomap::ColorOcTree> & tree);
-
-  virtual ~OctoCellSampler() = default;
-
-  /**
-   * @brief
-   *
-   * @param state
-   * @return true
-   * @return false
-   */
-  bool sample(
-    ompl::base::SE3StateSpace::StateType * state);
-
-  /**
-   * @brief
-   *
-   * @param state
-   * @param near
-   * @param distance
-   * @return true
-   * @return false
-   */
-  bool sampleNear(
-    ompl::base::SE3StateSpace::StateType * state,
-    const ompl::base::SE3StateSpace::StateType * near,
-    const double distance);
-
-protected:
-  ompl::base::StateSpacePtr space_;
-  octomap::unordered_ns::unordered_multimap<
-    octomap::OcTreeKey,
-    octomap::point3d,
-    octomap::OcTreeKey::KeyHash> color_octomap_node_colors_;
-  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
-};
 
 class OctoCellValidStateSampler : public ompl::base::ValidStateSampler
 {
@@ -132,7 +92,11 @@ public:
     const double distance) override;
 
 protected:
-  std::shared_ptr<OctoCellSampler> octocell_sampler_;
+  octomap::unordered_ns::unordered_multimap<
+    octomap::OcTreeKey,
+    octomap::point3d,
+    octomap::OcTreeKey::KeyHash> color_octomap_node_colors_;
+  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
 };
 
 }  // namespace botanbot_planning
