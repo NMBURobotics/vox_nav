@@ -70,7 +70,7 @@ OctoCellValidStateSampler::OctoCellValidStateSampler(
   for (auto it = tree->begin(),
     end = tree->end(); it != end; ++it)
   {
-    if (tree->isNodeOccupied(*it)) {
+    if (it->getColor().r == 255 && it->getColor().g == 255) {
       auto pair =
         std::pair<octomap::OcTreeKey, octomap::point3d>(it.getKey(), it.getCoordinate());
       color_octomap_node_colors_.insert(pair);
@@ -107,7 +107,7 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
 
     valid = si_->isValid(state);
     ++attempts;
-  } while (!valid && attempts < attempts_);
+  } while (!valid && attempts < attempts_ && color_octomap_node_colors_.size());
   return valid;
 }
 
@@ -141,7 +141,7 @@ bool OctoCellValidStateSampler::sampleNear(
     valid = si_->isValid(state);
     ++attempts;
 
-  } while (!valid && attempts < attempts_);
+  } while (!valid && attempts < attempts_ && color_octomap_node_colors_.size());
   return valid;
 }
 }  // namespace botanbot_planning
