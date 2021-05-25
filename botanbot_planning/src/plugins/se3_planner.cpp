@@ -37,6 +37,7 @@ void SE3Planner::initialize(
 {
   state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(3);
   octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
+
   is_octomap_ready_ = false;
 
   parent->declare_parameter(plugin_name + ".enabled", true);
@@ -91,7 +92,10 @@ void SE3Planner::initialize(
 
   state_space_ = std::make_shared<ompl::base::SE3StateSpace>();
   state_space_->as<ompl::base::SE3StateSpace>()->setBounds(*state_space_bounds_);
-  state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
+  simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
+
+  octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+
 
   if (!is_enabled_) {
     RCLCPP_WARN(
@@ -109,6 +113,14 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     RCLCPP_WARN(
       logger_,
       "SE3Planner plugin is disabled. Not performing anything returning an empty path"
+    );
+    return std::vector<geometry_msgs::msg::PoseStamped>();
+  }
+
+  if (!is_octomap_ready_) {
+    RCLCPP_WARN(
+      logger_,
+      "A valid Octomap has not been receievd yet, Try later again."
     );
     return std::vector<geometry_msgs::msg::PoseStamped>();
   }
@@ -145,79 +157,42 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     1,
     goal_yaw);
 
-  ompl::geometric::SimpleSetup ss(state_space_);
-
-  ss.setStartAndGoalStates(se3_start, se3_goal);
-
-  // objective is to minimize the planned path
-  ompl::base::OptimizationObjectivePtr objective(
-    new ompl::base::PathLengthOptimizationObjective(ss.getSpaceInformation()));
+  simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
 
 
-  ompl::base::OptimizationObjectivePtr octocost_objective(
-    new OctoCostOptimizationObjective(
-      ss.getSpaceInformation(), color_octomap_octree_));
-
-
-  //ss.setOptimizationObjective(getOptObjective());
-  ss.setOptimizationObjective(octocost_objective);
-
-  ss.setStateValidityChecker(
-    [this](const ompl::base::State * state)
-    {
-      return isStateValid(state);
-    });
-
-
-  octocell_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
-    ss.getSpaceInformation().get(),
-    color_octomap_octree_);
-
-  ss.getSpaceInformation()->setValidStateSamplerAllocator(
-    [this](const ompl::base::SpaceInformation * si)
-    {
-      return allocValidStateSampler(si);
-    });
-
-
-  ss.setup();
+  simple_setup_->setup();
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
   botanbot_utilities::initializeSelectedPlanner(
     planner,
     planner_name_,
-    ss.getSpaceInformation(),
+    simple_setup_->getSpaceInformation(),
     logger_);
 
-  ss.setPlanner(planner);
+  simple_setup_->setPlanner(planner);
 
   // print the settings for this space
-  ss.print(std::cout);
+  simple_setup_->print(std::cout);
 
   // attempt to solve the problem within one second of planning time
-  ompl::base::PlannerStatus solved = ss.solve(planner_timeout_);
+  ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
   std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
 
   if (solved) {
 
-    ompl::geometric::PathGeometric path = ss.getSolutionPath();
+    ompl::geometric::PathGeometric solution_path = simple_setup_->getSolutionPath();
     // Path smoothing using bspline
     ompl::geometric::PathSimplifier * path_simlifier =
-      new ompl::geometric::PathSimplifier(ss.getSpaceInformation());
-    path_simlifier->smoothBSpline(path, 3);
-    path_simlifier->collapseCloseVertices(path, 3);
-    path.checkAndRepair(2);
-    path.interpolate(interpolation_parameter_);
+      new ompl::geometric::PathSimplifier(simple_setup_->getSpaceInformation());
+    path_simlifier->smoothBSpline(solution_path, 3);
+    path_simlifier->collapseCloseVertices(solution_path, 3);
+    solution_path.checkAndRepair(2);
+    solution_path.interpolate(interpolation_parameter_);
 
-    for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
+    for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount(); path_idx++) {
       const ompl::base::SE3StateSpace::StateType * se3state =
-        path.getState(path_idx)->as<ompl::base::SE3StateSpace::StateType>();
-
-      // extract the first component of the state and cast it to what we expect
-      const ompl::base::RealVectorStateSpace::StateType * pos =
-        se3state->as<ompl::base::RealVectorStateSpace::StateType>(0);
-
+        solution_path.getState(path_idx)->as<ompl::base::SE3StateSpace::StateType>();
       // extract the second component of the state and cast it to what we expect
       const ompl::base::SO3StateSpace::StateType * rot =
         se3state->as<ompl::base::SO3StateSpace::StateType>(1);
@@ -225,9 +200,9 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
       geometry_msgs::msg::PoseStamped pose;
       pose.header.frame_id = start.header.frame_id;
       pose.header.stamp = rclcpp::Clock().now();
-      pose.pose.position.x = pos->values[0];
-      pose.pose.position.y = pos->values[1];
-      pose.pose.position.z = pos->values[2];
+      pose.pose.position.x = se3state->getX();
+      pose.pose.position.y = se3state->getY();
+      pose.pose.position.z = se3state->getZ();
       pose.pose.orientation.x = rot->x;
       pose.pose.orientation.y = rot->y;
       pose.pose.orientation.z = rot->z;
@@ -241,6 +216,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
       logger_, "No solution for requested path planning !");
   }
 
+  simple_setup_->clear();
   return plan_poses;
 }
 
@@ -294,54 +270,75 @@ void SE3Planner::octomapCallback(
     octomap_msg_ = msg;
     RCLCPP_INFO(logger_, "Octomap has been recieved!");
     try {
+
       auto raw_color_octomap_octree =
         dynamic_cast<octomap::ColorOcTree *>(octomap_msgs::fullMsgToMap(*octomap_msg_));
+
       color_octomap_octree_ = std::make_shared<octomap::ColorOcTree>(*raw_color_octomap_octree);
       delete raw_color_octomap_octree;
+
+      for (auto it = color_octomap_octree_->begin(),
+        end = color_octomap_octree_->end(); it != end; ++it)
+      {
+        auto crr_point_node_key = color_octomap_octree_->coordToKey(it.getCoordinate());
+        octomap_octree_->setNodeValue(crr_point_node_key, it->getValue(), false);
+      }
+
+      fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree_);
+      fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
+        std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
+
+      RCLCPP_INFO(
+        logger_,
+        "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
+        "octomap for state validity (aka collision check)", color_octomap_octree_->size());
+
+      RCLCPP_INFO(
+        logger_,
+        "Collisison check Octomap with %d nodes", color_octomap_octree_->size());
+      is_octomap_ready_ = true;
+
+      simple_setup_->setOptimizationObjective(getOptimizationObjective());
+      simple_setup_->getSpaceInformation()->setValidStateSamplerAllocator(
+        std::bind(
+          &SE3Planner::
+          allocValidStateSampler, this, std::placeholders::_1));
+      simple_setup_->setStateValidityChecker(
+        std::bind(
+          &SE3Planner::
+          isStateValid, this, std::placeholders::_1));
+
     } catch (const std::exception & e) {
       std::cerr << e.what() << "\n";
       RCLCPP_ERROR(
         logger_,
         "Exception while converting octomap  %s:", e.what());
     }
-
-    std::shared_ptr<octomap::OcTree> octomap_octree =
-      std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-
-    auto tree_depth = color_octomap_octree_->getTreeDepth();
-    for (auto it = color_octomap_octree_->begin(tree_depth),
-      end = color_octomap_octree_->end(); it != end; ++it)
-    {
-      auto crr_point_node_key = color_octomap_octree_->coordToKey(it.getCoordinate());
-      octomap_octree->setNodeValue(crr_point_node_key, it->getValue(), false);
-    }
-
-    fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
-    fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
-      std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
-
-    RCLCPP_INFO(
-      logger_,
-      "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
-      "octomap for state validity (aka collision check)", color_octomap_octree_->size());
-
-    RCLCPP_INFO(
-      logger_,
-      "Collisison check Octomap with %d nodes", color_octomap_octree_->size());
-    is_octomap_ready_ = true;
-
   }
 }
-
 
 ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
   const ompl::base::SpaceInformation * si)
 {
+  octocell_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
+    simple_setup_->getSpaceInformation().get(),
+    color_octomap_octree_);
+
   return octocell_state_sampler_;
 }
 
-ompl::base::OptimizationObjectivePtr SE3Planner::getOptObjective()
+ompl::base::OptimizationObjectivePtr SE3Planner::getOptimizationObjective()
 {
+  // select a optimizatio objective
+  ompl::base::OptimizationObjectivePtr length_objective(
+    new ompl::base::PathLengthOptimizationObjective(simple_setup_->getSpaceInformation()));
+
+  ompl::base::OptimizationObjectivePtr octocost_objective(
+    new OctoCostOptimizationObjective(
+      simple_setup_->getSpaceInformation(), color_octomap_octree_));
+
+  octocost_optimization_ = length_objective;
+
   return octocost_optimization_;
 }
 

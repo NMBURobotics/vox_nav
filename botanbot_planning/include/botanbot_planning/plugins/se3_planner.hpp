@@ -24,19 +24,13 @@
 #include "botanbot_planning/planner_core.hpp"
 #include "botanbot_planning/plugins/se3_planner_utils.hpp"
 
-/**
- * @brief
- *
- */
+
 namespace botanbot_planning
 {
 
-/**
- * @brief
- *
- */
 class SE3Planner : public botanbot_planning::PlannerCore
 {
+
 public:
 /**
  * @brief Construct a new SE3Planner object
@@ -98,7 +92,7 @@ public:
    *
    * @return ompl::base::OptimizationObjectivePtr
    */
-  ompl::base::OptimizationObjectivePtr getOptObjective();
+  ompl::base::OptimizationObjectivePtr getOptimizationObjective();
 
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner")};
@@ -109,14 +103,13 @@ protected:
   std::shared_ptr<fcl::OcTree> fcl_octree_;
   std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
   std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
+  std::shared_ptr<octomap::OcTree> octomap_octree_;
   std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
 
   ompl::base::StateSpacePtr state_space_;
-  ompl::base::SpaceInformationPtr state_space_information_;
-  ompl::base::ProblemDefinitionPtr problem_definition_;
-
   ompl::base::OptimizationObjectivePtr octocost_optimization_;
   ompl::base::ValidStateSamplerPtr octocell_state_sampler_;
+  ompl::geometric::SimpleSetupPtr simple_setup_;
 
   // to ensure safety when accessing global var curr_frame_
   std::mutex global_mutex_;
@@ -136,9 +129,7 @@ protected:
   volatile bool is_octomap_ready_;
   // global mutex to guard octomap
   std::mutex octomap_mutex_;
-  // We only need to creae a FLC cotomap collision from
-  // octomap once, because this is static map
-  std::once_flag fcl_tree_from_octomap_once_;
+
 };
 }  // namespace botanbot_planning
 
