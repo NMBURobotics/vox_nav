@@ -96,7 +96,6 @@ void SE3Planner::initialize(
 
   octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
 
-
   if (!is_enabled_) {
     RCLCPP_WARN(
       logger_, "SE3Planner plugin is disabled.");

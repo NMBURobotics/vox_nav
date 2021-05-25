@@ -287,12 +287,22 @@ void BotanbotMapManager::alignStaticMapToMap(const tf2::Transform & static_map_t
   octomap_octree_->insertPointCloud(octocloud, sensorOrigin);
 
   for (auto && i : pcd_map_pointcloud_->points) {
-    octomap_octree_->setNodeColor(i.x, i.y, i.z, i.r, i.g, i.b);
-    octomap_octree_->setNodeValue(i.x, i.y, i.z, 1.0);
+    double value = static_cast<double>(i.b / 255.0) -
+      static_cast<double>(i.g / 255.0);
+    if (i.r == 255) {
+      value = 2.0;
+    }
+    if (i.r == 255 && i.g == 255) {
+      value = 3.0;
+    }
+    octomap_octree_->setNodeValue(i.x, i.y, i.z, std::max(0.0, value));
   }
 
   try {
     octomap_msgs::fullMapToMsg<octomap::ColorOcTree>(*octomap_octree_, *octomap_ros_msg_);
+    octomap_ros_msg_->binary = false;
+    octomap_ros_msg_->resolution = octomap_voxel_size_;
+
   } catch (const std::exception & e) {
     std::cerr << e.what() << '\n';
     RCLCPP_ERROR(
@@ -318,14 +328,30 @@ void BotanbotMapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
     cubeCenter.y = it.getCoordinate().y();
     cubeCenter.z = it.getCoordinate().z();
     octomap_markers_.markers[idx].points.push_back(cubeCenter);
+
     std_msgs::msg::ColorRGBA color;
-    color.r = static_cast<float>(it->getColor().r / 255.0);
-    color.g = static_cast<float>(it->getColor().g / 255.0);
-    color.b = static_cast<float>(it->getColor().b / 255.0);
+
+    color.g = 1.0 - it->getValue();
+    color.b = it->getValue();
     color.a = 1.0;
 
+    if (it->getValue() == 2.0) {
+      color.r = 1.0;
+      color.g = 0.0;
+      color.b = 0.0;
+    }
+
+    if (it->getValue() == 3.0) {
+      color.r = 1.0;
+      color.g = 1.0;
+      color.b = 0.0;
+    }
+
     if (!tree.isNodeOccupied(*it)) {
-      color.a = 0.05;
+      color.r = 0.0;
+      color.g = 0.0;
+      color.b = 0.0;
+      color.a = 0.04;
     }
 
     octomap_markers_.markers[idx].colors.push_back(color);

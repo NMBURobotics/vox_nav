@@ -64,13 +64,11 @@ OctoCellValidStateSampler::OctoCellValidStateSampler(
 : ValidStateSampler(si)
 {
   name_ = "OctoCellValidStateSampler";
-
   color_octomap_octree_ = tree;
-
   for (auto it = tree->begin(),
     end = tree->end(); it != end; ++it)
   {
-    if (it->getColor().r == 255 && it->getColor().g == 255) {
+    if (it->getValue() < 1.0) {
       auto pair =
         std::pair<octomap::OcTreeKey, octomap::point3d>(it.getKey(), it.getCoordinate());
       color_octomap_node_colors_.insert(pair);
