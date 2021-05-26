@@ -50,23 +50,45 @@ void initializeSelectedPlanner(
   const ompl::base::SpaceInformationPtr & si,
   const rclcpp::Logger logger)
 {
-  if (selected_planner_name == std::string("PRMStar")) {
+  if (selected_planner_name == std::string("PRMstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
+  } else if (selected_planner_name == std::string("LazyPRMstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::LazyPRMstar(si));
   } else if (selected_planner_name == std::string("RRTstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
-  } else if (selected_planner_name == std::string("RRTConnect")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTConnect(si));
-  } else if (selected_planner_name == std::string("KPIECE1")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::KPIECE1(si));
-  } else if (selected_planner_name == std::string("SBL")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::SBL(si));
+  } else if (selected_planner_name == std::string("RRTsharp")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTsharp(si));
+  } else if (selected_planner_name == std::string("RRTXstatic")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTXstatic(si));
+  } else if (selected_planner_name == std::string("InformedRRTstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::InformedRRTstar(si));
+  } else if (selected_planner_name == std::string("BITstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::BITstar(si));
+  } else if (selected_planner_name == std::string("ABITstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::ABITstar(si));
+  } else if (selected_planner_name == std::string("AITstar")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::AITstar(si));
+  } else if (selected_planner_name == std::string("LBTRRT")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::LBTRRT(si));
   } else if (selected_planner_name == std::string("SST")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::SST(si));
+  } else if (selected_planner_name == std::string("TRRT")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::TRRT(si));
+  } else if (selected_planner_name == std::string("SPARS")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::SPARS(si));
+  } else if (selected_planner_name == std::string("SPARStwo")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::SPARStwo(si));
+  } else if (selected_planner_name == std::string("FMT")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::FMT(si));
+  } else if (selected_planner_name == std::string("CForest")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::CForest(si));
+  } else if (selected_planner_name == std::string("AnytimePathShortening")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::AnytimePathShortening(si));
   } else {
     RCLCPP_WARN(
       logger,
-      "Selected planner is not Found in available planners, using the default planner: KPIECE1");
-    planner = ompl::base::PlannerPtr(new ompl::geometric::KPIECE1(si));
+      "Selected planner is not Found in available planners, using the default planner: RRTstar");
+    planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
   }
 }
 
