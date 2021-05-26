@@ -105,10 +105,13 @@ protected:
   std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
   std::shared_ptr<octomap::OcTree> octomap_octree_;
   std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
+  std::shared_ptr<OctoCellValidStateSampler> octocell_state_sampler_;
+
+  ompl::base::ScopedState<ompl::base::SE3StateSpace> * start_;
+  ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal_;
 
   ompl::base::StateSpacePtr state_space_;
   ompl::base::OptimizationObjectivePtr octocost_optimization_;
-  ompl::base::ValidStateSamplerPtr octocell_state_sampler_;
   ompl::geometric::SimpleSetupPtr simple_setup_;
 
   // to ensure safety when accessing global var curr_frame_

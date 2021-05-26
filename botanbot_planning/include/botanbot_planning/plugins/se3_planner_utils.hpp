@@ -16,6 +16,8 @@
 #define BOTANBOT_PLANNING__PLUGINS__SE3_PLANNER_UTILS_HPP_
 
 #include "botanbot_planning/planner_core.hpp"
+#include <pcl/octree/octree_search.h>
+#include <pcl/filters/random_sample.h>
 
 /**
  * @brief
@@ -67,6 +69,8 @@ public:
    */
   OctoCellValidStateSampler(
     const ompl::base::SpaceInformationPtr & si,
+    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
+    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal,
     const std::shared_ptr<octomap::ColorOcTree> & tree);
 
   /**
@@ -91,14 +95,19 @@ public:
     ompl::base::State * state, const ompl::base::State * near,
     const double distance) override;
 
-protected:
-  octomap::unordered_ns::unordered_multimap<
-    octomap::OcTreeKey,
-    octomap::point3d,
-    octomap::OcTreeKey::KeyHash> color_octomap_node_colors_;
-  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
+  /**
+   * @brief
+   *
+   * @param start
+   * @param goal
+   */
+  void updateSearchArea(
+    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
+    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal);
 
-  pcl::PointCloud<pcl::PointXYZI>::Ptr nodes_as_pcl_;
+protected:
+  pcl::PointCloud<pcl::PointXYZ>::Ptr workspace_pcl_;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr search_area_pcl_;
 };
 
 }  // namespace botanbot_planning

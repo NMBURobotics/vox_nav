@@ -60,36 +60,35 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
 
 OctoCellValidStateSampler::OctoCellValidStateSampler(
   const ompl::base::SpaceInformationPtr & si,
+  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
+  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal,
   const std::shared_ptr<octomap::ColorOcTree> & tree)
 : ValidStateSampler(si.get())
 {
   name_ = "OctoCellValidStateSampler";
-  color_octomap_octree_ = tree;
 
-  nodes_as_pcl_ = pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+  workspace_pcl_ =
+    pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
 
   for (auto it = tree->begin(),
     end = tree->end();
     it != end; ++it)
   {
     if (it->getValue() > 2.0) {
-      auto pair =
-        std::pair<octomap::OcTreeKey, octomap::point3d>(it.getKey(), it.getCoordinate());
-      color_octomap_node_colors_.insert(pair);
-
-      pcl::PointXYZI node_as_point;
+      pcl::PointXYZ node_as_point;
       node_as_point.x = it.getCoordinate().x();
       node_as_point.y = it.getCoordinate().y();
       node_as_point.z = it.getCoordinate().z();
-      node_as_point.intensity = it->getValue();
-      nodes_as_pcl_->points.push_back(node_as_point);
+      workspace_pcl_->points.push_back(node_as_point);
     }
   }
-  nodes_as_pcl_->width = 1;
-  nodes_as_pcl_->height = nodes_as_pcl_->points.size();
+  workspace_pcl_->width = 1;
+  workspace_pcl_->height = workspace_pcl_->points.size();
 
   std::cout << "OctoCellValidStateSampler bases on an Octomap with " <<
-    color_octomap_node_colors_.size() << " nodes" << std::endl;
+    workspace_pcl_->points.size() << " nodes" << std::endl;
+
+  updateSearchArea(start, goal);
 }
 
 bool OctoCellValidStateSampler::sample(ompl::base::State * state)
@@ -99,27 +98,23 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
   bool valid = false;
   do {
 
-    octomap::unordered_ns::unordered_multimap<
-      octomap::OcTreeKey,
-      octomap::point3d,
-      octomap::OcTreeKey::KeyHash> random_octomap_node;
-
-    std::sample(
-      color_octomap_node_colors_.begin(),
-      color_octomap_node_colors_.end(),
-      std::inserter(random_octomap_node, random_octomap_node.end()),
-      1,
-      std::mt19937{std::random_device{} ()}
-    );
+    pcl::PointCloud<pcl::PointXYZ>::Ptr out_sample(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::RandomSample<pcl::PointXYZ> random_sample(true);
+    random_sample.setInputCloud(search_area_pcl_);
+    random_sample.setSample(1);
+    pcl::Indices indices;
+    random_sample.filter(indices);
+    random_sample.filter(*out_sample);
 
     se3_state->setXYZ(
-      random_octomap_node.begin()->second.x(),
-      random_octomap_node.begin()->second.y(),
-      random_octomap_node.begin()->second.z());
+      out_sample->points.front().x,
+      out_sample->points.front().y,
+      out_sample->points.front().z);
 
     valid = si_->isValid(state);
     ++attempts;
-  } while (!valid && attempts < attempts_ && color_octomap_node_colors_.size());
+
+  } while (!valid && attempts < attempts_ && search_area_pcl_->points.size());
   return valid;
 }
 
@@ -131,29 +126,56 @@ bool OctoCellValidStateSampler::sampleNear(
   unsigned int attempts = 0;
   bool valid = false;
   do {
-
-    octomap::unordered_ns::unordered_multimap<
-      octomap::OcTreeKey,
-      octomap::point3d,
-      octomap::OcTreeKey::KeyHash> random_octomap_node;
-
-    std::sample(
-      color_octomap_node_colors_.begin(),
-      color_octomap_node_colors_.end(),
-      std::inserter(random_octomap_node, random_octomap_node.end()),
-      1,
-      std::mt19937{std::random_device{} ()}
-    );
-
-    se3_state->setXYZ(
-      random_octomap_node.begin()->second.x(),
-      random_octomap_node.begin()->second.y(),
-      random_octomap_node.begin()->second.z());
-
+    se3_state->setXYZ(0, 0, 0);
     valid = si_->isValid(state);
     ++attempts;
-
-  } while (!valid && attempts < attempts_ && color_octomap_node_colors_.size());
+  } while (!valid && attempts < attempts_ && workspace_pcl_->points.size());
   return valid;
 }
+
+void OctoCellValidStateSampler::updateSearchArea(
+  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
+  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal)
+{
+  std::cout << "Updating search area " << std::endl;
+
+  search_area_pcl_ =
+    pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+
+  float resolution = 0.2;
+
+  pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree(resolution);
+  octree.setInputCloud(workspace_pcl_);
+  octree.addPointsFromInputCloud();
+
+  pcl::PointXYZ searchPoint;
+  searchPoint.x = (goal->get()->getX() + start->get()->getX()) / 2.0;
+  searchPoint.y = (goal->get()->getY() + start->get()->getY()) / 2.0;
+  searchPoint.z = (goal->get()->getZ() + start->get()->getZ()) / 2.0;
+
+  // Neighbors within radius search
+
+  std::vector<int> pointIdxRadiusSearch;
+  std::vector<float> pointRadiusSquaredDistance;
+
+  float radius = std::sqrt(
+    std::pow( (goal->get()->getX() - start->get()->getX()), 2) +
+    std::pow( (goal->get()->getY() - start->get()->getY()), 2) +
+    std::pow( (goal->get()->getZ() - start->get()->getZ()), 2)
+  );
+
+  std::cout << "Adjusting a search area with radius of: " << radius << std::endl;
+
+  if (octree.radiusSearch(
+      searchPoint, radius, pointIdxRadiusSearch,
+      pointRadiusSquaredDistance) > 0)
+  {
+    for (std::size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
+      search_area_pcl_->points.push_back(workspace_pcl_->points[pointIdxRadiusSearch[i]]);
+    }
+  }
+  std::cout << "Updated search area nodes." << std::endl;
+  std::cout << "Search area has nodes: " << search_area_pcl_->points.size() << std::endl;
+}
+
 }  // namespace botanbot_planning

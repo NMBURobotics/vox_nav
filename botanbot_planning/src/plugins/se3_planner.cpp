@@ -37,7 +37,6 @@ void SE3Planner::initialize(
 {
   state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(3);
   octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
-
   is_octomap_ready_ = false;
 
   parent->declare_parameter(plugin_name + ".enabled", true);
@@ -159,8 +158,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
 
 
-  simple_setup_->setup();
-
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
   botanbot_utilities::initializeSelectedPlanner(
@@ -171,8 +168,18 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
 
   simple_setup_->setPlanner(planner);
 
+  simple_setup_->setup();
+
   // print the settings for this space
   simple_setup_->print(std::cout);
+
+  goal_ = &se3_goal;
+  start_ = &se3_start;
+
+  simple_setup_->getSpaceInformation()->setValidStateSamplerAllocator(
+    std::bind(
+      &SE3Planner::
+      allocValidStateSampler, this, std::placeholders::_1));
 
   // attempt to solve the problem within one second of planning time
   ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
@@ -185,8 +192,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     ompl::geometric::PathSimplifier * path_simlifier =
       new ompl::geometric::PathSimplifier(simple_setup_->getSpaceInformation());
     path_simlifier->smoothBSpline(solution_path, 3);
-    path_simlifier->collapseCloseVertices(solution_path, 3);
-    solution_path.checkAndRepair(2);
     solution_path.interpolate(interpolation_parameter_);
 
     for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount(); path_idx++) {
@@ -298,10 +303,7 @@ void SE3Planner::octomapCallback(
       is_octomap_ready_ = true;
 
       simple_setup_->setOptimizationObjective(getOptimizationObjective());
-      simple_setup_->getSpaceInformation()->setValidStateSamplerAllocator(
-        std::bind(
-          &SE3Planner::
-          allocValidStateSampler, this, std::placeholders::_1));
+
       simple_setup_->setStateValidityChecker(
         std::bind(
           &SE3Planner::
@@ -321,6 +323,7 @@ ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
 {
   octocell_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
     simple_setup_->getSpaceInformation(),
+    start_, goal_,
     color_octomap_octree_);
 
   return octocell_state_sampler_;
