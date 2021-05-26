@@ -59,21 +59,35 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
 ///////////////////////////////////////////////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 OctoCellValidStateSampler::OctoCellValidStateSampler(
-  const ompl::base::SpaceInformation * si,
+  const ompl::base::SpaceInformationPtr & si,
   const std::shared_ptr<octomap::ColorOcTree> & tree)
-: ValidStateSampler(si)
+: ValidStateSampler(si.get())
 {
   name_ = "OctoCellValidStateSampler";
   color_octomap_octree_ = tree;
+
+  nodes_as_pcl_ = pcl::PointCloud<pcl::PointXYZI>::Ptr(new pcl::PointCloud<pcl::PointXYZI>);
+
   for (auto it = tree->begin(),
-    end = tree->end(); it != end; ++it)
+    end = tree->end();
+    it != end; ++it)
   {
-    if (it->getValue() < 1.0) {
+    if (it->getValue() > 2.0) {
       auto pair =
         std::pair<octomap::OcTreeKey, octomap::point3d>(it.getKey(), it.getCoordinate());
       color_octomap_node_colors_.insert(pair);
+
+      pcl::PointXYZI node_as_point;
+      node_as_point.x = it.getCoordinate().x();
+      node_as_point.y = it.getCoordinate().y();
+      node_as_point.z = it.getCoordinate().z();
+      node_as_point.intensity = it->getValue();
+      nodes_as_pcl_->points.push_back(node_as_point);
     }
   }
+  nodes_as_pcl_->width = 1;
+  nodes_as_pcl_->height = nodes_as_pcl_->points.size();
+
   std::cout << "OctoCellValidStateSampler bases on an Octomap with " <<
     color_octomap_node_colors_.size() << " nodes" << std::endl;
 }

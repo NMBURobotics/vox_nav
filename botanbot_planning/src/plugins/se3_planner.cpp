@@ -320,7 +320,7 @@ ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
   const ompl::base::SpaceInformation * si)
 {
   octocell_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
-    simple_setup_->getSpaceInformation().get(),
+    simple_setup_->getSpaceInformation(),
     color_octomap_octree_);
 
   return octocell_state_sampler_;

@@ -66,7 +66,7 @@ public:
    * @param tree
    */
   OctoCellValidStateSampler(
-    const ompl::base::SpaceInformation * si,
+    const ompl::base::SpaceInformationPtr & si,
     const std::shared_ptr<octomap::ColorOcTree> & tree);
 
   /**
@@ -97,6 +97,8 @@ protected:
     octomap::point3d,
     octomap::OcTreeKey::KeyHash> color_octomap_node_colors_;
   std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
+
+  pcl::PointCloud<pcl::PointXYZI>::Ptr nodes_as_pcl_;
 };
 
 }  // namespace botanbot_planning
