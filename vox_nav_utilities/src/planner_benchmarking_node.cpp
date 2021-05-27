@@ -1,4 +1,4 @@
-#include "vox_nav_utilities/planner_benchmarking.hpp"
+#include "vox_nav_utilities/planner_benchmarking_node.hpp"
 
 namespace vox_nav_utilities
 {

@@ -34,13 +34,9 @@ find_package(vox_nav_utilities REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pluginlib REQUIRED)
 
-include_directories(
-  include
-  ${LIBFCL_INCLUDE_DIRS}
-  ${THIS_PACKAGE_INCLUDE_DIRS}
-  ${OMPL_INCLUDE_DIRS}
-  ${OCTOMAP_INCLUDE_DIRS})
-
+include_directories(include
+                   ${OMPL_INCLUDE_DIRS})
+                   
 set(dependencies
 rclcpp
 pluginlib
@@ -66,7 +62,7 @@ target_link_libraries(${vox_nav_planner_server_exc_name} ${OCTOMAP_LIBRARIES} ${
 
 set(vox_nav_se3_planner_exc_name vox_nav_se3_planner)
 add_library(${vox_nav_se3_planner_exc_name} SHARED src/plugins/se3_planner.cpp
-                                                    src/plugins/se3_planner_utils.cpp)
+                                                   src/plugins/se3_planner_utils.cpp)
 ament_target_dependencies(${vox_nav_se3_planner_exc_name} ${dependencies})
 target_link_libraries(${vox_nav_se3_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
@@ -75,12 +71,7 @@ add_library(${vox_nav_se2_planner_exc_name} SHARED src/plugins/se2_planner.cpp)
 ament_target_dependencies(${vox_nav_se2_planner_exc_name} ${dependencies})
 target_link_libraries(${vox_nav_se2_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
-set(vox_nav_se2_planner_control_space_exc_name vox_nav_se2_planner_control_space)
-add_library(${vox_nav_se2_planner_control_space_exc_name} SHARED src/plugins/se2_planner_control_space.cpp)
-ament_target_dependencies(${vox_nav_se2_planner_control_space_exc_name} ${dependencies})
-target_link_libraries(${vox_nav_se2_planner_control_space_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
-
-install(TARGETS ${vox_nav_se3_planner_exc_name} ${vox_nav_se2_planner_exc_name} ${vox_nav_se2_planner_control_space_exc_name}
+install(TARGETS ${vox_nav_se3_planner_exc_name} ${vox_nav_se2_planner_exc_name}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
@@ -105,8 +96,7 @@ endif()
 
 ament_export_include_directories(include)
 ament_export_libraries(${vox_nav_se3_planner_exc_name} 
-                       ${vox_nav_se2_planner_exc_name}
-                       ${vox_nav_se2_planner_control_space_exc_name})
+                       ${vox_nav_se2_planner_exc_name})
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 
 ament_package()

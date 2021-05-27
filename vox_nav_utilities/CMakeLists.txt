@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(vox_nav_utilities)
 
-# Default to C++11
+# Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
@@ -30,21 +30,8 @@ find_package(OCTOMAP REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
-
-find_package(OpenMP REQUIRED)
-if(OPENMP_FOUND)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
-
-include_directories(
-    include
-    ${LIBFCL_INCLUDE_DIRS}
-    ${EIGEN3_INCLUDE_DIRS}
-    ${PCL_INCLUDE_DIRS}
-    ${THIS_PACKAGE_INCLUDE_DIRS}
-    ${OMPL_INCLUDE_DIRS}
-    ${OCTOMAP_INCLUDE_DIRS})
+include_directories(include
+                   ${OMPL_INCLUDE_DIRS})
 
 set(dependencies
   rclcpp
@@ -62,12 +49,12 @@ set(dependencies
   visualization_msgs
 )
 
-add_library(tf_helpers SHARED src/tf_helpers.cpp
-                              src/pcl_helpers.cpp)
+add_library(tf_helpers SHARED src/tf_helpers.cpp src/pcl_helpers.cpp)
 ament_target_dependencies(tf_helpers ${dependencies})
 
 add_library(planner_helpers SHARED src/planner_helpers.cpp)
 ament_target_dependencies(planner_helpers ${dependencies})
+target_link_libraries(planner_helpers ${LIBFCL_LIBRARIES} ompl)
 
 add_library(gps_waypoint_collector SHARED src/gps_waypoint_collector.cpp)
 ament_target_dependencies(gps_waypoint_collector ${dependencies})
@@ -76,24 +63,24 @@ add_executable(gps_waypoint_collector_node src/gps_waypoint_collector_node.cpp)
 target_link_libraries(gps_waypoint_collector_node gps_waypoint_collector)
 ament_target_dependencies(gps_waypoint_collector_node ${dependencies})
 
-add_executable(pcl2octomap_converter  src/pcl_helpers.cpp
-                                      src/pcl2octomap_converter.cpp)
-target_link_libraries(pcl2octomap_converter ${PCL_LIBRARIES} ${OCTOMAP_LIBRARIES})
-ament_target_dependencies(pcl2octomap_converter ${dependencies})
+add_executable(pcl2octomap_converter_node  src/pcl_helpers.cpp src/pcl2octomap_converter_node.cpp)
+ament_target_dependencies(pcl2octomap_converter_node ${dependencies})
 
-set(planner_benchmarking_exc_name planner_benchmarking)
-add_executable(${planner_benchmarking_exc_name} src/planner_benchmarking.cpp)
-ament_target_dependencies(${planner_benchmarking_exc_name} ${dependencies})
-target_link_libraries(${planner_benchmarking_exc_name} tf_helpers ${LIBFCL_LIBRARIES} ${OCTOMAP_LIBRARIES} ompl)
+add_executable(planner_benchmarking_node src/planner_benchmarking_node.cpp)
+ament_target_dependencies(planner_benchmarking_node ${dependencies})
+target_link_libraries(planner_benchmarking_node ${LIBFCL_LIBRARIES} tf_helpers ompl)
 
-install(TARGETS tf_helpers planner_helpers gps_waypoint_collector 
+
+install(TARGETS tf_helpers 
+                planner_helpers 
+                gps_waypoint_collector 
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
 
 install(TARGETS gps_waypoint_collector_node 
-                pcl2octomap_converter 
-                ${planner_benchmarking_exc_name} 
+                pcl2octomap_converter_node 
+                planner_benchmarking_node 
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
@@ -102,8 +89,10 @@ install(DIRECTORY include/
 install(DIRECTORY config launch 
         DESTINATION share/${PROJECT_NAME})
 
-ament_export_include_directories(include ${EIGEN3_INCLUDE_DIR})
-ament_export_libraries(tf_helpers planner_helpers gps_waypoint_collector)
+ament_export_libraries(tf_helpers 
+                        planner_helpers 
+                        gps_waypoint_collector)
 ament_export_dependencies(${dependencies})
+ament_export_include_directories(include)
 
 ament_package()

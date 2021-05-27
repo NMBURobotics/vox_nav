@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vox_nav_utilities/pcl2octomap_converter.hpp"
+#include "vox_nav_utilities/pcl2octomap_converter_node.hpp"
 
 #include <memory>
 
