@@ -27,3 +27,26 @@ You can download videos and see capablities of project. See all available videos
 * ![Full Navigation SE3 space](assets/navigation_se3_planner.mp4)
 
 * ![Full Navigation REEDSPEEP space](assets/navigation_se2_control_planner.mp4)
+
+### Related Publications
+
+If using voxblox for scientific publications, please consider citig the following paper.
+
+```bash
+@article{DBLP:journals/corr/abs-2103-13666,
+  author    = {Fetullah Atas and
+               Lars Grimstad and
+               Grzegorz Cielniak},
+  title     = {Evaluation of Sampling-Based Optimizing Planners for Outdoor Robot
+               Navigation},
+  journal   = {CoRR},
+  volume    = {abs/2103.13666},
+  year      = {2021},
+  url       = {https://arxiv.org/abs/2103.13666},
+  archivePrefix = {arXiv},
+  eprint    = {2103.13666},
+  timestamp = {Wed, 07 Apr 2021 15:31:46 +0200},
+  biburl    = {https://dblp.org/rec/journals/corr/abs-2103-13666.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+```
