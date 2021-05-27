@@ -1,6 +1,6 @@
 # vox_nav
 
-Documentation has been moved to ; https://outdoor-nav2.readthedocs.io/en/main/
+Documentation is here ; https://vox-nav.readthedocs.io/en/latest/
  
 ### Related presentations
 * [Possible ADs/CONSs of 3D enviornment rep. in Context of Uneven Terrain Nav.](assets/presentation_0.pdf)
