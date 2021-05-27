@@ -1,4 +1,4 @@
-# OUTDOOR_NAV2
+# vox_nav
 
 Documentation has been moved to ; https://outdoor-nav2.readthedocs.io/en/main/
  

@@ -1,7 +1,7 @@
 run_slam_rclcpp_node:
   ros__parameters:
-    vocab_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/vox_nav_openvslam/config/orb_vocab.dbow2
-    setting_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/vox_nav_openvslam/config/slam_config.yaml
+    vocab_file_path: /home/ros2-foxy/colcon_ws/src/vox_nav/vox_nav_openvslam/config/orb_vocab.dbow2
+    setting_file_path: /home/ros2-foxy/colcon_ws/src/vox_nav/vox_nav_openvslam/config/slam_config.yaml
     mask_img_path: ""
     map_db_path : /home/ros2-foxy/large_map.msg
     debug_mode: true
@@ -10,8 +10,8 @@ run_slam_rclcpp_node:
     map_info_path: "/home/ros2-foxy/large_map_info.yaml"
 run_localization_rclcpp_node:
   ros__parameters:
-    vocab_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/vox_nav_openvslam/config/orb_vocab.dbow2
-    setting_file_path: /home/ros2-foxy/colcon_ws/src/OUTDOOR_NAV2/vox_nav_openvslam/config/slam_config.yaml
+    vocab_file_path: /home/ros2-foxy/colcon_ws/src/vox_nav/vox_nav_openvslam/config/orb_vocab.dbow2
+    setting_file_path: /home/ros2-foxy/colcon_ws/src/vox_nav/vox_nav_openvslam/config/slam_config.yaml
     mask_img_path: ""
     prebuilt_map_path : /home/ros2-foxy/slope_map.msg
     debug_mode: true
