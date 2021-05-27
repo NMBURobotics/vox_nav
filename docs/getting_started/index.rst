@@ -7,10 +7,10 @@ Getting Started
 ========================================
 
 * Install ROS2 foxy. 
-This is latest LTS of ROS2 distros , so it makes a lot of sense to start from this version. 
-Deb installation is strongly recomended. Detailed steps to install ROS2 Foxy can be found [here](https://index.ros.org/doc/ros2/Installation/Foxy/Linux-Install-Debians/)
+Deb installation is strongly recomended. 
+Detailed steps to install ROS2 Foxy can be found [here](https://index.ros.org/doc/ros2/Installation/Foxy/Linux-Install-Debians/)
 
-A few helper packages we use fro gui and installation;
+A few helper packages we use for gui and installation;
 
 .. code-block:: bash
 
@@ -24,22 +24,17 @@ Finally get the project repository and dependecy repositories and build;
    source /opt/ros/foxy/setup.bash
    mkdir -p ~/colcon_ws/src
    cd ~/colcon_ws
-   wget https://raw.githubusercontent.com/jediofgever/OUTDOOR_NAV2_UNDERLAY_REPOS/main/underlay.repos
+   wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos
    vcs import src < underlay.repos
    cd ~/colcon_ws
    rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy
-   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-skip botanbot_openvslam
+   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-skip-regex archived_
 
-You will be asked to enter your github credentials, enter them correctly, since this repo is private at the moment. 
-`rosdep` might take quite long to install all required depenedencies , so please wait for that command to finish. 
-
-You can update dependencies that are build from source such as `navigation2` or `teb_local_planner`
-with this convient commands; 
 
 .. note::
-   Pay attention that we have disabled the build of botanbot_openvslam. The package has quite some 
+   Pay attention that we have disabled the build of archived_ packages. Some packages(e.g vox_net_openvslam) has quite some 
    amount of deps. If you like to use please refer to SLAM section , there you will find instructions
-   to install botanbot_openvslam deps. After that you ca remove `--packages-skip botanbot_openvslam` part from 
+   to install vox_net_openvslam deps. After that you can remove `--packages-skip vox_net_openvslam` part from 
    colcon build command.
 
 .. code-block:: bash
@@ -48,4 +43,5 @@ with this convient commands;
    vcs import src < underlay.repos
    vcs pull src
 
-We need the source build of some dependencies(e.g `navigation2`), sometimes we need to add/modify functionalities, overall it gives more control for the development. For future we might remove all source built dependencies, but for now the existing 3 better stay as it is since some of them are not avaliable in from debian installations. 
+We need the source build of some dependencies(e.g `pcl_ros`),
+

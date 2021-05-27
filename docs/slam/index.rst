@@ -6,14 +6,6 @@
 SLAM
 ========================================
 
-We are exploring the potentials of various SLAM algorithms in context of agri robotics.
-So far 3 approaches has been experimented.
- The first two experiments were based on SLAM packages that consumed LIDAR pointclouds.
-while the last one is Visual SLAM that consumes images.
-
-The main motivation behind this section of SLAM is; we have thoughts about switching envoirnment representationn from 2D to 3D, 
-in that case a global prebuilt map of envoirnment might be necesarry(e.g a `.pcd` file to load instead of `.pgm`). 
-
 ------------ 
 
  **1. Related to Google Cartographer 3D SLAM**
