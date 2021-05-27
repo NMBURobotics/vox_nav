@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>vox_nav_bringup</name>
+  <version>0.0.0</version>
+  <description>
+    ROS 2 launch scripts for vox_nav
+  </description>
+  <license>Apache 2.0</license>
+  <author email="fetullah.atas@nmbu.no">Fetullah Atas</author>
+  <maintainer email="fetullah.atas@nmbu.no">Fetullah Atas</maintainer>
+  <url type="repository">https://github.com/jediofgever/ROS_CB</url>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>vox_nav_planning</exec_depend>
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
