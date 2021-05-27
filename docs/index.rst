@@ -8,11 +8,20 @@ Welcome to vox_nav's documentation!
 
 A project to develop/adapt a navigation system for outdoor robotics particularly aiming for use-cases in agriculture. 
 
+* We call this `vox_nav` since it relies on voxel-based 3D occupacy grid(Octomap) in order to navigate a robot. 
 
-This branch(foxy) is aiming for ROS2 Foxy distro, there is also `main` branch which keeps up with the latest commits from `ros2::main` and `navigation2::main`. This branch is more stable so we aim to keep major feature developments in this branch since it is more stable. 
+* This project's main use case is navigation of robot in rough outdoor envoirnmets. 
 
-`main` branch unstable because of constant updates from whole ROS2 ecosystem. But it is required to be there, from time to time we may need to get involved with guys at `navigation2` e.g submitting PRs or getting/pulling latest features from navigation2. Current branch is recomended to try/test/develop. 
+* At the moment envoirnment reprsenation is done with Octomap, Based on the 3D topology of map we overlap costs to octomap.
 
+* Planning of vox_net relies on OMPL, we provide SE2, SE2.5 , planners. SE2 planners can also be constrained to output plans for Ackermaan type robots with DUBINS AND REEDS-SHEEP.
+
+* SE2.5 planner compute valid plans that go through ramps and hills, giving the robot chance to traverse though them.
+
+
+
+
+This branch(foxy) is aiming for ROS2 Foxy distro. 
 
 .. toctree::
    :hidden:
