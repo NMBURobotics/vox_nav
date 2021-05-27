@@ -1,0 +1,7 @@
+<class_libraries>
+  <library path="mpc_controller">
+    <class type="mpc_controller::MPCControllerROS" base_class_type="vox_nav_control::ControllerCore">
+      <description>TODO(fetullah.atas)</description>
+    </class>
+  </library>
+</class_libraries>

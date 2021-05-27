@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+    <name>vox_nav_openvslam</name>
+    <version>0.0.0</version>
+    <description>The ROS2 package for perfroming mapping and localization based on OpenVSLAM</description>
+    <maintainer email="fetullah.atas@nmbu.no">Fetullah Atas</maintainer>
+    <license>Apache 2.0</license>
+    <buildtool_depend>ament_cmake</buildtool_depend>
+
+    <depend>rclcpp</depend>
+    <depend>message_filters</depend>
+    <depend>geometry_msgs</depend>
+    <depend>nav_msgs</depend>
+    <depend>tf2_geometry_msgs</depend>
+    <depend>tf2_ros</depend>
+    <depend>robot_localization</depend>
+    <depend>vox_nav_msgs</depend>
+    <depend>vox_nav_utilities</depend>
+    <depend>image_transport</depend>
+    <depend>cv_bridge</depend>
+    <depend>opencv2</depend>
+    <depend>yaml-cpp</depend>
+    <depend>openvslam</depend>
+
+    <export>
+        <build_type>ament_cmake</build_type>
+    </export>
+</package>
