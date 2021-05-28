@@ -31,22 +31,23 @@ import os
 
 
 def generate_launch_description():
+
     share_dir = get_package_share_directory('vox_nav_bringup')
 
-    parameter_file = LaunchConfiguration('params_file')
-    params_declare = DeclareLaunchArgument(
-        'params_file',
+    params = LaunchConfiguration('params')
+
+    decleare_params = DeclareLaunchArgument(
+        'params',
         default_value=os.path.join(share_dir, 'params', 'params.yaml'),
-        description='FPath to the ROS2 parameters file to use.')
+        description='Path to the vox_nav parameters file.')
 
     planner_server_node = Node(
         package='vox_nav_planning',
         executable='vox_nav_planner_server',
         name='vox_nav_planner_server_rclcpp_node',
         namespace='',
-        prefix=['xterm -e gdb -ex run --args'],
         output='screen',
-        parameters=[parameter_file],
+        parameters=[params],
     )
 
     controller_server_node = Node(
@@ -55,16 +56,16 @@ def generate_launch_description():
         name='vox_nav_controller_server_rclcpp_node',
         namespace='',
         output='screen',
-        parameters=[parameter_file],
+        parameters=[params],
     )
 
     map_server_node = Node(
         package='vox_nav_map_server',
-        executable='vox_nav_map_manager',
+        executable='map_manager',
         name='vox_nav_map_server_rclcpp_node',
         namespace='',
         output='screen',
-        parameters=[parameter_file],
+        parameters=[params],
     )
 
     navigate_to_pose_server_node = Node(
@@ -73,10 +74,13 @@ def generate_launch_description():
         name='navigate_to_pose_server_node',
         namespace='',
         output='screen',
-        parameters=[parameter_file],
+        parameters=[params],
     )
 
     return LaunchDescription([
-        params_declare, planner_server_node, controller_server_node,
-        map_server_node, navigate_to_pose_server_node
+        decleare_params,
+        planner_server_node,
+        controller_server_node,
+        map_server_node,
+        navigate_to_pose_server_node
     ])

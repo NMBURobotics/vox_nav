@@ -25,17 +25,15 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    # Get the launch directory
-    bringup_dir = get_package_share_directory('vox_nav_bringup')
 
-    # Create the launch configuration variables
-    rviz_config_file = LaunchConfiguration('rviz_config')
+    bringup_dir = get_package_share_directory('vox_nav_bringup')
     use_namespace = LaunchConfiguration('use_namespace')
+    rviz_config_file = LaunchConfiguration('rviz_config')
 
     declare_use_namespace_cmd = DeclareLaunchArgument(
         'use_namespace',
         default_value='false',
-        description='Whether to apply a namespace to the navigation stack')
+        description='')
 
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         'rviz_config',
@@ -43,30 +41,16 @@ def generate_launch_description():
                                    'vox_nav_default_view.rviz'),
         description='Full path to the RVIZ config file to use')
 
-    # Launch rviz
-    start_rviz_cmd = Node(
+    rviz_node = Node(
         condition=UnlessCondition(use_namespace),
         package='rviz2',
         executable='rviz2',
         name='rviz2',
         arguments=['-d', rviz_config_file],
-        #prefix=['xterm -e gdb -ex run --args'],
         output='screen')
 
-    exit_event_handler = RegisterEventHandler(
-        condition=UnlessCondition(use_namespace),
-        event_handler=OnProcessExit(
-            target_action=start_rviz_cmd,
-            on_exit=EmitEvent(event=Shutdown(reason='rviz exited'))))
-
-    # Create the launch description and populate
-    ld = LaunchDescription()
-    ld.add_action(declare_use_namespace_cmd)
-    # Declare the launch options
-    ld.add_action(declare_rviz_config_file_cmd)
-    # Add any conditioned actions
-    ld.add_action(start_rviz_cmd)
-    # Add other nodes and processes we need
-    ld.add_action(exit_event_handler)
-
-    return ld
+    return LaunchDescription([
+        declare_use_namespace_cmd,
+        declare_rviz_config_file_cmd,
+        rviz_node
+    ])
