@@ -19,14 +19,10 @@ jobs:
                   sudo apt update
                   sudo apt install ros-foxy-desktop
                   source /opt/ros/foxy/setup.bash
-            - uses: actions/checkout@v1
-              with:
-                submodules: true
-            - name: Copy repository
+            - name: Create Workspace
               run: |
-                  mkdir -p ~/ros2_ws/src/vox_nav
-                  cp -rf . ~/ros2_ws/src/vox_nav
-            - name: Install dependencies
+                  mkdir -p ~/ros2_ws/src
+            - name: Install repos and dependencies
               run: |
                   source /opt/ros/foxy/setup.bash
                   sudo apt install -y python3-rosdep2
