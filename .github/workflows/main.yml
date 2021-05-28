@@ -9,7 +9,6 @@ jobs:
         steps:
             - name: ROS2 Install
               run: |
-                  # Ref: https://index.ros.org/doc/ros2/Installation/Foxy/Linux-Install-Debians/
                   sudo locale-gen en_US en_US.UTF-8
                   sudo update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
                   export LANG=en_US.UTF-8
@@ -22,7 +21,7 @@ jobs:
             - name: Create Workspace
               run: |
                   mkdir -p ~/ros2_ws/src
-            - name: Install repos and dependencies
+            - name: Install debian dependencies
               run: |
                   source /opt/ros/foxy/setup.bash
                   sudo apt install python3-colcon-common-extensions
@@ -30,13 +29,18 @@ jobs:
                   sudo apt-get install python3-vcstool
                   sudo apt-get install xdotool
                   rosdep update
+            - name: Build source
+              run: |                  
                   cd ~/ros2_ws
+                  source /opt/ros/foxy/setup.bash
                   wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos
                   vcs import src < underlay.repos     
                   rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy   
                   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-select casadi ompl
                   sudo cp install/ompl/lib/libompl.so* /usr/local/lib/
                   sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/
+                  sudo rm -rf src/ompl/
+                  sudo rm -rf src/casadi/
             - name: Build packages
               run: |
                   source /opt/ros/foxy/setup.bash
