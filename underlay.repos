@@ -1,5 +1,5 @@
 repositories:
-  OUTDOOR_NAV2:
+  vox_nav:
     type: git
     url: https://github.com/jediofgever/vox_nav.git
     version: foxy
