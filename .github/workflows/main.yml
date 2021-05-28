@@ -33,7 +33,10 @@ jobs:
                   cd ~/ros2_ws
                   wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos
                   vcs import src < underlay.repos     
-                  rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy       
+                  rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy   
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-skip-regex vox_nav
+                  sudo cp install/ompl/lib/libompl.so* /usr/local/lib/
+                  sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/
             - name: Build packages
               run: |
                   source /opt/ros/foxy/setup.bash
