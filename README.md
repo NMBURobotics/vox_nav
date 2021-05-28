@@ -1,4 +1,5 @@
 # vox_nav
+![foxy](https://github.com/jediofgever/vox_nav/workflows/foxy/badge.svg)  
 
 Documentation is here ; https://vox-nav.readthedocs.io/en/latest/
  

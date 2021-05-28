@@ -41,5 +41,5 @@ jobs:
               run: |
                   source /opt/ros/foxy/setup.bash
                   cd ~/ros2_ws
-                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-skip-regex archived_
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-skip archived_vox_nav_cartographer archived_vox_nav_grid_map vox_nav_openvslam
                   source ~/ros2_ws/install/setup.bash
