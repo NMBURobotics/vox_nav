@@ -33,7 +33,7 @@ jobs:
                   sudo apt-get install python3-vcstool
                   sudo apt-get install xdotool
                   rosdep update
-                  cd ~/ros2_ws/src
+                  cd ~/ros2_ws
                   rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy            
             - name: Build packages
               run: |
