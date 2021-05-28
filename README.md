@@ -31,7 +31,7 @@ You can download videos and see capablities of project. See all available videos
 
 ### Related Publications
 
-If using vox_nav for scientific publications, please consider citig the following paper.
+If using vox_nav for scientific publications, please consider citing the following paper.
 
 ```bash
 @article{DBLP:journals/corr/abs-2103-13666,
