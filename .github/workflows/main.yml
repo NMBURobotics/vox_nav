@@ -25,6 +25,7 @@ jobs:
             - name: Install repos and dependencies
               run: |
                   source /opt/ros/foxy/setup.bash
+                  sudo apt install python3-colcon-common-extensions
                   sudo apt install -y python3-rosdep2
                   sudo apt-get install python3-vcstool
                   sudo apt-get install xdotool
@@ -40,9 +41,6 @@ jobs:
             - name: Build packages
               run: |
                   source /opt/ros/foxy/setup.bash
-                  # Install colcon
-                  # Ref: https://index.ros.org/doc/ros2/Tutorials/Colcon-Tutorial/
-                  sudo apt install python3-colcon-common-extensions
                   cd ~/ros2_ws
                   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-skip-regex archived_
                   source ~/ros2_ws/install/setup.bash
