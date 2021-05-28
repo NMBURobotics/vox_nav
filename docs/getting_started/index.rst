@@ -23,7 +23,7 @@ To install ROS2 foxy desktop ;
    sudo apt install ros-foxy-desktop
    source /opt/ros/foxy/setup.bash
 
-A few helper packages we use for gui and installation;
+* A few helper packages we use for gui and installation;
 
 .. code-block:: bash
 
@@ -34,7 +34,7 @@ A few helper packages we use for gui and installation;
    sudo apt-get install xdotool
    rosdep update
 
-Finally get the project repository and dependecy repositories and build them; 
+* Get the project repository, source build deps and build deps first; 
 
 .. code-block:: bash
 
@@ -51,10 +51,9 @@ Finally get the project repository and dependecy repositories and build them;
    sudo rm -rf src/casadi/
 
 There are essentially 2-3 dependency libraries that needs source build. 
-pcl_perception ,OMPL AND casadi. The above sript will install them and remove the source code as its not needed.
+perception_pcl ,OMPL and casadi. The above sript will build and install them and remove the source code as its not needed.
 
-
-With above we only built dependencies, now lest build vox_nav itself
+* With above we only built dependencies, now lest build vox_nav itself
 
 .. code-block:: bash
 
