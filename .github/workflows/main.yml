@@ -32,9 +32,12 @@ jobs:
                   sudo apt install -y python3-rosdep2
                   sudo apt-get install python3-vcstool
                   sudo apt-get install xdotool
+                  sudo apt-get install libompl-dev ompl-demos
                   rosdep update
                   cd ~/ros2_ws
-                  rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy            
+                  wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos
+                  vcs import src < underlay.repos     
+                  rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy       
             - name: Build packages
               run: |
                   source /opt/ros/foxy/setup.bash

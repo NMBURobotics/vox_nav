@@ -23,6 +23,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
+#include <vox_nav_utilities/planner_helpers.hpp>
 // PCL
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
@@ -32,34 +33,26 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 // OMPL GEOMETRIC
-#include <ompl/geometric/planners/sst/SST.h>
-#include <ompl/geometric/planners/sbl/SBL.h>
-#include <ompl/geometric/planners/kpiece/KPIECE1.h>
-#include <ompl/geometric/planners/rrt/TRRT.h>
-#include <ompl/geometric/planners/rrt/RRT.h>
+#include <ompl/geometric/planners/fmt/BFMT.h>
 #include <ompl/geometric/planners/rrt/RRTstar.h>
 #include <ompl/geometric/planners/rrt/RRTsharp.h>
 #include <ompl/geometric/planners/rrt/InformedRRTstar.h>
-#include <ompl/geometric/planners/rrt/RRTConnect.h>
+#include <ompl/geometric/planners/rrt/LBTRRT.h>
+#include <ompl/geometric/planners/rrt/TRRT.h>
+#include <ompl/geometric/planners/sst/SST.h>
+#include <ompl/geometric/planners/fmt/FMT.h>
+#include <ompl/geometric/planners/prm/SPARS.h>
+#include <ompl/geometric/planners/prm/SPARStwo.h>
 #include <ompl/geometric/planners/prm/PRMstar.h>
-#include <ompl/geometric/planners/prm/PRM.h>
 #include <ompl/geometric/planners/prm/LazyPRMstar.h>
+#include <ompl/geometric/planners/AnytimePathShortening.h>
+/* OMPL 1.5 BINARIES DO NO HAVE THESE PLANNERS
 #include <ompl/geometric/planners/cforest/CForest.h>
+#include <ompl/geometric/planners/informedtrees/BITstar.h>
+#include <ompl/geometric/planners/informedtrees/ABITstar.h>
+#include <ompl/geometric/planners/informedtrees/AITstar.h>*/
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/OptimizationObjective.h>
-// OMPL CONTROL
-#include <ompl/control/ControlSpace.h>
-#include <ompl/control/spaces/RealVectorControlSpace.h>
-#include <ompl/control/planners/kpiece/KPIECE1.h>
-#include <ompl/control/planners/rrt/RRT.h>
-#include <ompl/control/planners/sst/SST.h>
-#include <ompl/control/planners/est/EST.h>
-#include <ompl/control/planners/syclop/SyclopRRT.h>
-#include <ompl/control/planners/syclop/SyclopEST.h>
-#include <ompl/control/planners/pdst/PDST.h>
-#include <ompl/control/planners/syclop/GridDecomposition.h>
-#include <ompl/control/SimpleSetup.h>
-#include <ompl/config.h>
 // OMPL BASE
 #include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
 #include <ompl/base/OptimizationObjective.h>
@@ -71,6 +64,7 @@
 #include <ompl/base/spaces/DubinsStateSpace.h>
 #include <ompl/base/spaces/ReedsSheppStateSpace.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
+#include <ompl/tools/benchmark/Benchmark.h>
 // OCTOMAP
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>

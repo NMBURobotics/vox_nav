@@ -48,11 +48,12 @@
 #include <ompl/geometric/planners/prm/SPARStwo.h>
 #include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/geometric/planners/prm/LazyPRMstar.h>
-#include <ompl/geometric/planners/cforest/CForest.h>
 #include <ompl/geometric/planners/AnytimePathShortening.h>
+/* OMPL 1.5 BINARIES DO NO HAVE THESE PLANNERS
+#include <ompl/geometric/planners/cforest/CForest.h>
 #include <ompl/geometric/planners/informedtrees/BITstar.h>
 #include <ompl/geometric/planners/informedtrees/ABITstar.h>
-#include <ompl/geometric/planners/informedtrees/AITstar.h>
+#include <ompl/geometric/planners/informedtrees/AITstar.h>*/
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/OptimizationObjective.h>
 // OMPL BASE

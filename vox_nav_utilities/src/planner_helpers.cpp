@@ -62,13 +62,16 @@ void initializeSelectedPlanner(
     planner = ompl::base::PlannerPtr(new ompl::geometric::RRTXstatic(si));
   } else if (selected_planner_name == std::string("InformedRRTstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::InformedRRTstar(si));
-  } else if (selected_planner_name == std::string("BITstar")) {
+  } /*else if (selected_planner_name == std::string("BITstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::BITstar(si));
   } else if (selected_planner_name == std::string("ABITstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::ABITstar(si));
   } else if (selected_planner_name == std::string("AITstar")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::AITstar(si));
-  } else if (selected_planner_name == std::string("LBTRRT")) {
+  } else if (selected_planner_name == std::string("CForest")) {
+    planner = ompl::base::PlannerPtr(new ompl::geometric::CForest(si));
+  }*/
+  else if (selected_planner_name == std::string("LBTRRT")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::LBTRRT(si));
   } else if (selected_planner_name == std::string("SST")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::SST(si));
@@ -80,8 +83,6 @@ void initializeSelectedPlanner(
     planner = ompl::base::PlannerPtr(new ompl::geometric::SPARStwo(si));
   } else if (selected_planner_name == std::string("FMT")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::FMT(si));
-  } else if (selected_planner_name == std::string("CForest")) {
-    planner = ompl::base::PlannerPtr(new ompl::geometric::CForest(si));
   } else if (selected_planner_name == std::string("AnytimePathShortening")) {
     planner = ompl::base::PlannerPtr(new ompl::geometric::AnytimePathShortening(si));
   } else {

@@ -9,9 +9,4 @@
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
-  <library path="vox_nav_se2_planner_control_space">
-    <class type="vox_nav_planning::SE2PlannerControlSpace" base_class_type="vox_nav_planning::PlannerCore">
-      <description>TODO(fetullah.atas)</description>
-    </class>
-  </library>
 </class_libraries>
