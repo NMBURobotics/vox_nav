@@ -246,4 +246,3 @@ where the argument is pull path to prebuild map in .msg format.
 
 [1](https://github.com/xdspacelab/openvslam)
 
-
