@@ -30,6 +30,7 @@ This branch(foxy) is aiming for ROS2 Foxy distro.
    :hidden:
 
    roadmap_milestones/index.rst
+   configuration/index.rst
    getting_started/index.rst
    running_project/index.rst
    botanbot/index.rst
