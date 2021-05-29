@@ -9,8 +9,8 @@ Diff-Drive robots, the primary model is aimed for Ackerman type robots.
 
 Please see botanbot_sim in this link; https://github.com/jediofgever/botanbot_sim
 
-It is a basic Ackermann type robot with all essential sensors(GPS, LIDAR, CAMERA, IMU). 
-botanbot_bringup package includes sample parametrs and launch files to run vox_nav.
+botanbot is a basic Ackermann type robot with all essential sensors(GPS, LIDAR, CAMERA, IMU). 
+botanbot_bringup package includes sample parameters and launch files to run vox_nav.
 
 Important nodes of vox_nav are; conroller_node, map_server_node, planning_node. 
 
@@ -122,7 +122,12 @@ parameters for these nodes are more or less as following;
                z: 4.672499893387009e-05
                w: 0.9999932007970892
 
-vox_nav's skeleton is made by ROS2 nodes; vox_nav_planner_server_rclcpp_node, vox_nav_controller_server_rclcpp_node, vox_nav_map_server_rclcpp_node.
+vox_nav's skeleton is made by ROS2 nodes; 
+1. vox_nav_planner_server_rclcpp_node, 
+2. vox_nav_controller_server_rclcpp_node, 
+3. vox_nav_map_server_rclcpp_node.
+
+Some highlights of the fetaures for this nodes are as follows.
 
 * vox_nav_planner_server_rclcpp_node
 You can select an available planner plugin(SE2Planner or SE3Planner), be sure to see through the parameters. 
@@ -130,7 +135,7 @@ SE2Planner can be configured such that kinematic constrains
 of ackemann robots are respected. e.g select REEDS OR DUBINS spaces.
 The planner plugins are interfaced with OMPL. Many of OMPL planners could be selected. 
 
-The planners are Sampling-Based, they utilize a octomap of envoirnment in order to perform collsion checks.
+The planners are Sampling-Based, they utilize a octomap of environment in order to perform collision checks.
 You also need to provide a 3D volume box that represents body of your robot. 
 see the robot_body_dimens params for that.
 
@@ -139,11 +144,11 @@ TODO
 
 * vox_nav_map_server_rclcpp_node
 
-You will need to provide a pre-built pcd map of envoirnment for this node to consume. 
+You will need to provide a pre-built pcd map of environment for this node to consume. 
 This map needs to have a datum of its origin(GPS coordinates and IMU acquired absolute heading). 
-This is basically the pose where you initialize your SLAM algorithm to build map. 
+This is basically the pose where you initialize your SLAM algorithm to build your map. 
 This is needed in order to geo-reference your map.
-vox_nav_openvslam can help you with building such map with a helper node to dump map meta information including datum.
+vox_nav_openvslam can help you with building such maps, these is also a helper node to dump map meta information including datum.
 Refer to SLAM section to see more details. 
 With this information the node is able to grab your pcd map and georeference it utilizing robot_localization package. 
 The pcd map is converted to an octomap and published with configured voxel sizes and topic names. 
