@@ -12,7 +12,6 @@ It is simulated under Gazebo with all required essential sensors in order to do 
 
 **1. Sensor support for Botanbot**
 
-========================================
 
 +-------------------------------+--------------------------+----------------------------------+-----------------------+
 |      Sensor Type              |       Topic              |       MSG TYPE                   | Update Rate           |

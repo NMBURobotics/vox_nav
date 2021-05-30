@@ -14,11 +14,11 @@ However this is kept for archival purposes. Some of the packages may still be us
  **1. Related to Google Cartographer 3D SLAM**
 
 Unfourtunately Cartographer has not been ported to ROS2 completely ATM. 
-We can still create maps and visualize results, the `botanbot_cartogrpaher` is correctly configured and tested. 
+We can still create maps and visualize results, the `vox_nav_cartogrpaher` is correctly configured and tested. 
 But the node named `cartographer_asset_writter` has not been ported,this node is used to 
 recieve actual 3D map in .pcd or other formats, therefore we cannot exploit created map now. 
 Hopefully soon enough this will be available. For exploting the actual maps created see the next SLAM options below this section.
-We have added configuration package(`botanbot_cartogrpaher`) in order to build 3D maps using google cartogrpaher.
+We have added configuration package(`vox_nav_cartogrpaher`) in order to build 3D maps using google cartogrpaher.
 
 
 In order to use the provided configuration package, 
@@ -32,7 +32,7 @@ In order to record a bag file this the required topics, do the following;
 
 A bag file will be created. Cartogrpaher expects that you define the rigid body 
 transforms between sensor links and robot body frame(base_link). 
-This transforms are defined in `archived_botanbot_cartographer/urdf`. 
+This transforms are defined in `archived_vox_nav_cartographer/urdf`. 
 You might need to modify translation and roation between velodyne sensor and imu sensor 
 for different setup. A strict calibration might not be necesarry between IMU and LIDAR. 
 
@@ -41,7 +41,7 @@ After we have the bag file and configuration ready, we do the following to build
 
 .. code-block:: bash
 
-   ros2 launch archived_botanbot_cartographer cartographer.launch.py use_sim_time:=true bag_file:=${HOME}/rosbag2_2020_12_18-10_25_37/rosbag2_2020_12_18-10_25_37_0.db3
+   ros2 launch archived_vox_nav_cartographer cartographer.launch.py use_sim_time:=true bag_file:=${HOME}/rosbag2_2020_12_18-10_25_37/rosbag2_2020_12_18-10_25_37_0.db3
 
 Wait for cartogrpaher to finish and do optimizations on the map. 
 
@@ -65,7 +65,7 @@ Assuming that we have recorded bag file that contains point cloud and imu(option
 
 Note; if the sensor topic names are different then you need to recorrect them in tha launch file `lidarslam.launch.py`
 execute all commands in seperate terminals. 
-Here are a few example maps crreated when botanbot was taking a tour to gas station and retruning back. 
+Here are a few example maps crreated when vox_nav was taking a tour to gas station and retruning back. 
 
 .. image:: ../images/slam_0.png
    :width: 700px
@@ -87,13 +87,13 @@ Here are a few example maps crreated when botanbot was taking a tour to gas stat
 
 **3. Related to grid_map package**
 
-`archived_botanbot_grid_map` is a package that reads a prebuilt map in .pcd format and publishes grid_map with several layers(elevation,traversability).
+`archived_vox_nav_grid_map` is a package that reads a prebuilt map in .pcd format and publishes grid_map with several layers(elevation,traversability).
 The maps can be built with any SLAM algorithm, at the default we have openvslam though. 
-There are several important parameters in configuration files of `archived_botanbot_grid_map`. 
+There are several important parameters in configuration files of `archived_vox_nav_grid_map`. 
 
 .. code-block:: yaml
 
-   archived_botanbot_grid_map_node:
+   archived_vox_nav_grid_map_node:
    ros__parameters:
       resolution: 0.15
       pcd_file_full_path: /home/ros2-foxy/f.pcd
@@ -127,7 +127,7 @@ parameters leads to following grid maps depicted in pictures.
 
 .. code-block:: bash
 
-   ros2 launch archived_botanbot_grid_map archived_botanbot_grid_map.launch.py 
+   ros2 launch archived_vox_nav_grid_map archived_vox_nav_grid_map.launch.py 
 
 .. image:: ../images/grid_map_0.png
    :width: 700px
