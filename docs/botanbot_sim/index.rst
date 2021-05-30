@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Botanbot
+Botanbot Sim
 ========================================
 
 Botanbot is a simple 4 wheeled , ackermann drived mobile robot.

@@ -28,12 +28,11 @@ This branch(foxy) is aiming for ROS2 Foxy distro.
 .. toctree::
    :hidden:
 
-   roadmap_milestones/index.rst
    configuration/index.rst
    getting_started/index.rst
    running_project/index.rst
-   botanbot/index.rst
-   slam/index.rst
-   grid_map/index.rst
+   botanbot_sim/index.rst
+   openvslam/index.rst
+   vox_nav_archived/index.rst
 
 

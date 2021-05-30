@@ -75,3 +75,9 @@ You can update code by vcstool, you can also us classic git pull.
    cd ~/ros2_ws
    vcs import src < underlay.repos
    vcs pull src
+
+
+.. note::
+   If for some reason you could not build vox_nav, a good place to seek for a solution is the github actions file that we have.
+   After each pull-push github actions is setup to build the vox_nav on remote to ensure stability of builds. 
+   Find a recent successful build and see the commands in .github/workflows/main.yml. The commands should more or less look as in this page.
