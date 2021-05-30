@@ -32,6 +32,7 @@ To install ROS2 foxy desktop ;
    sudo apt install -y python3-rosdep2
    sudo apt-get install python3-vcstool
    sudo apt-get install xdotool
+   sudo apt-get install coinor-libipopt-dev
    rosdep update
 
 * Get the project repository, source build deps and build deps first; 
