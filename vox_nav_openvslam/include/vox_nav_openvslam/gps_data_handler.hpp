@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef vox_nav_OPENVSLAM__GPS_DATA_HANDLER_HPP_
-#define vox_nav_OPENVSLAM__GPS_DATA_HANDLER_HPP_
+#ifndef VOX_NAV_OPENVSLAM__GPS_DATA_HANDLER_HPP_
+#define VOX_NAV_OPENVSLAM__GPS_DATA_HANDLER_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 #include <vox_nav_utilities/gps_waypoint_collector.hpp>

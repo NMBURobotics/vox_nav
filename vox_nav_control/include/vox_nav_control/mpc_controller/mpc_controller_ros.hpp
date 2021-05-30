@@ -34,8 +34,8 @@
 #include <vector>
 
 
-#ifndef vox_nav_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
-#define vox_nav_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
+#ifndef VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
+#define VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
 
 namespace vox_nav_control
 {
@@ -140,4 +140,4 @@ private:
 }  // namespace mpc_controller
 }  // namespace vox_nav_control
 
-#endif  // vox_nav_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
+#endif  // VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_

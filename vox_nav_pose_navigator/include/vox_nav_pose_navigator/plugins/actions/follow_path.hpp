@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef vox_nav_POSE_NAVIGATOR__PLUGINS__ACTIONS__FOLLOW_PATH_HPP_
-#define vox_nav_POSE_NAVIGATOR__PLUGINS__ACTIONS__FOLLOW_PATH_HPP_
+#ifndef VOX_NAV_POSE_NAVIGATOR__PLUGINS__ACTIONS__FOLLOW_PATH_HPP_
+#define VOX_NAV_POSE_NAVIGATOR__PLUGINS__ACTIONS__FOLLOW_PATH_HPP_
 
 #include <string>
 
@@ -69,4 +69,4 @@ public:
 
 }  // namespace vox_nav_pose_navigator
 
-#endif  // vox_nav_POSE_NAVIGATOR__PLUGINS__ACTIONS__FOLLOW_PATH_HPP_
+#endif  // VOX_NAV_POSE_NAVIGATOR__PLUGINS__ACTIONS__FOLLOW_PATH_HPP_

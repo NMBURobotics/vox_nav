@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef vox_nav_PLANNING__PLANNER_CORE_HPP_
-#define vox_nav_PLANNING__PLANNER_CORE_HPP_
+#ifndef VOX_NAV_PLANNING__PLANNER_CORE_HPP_
+#define VOX_NAV_PLANNING__PLANNER_CORE_HPP_
 #pragma once
 
 // ROS
@@ -46,11 +46,10 @@
 #include <ompl/geometric/planners/prm/PRMstar.h>
 #include <ompl/geometric/planners/prm/LazyPRMstar.h>
 #include <ompl/geometric/planners/AnytimePathShortening.h>
-/* OMPL 1.5 BINARIES DO NO HAVE THESE PLANNERS
 #include <ompl/geometric/planners/cforest/CForest.h>
 #include <ompl/geometric/planners/informedtrees/BITstar.h>
 #include <ompl/geometric/planners/informedtrees/ABITstar.h>
-#include <ompl/geometric/planners/informedtrees/AITstar.h>*/
+#include <ompl/geometric/planners/informedtrees/AITstar.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/OptimizationObjective.h>
 // OMPL BASE
@@ -145,4 +144,4 @@ public:
 
 };
 }  // namespace vox_nav_planning
-#endif  // vox_nav_PLANNING__PLANNER_CORE_HPP_
+#endif  // VOX_NAV_PLANNING__PLANNER_CORE_HPP_

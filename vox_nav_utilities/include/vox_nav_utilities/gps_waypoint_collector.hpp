@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef vox_nav_UTILITIES__GPS_WAYPOINT_COLLECTOR_HPP_
-#define vox_nav_UTILITIES__GPS_WAYPOINT_COLLECTOR_HPP_
+#ifndef VOX_NAV_UTILITIES__GPS_WAYPOINT_COLLECTOR_HPP_
+#define VOX_NAV_UTILITIES__GPS_WAYPOINT_COLLECTOR_HPP_
 
 #include <mutex>
 #include <utility>
@@ -106,4 +106,4 @@ private:
 
 }  // namespace vox_nav_utilities
 
-#endif  // vox_nav_UTILITIES__GPS_WAYPOINT_COLLECTOR_HPP_
+#endif  // VOX_NAV_UTILITIES__GPS_WAYPOINT_COLLECTOR_HPP_

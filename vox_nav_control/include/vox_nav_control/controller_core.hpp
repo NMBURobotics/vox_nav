@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef vox_nav_CONTROL__CONTROLLER_CORE_HPP_
-#define vox_nav_CONTROL__CONTROLLER_CORE_HPP_
+#ifndef VOX_NAV_CONTROL__CONTROLLER_CORE_HPP_
+#define VOX_NAV_CONTROL__CONTROLLER_CORE_HPP_
 
 #include <memory>
 #include <string>
@@ -70,4 +70,4 @@ public:
 
 }  // namespace vox_nav_control
 
-#endif  // vox_nav_CONTROL__CONTROLLER_CORE_HPP_
+#endif  // VOX_NAV_CONTROL__CONTROLLER_CORE_HPP_

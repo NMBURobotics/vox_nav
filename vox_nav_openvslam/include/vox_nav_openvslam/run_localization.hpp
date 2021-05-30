@@ -18,8 +18,8 @@
  *      Institute: AIST in Japan, XDSPACE
  */
 
-#ifndef vox_nav_OPENVSLAM__RUN_LOCALIZATION_HPP_
-#define vox_nav_OPENVSLAM__RUN_LOCALIZATION_HPP_
+#ifndef VOX_NAV_OPENVSLAM__RUN_LOCALIZATION_HPP_
+#define VOX_NAV_OPENVSLAM__RUN_LOCALIZATION_HPP_
 
 #include <pangolin_viewer/viewer.h>
 
@@ -174,4 +174,4 @@ private:
 };
 
 }  // namespace vox_nav_openvslam
-#endif  // vox_nav_OPENVSLAM__RUN_LOCALIZATION_HPP_
+#endif  // VOX_NAV_OPENVSLAM__RUN_LOCALIZATION_HPP_

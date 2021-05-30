@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef vox_nav_PLANNING__PLANNER_SERVER_HPP_
-#define vox_nav_PLANNING__PLANNER_SERVER_HPP_
+#ifndef VOX_NAV_PLANNING__PLANNER_SERVER_HPP_
+#define VOX_NAV_PLANNING__PLANNER_SERVER_HPP_
 
 
 #include <chrono>
@@ -135,4 +135,4 @@ protected:
 
 }  // namespace vox_nav_planning
 
-#endif  // vox_nav_PLANNING__PLANNER_SERVER_HPP_
+#endif  // VOX_NAV_PLANNING__PLANNER_SERVER_HPP_

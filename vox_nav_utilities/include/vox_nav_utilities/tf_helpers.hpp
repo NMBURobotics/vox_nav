@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef vox_nav_UTILITIES__TF_HELPERS_HPP_
-#define vox_nav_UTILITIES__TF_HELPERS_HPP_
+#ifndef VOX_NAV_UTILITIES__TF_HELPERS_HPP_
+#define VOX_NAV_UTILITIES__TF_HELPERS_HPP_
 
 #include <string>
 #include <memory>
@@ -115,4 +115,4 @@ geometry_msgs::msg::Quaternion getMsgQuaternionfromRPY(
 
 }  // namespace vox_nav_utilities
 
-#endif  // vox_nav_UTILITIES__TF_HELPERS_HPP_
+#endif  // VOX_NAV_UTILITIES__TF_HELPERS_HPP_

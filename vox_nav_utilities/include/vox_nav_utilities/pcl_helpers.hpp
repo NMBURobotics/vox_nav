@@ -18,8 +18,8 @@
  *      Institute: ETH Zurich, Robotic Systems Lab
  */
 
-#ifndef vox_nav_UTILITIES__PCL_HELPERS_HPP_
-#define vox_nav_UTILITIES__PCL_HELPERS_HPP_
+#ifndef VOX_NAV_UTILITIES__PCL_HELPERS_HPP_
+#define VOX_NAV_UTILITIES__PCL_HELPERS_HPP_
 
 #include <eigen3/Eigen/Core>
 
@@ -161,4 +161,4 @@ void publishClustersCloud(
 
 }  // namespace vox_nav_utilities
 
-#endif  // vox_nav_UTILITIES__PCL_HELPERS_HPP_
+#endif  // VOX_NAV_UTILITIES__PCL_HELPERS_HPP_

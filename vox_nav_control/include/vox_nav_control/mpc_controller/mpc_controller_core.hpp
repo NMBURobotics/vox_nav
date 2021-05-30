@@ -16,8 +16,8 @@
 // https://github.com/MPC-Berkeley/genesis_path_follower
 // Also refer to https://github.com/MPC-Berkeley/barc/wiki/Car-Model
 
-#ifndef vox_nav_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_CORE_HPP_
-#define vox_nav_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_CORE_HPP_
+#ifndef VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_CORE_HPP_
+#define VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_CORE_HPP_
 
 #include <casadi/casadi.hpp>
 
@@ -288,4 +288,4 @@ private:
 }  // namespace mpc_controller
 }  // namespace vox_nav_control
 
-#endif  // vox_nav_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_CORE_HPP_
+#endif  // VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_CORE_HPP_
