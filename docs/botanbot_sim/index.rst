@@ -59,3 +59,10 @@ It is simulated under Gazebo with all required essential sensors in order to do 
    :width: 700px
    :align: center
    :alt: rqt landing screen
+
+
+(botanbot_sim)[https://github.com/jediofgever/botanbot_sim] is configured use vox_nav system for 3D navigation. If you are trying to setup your robot for use with 
+vox_nav, botanbot_sim is  right place to look for.
+A RQT based gui is also provided in botanbot_gui, through this gui it is possible to send goal commands to action server(NavigateToPose) of vox_nav. If using simulation, 
+botanbot_gazebo includes sensor plugins.
+   
