@@ -22,7 +22,7 @@
 
 namespace vox_nav_map_server
 {
-vox_navMapManager::vox_navMapManager()
+MapManager::MapManager()
 : Node("vox_nav_map_manager_rclcpp_node")
 {
   RCLCPP_INFO(this->get_logger(), "Creating..");
@@ -103,7 +103,7 @@ vox_navMapManager::vox_navMapManager()
     octomap_point_cloud_publish_topic_, rclcpp::SystemDefaultsQoS());
   timer_ = this->create_wall_timer(
     std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
-    std::bind(&vox_navMapManager::timerCallback, this));
+    std::bind(&MapManager::timerCallback, this));
   robot_localization_fromLL_client_ =
     robot_localization_fromLL_client_node_->
     create_client<robot_localization::srv::FromLL>("/fromLL");
@@ -160,17 +160,17 @@ vox_navMapManager::vox_navMapManager()
 
   RCLCPP_INFO(
     this->get_logger(),
-    "Created an Instance of vox_navMapManager");
+    "Created an Instance of MapManager");
 }
 
-vox_navMapManager::~vox_navMapManager()
+MapManager::~MapManager()
 {
   RCLCPP_INFO(
     this->get_logger(),
-    "Destroyed an Instance of vox_navMapManager");
+    "Destroyed an Instance of MapManager");
 }
 
-void vox_navMapManager::timerCallback()
+void MapManager::timerCallback()
 {
   // Since this is static map we need to georefence this only once not each time
   std::call_once(
@@ -223,8 +223,13 @@ void vox_navMapManager::timerCallback()
 
       tf2::Transform static_map_to_map_transfrom = static_map_rotation *
       static_map_translation.inverse();
-      
+
+
+      RCLCPP_INFO(this->get_logger(), "Regressing costs");
+
+      regressCosts();
       alignStaticMapToMap(static_map_to_map_transfrom);
+      fillOctomapMarkers(*octomap_octree_);
 
       RCLCPP_INFO(get_logger(), "Georeferenced given map");
     });
@@ -232,7 +237,7 @@ void vox_navMapManager::timerCallback()
   publishAlignedMap();
 }
 
-void vox_navMapManager::publishAlignedMap()
+void MapManager::publishAlignedMap()
 {
   octomap_ros_msg_->header.stamp = this->now();
   octomap_ros_msg_->header.frame_id = map_frame_id_;
@@ -249,7 +254,7 @@ void vox_navMapManager::publishAlignedMap()
   }
 }
 
-void vox_navMapManager::fromGPSPoseToMapPose(
+void MapManager::fromGPSPoseToMapPose(
   const robot_localization::srv::FromLL::Request::SharedPtr request,
   robot_localization::srv::FromLL::Response::SharedPtr response)
 {
@@ -257,10 +262,11 @@ void vox_navMapManager::fromGPSPoseToMapPose(
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(
         this->get_logger(),
-        "Interrupted while waiting for the /fromLL service. Exiting.");
+        "Interrupted while waiting for the /fromLL service.Exiting");
       return;
     }
-    RCLCPP_INFO(this->get_logger(), "/fromLL service not available, waiting and trying again...");
+    RCLCPP_INFO(
+      this->get_logger(), "/fromLL service not available, waiting and trying again");
   }
 
   auto result_future = robot_localization_fromLL_client_->async_send_request(request);
@@ -269,14 +275,14 @@ void vox_navMapManager::fromGPSPoseToMapPose(
       result_future) !=
     rclcpp::FutureReturnCode::SUCCESS)
   {
-    RCLCPP_ERROR(this->get_logger(), "/fromLL service call failed :(");
+    RCLCPP_ERROR(this->get_logger(), "/fromLL service call failed");
   }
 
   auto result = result_future.get();
   response->map_point = result->map_point;
 }
 
-void vox_navMapManager::alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom)
+void MapManager::alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom)
 {
   pcl_ros::transformPointCloud(
     *pcd_map_pointcloud_, *pcd_map_pointcloud_, static_map_to_map_transfrom
@@ -312,13 +318,12 @@ void vox_navMapManager::alignStaticMapToMap(const tf2::Transform & static_map_to
     std::cerr << e.what() << '\n';
     RCLCPP_ERROR(
       get_logger(),
-      "Exception while converting binary octomap  %s:", e.what());
+      "Exception while converting binary octomap %s:", e.what());
   }
 
-  fillOctomapMarkers(*octomap_octree_);
 }
 
-void vox_navMapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
+void MapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
 {
   auto tree_depth = tree.getTreeDepth();
   octomap_markers_.markers.resize(tree_depth + 1);
@@ -385,6 +390,99 @@ void vox_navMapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
   }
 }
 
+void MapManager::regressCosts()
+{
+  // PARAMETERS
+  double CELL_RADIUS = 0.8;
+  double MAX_ALLOWED_TILT = 40.0; // degrees
+  double MAX_ALLOWED_POINT_DEVIATION = 0.2;
+  double MAX_ALLOWED_ENERGY_GAP = 0.2;
+  double NODE_ELEVATION_DISTANCE = 0.5;
+  double PLANE_FIT_THRES = 0.2;
+  bool INCLUDE_NODE_CENTERS_IN_CLOUD = true;
+  const double kMAX_COLOR_RANGE = 255.0;
+
+  // DENOISE THE CLOUD IF HAVENT ALREADY
+  auto denoised_cloud =
+    denoise_segmented_cloud(pcd_map_pointcloud_, 0.8, 0.3, 10);
+
+  // REMOVE NON TRAVERSABLE POINTS(RED POINTS)
+  auto pure_traversable_pcl = get_traversable_points(denoised_cloud);
+  auto pure_non_traversable_pcl = get_non_traversable_points(denoised_cloud);
+
+  // UNIFORMLY SAMPLE NODES ON TOP OF TRAVERSABLE CLOUD
+  auto uniformly_sampled_nodes = uniformly_sample_cloud(
+    pure_traversable_pcl,
+    CELL_RADIUS);
+
+  // THIS IS BASICALLY VECTOR OF CLOUD SEGMENTS, EACH SEGMENT INCLUDES POINTS REPRESENTING CELL,
+  // THE FIRST ELEMNET OF PAIR IS CENTROID WHILE SECOND IS THE POINTCLOUD ITSELF
+  std::vector<std::pair<pcl::PointXYZRGB,
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr>> decomposed_cells =
+    decompose_traversability_cloud(
+    pure_traversable_pcl,
+    uniformly_sampled_nodes, CELL_RADIUS);
+
+  pcl::PointCloud<pcl::PointXYZRGB> cld;
+  pcl::PointCloud<pcl::PointXYZRGB> elevated_nodes_cloud;
+  for (auto && i : decomposed_cells) {
+
+    auto plane_model = fit_plane_to_cloud(i.second, PLANE_FIT_THRES);
+    auto rpy_from_plane_model = absolute_rpy_from_plane(plane_model);
+
+    auto pitch = rpy_from_plane_model[0];
+    auto roll = rpy_from_plane_model[1];
+    auto yaw = rpy_from_plane_model[2];
+
+    double average_point_deviation =
+      average_point_deviation_from_plane(i.second, plane_model);
+
+    double max_energy_gap =
+      max_energy_gap_in_cloud(i.second, 0.1, 1.0);
+
+    double slope_cost = std::min(
+      std::max(pitch, roll) / MAX_ALLOWED_TILT, 1.0) * kMAX_COLOR_RANGE;
+
+    double energy_gap_cost = std::min(
+      max_energy_gap / MAX_ALLOWED_ENERGY_GAP, 1.0) * kMAX_COLOR_RANGE;
+
+    double deviation_of_points_cost = std::min(
+      average_point_deviation / MAX_ALLOWED_POINT_DEVIATION, 1.0) * kMAX_COLOR_RANGE;
+
+
+    double total_cost = 0.8 * slope_cost + 0.1 * deviation_of_points_cost + 0.1 * energy_gap_cost;
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_fitted_cell(
+      new pcl::PointCloud<pcl::PointXYZRGB>);
+
+    if (std::max(pitch, roll) > MAX_ALLOWED_TILT) {
+      plane_fitted_cell = set_cloud_color(
+        i.second, std::vector<double>({255.0, 0, 0}));
+    } else {
+      plane_fitted_cell = set_cloud_color(
+        i.second, std::vector<double>({0.0, kMAX_COLOR_RANGE - total_cost, total_cost}));
+    }
+
+    pcl::PointXYZRGB elevated_node;
+    elevated_node.x = i.first.x + NODE_ELEVATION_DISTANCE * plane_model.values[0];
+    elevated_node.y = i.first.y + NODE_ELEVATION_DISTANCE * plane_model.values[1];
+    elevated_node.z = i.first.z + NODE_ELEVATION_DISTANCE * plane_model.values[2];
+    elevated_node.r = kMAX_COLOR_RANGE;
+    elevated_node.g = kMAX_COLOR_RANGE;
+    elevated_nodes_cloud.points.push_back(elevated_node);
+
+    cld += *plane_fitted_cell;
+  }
+
+  if (INCLUDE_NODE_CENTERS_IN_CLOUD) {
+    elevated_nodes_cloud.height = 1;
+    elevated_nodes_cloud.width = elevated_nodes_cloud.points.size();
+    cld += elevated_nodes_cloud;
+  }
+  cld += *pure_non_traversable_pcl;
+
+  *pcd_map_pointcloud_ = cld;
+}
 }   // namespace vox_nav_map_server
 
 /**
@@ -398,7 +496,7 @@ int main(int argc, char const * argv[])
 {
   rclcpp::init(argc, argv);
   auto gps_waypoint_follower_client_node = std::make_shared
-    <vox_nav_map_server::vox_navMapManager>();
+    <vox_nav_map_server::MapManager>();
   rclcpp::spin(gps_waypoint_follower_client_node);
   rclcpp::shutdown();
   return 0;

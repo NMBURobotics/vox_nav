@@ -44,7 +44,7 @@ To install ROS2 foxy desktop ;
    wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos
    vcs import src < underlay.repos     
    rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy   
-   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-select casadi ompl
+   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=true --packages-select casadi ompl
    sudo cp install/ompl/lib/libompl.so* /usr/local/lib/
    sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/
    sudo rm -rf src/ompl/
@@ -59,7 +59,7 @@ perception_pcl ,OMPL and casadi. The above sript will build and install them and
 
    source /opt/ros/foxy/setup.bash
    cd ~/ros2_ws
-   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-skip archived_vox_nav_cartographer archived_vox_nav_grid_map vox_nav_openvslam
+   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-skip-regex archived --packages-skip ompl casadi vox_nav_openvslam
    source ~/ros2_ws/install/setup.bash
 
 .. note::

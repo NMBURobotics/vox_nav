@@ -69,20 +69,20 @@ namespace vox_nav_map_server
  * @brief
  *
  */
-class vox_navMapManager : public rclcpp::Node
+class MapManager : public rclcpp::Node
 {
 public:
   /**
    * @brief Construct a new vox_nav Map Manager object
    *
    */
-  vox_navMapManager();
+  MapManager();
 
   /**
    * @brief Destroy the vox_nav Map Manager object
    *
    */
-  ~vox_navMapManager();
+  ~MapManager();
 
   /**
   * @brief periodically called function to publish octomap and its pointcloud data
@@ -121,6 +121,8 @@ public:
    * @param static_map_to_map_transfrom
    */
   void alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom);
+
+  void regressCosts();
 
 protected:
   // Used to creted a periodic callback function IOT publish transfrom/octomap/cloud etc.
