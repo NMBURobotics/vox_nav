@@ -9,7 +9,9 @@ Botanbot Sim
 Botanbot is a simple 4 wheeled , ackermann drived mobile robot.
 It is simulated under Gazebo with all required essential sensors in order to do outdoor navigation. The following table shows currently supported sensors. 
 
-Sensor support for Botanbot
+
+**1. Sensor support for Botanbot**
+
 ========================================
 
 +-------------------------------+--------------------------+----------------------------------+-----------------------+

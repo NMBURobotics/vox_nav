@@ -122,14 +122,12 @@ parameters for these nodes are more or less as following;
                z: 4.672499893387009e-05
                w: 0.9999932007970892
 
-vox_nav's skeleton is made by ROS2 nodes; 
-1. vox_nav_planner_server_rclcpp_node, 
-2. vox_nav_controller_server_rclcpp_node, 
-3. vox_nav_map_server_rclcpp_node.
+vox_nav's skeleton is made by following ROS2 nodes; 
 
 Some highlights of the fetaures for this nodes are as follows.
 
-* vox_nav_planner_server_rclcpp_node
+**1. vox_nav_planner_server_rclcpp_node**
+
 You can select an available planner plugin(SE2Planner or SE3Planner), be sure to see through the parameters. 
 SE2Planner can be configured such that kinematic constrains
 of ackemann robots are respected. e.g select REEDS OR DUBINS spaces.
@@ -139,11 +137,13 @@ The planners are Sampling-Based, they utilize a octomap of environment in order 
 You also need to provide a 3D volume box that represents body of your robot. 
 see the robot_body_dimens params for that.
 
-* vox_nav_controller_server_rclcpp_node
+**2. vox_nav_controller_server_rclcpp_node**
+
 TODO
 
-* vox_nav_map_server_rclcpp_node
 
+**3. vox_nav_map_server_rclcpp_node**
+ 
 You will need to provide a pre-built pcd map of environment for this node to consume. 
 This map needs to have a datum of its origin(GPS coordinates and IMU acquired absolute heading). 
 This is basically the pose where you initialize your SLAM algorithm to build your map. 
@@ -153,4 +153,4 @@ Refer to SLAM section to see more details.
 With this information the node is able to grab your pcd map and georeference it utilizing robot_localization package. 
 The pcd map is converted to an octomap and published with configured voxel sizes and topic names. 
 You should visualize topics in RVIZ, in order to make sure the map looks as expected.
-visualizing as markers usually lags RVIZ, instead we reccoemnd you to visualize pointcloud topic of octomap.
+visualizing as markers usually lags RVIZ, instead we recomend you to visualize pointcloud topic of octomap.

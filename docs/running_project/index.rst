@@ -32,8 +32,8 @@ Click on Control Plugin and you would be able to see;
    :align: center
    :alt: rqt landing screen
 
-Interact with GUI
-========================================   
+
+**1. Interact with GUI**
 
 Select a world that you would like to run te robot in then Click on Start Gazebo Stand Alone, to start botanbot simulation. 
 Note that the Gazebo worlds we use are large, so your computer needs to have an dedicated GPU,it takes apprx. 10 seconds for simulation to start in my case.
