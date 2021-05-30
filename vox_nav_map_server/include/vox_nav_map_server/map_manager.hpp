@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Norwegian University of Life Sciences, Fetullah Atas
+// Copyright (c) 2021 Norwegian University of Life Sciences Fetullah Atas
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <robot_localization/srv/from_ll.hpp>
+#include <vox_nav_map_server/cost_regression_utils.hpp>
 #include <vox_nav_msgs/msg/oriented_nav_sat_fix.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
 
@@ -128,7 +129,8 @@ protected:
   rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_publisher_;
   // publishes octomap in form of a point cloud message
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr octomap_pointloud_publisher_;
-  // robot_localization package provides a service to convert lat,long,al GPS cooordinates to x,y,z map points
+  // robot_localization package provides a service to convert
+  // lat,long,al GPS cooordinates to x,y,z map points
   rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr robot_localization_fromLL_client_;
   // clint node used for spinning the service callback of robot_localization_fromLL_client_
   rclcpp::Node::SharedPtr robot_localization_fromLL_client_node_;
@@ -153,7 +155,8 @@ protected:
   std::string utm_frame_id_;
   // rclcpp parameters from yaml file: vxel size for octomap
   double octomap_voxel_size_;
-  // see navsat_transform_node from robot_localization, this offset is needed to recorrect orientation of static map
+  // see navsat_transform_node from robot_localization
+  // this offset is needed to recorrect orientation of static map
   double yaw_offset_;
   // rclcpp parameters from yaml file: publish frequncy to publish map and transfroms
   int octomap_publish_frequency_;

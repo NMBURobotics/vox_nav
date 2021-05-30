@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <algorithm>
 
 namespace vox_nav_map_server
 {
@@ -104,7 +105,8 @@ vox_navMapManager::vox_navMapManager()
     std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
     std::bind(&vox_navMapManager::timerCallback, this));
   robot_localization_fromLL_client_ =
-    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
+    robot_localization_fromLL_client_node_->
+    create_client<robot_localization::srv::FromLL>("/fromLL");
   // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
@@ -181,7 +183,8 @@ void vox_navMapManager::timerCallback()
       }
       RCLCPP_INFO(
         get_logger(), "Going to align the static map to map frames once,"
-        " But the map and octomap will be published at %i frequncy rate", octomap_publish_frequency_);
+        " But the map and octomap will be published at %i frequncy rate",
+        octomap_publish_frequency_);
       RCLCPP_INFO(get_logger(), "Depending on the size of map , this might tke a while..");
       auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
       auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
@@ -190,7 +193,8 @@ void vox_navMapManager::timerCallback()
       request->ll_point.altitude = static_map_gps_pose_->position.altitude;
       fromGPSPoseToMapPose(request, response);
 
-      // "/fromLL" service only accounts for translational transform, we still need to rotate the points according to yaw_offset
+      // "/fromLL" service only accounts for translational transform
+      // we still need to rotate the points according to yaw_offset
       // yaw_offset determines rotation between utm and map frame
       // Normally utm and map frmaes are aligned rotationally, but if there is yaw_offset set in
       // navsat_transfrom_node we have to account for that yaw_offset here as well
@@ -212,12 +216,14 @@ void vox_navMapManager::timerCallback()
       tf2::Transform static_map_rotation;
       tf2::Quaternion static_map_quaternion;
       tf2::fromMsg(static_map_gps_pose_->orientation, static_map_quaternion);
-      // First align the static map origin to map in translation, and then rotate the static map with its correct rotation
+      // First align the static map origin to map in translation
+      // and then rotate the static map with its correct rotation
       static_map_rotation.setOrigin(tf2::Vector3(0, 0, 0));
       static_map_rotation.setRotation(static_map_quaternion);
 
       tf2::Transform static_map_to_map_transfrom = static_map_rotation *
       static_map_translation.inverse();
+      
       alignStaticMapToMap(static_map_to_map_transfrom);
 
       RCLCPP_INFO(get_logger(), "Georeferenced given map");
@@ -302,7 +308,6 @@ void vox_navMapManager::alignStaticMapToMap(const tf2::Transform & static_map_to
     octomap_msgs::fullMapToMsg<octomap::ColorOcTree>(*octomap_octree_, *octomap_ros_msg_);
     octomap_ros_msg_->binary = false;
     octomap_ros_msg_->resolution = octomap_voxel_size_;
-
   } catch (const std::exception & e) {
     std::cerr << e.what() << '\n';
     RCLCPP_ERROR(
