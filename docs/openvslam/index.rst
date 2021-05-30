@@ -16,8 +16,8 @@ tha covers tomato fields.
    :align: center
    :alt: rqt landing screen
 
-Installation and Usage of OpenVSLAM
-========================================
+* Installation and Usage of OpenVSLAM
+
 
 It is best to refer to their read the docs website of OpenVSLAM here; https://openvslam.readthedocs.io/en/develop/installation.html
 for an updated information related to installation.
