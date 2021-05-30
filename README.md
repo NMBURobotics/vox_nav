@@ -5,17 +5,17 @@ Documentation is here ; https://vox-nav.readthedocs.io/en/latest/
  
 ### Videos 
 
-You can download videos and see capablities of project. See all available videos under assets.
+You can download videos and see capablities of project. See all available videos under docs/assets.
 
-* ![MPC following a Trajectory](assets/mpc_3.mp4)
+* ![MPC following a Trajectory](docs/assets/mpc_3.mp4)
 
-* ![Full Navigation using Behaviour Trees](assets/navigation_in_action.mp4)
+* ![Full Navigation using Behaviour Trees](docs/assets/navigation_in_action.mp4)
 
-* ![Full Navigation DUBINS space](assets/navigation_dubins_space.mp4)
+* ![Full Navigation DUBINS space](docs/assets/navigation_dubins_space.mp4)
 
-* ![Full Navigation SE3 space](assets/navigation_se3_planner.mp4)
+* ![Full Navigation SE3 space](docs/assets/navigation_se3_planner.mp4)
 
-* ![Full Navigation REEDSPEEP space](assets/navigation_se2_control_planner.mp4)
+* ![Full Navigation REEDSPEEP space](docs/assets/navigation_se2_control_planner.mp4)
 
 ### Related Publications
 
