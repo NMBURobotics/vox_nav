@@ -20,45 +20,45 @@ parameters for these nodes are more or less as following;
 
    vox_nav_planner_server_rclcpp_node:
       ros__parameters:
-         planner_plugin: "SE3Planner"                             # other options: "SE2Planner", "SE3Planner"
+         planner_plugin: "SE3Planner"                  # other options: "SE2Planner", "SE3Planner"
          expected_planner_frequency: 10.0
          SE2Planner:
             plugin: "vox_nav_planning::SE2Planner"
-            planner_name: "RRTstar"                               # other options: RRTstar, RRTConnect, KPIECE1, SBL, SST
+            planner_name: "RRTstar"                    # other options: RRTstar, RRTConnect, KPIECE1, SBL, SST and many more see OMPL or vox_nav_utiities
             planner_timeout: 3.0
             interpolation_parameter: 50
             octomap_topic: "octomap"
             octomap_voxel_size: 0.2
-            se2_space: "SE2"                                      # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+            se2_space: "SE2"                           # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
             state_space_boundries:
-               minx: -50.0
-               maxx: 50.0
-               miny: -50.0
-               maxy: 50.0
-               minyaw: -3.14
-               maxyaw: 3.14
+            minx: -50.0
+            maxx: 50.0
+            miny: -50.0
+            maxy: 50.0
+            minyaw: -3.14
+            maxyaw: 3.14
             robot_body_dimens:
-               x: 1.5
-               y: 1.0
-               z: 0.4
+            x: 1.5
+            y: 1.0
+            z: 0.4
          SE3Planner:
             plugin: "vox_nav_planning::SE3Planner"
-            planner_name: "PRMStar"                               # other options: PRMStar, RRTstar, RRTConnect, KPIECE1
+            planner_name: "RRTstar"                   # other options: PRMStar, RRTstar, RRTConnect, KPIECE1
             planner_timeout: 15.0
             interpolation_parameter: 25
             octomap_topic: "octomap"
             octomap_voxel_size: 0.2
-            state_space_boundries:                               # boundries expans from the origin of your map
-               minx: -50.0
-               maxx: 50.0
-               miny: -50.0
-               maxy: 50.0
-               minz: -2.0
-               maxz: 12.0
-            robot_body_dimens:                                   # robot body volume box dimensions
-               x: 1.0
-               y: 1.0
-               z: 0.2
+            state_space_boundries:
+            minx: -50.0
+            maxx: 50.0
+            miny: -50.0
+            maxy: 50.0
+            minz: -2.0
+            maxz: 12.0
+            robot_body_dimens:
+            x: 1.0
+            y: 1.0
+            z: 0.2
 
    vox_nav_controller_server_rclcpp_node:
       ros__parameters:
@@ -87,40 +87,53 @@ parameters for these nodes are more or less as following;
 
    vox_nav_map_server_rclcpp_node:
       ros__parameters:
-         pcd_map_filename: /home/atas/data/pcd_map.pcd
-         pcd_map_downsample_voxel_size: 0.1                                                        # set to smaller if you do not want downsample
-         pcd_map_transform:                                                                        # Apply an optional rigid-body transrom to pcd file
+         pcd_map_filename: /home/atas/colcon_ws/src/botanbot_sim/botanbot_bringup/maps/uneven_world.pcd
+         pcd_map_downsample_voxel_size: 0.1                                        # Set to smaller if you do not want downsample
+         pcd_map_transform:                                                        # Apply an optional rigid-body transrom to pcd file
             translation:
-               x: 0.0
-               y: 0.0
-               z: 0.0 #1.0
-            rotation:                                                                               # intrinsic rotation X-Y-Z (r-p-y)sequence
-               r: 0.0 #3.14
-               p: 0.0 #1.57
-               y: 0.0 #1.57
-         apply_filters: False                                                                       # Mostly for noise removal
+            x: 0.0
+            y: 0.0
+            z: 0.0 #1.0
+            rotation:                                                               #intrinsic rotation X-Y-Z (r-p-y)sequence
+            r: 0.0 #3.14
+            p: 0.0 #1.57
+            y: 0.0 #1.57
+         apply_filters: False # Mostly for noise removal
          remove_outlier_mean_K: 50
          remove_outlier_stddev_threshold: 0.1
          remove_outlier_radius_search: 0.1
          remove_outlier_min_neighbors_in_radius: 1
+         # COST REGRESSION CRITICS AND PARAMS
+         cell_radius: 0.8                                                         # Works as resolution of cost regression onto map
+         max_allowed_tilt: 40.0                                                   # 1st Cost critic Any angle higher than this is marked as NON-traversable
+         max_allowed_point_deviation: 0.2                                         # 2nd Cost critic Point deviation from plane, this could be viewed as roughness of each cell 
+         max_allowed_energy_gap: 0.2                                              # 3rd Cost critic Max Energy in each cell, this is detemined by max height differnce between edge points of cell
+         node_elevation_distance: 0.5                                             # According to cell_radius, cell centers are sampled from original point cloud map, they are elevated from the original cloud
+         plane_fit_threshold: 0.2                                                 # when fitting a flan to each cell, a plane_fit_threshold is considered from plane fitting f PCL
+         robot_mass: 0.1                                                          # approximate robot mass considering cell_radius
+         average_speed: 1.0                                                       # average robot speed(m/s) when calcuating kinetic energy m = 0.5 * (m * pow(v,2))
+         include_node_centers_in_cloud: true                                      # should cell(node) centers be included in ap ? , they will apear as yellow
+         cost_critic_weights: [0.6, 0.2, 0.2]                                     # Give weight to each cost critic wen calculating final cost
+         # PCD MAP IS TRANSLATED TO OCTOMAP TO BE USED BY PLANNER
          octomap_voxel_size: 0.2
          octomap_publish_frequency: 1
          publish_octomap_as_pointcloud: true
          publish_octomap_markers: true
-         octomap_publish_topic_name: "octomap"                                                      # octomap_msgs::msg::Octomap type of message topic name
-         octomap_point_cloud_publish_topic: "octomap_pointcloud"                                    # sensor_msgs::msg::PoinCloud2 that represents octomap
+         octomap_publish_topic_name: "octomap"                                    # octomap_msgs::msg::Octomap type of message topic name
+         octomap_point_cloud_publish_topic: "octomap_pointcloud"                  # sensor_msgs::msg::PoinCloud2 that represents octomap
          map_frame_id: "map"
          utm_frame_id: "utm"
-         yaw_offset: 1.57                                                                           # see navsat_transform_node from robot_localization, this offset is needed to recorrect orientation of static map
+         yaw_offset: 1.57                                                         # see navsat_transform_node from robot_localization, this offset is needed to recorrect orientation of static map
          map_coordinates:
             latitude: 49.89999996757017
             longitude: 8.899999997371747
             altitude: 1.8
             quaternion:
-               x: -0.0001960611448920198
-               y: -0.003682083159658604
-               z: 4.672499893387009e-05
-               w: 0.9999932007970892
+            x: -0.0001960611448920198
+            y: -0.003682083159658604
+            z: 4.672499893387009e-05
+            w: 0.9999932007970892
+
 
 vox_nav's skeleton is made by following ROS2 nodes; 
 

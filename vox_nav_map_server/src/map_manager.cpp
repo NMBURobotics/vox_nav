@@ -70,7 +70,6 @@ MapManager::MapManager()
   declare_parameter("include_node_centers_in_cloud", true);
   declare_parameter("cost_critic_weights", std::vector<double>({0.8, 0.1, 0.1}));
 
-
   // get this node's parameters
   get_parameter("pcd_map_filename", pcd_map_filename_);
   get_parameter("octomap_publish_topic_name", octomap_publish_topic_name_);
@@ -300,6 +299,12 @@ void MapManager::fromGPSPoseToMapPose(
 
 void MapManager::regressCosts()
 {
+  // EXPERIMENTAL, THIS ASSUMES WE HAVE NO PRIOR INFORMATION OF
+  // SEGMENTATION, SO MARK ALL POINTS AS TRAVERSABLE
+  // BY PAINTING THEM GREEN > 0
+  pcd_map_pointcloud_ =
+    set_cloud_color(pcd_map_pointcloud_, std::vector<double>({0.0, 255.0, 0.0}));
+
   // REMOVE NON TRAVERSABLE POINTS(RED POINTS)
   auto pure_traversable_pcl = get_traversable_points(pcd_map_pointcloud_);
   auto pure_non_traversable_pcl = get_non_traversable_points(pcd_map_pointcloud_);
