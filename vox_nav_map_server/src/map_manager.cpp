@@ -59,6 +59,17 @@ MapManager::MapManager()
   declare_parameter("remove_outlier_stddev_threshold", 1.0);
   declare_parameter("remove_outlier_radius_search", 0.1);
   declare_parameter("remove_outlier_min_neighbors_in_radius", 1);
+  declare_parameter("cell_radius", 0.8);
+  declare_parameter("max_allowed_tilt", 40.0);
+  declare_parameter("max_allowed_point_deviation", 0.2);
+  declare_parameter("max_allowed_energy_gap", 0.2);
+  declare_parameter("node_elevation_distance", 0.5);
+  declare_parameter("plane_fit_threshold", 0.2);
+  declare_parameter("robot_mass", 0.1);
+  declare_parameter("average_speed", 1.0);
+  declare_parameter("include_node_centers_in_cloud", true);
+  declare_parameter("cost_critic_weights", std::vector<double>({0.8, 0.1, 0.1}));
+
 
   // get this node's parameters
   get_parameter("pcd_map_filename", pcd_map_filename_);
@@ -90,6 +101,16 @@ MapManager::MapManager()
   get_parameter("remove_outlier_stddev_threshold", remove_outlier_stddev_threshold_);
   get_parameter("remove_outlier_radius_search", remove_outlier_radius_search_);
   get_parameter("remove_outlier_min_neighbors_in_radius", remove_outlier_min_neighbors_in_radius_);
+  get_parameter("cell_radius", cell_radius_);
+  get_parameter("max_allowed_tilt", max_allowed_tilt_);
+  get_parameter("max_allowed_point_deviation", max_allowed_point_deviation_);
+  get_parameter("max_allowed_energy_gap", max_allowed_energy_gap_);
+  get_parameter("node_elevation_distance", node_elevation_distance_);
+  get_parameter("plane_fit_threshold", plane_fit_threshold_);
+  get_parameter("robot_mass", robot_mass_);
+  get_parameter("average_speed", average_speed_);
+  get_parameter("include_node_centers_in_cloud", include_node_centers_in_cloud_);
+  get_parameter("cost_critic_weights", cost_critic_weights_);
 
   octomap_octree_ = std::make_shared<octomap::ColorOcTree>(octomap_voxel_size_);
   octomap_ros_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
@@ -183,9 +204,9 @@ void MapManager::timerCallback()
       }
       RCLCPP_INFO(
         get_logger(), "Going to align the static map to map frames once,"
-        " But the map and octomap will be published at %i frequncy rate",
+        " But the map and octomap will be published at %i frequency rate",
         octomap_publish_frequency_);
-      RCLCPP_INFO(get_logger(), "Depending on the size of map , this might tke a while..");
+      RCLCPP_INFO(get_logger(), "Depending on the size of map , this might take a while..");
       auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
       auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
       request->ll_point.latitude = static_map_gps_pose_->position.latitude;
@@ -225,13 +246,11 @@ void MapManager::timerCallback()
       static_map_translation.inverse();
 
 
-      RCLCPP_INFO(this->get_logger(), "Regressing costs");
-
+      RCLCPP_INFO(this->get_logger(), "Regressing costs to given pcd map");
       regressCosts();
       alignStaticMapToMap(static_map_to_map_transfrom);
-      fillOctomapMarkers(*octomap_octree_);
-
-      RCLCPP_INFO(get_logger(), "Georeferenced given map");
+      fillOctomapMarkers();
+      RCLCPP_INFO(get_logger(), "Georeferenced given map, ready to publish");
     });
 
   publishAlignedMap();
@@ -242,13 +261,11 @@ void MapManager::publishAlignedMap()
   octomap_ros_msg_->header.stamp = this->now();
   octomap_ros_msg_->header.frame_id = map_frame_id_;
   octomap_publisher_->publish(*octomap_ros_msg_);
-
   if (publish_octomap_as_pointcloud_) {
     octomap_pointcloud_ros_msg_->header.frame_id = map_frame_id_;
     octomap_pointcloud_ros_msg_->header.stamp = this->now();
     octomap_pointloud_publisher_->publish(*octomap_pointcloud_ros_msg_);
   }
-
   if (publish_octomap_markers_) {
     octomap_markers_publisher_->publish(octomap_markers_);
   }
@@ -277,10 +294,87 @@ void MapManager::fromGPSPoseToMapPose(
   {
     RCLCPP_ERROR(this->get_logger(), "/fromLL service call failed");
   }
-
   auto result = result_future.get();
   response->map_point = result->map_point;
 }
+
+void MapManager::regressCosts()
+{
+  // REMOVE NON TRAVERSABLE POINTS(RED POINTS)
+  auto pure_traversable_pcl = get_traversable_points(pcd_map_pointcloud_);
+  auto pure_non_traversable_pcl = get_non_traversable_points(pcd_map_pointcloud_);
+
+  // UNIFORMLY SAMPLE NODES ON TOP OF TRAVERSABLE CLOUD
+  auto uniformly_sampled_nodes = uniformly_sample_cloud(
+    pure_traversable_pcl,
+    cell_radius_);
+
+  // THIS IS BASICALLY VECTOR OF CLOUD SEGMENTS, EACH SEGMENT INCLUDES POINTS REPRESENTING CELL,
+  // THE FIRST ELEMNET OF PAIR IS CENTROID WHILE SECOND IS THE POINTCLOUD ITSELF
+  auto decomposed_cells = decompose_traversability_cloud(
+    pure_traversable_pcl,
+    uniformly_sampled_nodes,
+    cell_radius_);
+
+  pcl::PointCloud<pcl::PointXYZRGB> cost_regressd_cloud;
+  pcl::PointCloud<pcl::PointXYZRGB> elevated_nodes_cloud;
+  for (auto && i : decomposed_cells) {
+    auto plane_model = fit_plane_to_cloud(i.second, plane_fit_threshold_);
+    auto rpy = absolute_rpy_from_plane(plane_model);
+    double average_point_deviation = average_point_deviation_from_plane(i.second, plane_model);
+    double max_energy_gap = max_energy_gap_in_cloud(i.second, robot_mass_, average_speed_);
+
+    double max_tilt = std::max(rpy[0], rpy[1]);
+    double slope_cost = std::min(
+      max_tilt /
+      max_allowed_tilt_, 1.0) *
+      kMaxColorRange;
+    double energy_gap_cost = std::min(
+      max_energy_gap /
+      max_allowed_energy_gap_, 1.0) * kMaxColorRange;
+    double deviation_of_points_cost = std::min(
+      average_point_deviation /
+      max_allowed_point_deviation_, 1.0) * kMaxColorRange;
+
+    double total_cost =
+      cost_critic_weights_[0] * slope_cost +
+      cost_critic_weights_[1] * deviation_of_points_cost +
+      cost_critic_weights_[2] * energy_gap_cost;
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_fitted_cell(
+      new pcl::PointCloud<pcl::PointXYZRGB>);
+
+    if (max_tilt > max_allowed_tilt_) {
+      plane_fitted_cell = set_cloud_color(
+        i.second,
+        std::vector<double>({255.0, 0, 0}));
+    } else {
+      plane_fitted_cell = set_cloud_color(
+        i.second,
+        std::vector<double>({0.0, kMaxColorRange - total_cost, total_cost}));
+    }
+
+    pcl::PointXYZRGB elevated_node;
+    elevated_node.x = i.first.x + node_elevation_distance_ * plane_model.values[0];
+    elevated_node.y = i.first.y + node_elevation_distance_ * plane_model.values[1];
+    elevated_node.z = i.first.z + node_elevation_distance_ * plane_model.values[2];
+    elevated_node.r = kMaxColorRange;
+    elevated_node.g = kMaxColorRange;
+    elevated_nodes_cloud.points.push_back(elevated_node);
+    cost_regressd_cloud += *plane_fitted_cell;
+  }
+
+  if (include_node_centers_in_cloud_) {
+    cost_regressd_cloud += elevated_nodes_cloud;
+  }
+  cost_regressd_cloud += *pure_non_traversable_pcl;
+  *pcd_map_pointcloud_ = cost_regressd_cloud;
+
+  pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud(
+    pcd_map_pointcloud_,
+    pcd_map_downsample_voxel_size_);
+}
+
 
 void MapManager::alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom)
 {
@@ -320,16 +414,14 @@ void MapManager::alignStaticMapToMap(const tf2::Transform & static_map_to_map_tr
       get_logger(),
       "Exception while converting binary octomap %s:", e.what());
   }
-
 }
-
-void MapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
+void MapManager::fillOctomapMarkers()
 {
-  auto tree_depth = tree.getTreeDepth();
+  auto tree_depth = octomap_octree_->getTreeDepth();
   octomap_markers_.markers.resize(tree_depth + 1);
   // now, traverse all leafs in the tree:
-  for (auto it = tree.begin(tree_depth),
-    end = tree.end(); it != end; ++it)
+  for (auto it = octomap_octree_->begin(tree_depth),
+    end = octomap_octree_->end(); it != end; ++it)
   {
     unsigned idx = it.getDepth();
     assert(idx < octomap_markers_.markers.size());
@@ -357,7 +449,7 @@ void MapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
       color.b = 0.0;
     }
 
-    if (!tree.isNodeOccupied(*it)) {
+    if (!octomap_octree_->isNodeOccupied(*it)) {
       color.r = 0.0;
       color.g = 0.0;
       color.b = 0.0;
@@ -368,7 +460,7 @@ void MapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
   }
 
   for (unsigned i = 0; i < octomap_markers_.markers.size(); ++i) {
-    double size = tree.getNodeSize(i);
+    double size = octomap_octree_->getNodeSize(i);
 
     octomap_markers_.markers[i].header.frame_id = map_frame_id_;
     octomap_markers_.markers[i].header.stamp = this->now();
@@ -390,99 +482,6 @@ void MapManager::fillOctomapMarkers(const octomap::ColorOcTree & tree)
   }
 }
 
-void MapManager::regressCosts()
-{
-  // PARAMETERS
-  double CELL_RADIUS = 0.8;
-  double MAX_ALLOWED_TILT = 40.0; // degrees
-  double MAX_ALLOWED_POINT_DEVIATION = 0.2;
-  double MAX_ALLOWED_ENERGY_GAP = 0.2;
-  double NODE_ELEVATION_DISTANCE = 0.5;
-  double PLANE_FIT_THRES = 0.2;
-  bool INCLUDE_NODE_CENTERS_IN_CLOUD = true;
-  const double kMAX_COLOR_RANGE = 255.0;
-
-  // DENOISE THE CLOUD IF HAVENT ALREADY
-  auto denoised_cloud =
-    denoise_segmented_cloud(pcd_map_pointcloud_, 0.8, 0.3, 10);
-
-  // REMOVE NON TRAVERSABLE POINTS(RED POINTS)
-  auto pure_traversable_pcl = get_traversable_points(denoised_cloud);
-  auto pure_non_traversable_pcl = get_non_traversable_points(denoised_cloud);
-
-  // UNIFORMLY SAMPLE NODES ON TOP OF TRAVERSABLE CLOUD
-  auto uniformly_sampled_nodes = uniformly_sample_cloud(
-    pure_traversable_pcl,
-    CELL_RADIUS);
-
-  // THIS IS BASICALLY VECTOR OF CLOUD SEGMENTS, EACH SEGMENT INCLUDES POINTS REPRESENTING CELL,
-  // THE FIRST ELEMNET OF PAIR IS CENTROID WHILE SECOND IS THE POINTCLOUD ITSELF
-  std::vector<std::pair<pcl::PointXYZRGB,
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr>> decomposed_cells =
-    decompose_traversability_cloud(
-    pure_traversable_pcl,
-    uniformly_sampled_nodes, CELL_RADIUS);
-
-  pcl::PointCloud<pcl::PointXYZRGB> cld;
-  pcl::PointCloud<pcl::PointXYZRGB> elevated_nodes_cloud;
-  for (auto && i : decomposed_cells) {
-
-    auto plane_model = fit_plane_to_cloud(i.second, PLANE_FIT_THRES);
-    auto rpy_from_plane_model = absolute_rpy_from_plane(plane_model);
-
-    auto pitch = rpy_from_plane_model[0];
-    auto roll = rpy_from_plane_model[1];
-    auto yaw = rpy_from_plane_model[2];
-
-    double average_point_deviation =
-      average_point_deviation_from_plane(i.second, plane_model);
-
-    double max_energy_gap =
-      max_energy_gap_in_cloud(i.second, 0.1, 1.0);
-
-    double slope_cost = std::min(
-      std::max(pitch, roll) / MAX_ALLOWED_TILT, 1.0) * kMAX_COLOR_RANGE;
-
-    double energy_gap_cost = std::min(
-      max_energy_gap / MAX_ALLOWED_ENERGY_GAP, 1.0) * kMAX_COLOR_RANGE;
-
-    double deviation_of_points_cost = std::min(
-      average_point_deviation / MAX_ALLOWED_POINT_DEVIATION, 1.0) * kMAX_COLOR_RANGE;
-
-
-    double total_cost = 0.8 * slope_cost + 0.1 * deviation_of_points_cost + 0.1 * energy_gap_cost;
-
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_fitted_cell(
-      new pcl::PointCloud<pcl::PointXYZRGB>);
-
-    if (std::max(pitch, roll) > MAX_ALLOWED_TILT) {
-      plane_fitted_cell = set_cloud_color(
-        i.second, std::vector<double>({255.0, 0, 0}));
-    } else {
-      plane_fitted_cell = set_cloud_color(
-        i.second, std::vector<double>({0.0, kMAX_COLOR_RANGE - total_cost, total_cost}));
-    }
-
-    pcl::PointXYZRGB elevated_node;
-    elevated_node.x = i.first.x + NODE_ELEVATION_DISTANCE * plane_model.values[0];
-    elevated_node.y = i.first.y + NODE_ELEVATION_DISTANCE * plane_model.values[1];
-    elevated_node.z = i.first.z + NODE_ELEVATION_DISTANCE * plane_model.values[2];
-    elevated_node.r = kMAX_COLOR_RANGE;
-    elevated_node.g = kMAX_COLOR_RANGE;
-    elevated_nodes_cloud.points.push_back(elevated_node);
-
-    cld += *plane_fitted_cell;
-  }
-
-  if (INCLUDE_NODE_CENTERS_IN_CLOUD) {
-    elevated_nodes_cloud.height = 1;
-    elevated_nodes_cloud.width = elevated_nodes_cloud.points.size();
-    cld += elevated_nodes_cloud;
-  }
-  cld += *pure_non_traversable_pcl;
-
-  *pcd_map_pointcloud_ = cld;
-}
 }   // namespace vox_nav_map_server
 
 /**

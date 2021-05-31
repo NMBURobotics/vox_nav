@@ -91,20 +91,6 @@ public:
   void timerCallback();
 
   /**
-   * @brief once map is georefnced, this function
-   *  is called from timerCallback to publish map
-   *
-   */
-  void publishAlignedMap();
-
-  /**
-   * @brief publishes octomap as visualization msgs
-   *
-   * @param tree
-   */
-  void fillOctomapMarkers(const octomap::ColorOcTree & tree);
-
-  /**
    * @brief given GPS lat long alt coordinates uses
    *        robot_localization service to georefence this map
    *
@@ -122,7 +108,24 @@ public:
    */
   void alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom);
 
+  /**
+   * @brief
+   *
+   */
   void regressCosts();
+
+  /**
+ * @brief once map is georefnced, this function
+ *  is called from timerCallback to publish map
+ *
+ */
+  void publishAlignedMap();
+
+  /**
+   * @brief
+   *
+   */
+  void fillOctomapMarkers();
 
 protected:
   // Used to creted a periodic callback function IOT publish transfrom/octomap/cloud etc.
@@ -183,6 +186,19 @@ protected:
   bool apply_filters_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr octomap_markers_publisher_;
   visualization_msgs::msg::MarkerArray octomap_markers_;
+
+  // Cost regression critics
+  double cell_radius_;
+  double max_allowed_tilt_;
+  double max_allowed_point_deviation_;
+  double max_allowed_energy_gap_;
+  double node_elevation_distance_;
+  double plane_fit_threshold_;
+  double robot_mass_;
+  double average_speed_;
+  bool include_node_centers_in_cloud_;
+  const double kMaxColorRange = 255.0;
+  std::vector<double> cost_critic_weights_;
 };
 }  // namespace vox_nav_map_server
 
