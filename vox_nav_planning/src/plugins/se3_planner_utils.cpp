@@ -122,7 +122,7 @@ void OctoCellValidStateSampler::updateSearchArea(
   const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
   const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal)
 {
-  RCLCPP_INFO(logger_, "OctoCellValidStateSampler Updating search are");
+  RCLCPP_INFO(logger_, "Updating search area");
 
   search_area_pcl_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -145,8 +145,7 @@ void OctoCellValidStateSampler::updateSearchArea(
     std::pow( (goal->get()->getZ() - start->get()->getZ()), 2)
   );
 
-  RCLCPP_INFO(
-    logger_, "Adjusting a search area with radius of: %.3f", radius);
+  RCLCPP_INFO(logger_, "Adjusting a search area with radius of: %.3f", radius);
 
   if (octree.radiusSearch(
       searchPoint, radius, pointIdxRadiusSearch,
@@ -156,9 +155,93 @@ void OctoCellValidStateSampler::updateSearchArea(
       search_area_pcl_->points.push_back(workspace_pcl_->points[pointIdxRadiusSearch[i]]);
     }
   }
-  RCLCPP_INFO(logger_, "OctoCellValidStateSampler Updated search area nodes");
+  RCLCPP_INFO(logger_, "Updated search area nodes");
+}
+
+OctoCellStateSampler::OctoCellStateSampler(
+  const ompl::base::StateSpacePtr & space,
+  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
+  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal,
+  const std::shared_ptr<octomap::ColorOcTree> & tree)
+: StateSampler(space.get())
+{
+  workspace_pcl_ =
+    pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+  for (auto it = tree->begin(),
+    end = tree->end();
+    it != end; ++it)
+  {
+    if (it->getValue() > 2.0) {
+      pcl::PointXYZ node_as_point;
+      node_as_point.x = it.getCoordinate().x();
+      node_as_point.y = it.getCoordinate().y();
+      node_as_point.z = it.getCoordinate().z();
+      workspace_pcl_->points.push_back(node_as_point);
+    }
+  }
+
   RCLCPP_INFO(
-    logger_, "OctoCellValidStateSampler Search area has nodes:%d nodes",
+    logger_, "OctoCellStateSampler bases on an Octomap with %d nodes",
+    workspace_pcl_->points.size());
+
+  updateSearchArea(start, goal);
+
+  RCLCPP_INFO(
+    logger_, "Search area has nodes: %d nodes",
     search_area_pcl_->points.size());
+}
+
+OctoCellStateSampler::~OctoCellStateSampler()
+{
+}
+
+void OctoCellStateSampler::sampleUniform(ompl::base::State * state)
+{
+  auto se3_state = static_cast<ompl::base::SE3StateSpace::StateType *>(state);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr out_sample(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::RandomSample<pcl::PointXYZ> random_sample(true);
+  random_sample.setInputCloud(search_area_pcl_);
+  random_sample.setSample(1);
+  pcl::Indices indices;
+  random_sample.filter(indices);
+  random_sample.filter(*out_sample);
+  se3_state->setXYZ(
+    out_sample->points.front().x,
+    out_sample->points.front().y,
+    out_sample->points.front().z);
+}
+
+void OctoCellStateSampler::updateSearchArea(
+  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
+  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal)
+{
+  RCLCPP_INFO(logger_, "Updating search area");
+  search_area_pcl_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
+  float resolution = 0.2;
+  pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree(resolution);
+  octree.setInputCloud(workspace_pcl_);
+  octree.addPointsFromInputCloud();
+  pcl::PointXYZ searchPoint;
+  searchPoint.x = (goal->get()->getX() + start->get()->getX()) / 2.0;
+  searchPoint.y = (goal->get()->getY() + start->get()->getY()) / 2.0;
+  searchPoint.z = (goal->get()->getZ() + start->get()->getZ()) / 2.0;
+  // Neighbors within radius search
+  std::vector<int> pointIdxRadiusSearch;
+  std::vector<float> pointRadiusSquaredDistance;
+  float radius = std::sqrt(
+    std::pow( (goal->get()->getX() - start->get()->getX()), 2) +
+    std::pow( (goal->get()->getY() - start->get()->getY()), 2) +
+    std::pow( (goal->get()->getZ() - start->get()->getZ()), 2)
+  );
+  RCLCPP_INFO(logger_, "Adjusting a search area with radius of: %.3f", radius);
+  if (octree.radiusSearch(
+      searchPoint, radius, pointIdxRadiusSearch,
+      pointRadiusSquaredDistance) > 0)
+  {
+    for (std::size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
+      search_area_pcl_->points.push_back(workspace_pcl_->points[pointIdxRadiusSearch[i]]);
+    }
+  }
+  RCLCPP_INFO(logger_, "Updated search area nodes");
 }
 }  // namespace vox_nav_planning

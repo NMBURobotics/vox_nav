@@ -64,6 +64,7 @@
 #include <ompl/base/spaces/ReedsSheppStateSpace.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/tools/benchmark/Benchmark.h>
+#include <ompl/base/StateSampler.h>
 // OCTOMAP
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>

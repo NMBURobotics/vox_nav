@@ -54,14 +54,12 @@ void SE3Planner::initialize(
   parent->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.0);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.y", 0.8);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.z", 0.6);
-
   parent->get_parameter(plugin_name + ".enabled", is_enabled_);
   parent->get_parameter(plugin_name + ".planner_name", planner_name_);
   parent->get_parameter(plugin_name + ".planner_timeout", planner_timeout_);
   parent->get_parameter(plugin_name + ".interpolation_parameter", interpolation_parameter_);
   parent->get_parameter(plugin_name + ".octomap_topic", octomap_topic_);
   parent->get_parameter(plugin_name + ".octomap_voxel_size", octomap_voxel_size_);
-
   state_space_bounds_->setLow(
     0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
   state_space_bounds_->setHigh(
@@ -91,14 +89,11 @@ void SE3Planner::initialize(
   state_space_ = std::make_shared<ompl::base::SE3StateSpace>();
   state_space_->as<ompl::base::SE3StateSpace>()->setBounds(*state_space_bounds_);
   simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
-
   octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
 
   if (!is_enabled_) {
-    RCLCPP_WARN(
-      logger_, "SE3Planner plugin is disabled.");
+    RCLCPP_WARN(logger_, "SE3Planner plugin is disabled.");
   }
-
   RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
 }
 
@@ -116,8 +111,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
 
   if (!is_octomap_ready_) {
     RCLCPP_WARN(
-      logger_,
-      "A valid Octomap has not been receievd yet, Try later again."
+      logger_, "A valid Octomap has not been receievd yet, Try later again."
     );
     return std::vector<geometry_msgs::msg::PoseStamped>();
   }
@@ -183,6 +177,11 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
       &SE3Planner::
       allocValidStateSampler, this, std::placeholders::_1));
 
+  simple_setup_->getStateSpace()->setStateSamplerAllocator(
+    std::bind(
+      &SE3Planner::
+      allocStateSampler, this, std::placeholders::_1));
+
   // attempt to solve the problem within one second of planning time
   ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
   std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
@@ -231,7 +230,7 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
     const ompl::base::SE3StateSpace::StateType * se3state =
       state->as<ompl::base::SE3StateSpace::StateType>();
 
-    /*// extract the second component of the state and cast it to what we expect
+    // extract the second component of the state and cast it to what we expect
     const ompl::base::SO3StateSpace::StateType * rot =
       se3state->as<ompl::base::SO3StateSpace::StateType>(1);
     // check validity of state Fdefined by pos & rot
@@ -239,23 +238,20 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
     fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
     robot_collision_object_->setTransform(rotation, translation);
     fcl::CollisionRequest requestType(1, false, 1, false);
-     fcl::CollisionResult collisionResult;
-     fcl::collide(
-       robot_collision_object_.get(),
-       fcl_octree_collision_object_.get(), requestType, collisionResult);
-    return !collisionResult.isCollision();
-    */
+    fcl::CollisionResult collisionResult;
+    fcl::collide(
+      robot_collision_object_.get(),
+      fcl_octree_collision_object_.get(), requestType, collisionResult);
 
     bool is_valid = false;
     auto node = color_octomap_octree_->search(
       octomap::point3d(se3state->getX(), se3state->getY(), se3state->getZ()));
     if (node) {
-      if (color_octomap_octree_->isNodeOccupied(node)) {
-        is_valid = true;
-      }
+      //if (color_octomap_octree_->isNodeOccupied(node)) {
+      is_valid = true;
+      //}
     }
-    return is_valid;
-
+    return is_valid; //&& !collisionResult.isCollision();
   } else {
     RCLCPP_ERROR(
       logger_,
@@ -318,14 +314,24 @@ void SE3Planner::octomapCallback(
   }
 }
 
-ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
-  const ompl::base::SpaceInformation * si)
+ompl::base::StateSamplerPtr SE3Planner::allocStateSampler(
+  const ompl::base::StateSpace * space)
 {
-  octocell_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
-    simple_setup_->getSpaceInformation(),
+  octocell_state_sampler_ = std::make_shared<OctoCellStateSampler>(
+    simple_setup_->getStateSpace(),
     start_, goal_,
     color_octomap_octree_);
   return octocell_state_sampler_;
+}
+
+ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
+  const ompl::base::SpaceInformation * si)
+{
+  octocell_valid_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
+    simple_setup_->getSpaceInformation(),
+    start_, goal_,
+    color_octomap_octree_);
+  return octocell_valid_state_sampler_;
 }
 
 ompl::base::OptimizationObjectivePtr SE3Planner::getOptimizationObjective()

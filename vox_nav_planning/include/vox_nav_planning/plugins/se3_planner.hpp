@@ -87,6 +87,14 @@ public:
   ompl::base::ValidStateSamplerPtr allocValidStateSampler(const ompl::base::SpaceInformation * si);
 
   /**
+   * @brief
+   *
+   * @param space
+   * @return ompl::base::StateSamplerPtr
+   */
+  ompl::base::StateSamplerPtr allocStateSampler(const ompl::base::StateSpace * space);
+
+  /**
    * @brief Get the Opt Objective object
    *
    * @return ompl::base::OptimizationObjectivePtr
@@ -115,7 +123,8 @@ protected:
   std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
   std::shared_ptr<octomap::OcTree> octomap_octree_;
   std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
-  std::shared_ptr<OctoCellValidStateSampler> octocell_state_sampler_;
+  std::shared_ptr<OctoCellValidStateSampler> octocell_valid_state_sampler_;
+  std::shared_ptr<OctoCellStateSampler> octocell_state_sampler_;
 
   ompl::base::ScopedState<ompl::base::SE3StateSpace> * start_;
   ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal_;

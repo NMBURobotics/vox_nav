@@ -97,6 +97,7 @@ public:
     const ompl::base::State * near,
     const double distance) override;
 
+
   /**
    * @brief
    *
@@ -113,6 +114,73 @@ protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner_utils")};
 };
 
+class OctoCellStateSampler : public ompl::base::StateSampler
+{
+public:
+  /**
+   * @brief Construct a new Octo Cell State Sampler object
+   *
+   * @param space
+   * @param start
+   * @param goal
+   * @param tree
+   */
+  OctoCellStateSampler(
+    const ompl::base::StateSpacePtr & space,
+    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
+    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal,
+    const std::shared_ptr<octomap::ColorOcTree> & tree);
+
+  /**
+   * @brief Destroy the Octo Cell State Sampler object
+   *
+   */
+  ~OctoCellStateSampler();
+
+  /**
+   * @brief
+   *
+   * @param state
+   */
+  void sampleUniform(ompl::base::State * state) override;
+
+  /**
+   * @brief
+   *
+   * @param s
+   * @param n
+   */
+  void sampleUniformNear(ompl::base::State * s, const ompl::base::State * n, double) override
+  {
+    OMPL_ERROR("sampleUniformNear is not supported for OctoCellStateSampler");
+  }
+
+  /**
+   * @brief
+   *
+   * @param s
+   * @param n
+   */
+  void sampleGaussian(ompl::base::State * s, const ompl::base::State * n, double) override
+  {
+    OMPL_ERROR("sampleGaussian is not supported for OctoCellStateSampler");
+  }
+
+  /**
+   * @brief
+   *
+   * @param start
+   * @param goal
+   */
+  void updateSearchArea(
+    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
+    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal);
+
+protected:
+  pcl::PointCloud<pcl::PointXYZ>::Ptr workspace_pcl_;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr search_area_pcl_;
+  rclcpp::Logger logger_{rclcpp::get_logger("se3_planner_utils")};
+};
 }  // namespace vox_nav_planning
 
 #endif  // VOX_NAV_PLANNING__PLUGINS__SE3_PLANNER_UTILS_HPP_

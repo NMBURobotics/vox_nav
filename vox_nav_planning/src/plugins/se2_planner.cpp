@@ -54,7 +54,6 @@ void SE2Planner::initialize(
   parent->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.5);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.y", 1.5);
   parent->declare_parameter(plugin_name + ".robot_body_dimens.z", 0.4);
-
   parent->get_parameter(plugin_name + ".enabled", is_enabled_);
   parent->get_parameter(plugin_name + ".planner_name", planner_name_);
   parent->get_parameter(plugin_name + ".planner_timeout", planner_timeout_);
@@ -91,8 +90,8 @@ void SE2Planner::initialize(
       parent->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
       parent->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
       parent->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
-  fcl::Transform3f tf2;
-  fcl::CollisionObject robot_body_box_object(robot_body_box, tf2);
+
+  fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
   octomap_subscriber_ = parent->create_subscription<octomap_msgs::msg::Octomap>(
     octomap_topic_, rclcpp::SystemDefaultsQoS(),
