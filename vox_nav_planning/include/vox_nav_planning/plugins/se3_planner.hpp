@@ -108,7 +108,6 @@ protected:
 
   ompl::base::ScopedState<ompl::base::SE3StateSpace> * start_;
   ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal_;
-
   ompl::base::StateSpacePtr state_space_;
   ompl::base::OptimizationObjectivePtr octocost_optimization_;
   ompl::geometric::SimpleSetupPtr simple_setup_;
@@ -131,7 +130,6 @@ protected:
   volatile bool is_octomap_ready_;
   // global mutex to guard octomap
   std::mutex octomap_mutex_;
-
 };
 }  // namespace vox_nav_planning
 

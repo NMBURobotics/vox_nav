@@ -81,8 +81,7 @@ void SE3Planner::initialize(
       parent->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
       parent->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
 
-  fcl::Transform3f tf2;
-  fcl::CollisionObject robot_body_box_object(robot_body_box, tf2);
+  fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
 
   octomap_subscriber_ = parent->create_subscription<octomap_msgs::msg::Octomap>(
@@ -157,7 +156,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
 
   simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
 
-
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
   vox_nav_utilities::initializeSelectedPlanner(
@@ -186,7 +184,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
 
   if (solved) {
-
     ompl::geometric::PathGeometric solution_path = simple_setup_->getSolutionPath();
     // Path smoothing using bspline
     ompl::geometric::PathSimplifier * path_simlifier =
@@ -200,7 +197,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
       // extract the second component of the state and cast it to what we expect
       const ompl::base::SO3StateSpace::StateType * rot =
         se3state->as<ompl::base::SO3StateSpace::StateType>(1);
-
       geometry_msgs::msg::PoseStamped pose;
       pose.header.frame_id = start.header.frame_id;
       pose.header.stamp = rclcpp::Clock().now();

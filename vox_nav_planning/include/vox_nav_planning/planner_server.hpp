@@ -107,10 +107,16 @@ protected:
   void computePlan(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle);
 
   /**
-   * @brief Publish a path for visualization purposes
-   * @param path Reference to Global Path
+   * @brief Publish a path for visualization purposes, add start and goal poses too
+   *
+   * @param path
+   * @param start_pose
+   * @param goal_pose
    */
-  void publishPlan(const std::vector<geometry_msgs::msg::PoseStamped> & path);
+  void publishPlan(
+    const std::vector<geometry_msgs::msg::PoseStamped> & path,
+    const geometry_msgs::msg::PoseStamped & start_pose,
+    const geometry_msgs::msg::PoseStamped & goal_pose);
 
   // Planner
   PlannerMap planners_;

@@ -183,7 +183,7 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
     goal_handle->succeed(result);
     RCLCPP_INFO(this->get_logger(), "Goal Succeeded");
     // Publish the plan for visualization purposes
-    publishPlan(result->path.poses);
+    publishPlan(result->path.poses, start_pose, goal->pose);
   }
   cycle_duration = steady_clock_.now() - start_time;
   if (max_planner_duration_ && cycle_duration.seconds() > max_planner_duration_) {
@@ -229,10 +229,13 @@ PlannerServer::getPlan(
   return std::vector<geometry_msgs::msg::PoseStamped>();
 }
 
-void
-PlannerServer::publishPlan(const std::vector<geometry_msgs::msg::PoseStamped> & path)
+void PlannerServer::publishPlan(
+  const std::vector<geometry_msgs::msg::PoseStamped> & path,
+  const geometry_msgs::msg::PoseStamped & start_pose,
+  const geometry_msgs::msg::PoseStamped & goal_pose)
 {
   visualization_msgs::msg::MarkerArray marker_array;
+  visualization_msgs::msg::Marker start_marker, goal_marker;
   auto path_idx = 0;
   for (auto && i : path) {
     visualization_msgs::msg::Marker marker;
@@ -243,13 +246,7 @@ PlannerServer::publishPlan(const std::vector<geometry_msgs::msg::PoseStamped> & 
     marker.type = visualization_msgs::msg::Marker::ARROW;
     marker.action = visualization_msgs::msg::Marker::ADD;
     marker.lifetime = rclcpp::Duration::from_seconds(0);
-    marker.pose.position.x = i.pose.position.x;
-    marker.pose.position.y = i.pose.position.y;
-    marker.pose.position.z = i.pose.position.z;
-    marker.pose.orientation.x = i.pose.orientation.x;
-    marker.pose.orientation.y = i.pose.orientation.y;
-    marker.pose.orientation.z = i.pose.orientation.z;
-    marker.pose.orientation.w = i.pose.orientation.w;
+    marker.pose = i.pose;
     marker.scale.x = 0.30;
     marker.scale.y = 0.2;
     marker.scale.z = 0.2;
@@ -259,7 +256,16 @@ PlannerServer::publishPlan(const std::vector<geometry_msgs::msg::PoseStamped> & 
     marker.color.b = 1.0;
     marker_array.markers.push_back(marker);
     path_idx++;
+    start_marker = marker;
+    goal_marker = marker;
   }
+  // Publish goal and start states for debuging
+  start_marker.pose = start_pose.pose;
+  start_marker.color.b = 0;
+  goal_marker.pose = goal_pose.pose;
+  goal_marker.color.b = 0;
+  marker_array.markers.push_back(start_marker);
+  marker_array.markers.push_back(goal_marker);
   plan_publisher_->publish(marker_array);
 }
 }  // namespace vox_nav_planning
