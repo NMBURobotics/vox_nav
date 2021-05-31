@@ -93,10 +93,21 @@ public:
    */
   ompl::base::OptimizationObjectivePtr getOptimizationObjective();
 
+  /**
+ * @brief Get the Overlayed Start and Goal poses, only x and y are provided for goal ,
+ * but internally planner finds closest valid node on octomap and reassigns goal to this pose
+ *
+ * @return std::vector<geometry_msgs::msg::PoseStamped>
+ */
+  std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() override;
+
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner")};
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
   octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
+
+  geometry_msgs::msg::PoseStamped nearest_node_to_start_;
+  geometry_msgs::msg::PoseStamped nearest_node_to_goal_;
 
   std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
   std::shared_ptr<fcl::OcTree> fcl_octree_;

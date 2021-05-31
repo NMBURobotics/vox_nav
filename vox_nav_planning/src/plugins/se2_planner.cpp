@@ -261,6 +261,13 @@ void SE2Planner::octomapCallback(
   }
 }
 
+std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::getOverlayedStartandGoal()
+{
+  RCLCPP_WARN(
+    logger_,
+    "SE2Planner::getOverlayedStartandGoal Not implemented!");
+  return std::vector<geometry_msgs::msg::PoseStamped>();
+}
 }  // namespace vox_nav_planning
 
 PLUGINLIB_EXPORT_CLASS(vox_nav_planning::SE2Planner, vox_nav_planning::PlannerCore)

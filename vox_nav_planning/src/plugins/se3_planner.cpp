@@ -131,13 +131,17 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   se3_start(state_space_),
   se3_goal(state_space_);
 
-  auto nearest_node_to_start = vox_nav_utilities::getNearstNode(start, color_octomap_octree_);
-  auto nearest_node_to_goal = vox_nav_utilities::getNearstNode(goal, color_octomap_octree_);
+  nearest_node_to_start_ = vox_nav_utilities::getNearstNode(start, color_octomap_octree_);
+  nearest_node_to_goal_ = vox_nav_utilities::getNearstNode(goal, color_octomap_octree_);
+  nearest_node_to_start_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
+    0, 0, start_yaw);
+  nearest_node_to_goal_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
+    0, 0, goal_yaw);
 
   se3_start->setXYZ(
-    nearest_node_to_start.pose.position.x,
-    nearest_node_to_start.pose.position.y,
-    nearest_node_to_start.pose.position.z);
+    nearest_node_to_start_.pose.position.x,
+    nearest_node_to_start_.pose.position.y,
+    nearest_node_to_start_.pose.position.z);
   se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
     0,
     0,
@@ -145,9 +149,9 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     start_yaw);
 
   se3_goal->setXYZ(
-    nearest_node_to_goal.pose.position.x,
-    nearest_node_to_goal.pose.position.y,
-    nearest_node_to_goal.pose.position.z);
+    nearest_node_to_goal_.pose.position.x,
+    nearest_node_to_goal_.pose.position.y,
+    nearest_node_to_goal_.pose.position.z);
   se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
     0,
     0,
@@ -337,6 +341,14 @@ ompl::base::OptimizationObjectivePtr SE3Planner::getOptimizationObjective()
   octocost_optimization_ = octocost_objective;
 
   return length_objective;
+}
+
+std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::getOverlayedStartandGoal()
+{
+  std::vector<geometry_msgs::msg::PoseStamped> start_pose_vector;
+  start_pose_vector.push_back(nearest_node_to_start_);
+  start_pose_vector.push_back(nearest_node_to_goal_);
+  return start_pose_vector;
 }
 }  // namespace vox_nav_planning
 

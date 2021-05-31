@@ -81,6 +81,14 @@ public:
   */
   virtual void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg) override;
 
+/**
+ * @brief Get the Overlayed Start and Goal poses, only x and y are provided for goal ,
+ * but internally planner finds closest valid node on octomap and reassigns goal to this pose
+ *
+ * @return std::vector<geometry_msgs::msg::PoseStamped>
+ */
+  std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() override;
+
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se2_planner")};
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;

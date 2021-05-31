@@ -143,16 +143,16 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
     this->get_logger(), "Received a planning request to (%.3f, %.3f)",
     goal->pose.pose.position.x, goal->pose.pose.position.y);
 
-  geometry_msgs::msg::PoseStamped start_pose;
+  geometry_msgs::msg::PoseStamped start_pose, goal_pose;
   vox_nav_utilities::getCurrentPose(start_pose, *tf_buffer_, "map", "base_link", 0.1);
-
-  result->path.poses = getPlan(start_pose, goal->pose, planner_id_);
+  goal_pose = goal->pose;
+  result->path.poses = getPlan(start_pose, goal_pose, planner_id_);
 
   if (result->path.poses.size() == 0) {
     RCLCPP_WARN(
       get_logger(), "Planning algorithm %s failed to generate a valid"
       " path to (%.2f, %.2f)", goal->planner_id.c_str(),
-      goal->pose.pose.position.x, goal->pose.pose.position.y);
+      goal_pose.pose.position.x, goal_pose.pose.position.y);
     return;
   }
 
@@ -171,8 +171,8 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
   RCLCPP_DEBUG(
     get_logger(),
     "Found valid path of size %u to (%.2f, %.2f)",
-    result->path.poses.size(), goal->pose.pose.position.x,
-    goal->pose.pose.position.y);
+    result->path.poses.size(), goal_pose.pose.position.x,
+    goal_pose.pose.position.y);
 
   auto cycle_duration = steady_clock_.now() - start_time;
 
@@ -183,7 +183,14 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
     goal_handle->succeed(result);
     RCLCPP_INFO(this->get_logger(), "Goal Succeeded");
     // Publish the plan for visualization purposes
-    publishPlan(result->path.poses, start_pose, goal->pose);
+    if (planners_.find(planner_id_) != planners_.end()) {
+      auto overlayed_start_goal = planners_[planner_id_]->getOverlayedStartandGoal();
+      if (overlayed_start_goal.size() == 2) {
+        start_pose = overlayed_start_goal.front();
+        goal_pose = overlayed_start_goal.back();
+      }
+    }
+    publishPlan(result->path.poses, start_pose, goal_pose);
   }
   cycle_duration = steady_clock_.now() - start_time;
   if (max_planner_duration_ && cycle_duration.seconds() > max_planner_duration_) {
