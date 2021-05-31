@@ -325,7 +325,6 @@ ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
     simple_setup_->getSpaceInformation(),
     start_, goal_,
     color_octomap_octree_);
-
   return octocell_state_sampler_;
 }
 
@@ -339,11 +338,10 @@ ompl::base::OptimizationObjectivePtr SE3Planner::getOptimizationObjective()
     new OctoCostOptimizationObjective(
       simple_setup_->getSpaceInformation(), color_octomap_octree_));
 
-  octocost_optimization_ = length_objective;
+  octocost_optimization_ = octocost_objective;
 
-  return octocost_optimization_;
+  return length_objective;
 }
-
 }  // namespace vox_nav_planning
 
 PLUGINLIB_EXPORT_CLASS(vox_nav_planning::SE3Planner, vox_nav_planning::PlannerCore)

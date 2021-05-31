@@ -37,7 +37,7 @@ public:
   */
   OctoCostOptimizationObjective(
     const ompl::base::SpaceInformationPtr & si,
-    std::shared_ptr<octomap::ColorOcTree> tree);
+    const std::shared_ptr<octomap::ColorOcTree> & tree);
 
   /**
    * @brief Destroy the Octo Cost Optimization Objective object
@@ -53,8 +53,9 @@ public:
    */
   ompl::base::Cost stateCost(const ompl::base::State * s) const override;
 
-private:
+protected:
   std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
+  rclcpp::Logger logger_{rclcpp::get_logger("se3_planner_utils")};
 };
 
 
@@ -92,7 +93,8 @@ public:
    * @return false
    */
   bool sampleNear(
-    ompl::base::State * state, const ompl::base::State * near,
+    ompl::base::State * state,
+    const ompl::base::State * near,
     const double distance) override;
 
   /**
@@ -108,6 +110,7 @@ public:
 protected:
   pcl::PointCloud<pcl::PointXYZ>::Ptr workspace_pcl_;
   pcl::PointCloud<pcl::PointXYZ>::Ptr search_area_pcl_;
+  rclcpp::Logger logger_{rclcpp::get_logger("se3_planner_utils")};
 };
 
 }  // namespace vox_nav_planning
