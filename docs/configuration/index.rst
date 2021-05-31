@@ -24,9 +24,9 @@ parameters for these nodes are more or less as following;
          expected_planner_frequency: 10.0
          SE2Planner:
             plugin: "vox_nav_planning::SE2Planner"
-            planner_name: "RRTstar"                    # other options: RRTstar, RRTConnect, KPIECE1, SBL, SST and many more see OMPL or vox_nav_utiities
-            planner_timeout: 3.0
-            interpolation_parameter: 50
+            planner_name: "PRMstar"                   # PRMstar,LazyPRMstar,RRTstar,RRTsharp,RRTXstatic,InformedRRTstar,BITstar, 
+            interpolation_parameter: 25               # ABITstar,AITstar,CForest,LBTRRT,SST,TRRT,SPARS,SPARStwo,FMT,AnytimePathShortening
+            planner_timeout: 15.0
             octomap_topic: "octomap"
             octomap_voxel_size: 0.2
             se2_space: "SE2"                           # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
@@ -43,9 +43,9 @@ parameters for these nodes are more or less as following;
             z: 0.4
          SE3Planner:
             plugin: "vox_nav_planning::SE3Planner"
-            planner_name: "RRTstar"                   # other options: PRMStar, RRTstar, RRTConnect, KPIECE1
+            planner_name: "CForest"                   # PRMstar,LazyPRMstar,RRTstar,RRTsharp,RRTXstatic,InformedRRTstar,BITstar, 
+            interpolation_parameter: 25               # ABITstar,AITstar,CForest,LBTRRT,SST,TRRT,SPARS,SPARStwo,FMT,AnytimePathShortening
             planner_timeout: 15.0
-            interpolation_parameter: 25
             octomap_topic: "octomap"
             octomap_voxel_size: 0.2
             state_space_boundries:
@@ -133,6 +133,7 @@ parameters for these nodes are more or less as following;
             y: -0.003682083159658604
             z: 4.672499893387009e-05
             w: 0.9999932007970892
+
 
 
 vox_nav's skeleton is made by following ROS2 nodes; 
