@@ -18,6 +18,8 @@
 #include "vox_nav_planning/planner_core.hpp"
 #include <pcl/octree/octree_search.h>
 #include <pcl/filters/random_sample.h>
+#include <vox_nav_utilities/tf_helpers.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
 
 /**
  * @brief
@@ -37,7 +39,7 @@ public:
   */
   OctoCostOptimizationObjective(
     const ompl::base::SpaceInformationPtr & si,
-    const std::shared_ptr<octomap::ColorOcTree> & tree);
+    const std::shared_ptr<octomap::OcTree> & nodes_octree);
 
   /**
    * @brief Destroy the Octo Cost Optimization Objective object
@@ -54,7 +56,7 @@ public:
   ompl::base::Cost stateCost(const ompl::base::State * s) const override;
 
 protected:
-  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
+  std::shared_ptr<octomap::OcTree> nodes_octree_;
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner_utils")};
 };
 
@@ -72,7 +74,12 @@ public:
     const ompl::base::SpaceInformationPtr & si,
     const geometry_msgs::msg::PoseStamped start,
     const geometry_msgs::msg::PoseStamped goal,
-    const std::shared_ptr<octomap::ColorOcTree> & tree);
+    const std::shared_ptr<octomap::OcTree> & nodes_octree,
+    const std::shared_ptr<octomap::OcTree> & full_map_octree,
+    const std::shared_ptr<fcl::CollisionObject> & robot_collision_object,
+    const std::shared_ptr<fcl::CollisionObject> & fcl_full_map_collision_object,
+    const std::shared_ptr<fcl::CollisionObject> & fcl_nodes_collision_object,
+    const geometry_msgs::msg::PoseArray::SharedPtr & workspace_poses);
 
   /**
    * @brief
@@ -108,78 +115,21 @@ public:
     const geometry_msgs::msg::PoseStamped start,
     const geometry_msgs::msg::PoseStamped goal);
 
-protected:
-  pcl::PointCloud<pcl::PointXYZ>::Ptr workspace_pcl_;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr search_area_pcl_;
-  rclcpp::Logger logger_{rclcpp::get_logger("se3_planner_utils")};
-};
-
-class OctoCellStateSampler : public ompl::base::StateSampler
-{
-public:
-  /**
-   * @brief Construct a new Octo Cell State Sampler object
-   *
-   * @param space
-   * @param start
-   * @param goal
-   * @param tree
-   */
-  OctoCellStateSampler(
-    const ompl::base::StateSpacePtr & space,
-    const geometry_msgs::msg::PoseStamped start,
-    const geometry_msgs::msg::PoseStamped goal,
-    const std::shared_ptr<octomap::ColorOcTree> & tree);
-
-  /**
-   * @brief Destroy the Octo Cell State Sampler object
-   *
-   */
-  ~OctoCellStateSampler();
-
-  /**
-   * @brief
-   *
-   * @param state
-   */
-  void sampleUniform(ompl::base::State * state) override;
-
-  /**
-   * @brief
-   *
-   * @param s
-   * @param n
-   */
-  void sampleUniformNear(ompl::base::State * s, const ompl::base::State * n, double) override
-  {
-    OMPL_ERROR("sampleUniformNear is not supported for OctoCellStateSampler");
-  }
-
-  /**
-   * @brief
-   *
-   * @param s
-   * @param n
-   */
-  void sampleGaussian(ompl::base::State * s, const ompl::base::State * n, double) override
-  {
-    OMPL_ERROR("sampleGaussian is not supported for OctoCellStateSampler");
-  }
-
-  /**
-   * @brief
-   *
-   * @param start
-   * @param goal
-   */
-  void updateSearchArea(
-    const geometry_msgs::msg::PoseStamped start,
-    const geometry_msgs::msg::PoseStamped goal);
+  bool  isStateValid(const ompl::base::State * state);
 
 protected:
-  pcl::PointCloud<pcl::PointXYZ>::Ptr workspace_pcl_;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr search_area_pcl_;
+  geometry_msgs::msg::PoseArray workspace_poses_;
+
+  pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
+  pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
+
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner_utils")};
+
+  std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
+  std::shared_ptr<fcl::CollisionObject> fcl_full_map_collision_object_;
+  std::shared_ptr<fcl::CollisionObject> fcl_nodes_collision_object_;
+  std::shared_ptr<octomap::OcTree> full_map_octree_;
+  std::shared_ptr<octomap::OcTree> nodes_octree_;
 };
 }  // namespace vox_nav_planning
 

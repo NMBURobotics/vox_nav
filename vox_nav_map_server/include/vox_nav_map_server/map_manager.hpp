@@ -32,11 +32,13 @@
 
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <robot_localization/srv/from_ll.hpp>
 #include <vox_nav_map_server/cost_regression_utils.hpp>
 #include <vox_nav_msgs/msg/oriented_nav_sat_fix.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
+#include <vox_nav_utilities/tf_helpers.hpp>
 
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>
@@ -134,6 +136,8 @@ protected:
   rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_publisher_;
   // publishes octomap in form of a point cloud message
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr octomap_pointloud_publisher_;
+  // publish sampled node poses for planner to use.
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr node_poses_publisher_;
   // robot_localization package provides a service to convert
   // lat,long,al GPS cooordinates to x,y,z map points
   rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr robot_localization_fromLL_client_;
@@ -145,6 +149,8 @@ protected:
   octomap_msgs::msg::Octomap::SharedPtr octomap_ros_msg_;
   // we read gps coordinates of map from yaml
   vox_nav_msgs::msg::OrientedNavSatFix::SharedPtr static_map_gps_pose_;
+  // Publish nodes fro planner to use
+  geometry_msgs::msg::PoseArray::SharedPtr node_poses_;
   // otree object to read and store binary octomap from disk
   std::shared_ptr<octomap::ColorOcTree> octomap_octree_;
   // rclcpp parameters from yaml file: full path to octomap file in disk

@@ -37,7 +37,10 @@ void SE3Planner::initialize(
 {
   state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(3);
   octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
+  node_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>();
+
   is_octomap_ready_ = false;
+  is_node_poses_ready_ = false;
 
   parent->declare_parameter(plugin_name + ".enabled", true);
   parent->declare_parameter(plugin_name + ".planner_name", "PRMStar");
@@ -86,10 +89,16 @@ void SE3Planner::initialize(
     octomap_topic_, rclcpp::SystemDefaultsQoS(),
     std::bind(&SE3Planner::octomapCallback, this, std::placeholders::_1));
 
+  node_poses_subscriber_ = parent->create_subscription<geometry_msgs::msg::PoseArray>(
+    "node_poses", rclcpp::SystemDefaultsQoS(),
+    std::bind(&SE3Planner::nodePosesCallback, this, std::placeholders::_1));
+
   state_space_ = std::make_shared<ompl::base::SE3StateSpace>();
   state_space_->as<ompl::base::SE3StateSpace>()->setBounds(*state_space_bounds_);
   simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
-  octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+
+  nodes_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+  full_map_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
 
   if (!is_enabled_) {
     RCLCPP_WARN(logger_, "SE3Planner plugin is disabled.");
@@ -125,8 +134,9 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   se3_start(state_space_),
   se3_goal(state_space_);
 
-  nearest_node_to_start_ = vox_nav_utilities::getNearstNode(start, color_octomap_octree_);
-  nearest_node_to_goal_ = vox_nav_utilities::getNearstNode(goal, color_octomap_octree_);
+  nearest_node_to_start_ = vox_nav_utilities::getNearstNode(start, nodes_octree_);
+  nearest_node_to_goal_ = vox_nav_utilities::getNearstNode(goal, nodes_octree_);
+
   nearest_node_to_start_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
     0, 0,
     start_yaw);
@@ -173,11 +183,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     std::bind(
       &SE3Planner::
       allocValidStateSampler, this, std::placeholders::_1));
-
-  /*simple_setup_->getStateSpace()->setStateSamplerAllocator(
-    std::bind(
-      &SE3Planner::
-      allocStateSampler, this, std::placeholders::_1));*/
 
   // attempt to solve the problem within one second of planning time
   ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
@@ -238,21 +243,9 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
     fcl::CollisionResult collisionResult;
     fcl::collide(
       robot_collision_object_.get(),
-      fcl_octree_collision_object_.get(), requestType, collisionResult);
+      fcl_nodes_collision_object_.get(), requestType, collisionResult);
     return collisionResult.isCollision();
 
-    /* bool is_valid = false;
-    auto node = color_octomap_octree_->search(
-      octomap::point3d(se3state->getX(), se3state->getY(), se3state->getZ()));
-    if (node) {
-      if (color_octomap_octree_->isNodeOccupied(node)) {
-        if (node->getValue() > 2.0) {
-          is_valid = true;
-        }
-      }
-    }*/
-
-    //return is_valid; //&& !collisionResult.isCollision();
   } else {
     RCLCPP_ERROR(
       logger_,
@@ -262,12 +255,24 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
   }
 }
 
+
+void SE3Planner::nodePosesCallback(
+  const geometry_msgs::msg::PoseArray::SharedPtr msg)
+{
+  if (!is_node_poses_ready_) {
+    node_poses_msg_ = msg;
+    is_node_poses_ready_ = true;
+    RCLCPP_INFO(logger_, "Node poses has been recieved!");
+  }
+}
+
+
 void SE3Planner::octomapCallback(
   const octomap_msgs::msg::Octomap::ConstSharedPtr msg)
 {
   const std::lock_guard<std::mutex> lock(octomap_mutex_);
 
-  if (!is_octomap_ready_) {
+  if (!is_octomap_ready_ && is_node_poses_ready_) {
     octomap_msg_ = msg;
     RCLCPP_INFO(logger_, "Octomap has been recieved!");
     try {
@@ -275,30 +280,37 @@ void SE3Planner::octomapCallback(
       auto raw_color_octomap_octree =
         dynamic_cast<octomap::ColorOcTree *>(octomap_msgs::fullMsgToMap(*octomap_msg_));
 
-      color_octomap_octree_ = std::make_shared<octomap::ColorOcTree>(*raw_color_octomap_octree);
+      auto full_map_and_nodes_octree =
+        std::make_shared<octomap::ColorOcTree>(*raw_color_octomap_octree);
       delete raw_color_octomap_octree;
 
-      for (auto it = color_octomap_octree_->begin(),
-        end = color_octomap_octree_->end(); it != end; ++it)
+      for (auto it = full_map_and_nodes_octree->begin(),
+        end = full_map_and_nodes_octree->end(); it != end; ++it)
       {
-        auto crr_point_node_key = color_octomap_octree_->coordToKey(it.getCoordinate());
+        auto crr_point_node_key = full_map_and_nodes_octree->coordToKey(it.getCoordinate());
         if (it->getValue() > 2.0) {
-          octomap_octree_->setNodeValue(crr_point_node_key, it->getValue(), false);
+          nodes_octree_->setNodeValue(crr_point_node_key, it->getValue(), false);
+        } else {
+          full_map_octree_->setNodeValue(crr_point_node_key, it->getValue(), false);
         }
       }
 
-      fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree_);
-      fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
-        std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
+      auto nodes_octree = std::make_shared<fcl::OcTree>(nodes_octree_);
+      fcl_nodes_collision_object_ = std::make_shared<fcl::CollisionObject>(
+        std::shared_ptr<fcl::CollisionGeometry>(nodes_octree));
+
+      auto full_map_octree = std::make_shared<fcl::OcTree>(full_map_octree_);
+      fcl_full_map_collision_object_ = std::make_shared<fcl::CollisionObject>(
+        std::shared_ptr<fcl::CollisionGeometry>(full_map_octree));
 
       RCLCPP_INFO(
         logger_,
         "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
-        "octomap for state validity (aka collision check)", color_octomap_octree_->size());
+        "octomap for state validity (aka collision check)", full_map_octree_->size());
 
       RCLCPP_INFO(
         logger_,
-        "Collisison check Octomap with %d nodes", octomap_octree_->size());
+        "Collisison check Octomap with %d nodes", nodes_octree_->size());
       is_octomap_ready_ = true;
 
       simple_setup_->setOptimizationObjective(getOptimizationObjective());
@@ -317,23 +329,18 @@ void SE3Planner::octomapCallback(
   }
 }
 
-ompl::base::StateSamplerPtr SE3Planner::allocStateSampler(
-  const ompl::base::StateSpace * space)
-{
-  octocell_state_sampler_ = std::make_shared<OctoCellStateSampler>(
-    simple_setup_->getStateSpace(),
-    nearest_node_to_start_, nearest_node_to_goal_,
-    color_octomap_octree_);
-  return octocell_state_sampler_;
-}
-
 ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
   const ompl::base::SpaceInformation * si)
 {
   octocell_valid_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
     simple_setup_->getSpaceInformation(),
     nearest_node_to_start_, nearest_node_to_goal_,
-    color_octomap_octree_);
+    nodes_octree_,
+    full_map_octree_,
+    robot_collision_object_,
+    fcl_full_map_collision_object_,
+    fcl_nodes_collision_object_,
+    node_poses_msg_);
   return octocell_valid_state_sampler_;
 }
 
@@ -345,7 +352,7 @@ ompl::base::OptimizationObjectivePtr SE3Planner::getOptimizationObjective()
 
   ompl::base::OptimizationObjectivePtr octocost_objective(
     new OctoCostOptimizationObjective(
-      simple_setup_->getSpaceInformation(), color_octomap_octree_));
+      simple_setup_->getSpaceInformation(), nodes_octree_));
 
   octocost_optimization_ = octocost_objective;
 

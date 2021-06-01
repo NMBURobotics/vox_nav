@@ -19,9 +19,9 @@
 #include <string>
 #include <memory>
 
-
 #include "vox_nav_planning/planner_core.hpp"
 #include "vox_nav_planning/plugins/se3_planner_utils.hpp"
+#include <geometry_msgs/msg/pose_array.hpp>
 
 
 namespace vox_nav_planning
@@ -81,6 +81,13 @@ public:
   /**
    * @brief
    *
+   * @param msg
+   */
+  void nodePosesCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg);
+
+  /**
+   * @brief
+   *
    * @param si
    * @return ompl::base::ValidStateSamplerPtr
    */
@@ -112,19 +119,20 @@ public:
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner")};
   rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
-  octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
+  rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr node_poses_subscriber_;
 
+  octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
+  geometry_msgs::msg::PoseArray::SharedPtr node_poses_msg_;
   geometry_msgs::msg::PoseStamped nearest_node_to_start_;
   geometry_msgs::msg::PoseStamped nearest_node_to_goal_;
 
   std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-  std::shared_ptr<fcl::OcTree> fcl_octree_;
-  std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
-  std::shared_ptr<octomap::ColorOcTree> color_octomap_octree_;
-  std::shared_ptr<octomap::OcTree> octomap_octree_;
+  std::shared_ptr<fcl::CollisionObject> fcl_full_map_collision_object_;
+  std::shared_ptr<fcl::CollisionObject> fcl_nodes_collision_object_;
+  std::shared_ptr<octomap::OcTree> full_map_octree_;
+  std::shared_ptr<octomap::OcTree> nodes_octree_;
   std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
   std::shared_ptr<OctoCellValidStateSampler> octocell_valid_state_sampler_;
-  std::shared_ptr<OctoCellStateSampler> octocell_state_sampler_;
 
   ompl::base::StateSpacePtr state_space_;
   ompl::base::OptimizationObjectivePtr octocost_optimization_;
@@ -146,6 +154,8 @@ protected:
   double planner_timeout_;
   // whether otomap is recieved
   volatile bool is_octomap_ready_;
+  // whether otomap is recieved
+  volatile bool is_node_poses_ready_;
   // global mutex to guard octomap
   std::mutex octomap_mutex_;
 };

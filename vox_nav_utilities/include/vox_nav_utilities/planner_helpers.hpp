@@ -70,7 +70,7 @@ namespace vox_nav_utilities
  */
 geometry_msgs::msg::PoseStamped getNearstNode(
   const geometry_msgs::msg::PoseStamped & state,
-  const std::shared_ptr<octomap::ColorOcTree> & color_octomap_octree);
+  const std::shared_ptr<octomap::OcTree> & nodes_octree);
 
 /**
  * @brief

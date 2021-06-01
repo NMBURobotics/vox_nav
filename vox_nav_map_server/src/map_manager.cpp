@@ -28,6 +28,7 @@ MapManager::MapManager()
   RCLCPP_INFO(this->get_logger(), "Creating..");
   // This is populated by params, soinitialize pointer asap
   static_map_gps_pose_ = std::make_shared<vox_nav_msgs::msg::OrientedNavSatFix>();
+  node_poses_ = std::make_shared<geometry_msgs::msg::PoseArray>();
 
   // Declare this node's parameters
   declare_parameter("pcd_map_filename", "/home/ros2-foxy/f.pcd");
@@ -130,8 +131,11 @@ MapManager::MapManager()
   // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
   octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
     "octomap_markers", rclcpp::SystemDefaultsQoS());
+  node_poses_publisher_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
+    "node_poses", rclcpp::SystemDefaultsQoS());
 
   pcd_map_pointcloud_ = vox_nav_utilities::loadPointcloudFromPcd(pcd_map_filename_.c_str());
 
@@ -244,7 +248,6 @@ void MapManager::timerCallback()
       tf2::Transform static_map_to_map_transfrom = static_map_rotation *
       static_map_translation.inverse();
 
-
       RCLCPP_INFO(this->get_logger(), "Regressing costs to given pcd map");
       regressCosts();
       alignStaticMapToMap(static_map_to_map_transfrom);
@@ -268,6 +271,7 @@ void MapManager::publishAlignedMap()
   if (publish_octomap_markers_) {
     octomap_markers_publisher_->publish(octomap_markers_);
   }
+  node_poses_publisher_->publish(*node_poses_);
 }
 
 void MapManager::fromGPSPoseToMapPose(
@@ -364,6 +368,14 @@ void MapManager::regressCosts()
       elevated_node.r = kMaxColorRange;
       elevated_node.g = kMaxColorRange;
       elevated_nodes_cloud.points.push_back(elevated_node);
+
+      geometry_msgs::msg::Pose elevated_node_pose;
+      elevated_node_pose.position.x = elevated_node.x;
+      elevated_node_pose.position.y = elevated_node.y;
+      elevated_node_pose.position.z = elevated_node.z;
+      elevated_node_pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
+        rpy[0], rpy[1], rpy[2]);
+      node_poses_->poses.push_back(elevated_node_pose);
     }
 
     cost_regressd_cloud += *plane_fitted_cell;
