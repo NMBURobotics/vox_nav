@@ -57,8 +57,8 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
 
 OctoCellValidStateSampler::OctoCellValidStateSampler(
   const ompl::base::SpaceInformationPtr & si,
-  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
-  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal,
+  const geometry_msgs::msg::PoseStamped start,
+  const geometry_msgs::msg::PoseStamped goal,
   const std::shared_ptr<octomap::ColorOcTree> & tree)
 : ValidStateSampler(si.get())
 {
@@ -119,8 +119,8 @@ bool OctoCellValidStateSampler::sampleNear(
 }
 
 void OctoCellValidStateSampler::updateSearchArea(
-  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
-  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal)
+  const geometry_msgs::msg::PoseStamped start,
+  const geometry_msgs::msg::PoseStamped goal)
 {
   RCLCPP_INFO(logger_, "Updating search area");
 
@@ -132,17 +132,17 @@ void OctoCellValidStateSampler::updateSearchArea(
   octree.addPointsFromInputCloud();
 
   pcl::PointXYZ searchPoint;
-  searchPoint.x = (goal->get()->getX() + start->get()->getX()) / 2.0;
-  searchPoint.y = (goal->get()->getY() + start->get()->getY()) / 2.0;
-  searchPoint.z = (goal->get()->getZ() + start->get()->getZ()) / 2.0;
+  searchPoint.x = (goal.pose.position.x + start.pose.position.x) / 2.0;
+  searchPoint.y = (goal.pose.position.y + start.pose.position.y) / 2.0;
+  searchPoint.z = (goal.pose.position.z + start.pose.position.z) / 2.0;
 
   // Neighbors within radius search
   std::vector<int> pointIdxRadiusSearch;
   std::vector<float> pointRadiusSquaredDistance;
   float radius = std::sqrt(
-    std::pow( (goal->get()->getX() - start->get()->getX()), 2) +
-    std::pow( (goal->get()->getY() - start->get()->getY()), 2) +
-    std::pow( (goal->get()->getZ() - start->get()->getZ()), 2)
+    std::pow( (goal.pose.position.x - start.pose.position.x), 2) +
+    std::pow( (goal.pose.position.y - start.pose.position.y), 2) +
+    std::pow( (goal.pose.position.z - start.pose.position.z), 2)
   );
 
   RCLCPP_INFO(logger_, "Adjusting a search area with radius of: %.3f", radius);
@@ -160,8 +160,8 @@ void OctoCellValidStateSampler::updateSearchArea(
 
 OctoCellStateSampler::OctoCellStateSampler(
   const ompl::base::StateSpacePtr & space,
-  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
-  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal,
+  const geometry_msgs::msg::PoseStamped start,
+  const geometry_msgs::msg::PoseStamped goal,
   const std::shared_ptr<octomap::ColorOcTree> & tree)
 : StateSampler(space.get())
 {
@@ -212,8 +212,8 @@ void OctoCellStateSampler::sampleUniform(ompl::base::State * state)
 }
 
 void OctoCellStateSampler::updateSearchArea(
-  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
-  const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal)
+  const geometry_msgs::msg::PoseStamped start,
+  const geometry_msgs::msg::PoseStamped goal)
 {
   RCLCPP_INFO(logger_, "Updating search area");
   search_area_pcl_ = pcl::PointCloud<pcl::PointXYZ>::Ptr(new pcl::PointCloud<pcl::PointXYZ>);
@@ -221,18 +221,21 @@ void OctoCellStateSampler::updateSearchArea(
   pcl::octree::OctreePointCloudSearch<pcl::PointXYZ> octree(resolution);
   octree.setInputCloud(workspace_pcl_);
   octree.addPointsFromInputCloud();
+
   pcl::PointXYZ searchPoint;
-  searchPoint.x = (goal->get()->getX() + start->get()->getX()) / 2.0;
-  searchPoint.y = (goal->get()->getY() + start->get()->getY()) / 2.0;
-  searchPoint.z = (goal->get()->getZ() + start->get()->getZ()) / 2.0;
+  searchPoint.x = (goal.pose.position.x + start.pose.position.x) / 2.0;
+  searchPoint.y = (goal.pose.position.y + start.pose.position.y) / 2.0;
+  searchPoint.z = (goal.pose.position.z + start.pose.position.z) / 2.0;
+
   // Neighbors within radius search
   std::vector<int> pointIdxRadiusSearch;
   std::vector<float> pointRadiusSquaredDistance;
   float radius = std::sqrt(
-    std::pow( (goal->get()->getX() - start->get()->getX()), 2) +
-    std::pow( (goal->get()->getY() - start->get()->getY()), 2) +
-    std::pow( (goal->get()->getZ() - start->get()->getZ()), 2)
+    std::pow( (goal.pose.position.x - start.pose.position.x), 2) +
+    std::pow( (goal.pose.position.y - start.pose.position.y), 2) +
+    std::pow( (goal.pose.position.z - start.pose.position.z), 2)
   );
+
   RCLCPP_INFO(logger_, "Adjusting a search area with radius of: %.3f", radius);
   if (octree.radiusSearch(
       searchPoint, radius, pointIdxRadiusSearch,

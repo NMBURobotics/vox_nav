@@ -126,8 +126,6 @@ protected:
   std::shared_ptr<OctoCellValidStateSampler> octocell_valid_state_sampler_;
   std::shared_ptr<OctoCellStateSampler> octocell_state_sampler_;
 
-  ompl::base::ScopedState<ompl::base::SE3StateSpace> * start_;
-  ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal_;
   ompl::base::StateSpacePtr state_space_;
   ompl::base::OptimizationObjectivePtr octocost_optimization_;
   ompl::geometric::SimpleSetupPtr simple_setup_;

@@ -29,15 +29,17 @@ geometry_msgs::msg::PoseStamped getNearstNode(
     end = color_octomap_octree->end(); it != end; ++it)
   {
     if (color_octomap_octree->isNodeOccupied(*it)) {
-      auto dist_to_crr_node = std::sqrt(
-        std::pow(it.getCoordinate().x() - state.pose.position.x, 2) +
-        std::pow(it.getCoordinate().y() - state.pose.position.y, 2) +
-        std::pow(it.getCoordinate().z() - state.pose.position.z, 2));
-      if (dist_to_crr_node < dist) {
-        dist = dist_to_crr_node;
-        nearest_node_pose.pose.position.x = it.getCoordinate().x();
-        nearest_node_pose.pose.position.y = it.getCoordinate().y();
-        nearest_node_pose.pose.position.z = it.getCoordinate().z();
+      if (it->getValue() > 2.0) {
+        auto dist_to_crr_node = std::sqrt(
+          std::pow(it.getCoordinate().x() - state.pose.position.x, 2) +
+          std::pow(it.getCoordinate().y() - state.pose.position.y, 2) +
+          std::pow(it.getCoordinate().z() - state.pose.position.z, 2));
+        if (dist_to_crr_node < dist) {
+          dist = dist_to_crr_node;
+          nearest_node_pose.pose.position.x = it.getCoordinate().x();
+          nearest_node_pose.pose.position.y = it.getCoordinate().y();
+          nearest_node_pose.pose.position.z = it.getCoordinate().z();
+        }
       }
     }
   }

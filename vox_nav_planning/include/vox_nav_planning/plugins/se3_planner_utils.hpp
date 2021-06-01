@@ -70,8 +70,8 @@ public:
    */
   OctoCellValidStateSampler(
     const ompl::base::SpaceInformationPtr & si,
-    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
-    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal,
+    const geometry_msgs::msg::PoseStamped start,
+    const geometry_msgs::msg::PoseStamped goal,
     const std::shared_ptr<octomap::ColorOcTree> & tree);
 
   /**
@@ -105,8 +105,8 @@ public:
    * @param goal
    */
   void updateSearchArea(
-    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
-    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal);
+    const geometry_msgs::msg::PoseStamped start,
+    const geometry_msgs::msg::PoseStamped goal);
 
 protected:
   pcl::PointCloud<pcl::PointXYZ>::Ptr workspace_pcl_;
@@ -127,8 +127,8 @@ public:
    */
   OctoCellStateSampler(
     const ompl::base::StateSpacePtr & space,
-    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
-    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal,
+    const geometry_msgs::msg::PoseStamped start,
+    const geometry_msgs::msg::PoseStamped goal,
     const std::shared_ptr<octomap::ColorOcTree> & tree);
 
   /**
@@ -173,8 +173,8 @@ public:
    * @param goal
    */
   void updateSearchArea(
-    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * start,
-    const ompl::base::ScopedState<ompl::base::SE3StateSpace> * goal);
+    const geometry_msgs::msg::PoseStamped start,
+    const geometry_msgs::msg::PoseStamped goal);
 
 protected:
   pcl::PointCloud<pcl::PointXYZ>::Ptr workspace_pcl_;

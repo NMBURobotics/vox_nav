@@ -357,15 +357,15 @@ void MapManager::regressCosts()
       plane_fitted_cell = set_cloud_color(
         i.second,
         std::vector<double>({0.0, kMaxColorRange - total_cost, total_cost}));
+      pcl::PointXYZRGB elevated_node;
+      elevated_node.x = i.first.x + node_elevation_distance_ * plane_model.values[0];
+      elevated_node.y = i.first.y + node_elevation_distance_ * plane_model.values[1];
+      elevated_node.z = i.first.z + node_elevation_distance_ * plane_model.values[2];
+      elevated_node.r = kMaxColorRange;
+      elevated_node.g = kMaxColorRange;
+      elevated_nodes_cloud.points.push_back(elevated_node);
     }
 
-    pcl::PointXYZRGB elevated_node;
-    elevated_node.x = i.first.x + node_elevation_distance_ * plane_model.values[0];
-    elevated_node.y = i.first.y + node_elevation_distance_ * plane_model.values[1];
-    elevated_node.z = i.first.z + node_elevation_distance_ * plane_model.values[2];
-    elevated_node.r = kMaxColorRange;
-    elevated_node.g = kMaxColorRange;
-    elevated_nodes_cloud.points.push_back(elevated_node);
     cost_regressd_cloud += *plane_fitted_cell;
   }
 

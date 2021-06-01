@@ -128,9 +128,11 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   nearest_node_to_start_ = vox_nav_utilities::getNearstNode(start, color_octomap_octree_);
   nearest_node_to_goal_ = vox_nav_utilities::getNearstNode(goal, color_octomap_octree_);
   nearest_node_to_start_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-    0, 0, start_yaw);
+    0, 0,
+    start_yaw);
   nearest_node_to_goal_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-    0, 0, goal_yaw);
+    0, 0,
+    goal_yaw);
 
   se3_start->setXYZ(
     nearest_node_to_start_.pose.position.x,
@@ -163,24 +165,19 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     logger_);
 
   simple_setup_->setPlanner(planner);
-
   simple_setup_->setup();
-
   // print the settings for this space
   simple_setup_->print(std::cout);
-
-  goal_ = &se3_goal;
-  start_ = &se3_start;
 
   simple_setup_->getSpaceInformation()->setValidStateSamplerAllocator(
     std::bind(
       &SE3Planner::
       allocValidStateSampler, this, std::placeholders::_1));
 
-  simple_setup_->getStateSpace()->setStateSamplerAllocator(
+  /*simple_setup_->getStateSpace()->setStateSamplerAllocator(
     std::bind(
       &SE3Planner::
-      allocStateSampler, this, std::placeholders::_1));
+      allocStateSampler, this, std::placeholders::_1));*/
 
   // attempt to solve the problem within one second of planning time
   ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
@@ -242,16 +239,20 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
     fcl::collide(
       robot_collision_object_.get(),
       fcl_octree_collision_object_.get(), requestType, collisionResult);
+    return collisionResult.isCollision();
 
-    bool is_valid = false;
+    /* bool is_valid = false;
     auto node = color_octomap_octree_->search(
       octomap::point3d(se3state->getX(), se3state->getY(), se3state->getZ()));
     if (node) {
-      //if (color_octomap_octree_->isNodeOccupied(node)) {
-      is_valid = true;
-      //}
-    }
-    return is_valid; //&& !collisionResult.isCollision();
+      if (color_octomap_octree_->isNodeOccupied(node)) {
+        if (node->getValue() > 2.0) {
+          is_valid = true;
+        }
+      }
+    }*/
+
+    //return is_valid; //&& !collisionResult.isCollision();
   } else {
     RCLCPP_ERROR(
       logger_,
@@ -281,7 +282,9 @@ void SE3Planner::octomapCallback(
         end = color_octomap_octree_->end(); it != end; ++it)
       {
         auto crr_point_node_key = color_octomap_octree_->coordToKey(it.getCoordinate());
-        octomap_octree_->setNodeValue(crr_point_node_key, it->getValue(), false);
+        if (it->getValue() > 2.0) {
+          octomap_octree_->setNodeValue(crr_point_node_key, it->getValue(), false);
+        }
       }
 
       fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree_);
@@ -295,7 +298,7 @@ void SE3Planner::octomapCallback(
 
       RCLCPP_INFO(
         logger_,
-        "Collisison check Octomap with %d nodes", color_octomap_octree_->size());
+        "Collisison check Octomap with %d nodes", octomap_octree_->size());
       is_octomap_ready_ = true;
 
       simple_setup_->setOptimizationObjective(getOptimizationObjective());
@@ -319,7 +322,7 @@ ompl::base::StateSamplerPtr SE3Planner::allocStateSampler(
 {
   octocell_state_sampler_ = std::make_shared<OctoCellStateSampler>(
     simple_setup_->getStateSpace(),
-    start_, goal_,
+    nearest_node_to_start_, nearest_node_to_goal_,
     color_octomap_octree_);
   return octocell_state_sampler_;
 }
@@ -329,7 +332,7 @@ ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
 {
   octocell_valid_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
     simple_setup_->getSpaceInformation(),
-    start_, goal_,
+    nearest_node_to_start_, nearest_node_to_goal_,
     color_octomap_octree_);
   return octocell_valid_state_sampler_;
 }
