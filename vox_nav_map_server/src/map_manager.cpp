@@ -373,8 +373,10 @@ void MapManager::regressCosts()
       elevated_node_pose.position.x = elevated_node.x;
       elevated_node_pose.position.y = elevated_node.y;
       elevated_node_pose.position.z = elevated_node.z;
+      const double kRAD2DEG = 180.0 / M_PI;
+
       elevated_node_pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-        rpy[0], rpy[1], rpy[2]);
+        rpy[0] / kRAD2DEG, rpy[1] / kRAD2DEG, rpy[2] / kRAD2DEG);
       node_poses_->poses.push_back(elevated_node_pose);
     }
 

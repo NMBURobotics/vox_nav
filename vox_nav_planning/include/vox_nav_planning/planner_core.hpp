@@ -23,6 +23,7 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
+#include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_utilities/planner_helpers.hpp>
 // PCL
 #include <pcl/common/common.h>

@@ -68,7 +68,8 @@ enum class OutlierRemovalType: int {RadiusOutlierRemoval, StatisticalOutlierRemo
  * @param inputCloud
  * @return Eigen::Vector3d
  */
-Eigen::Vector3d calculateMeanOfPointPositions(pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud);
+Eigen::Vector3d calculateMeanOfPointPositions(
+  pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud);
 
 /**
  * @brief
@@ -158,6 +159,26 @@ void publishClustersCloud(
   const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
   const std_msgs::msg::Header header,
   const std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clusters_array);
+
+template<typename P, typename T>
+void  getNearstPoint(
+  P & nearest_point,
+  const P & search_point,
+  const T & cloud)
+{
+  pcl::KdTreeFLANN<P> kdtree;
+  kdtree.setInputCloud(cloud);
+  // K nearest neighbor search
+  int K = 1;
+  std::vector<int> pointIdxNKNSearch(K);
+  std::vector<float> pointNKNSquaredDistance(K);
+  if (kdtree.nearestKSearch(search_point, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0) {
+    for (std::size_t i = 0; i < pointIdxNKNSearch.size(); ++i) {
+      nearest_point = cloud->points[pointIdxNKNSearch[0]];
+    }
+  }
+}
+
 
 }  // namespace vox_nav_utilities
 

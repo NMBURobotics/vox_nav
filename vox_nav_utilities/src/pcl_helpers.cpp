@@ -26,7 +26,8 @@
 namespace vox_nav_utilities
 {
 
-Eigen::Vector3d calculateMeanOfPointPositions(pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud)
+Eigen::Vector3d calculateMeanOfPointPositions(
+  pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud)
 {
   Eigen::Vector3d mean = Eigen::Vector3d::Zero();
   for (const auto & point : inputCloud->points) {

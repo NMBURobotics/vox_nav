@@ -134,6 +134,8 @@ protected:
   std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
   std::shared_ptr<OctoCellValidStateSampler> octocell_valid_state_sampler_;
 
+  pcl::PointCloud<pcl::PointSurfel>::Ptr node_surfels_;
+
   ompl::base::StateSpacePtr state_space_;
   ompl::base::OptimizationObjectivePtr octocost_optimization_;
   ompl::geometric::SimpleSetupPtr simple_setup_;

@@ -39,6 +39,9 @@ void SE3Planner::initialize(
   octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
   node_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>();
 
+  node_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
+    new pcl::PointCloud<pcl::PointSurfel>);
+
   is_octomap_ready_ = false;
   is_node_poses_ready_ = false;
 
@@ -134,35 +137,71 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   se3_start(state_space_),
   se3_goal(state_space_);
 
-  nearest_node_to_start_ = vox_nav_utilities::getNearstNode(start, nodes_octree_);
-  nearest_node_to_goal_ = vox_nav_utilities::getNearstNode(goal, nodes_octree_);
+  pcl::PointSurfel start_nearest_surfel, goal_nearest_surfel;
+  pcl::PointSurfel start_actual, goal_acual;
+
+  start_actual.x = start.pose.position.x;
+  start_actual.y = start.pose.position.y;
+  start_actual.z = start.pose.position.z;
+
+  goal_acual.x = goal.pose.position.x;
+  goal_acual.y = goal.pose.position.y;
+  goal_acual.z = goal.pose.position.z;
+
+  vox_nav_utilities::getNearstPoint<
+    pcl::PointSurfel,
+    pcl::PointCloud<pcl::PointSurfel>::Ptr>(start_nearest_surfel, start_actual, node_surfels_);
+
+  vox_nav_utilities::getNearstPoint<
+    pcl::PointSurfel,
+    pcl::PointCloud<pcl::PointSurfel>::Ptr>(goal_nearest_surfel, goal_acual, node_surfels_);
+
+  nearest_node_to_start_.pose.position.x = start_nearest_surfel.x;
+  nearest_node_to_start_.pose.position.y = start_nearest_surfel.y;
+  nearest_node_to_start_.pose.position.z = start_nearest_surfel.z;
+
+  nearest_node_to_goal_.pose.position.x = goal_nearest_surfel.x;
+  nearest_node_to_goal_.pose.position.y = goal_nearest_surfel.y;
+  nearest_node_to_goal_.pose.position.z = goal_nearest_surfel.z;
 
   nearest_node_to_start_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-    0, 0,
-    start_yaw);
+    start_nearest_surfel.normal_x,
+    start_nearest_surfel.normal_y,
+    start_nearest_surfel.normal_z
+  );
+
   nearest_node_to_goal_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-    0, 0,
-    goal_yaw);
+    goal_nearest_surfel.normal_x,
+    goal_nearest_surfel.normal_y,
+    goal_nearest_surfel.normal_z);
 
   se3_start->setXYZ(
     nearest_node_to_start_.pose.position.x,
     nearest_node_to_start_.pose.position.y,
     nearest_node_to_start_.pose.position.z);
-  se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-    0,
-    0,
-    1,
-    start_yaw);
 
   se3_goal->setXYZ(
     nearest_node_to_goal_.pose.position.x,
     nearest_node_to_goal_.pose.position.y,
     nearest_node_to_goal_.pose.position.z);
-  se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-    0,
-    0,
-    1,
-    goal_yaw);
+
+  se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->x =
+    nearest_node_to_start_.pose.orientation.x;
+  se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->y =
+    nearest_node_to_start_.pose.orientation.y;
+  se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->z =
+    nearest_node_to_start_.pose.orientation.z;
+  se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->w =
+    nearest_node_to_start_.pose.orientation.w;
+
+  se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->x =
+    nearest_node_to_goal_.pose.orientation.x;
+  se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->y =
+    nearest_node_to_goal_.pose.orientation.y;
+  se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->z =
+    nearest_node_to_goal_.pose.orientation.z;
+  se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->w =
+    nearest_node_to_goal_.pose.orientation.w;
 
   simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
 
@@ -193,6 +232,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     // Path smoothing using bspline
     ompl::geometric::PathSimplifier * path_simlifier =
       new ompl::geometric::PathSimplifier(simple_setup_->getSpaceInformation());
+
     path_simlifier->smoothBSpline(solution_path, 3);
     solution_path.interpolate(interpolation_parameter_);
 
@@ -231,21 +271,27 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
     // cast the abstract state type to the type we expect
     const ompl::base::SE3StateSpace::StateType * se3state =
       state->as<ompl::base::SE3StateSpace::StateType>();
-
     // extract the second component of the state and cast it to what we expect
     const ompl::base::SO3StateSpace::StateType * rot =
       se3state->as<ompl::base::SO3StateSpace::StateType>(1);
+    fcl::CollisionRequest requestType(1, false, 1, false);
+
     // check validity of state Fdefined by pos & rot
     fcl::Vec3f translation(se3state->getX(), se3state->getY(), se3state->getZ());
     fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
     robot_collision_object_->setTransform(rotation, translation);
-    fcl::CollisionRequest requestType(1, false, 1, false);
-    fcl::CollisionResult collisionResult;
+
+    fcl::CollisionResult collisionWithNodesResult, collisionWitFullMapResult;
+
     fcl::collide(
       robot_collision_object_.get(),
-      fcl_nodes_collision_object_.get(), requestType, collisionResult);
-    return collisionResult.isCollision();
+      fcl_nodes_collision_object_.get(), requestType, collisionWithNodesResult);
 
+    fcl::collide(
+      robot_collision_object_.get(),
+      fcl_full_map_collision_object_.get(), requestType, collisionWitFullMapResult);
+
+    return true; //collisionWithNodesResult.isCollision();
   } else {
     RCLCPP_ERROR(
       logger_,
@@ -263,6 +309,18 @@ void SE3Planner::nodePosesCallback(
     node_poses_msg_ = msg;
     is_node_poses_ready_ = true;
     RCLCPP_INFO(logger_, "Node poses has been recieved!");
+    for (auto && i : node_poses_msg_->poses) {
+      pcl::PointSurfel surfel;
+      surfel.x = i.position.x;
+      surfel.y = i.position.y;
+      surfel.z = i.position.z;
+      double r, p, y;
+      vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
+      surfel.normal_x = r;
+      surfel.normal_y = p;
+      surfel.normal_z = y;
+      node_surfels_->points.push_back(surfel);
+    }
   }
 }
 
