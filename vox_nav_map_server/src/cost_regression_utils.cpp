@@ -211,18 +211,15 @@ std::vector<double> rpy_from_plane(
 {
   std::vector<double> rpy({0.0, 0.0, 0.0});
   const double kRAD2DEG = 180.0 / M_PI;
-
-  float rot_x = std::atan2(
-    plane_model.values[1], plane_model.values[2]);
-  float rot_y = std::atan2(
-    plane_model.values[0], plane_model.values[2]);
-  float rot_z = std::atan2(
-    plane_model.values[0], plane_model.values[1]);
-
-  rpy[0] = rot_x * kRAD2DEG;
-  rpy[1] = rot_y * kRAD2DEG;
-  rpy[2] = rot_z * kRAD2DEG;
-
+  float roll = std::atan2(
+    plane_model.values[1],
+    plane_model.values[2]);
+  float pitch = std::atan2(
+    plane_model.values[0],
+    plane_model.values[2]);
+  rpy[0] = -roll * kRAD2DEG;
+  rpy[1] = pitch * kRAD2DEG;
+  rpy[2] = 0;
   return rpy;
 }
 

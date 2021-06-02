@@ -250,6 +250,11 @@ void MapManager::timerCallback()
       static_map_translation.inverse();
 
       RCLCPP_INFO(this->get_logger(), "Regressing costs to given pcd map");
+
+      pcl_ros::transformPointCloud(
+        *pcd_map_pointcloud_, *pcd_map_pointcloud_, static_map_to_map_transfrom
+      );
+
       regressCosts();
       alignStaticMapToMap(static_map_to_map_transfrom);
       fillOctomapMarkers();
@@ -402,19 +407,7 @@ void MapManager::regressCosts()
 
 void MapManager::alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom)
 {
-  pcl_ros::transformPointCloud(
-    *pcd_map_pointcloud_, *pcd_map_pointcloud_, static_map_to_map_transfrom
-  );
 
-  // Also need to transform node poses
-  geometry_msgs::msg::TransformStamped static_map_to_map_transfrom_msg;
-  static_map_to_map_transfrom_msg.transform = tf2::toMsg(static_map_to_map_transfrom);
-  for (auto && i : node_poses_->poses) {
-    geometry_msgs::msg::PoseStamped in, out;
-    in.pose = i;
-    tf2::doTransform(in, out, static_map_to_map_transfrom_msg);
-    i = out.pose;
-  }
 
   pcl::toROSMsg(*pcd_map_pointcloud_, *octomap_pointcloud_ros_msg_);
 
