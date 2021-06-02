@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "vox_nav_map_server/map_manager.hpp"
-
 #include <string>
 #include <vector>
 #include <memory>
@@ -112,28 +110,30 @@ MapManager::MapManager()
   get_parameter("include_node_centers_in_cloud", include_node_centers_in_cloud_);
   get_parameter("cost_critic_weights", cost_critic_weights_);
 
+  timer_ = this->create_wall_timer(
+    std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
+    std::bind(&MapManager::timerCallback, this));
+
   octomap_octree_ = std::make_shared<octomap::ColorOcTree>(octomap_voxel_size_);
   octomap_ros_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
   octomap_pointcloud_ros_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
 
-  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
-    "map_manager_fromll_client_node");
   octomap_publisher_ = this->create_publisher<octomap_msgs::msg::Octomap>(
     octomap_publish_topic_name_, rclcpp::SystemDefaultsQoS());
   octomap_pointloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     octomap_point_cloud_publish_topic_, rclcpp::SystemDefaultsQoS());
-  timer_ = this->create_wall_timer(
-    std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
-    std::bind(&MapManager::timerCallback, this));
+  octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "octomap_markers", rclcpp::SystemDefaultsQoS());
+
+  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
+    "map_manager_fromll_client_node");
+
   robot_localization_fromLL_client_ =
-    robot_localization_fromLL_client_node_->
-    create_client<robot_localization::srv::FromLL>("/fromLL");
+    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
   // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
-  octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "octomap_markers", rclcpp::SystemDefaultsQoS());
   node_poses_publisher_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
     "node_poses", rclcpp::SystemDefaultsQoS());
 
@@ -172,6 +172,7 @@ MapManager::MapManager()
       get_logger()));
 
   bool is_octomap_successfully_converted(false);
+
   try {
     is_octomap_successfully_converted = octomap_msgs::fullMapToMsg<octomap::ColorOcTree>(
       *octomap_octree_, *octomap_ros_msg_);
@@ -329,11 +330,11 @@ void MapManager::regressCosts()
   pcl::PointCloud<pcl::PointXYZRGB> elevated_nodes_cloud;
   for (auto && i : decomposed_cells) {
     auto plane_model = fit_plane_to_cloud(i.second, plane_fit_threshold_);
-    auto rpy = absolute_rpy_from_plane(plane_model);
+    auto rpy = rpy_from_plane(plane_model);
     double average_point_deviation = average_point_deviation_from_plane(i.second, plane_model);
     double max_energy_gap = max_energy_gap_in_cloud(i.second, robot_mass_, average_speed_);
 
-    double max_tilt = std::max(rpy[0], rpy[1]);
+    double max_tilt = std::max(std::abs(rpy[0]), std::abs(rpy[1]));
     double slope_cost = std::min(
       max_tilt /
       max_allowed_tilt_, 1.0) *
@@ -369,15 +370,19 @@ void MapManager::regressCosts()
       elevated_node.g = kMaxColorRange;
       elevated_nodes_cloud.points.push_back(elevated_node);
 
+      const double kRAD2DEG = 180.0 / M_PI;
       geometry_msgs::msg::Pose elevated_node_pose;
       elevated_node_pose.position.x = elevated_node.x;
       elevated_node_pose.position.y = elevated_node.y;
       elevated_node_pose.position.z = elevated_node.z;
-      const double kRAD2DEG = 180.0 / M_PI;
 
       elevated_node_pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-        rpy[0] / kRAD2DEG, rpy[1] / kRAD2DEG, rpy[2] / kRAD2DEG);
+        rpy[0] / kRAD2DEG,
+        rpy[1] / kRAD2DEG,
+        rpy[2] / kRAD2DEG);
       node_poses_->poses.push_back(elevated_node_pose);
+
+      std::cout << rpy[0] << " " << rpy[1] << " " << rpy[2] << std::endl;
     }
 
     cost_regressd_cloud += *plane_fitted_cell;
@@ -400,6 +405,17 @@ void MapManager::alignStaticMapToMap(const tf2::Transform & static_map_to_map_tr
   pcl_ros::transformPointCloud(
     *pcd_map_pointcloud_, *pcd_map_pointcloud_, static_map_to_map_transfrom
   );
+
+  // Also need to transform node poses
+  geometry_msgs::msg::TransformStamped static_map_to_map_transfrom_msg;
+  static_map_to_map_transfrom_msg.transform = tf2::toMsg(static_map_to_map_transfrom);
+  for (auto && i : node_poses_->poses) {
+    geometry_msgs::msg::PoseStamped in, out;
+    in.pose = i;
+    tf2::doTransform(in, out, static_map_to_map_transfrom_msg);
+    i = out.pose;
+  }
+
   pcl::toROSMsg(*pcd_map_pointcloud_, *octomap_pointcloud_ros_msg_);
 
   octomap::Pointcloud octocloud;

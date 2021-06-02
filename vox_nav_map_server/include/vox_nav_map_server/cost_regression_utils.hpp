@@ -126,7 +126,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr set_cloud_color(
  * @param plane_model
  * @return std::vector<double>
  */
-std::vector<double> absolute_rpy_from_plane(
+std::vector<double> rpy_from_plane(
   const pcl::ModelCoefficients plane_model);
 
 /**

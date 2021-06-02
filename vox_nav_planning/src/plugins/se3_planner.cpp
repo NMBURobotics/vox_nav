@@ -159,17 +159,15 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   nearest_node_to_start_.pose.position.x = start_nearest_surfel.x;
   nearest_node_to_start_.pose.position.y = start_nearest_surfel.y;
   nearest_node_to_start_.pose.position.z = start_nearest_surfel.z;
-
-  nearest_node_to_goal_.pose.position.x = goal_nearest_surfel.x;
-  nearest_node_to_goal_.pose.position.y = goal_nearest_surfel.y;
-  nearest_node_to_goal_.pose.position.z = goal_nearest_surfel.z;
-
   nearest_node_to_start_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
     start_nearest_surfel.normal_x,
     start_nearest_surfel.normal_y,
     start_nearest_surfel.normal_z
   );
 
+  nearest_node_to_goal_.pose.position.x = goal_nearest_surfel.x;
+  nearest_node_to_goal_.pose.position.y = goal_nearest_surfel.y;
+  nearest_node_to_goal_.pose.position.z = goal_nearest_surfel.z;
   nearest_node_to_goal_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
     goal_nearest_surfel.normal_x,
     goal_nearest_surfel.normal_y,
@@ -291,7 +289,7 @@ bool SE3Planner::isStateValid(const ompl::base::State * state)
       robot_collision_object_.get(),
       fcl_full_map_collision_object_.get(), requestType, collisionWitFullMapResult);
 
-    return true; //collisionWithNodesResult.isCollision();
+    return collisionWithNodesResult.isCollision() && !collisionWitFullMapResult.isCollision();
   } else {
     RCLCPP_ERROR(
       logger_,

@@ -206,25 +206,24 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr set_cloud_color(
   return new_colored_cloud;
 }
 
-std::vector<double> absolute_rpy_from_plane(
+std::vector<double> rpy_from_plane(
   const pcl::ModelCoefficients plane_model)
 {
-  std::vector<double> absolute_rpy({0.0, 0.0, 0.0});
+  std::vector<double> rpy({0.0, 0.0, 0.0});
   const double kRAD2DEG = 180.0 / M_PI;
 
-  auto vector_magnitude =
-    std::sqrt(
-    std::pow(plane_model.values[0], 2) +
-    std::pow(plane_model.values[1], 2) +
-    std::pow(plane_model.values[2], 2));
-  auto roll = std::abs(plane_model.values[0] / vector_magnitude * kRAD2DEG);
-  auto pitch = std::abs(plane_model.values[1] / vector_magnitude * kRAD2DEG);
-  auto yaw = std::abs(plane_model.values[2] / vector_magnitude * kRAD2DEG);
+  float rot_x = std::atan2(
+    plane_model.values[1], plane_model.values[2]);
+  float rot_y = std::atan2(
+    plane_model.values[0], plane_model.values[2]);
+  float rot_z = std::atan2(
+    plane_model.values[0], plane_model.values[1]);
 
-  absolute_rpy[0] = roll;
-  absolute_rpy[1] = pitch;
-  absolute_rpy[2] = yaw;
-  return absolute_rpy;
+  rpy[0] = rot_x * kRAD2DEG;
+  rpy[1] = rot_y * kRAD2DEG;
+  rpy[2] = rot_z * kRAD2DEG;
+
+  return rpy;
 }
 
 double average_point_deviation_from_plane(
