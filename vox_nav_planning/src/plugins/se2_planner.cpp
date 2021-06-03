@@ -34,9 +34,8 @@ void SE2Planner::initialize(
   rclcpp::Node * parent,
   const std::string & plugin_name)
 {
-  se2_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
-  octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
-  is_octomap_ready_ = false;
+  state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
+  is_map_ready_ = false;
 
   parent->declare_parameter(plugin_name + ".enabled", true);
   parent->declare_parameter(plugin_name + ".planner_name", "PRMStar");
@@ -58,32 +57,32 @@ void SE2Planner::initialize(
   parent->get_parameter(plugin_name + ".planner_name", planner_name_);
   parent->get_parameter(plugin_name + ".planner_timeout", planner_timeout_);
   parent->get_parameter(plugin_name + ".interpolation_parameter", interpolation_parameter_);
-  parent->get_parameter(plugin_name + ".octomap_topic", octomap_topic_);
   parent->get_parameter(plugin_name + ".octomap_voxel_size", octomap_voxel_size_);
   parent->get_parameter(plugin_name + ".se2_space", selected_se2_space_name_);
 
-  se2_space_bounds_->setLow(
+  state_space_bounds_->setLow(
     0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
-  se2_space_bounds_->setHigh(
+  state_space_bounds_->setHigh(
     0, parent->get_parameter(plugin_name + ".state_space_boundries.maxx").as_double());
-  se2_space_bounds_->setLow(
+  state_space_bounds_->setLow(
     1, parent->get_parameter(plugin_name + ".state_space_boundries.miny").as_double());
-  se2_space_bounds_->setHigh(
+  state_space_bounds_->setHigh(
     1, parent->get_parameter(plugin_name + ".state_space_boundries.maxy").as_double());
-  se2_space_bounds_->setLow(
+  state_space_bounds_->setLow(
     2, parent->get_parameter(plugin_name + ".state_space_boundries.minyaw").as_double());
-  se2_space_bounds_->setHigh(
+  state_space_bounds_->setHigh(
     2, parent->get_parameter(plugin_name + ".state_space_boundries.maxyaw").as_double());
 
-  se2_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(2.5);
-  se2_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*se2_space_bounds_);
+  state_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(2.5);
+  state_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds_);
   if (selected_se2_space_name_ == "DUBINS") {
-    se2_space_ = std::make_shared<ompl::base::DubinsStateSpace>(2.5, false);
-    se2_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*se2_space_bounds_);
+    state_space_ = std::make_shared<ompl::base::DubinsStateSpace>(2.5, false);
+    state_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*state_space_bounds_);
   } else if (selected_se2_space_name_ == "SE2") {
-    se2_space_ = std::make_shared<ompl::base::SE2StateSpace>();
-    se2_space_->as<ompl::base::SE2StateSpace>()->setBounds(*se2_space_bounds_);
+    state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
+    state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*state_space_bounds_);
   }
+  simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
 
   typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
   CollisionGeometryPtr_t robot_body_box(new fcl::Box(
@@ -93,19 +92,14 @@ void SE2Planner::initialize(
 
   fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
-  octomap_subscriber_ = parent->create_subscription<octomap_msgs::msg::Octomap>(
-    octomap_topic_, rclcpp::SystemDefaultsQoS(),
-    std::bind(&SE2Planner::octomapCallback, this, std::placeholders::_1));
-
-  se2_state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(se2_space_);
-  se2_state_space_information_->setStateValidityChecker(
-    std::bind(&SE2Planner::isStateValid, this, std::placeholders::_1));
+  original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
 
   if (!is_enabled_) {
-    RCLCPP_WARN(
-      logger_, "SE2PlannerControlSpace plugin is disabled.");
+    RCLCPP_WARN(logger_, "SE2Planner plugin is disabled.");
   }
   RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
+
+  setupMap();
 }
 
 std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
@@ -119,10 +113,16 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
     );
     return std::vector<geometry_msgs::msg::PoseStamped>();
   }
+  if (!is_map_ready_) {
+    RCLCPP_WARN(
+      logger_, "A valid Octomap has not been receievd yet, Try later again."
+    );
+    return std::vector<geometry_msgs::msg::PoseStamped>();
+  }
 
-  ompl::base::ScopedState<ompl::base::DubinsStateSpace>
-  se2_start(se2_space_),
-  se2_goal(se2_space_);
+  ompl::base::ScopedState<ompl::base::SE2StateSpace>
+  se2_start(state_space_),
+  se2_goal(state_space_);
   // set the start and goal states
   double start_yaw, goal_yaw, nan;
   vox_nav_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan, start_yaw);
@@ -136,54 +136,45 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
   se2_goal[1] = goal.pose.position.y;
   se2_goal[2] = goal_yaw;
 
-  // create a problem instance
-  // define a simple setup class
-  ompl::geometric::SimpleSetup simple_setup(se2_space_);
-  simple_setup.setStateValidityChecker(
-    [this](const ompl::base::State * state)
-    {
-      return isStateValid(state);
-    });
-  simple_setup.setStartAndGoalStates(se2_start, se2_goal);
+  simple_setup_->setStartAndGoalStates(se2_start, se2_goal);
 
+  // objective is to minimize the planned path
+  ompl::base::OptimizationObjectivePtr objective(
+    new ompl::base::PathLengthOptimizationObjective(simple_setup_->getSpaceInformation()));
+
+  simple_setup_->setOptimizationObjective(objective);
 
   // create a planner for the defined space
   ompl::base::PlannerPtr planner;
   vox_nav_utilities::initializeSelectedPlanner(
     planner,
     planner_name_,
-    simple_setup.getSpaceInformation(),
+    simple_setup_->getSpaceInformation(),
     logger_);
 
-  // objective is to minimize the planned path
-  ompl::base::OptimizationObjectivePtr objective(
-    new ompl::base::PathLengthOptimizationObjective(simple_setup.getSpaceInformation()));
-  simple_setup.setOptimizationObjective(objective);
-
-  simple_setup.setup();
-
-  simple_setup.setPlanner(planner);
+  simple_setup_->setPlanner(planner);
+  simple_setup_->setup();
   // print the settings for this space
-  se2_state_space_information_->printSettings(std::cout);
+  simple_setup_->print(std::cout);
 
   // attempt to solve the problem within one second of planning time
-  ompl::base::PlannerStatus solved = simple_setup.solve(planner_timeout_);
+  ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
   std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
 
   if (solved) {
-    ompl::geometric::PathGeometric path = simple_setup.getSolutionPath();
+
+    ompl::geometric::PathGeometric solution_path = simple_setup_->getSolutionPath();
     // Path smoothing using bspline
     ompl::geometric::PathSimplifier * path_simlifier =
-      new ompl::geometric::PathSimplifier(simple_setup.getSpaceInformation());
-    path_simlifier->smoothBSpline(path, 3);
-    path_simlifier->collapseCloseVertices(path, 3);
-    path.checkAndRepair(2);
-    path.interpolate(interpolation_parameter_);
+      new ompl::geometric::PathSimplifier(simple_setup_->getSpaceInformation());
 
-    for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
+    path_simlifier->smoothBSpline(solution_path, 3);
+    solution_path.interpolate(interpolation_parameter_);
+
+    for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount(); path_idx++) {
       // cast the abstract state type to the type we expect
       const ompl::base::SE2StateSpace::StateType * se2_state =
-        path.getState(path_idx)->as<ompl::base::SE2StateSpace::StateType>();
+        solution_path.getState(path_idx)->as<ompl::base::SE2StateSpace::StateType>();
 
       tf2::Quaternion this_pose_quat;
       this_pose_quat.setRPY(0, 0, se2_state->getYaw());
@@ -211,27 +202,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
 
 bool SE2Planner::isStateValid(const ompl::base::State * state)
 {
-  if (is_octomap_ready_) {
-    std::call_once(
-      fcl_tree_from_octomap_once_, [this]() {
-        std::shared_ptr<octomap::OcTree> octomap_octree =
-        std::make_shared<octomap::OcTree>(0.2);
-        octomap_msgs::readTree<octomap::OcTree>(octomap_octree.get(), *octomap_msg_);
-        fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
-        fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
-          std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
-        RCLCPP_INFO(
-          logger_,
-          "Recieved a valid Octomap, A FCL collision tree will be created from this "
-          "octomap for state validity(aka collision check)");
-      });
-  } else {
-    RCLCPP_ERROR(
-      logger_,
-      "The Octomap has not been recieved correctly, Collision check "
-      "cannot be processed without a valid Octomap!");
-    return false;
-  }
   // cast the abstract state type to the type we expect
   const ompl::base::SE2StateSpace::StateType * se2_state =
     state->as<ompl::base::SE2StateSpace::StateType>();
@@ -246,17 +216,66 @@ bool SE2Planner::isStateValid(const ompl::base::State * state)
   fcl::CollisionResult collisionResult;
   fcl::collide(
     robot_collision_object_.get(),
-    fcl_octree_collision_object_.get(), requestType, collisionResult);
+    original_octomap_collision_object_.get(), requestType, collisionResult);
   return !collisionResult.isCollision();
 }
 
-void SE2Planner::octomapCallback(
-  const octomap_msgs::msg::Octomap::ConstSharedPtr msg)
+void SE2Planner::setupMap()
 {
   const std::lock_guard<std::mutex> lock(octomap_mutex_);
-  if (!is_octomap_ready_) {
-    is_octomap_ready_ = true;
-    octomap_msg_ = msg;
+
+  while (!is_map_ready_ && rclcpp::ok()) {
+
+    auto request = std::make_shared<vox_nav_msgs::srv::GetMapsAndSurfels::Request>();
+
+    while (!get_maps_and_surfels_client_->wait_for_service(std::chrono::seconds(1))) {
+      if (!rclcpp::ok()) {
+        RCLCPP_ERROR(
+          logger_,
+          "Interrupted while waiting for the get_maps_and_surfels service. Exiting");
+        return;
+      }
+      RCLCPP_INFO(
+        logger_,
+        "get_maps_and_surfels service not available, waiting and trying again");
+    }
+
+    auto result_future = get_maps_and_surfels_client_->async_send_request(request);
+    if (rclcpp::spin_until_future_complete(
+        get_maps_and_surfels_client_node_,
+        result_future) !=
+      rclcpp::FutureReturnCode::SUCCESS)
+    {
+      RCLCPP_ERROR(logger_, "/get_maps_and_surfels service call failed");
+    }
+    auto response = result_future.get();
+
+    if (response->is_valid) {
+      is_map_ready_ = true;
+    } else {
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      RCLCPP_INFO(
+        logger_, "Waiting for GetMapsAndSurfels service to provide correct maps.");
+      continue;
+    }
+
+    auto original_octomap_octree =
+      dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(response->original_octomap));
+    original_octomap_octree_ = std::make_shared<octomap::OcTree>(*original_octomap_octree);
+
+    delete original_octomap_octree;
+
+    auto original_octomap_fcl_octree = std::make_shared<fcl::OcTree>(original_octomap_octree_);
+    original_octomap_collision_object_ = std::make_shared<fcl::CollisionObject>(
+      std::shared_ptr<fcl::CollisionGeometry>(original_octomap_fcl_octree));
+
+    RCLCPP_INFO(
+      logger_,
+      "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
+      "octomap for state validity (aka collision check)", original_octomap_octree_->size());
+
+    simple_setup_->setStateValidityChecker(
+      std::bind(&SE2Planner::isStateValid, this, std::placeholders::_1));
   }
 }
 

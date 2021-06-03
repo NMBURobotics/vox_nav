@@ -72,13 +72,6 @@ public:
   bool isStateValid(const ompl::base::State * state) override;
 
   /**
-  * @brief Callback to subscribe ang get octomap
-  *
-  * @param octomap
-  */
-  virtual void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg) override;
-
-  /**
    * @brief
    *
    * @param msg
@@ -116,50 +109,28 @@ public:
  */
   std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() override;
 
+  /**
+   * @brief
+   *
+   */
+  void setupMap() override;
+
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se3_planner")};
-  rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr node_poses_subscriber_;
-
-  octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
-  geometry_msgs::msg::PoseArray::SharedPtr node_poses_msg_;
-  geometry_msgs::msg::PoseStamped nearest_node_to_start_;
-  geometry_msgs::msg::PoseStamped nearest_node_to_goal_;
-
-  std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-  std::shared_ptr<fcl::CollisionObject> fcl_full_map_collision_object_;
-  std::shared_ptr<fcl::CollisionObject> fcl_nodes_collision_object_;
-  std::shared_ptr<octomap::OcTree> full_map_octree_;
-  std::shared_ptr<octomap::OcTree> nodes_octree_;
-  std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
+  // Surfels centers are elevated by node_elevation_distance_, and are stored in this
+  // octomap, this maps is used by planner to sample states that are
+  // strictly laying on ground but not touching. So it constrains the path to be on ground
+  // while it can elevate thorogh ramps or slopes
+  std::shared_ptr<octomap::OcTree> elevated_surfel_octomap_octree_;
+  // it is also required to have orientation information of surfels, they are kept in
+  // elevated_surfel_poses_msg_
+  geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
+  pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
+  geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
+  geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
+  std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
   std::shared_ptr<OctoCellValidStateSampler> octocell_valid_state_sampler_;
-
-  pcl::PointCloud<pcl::PointSurfel>::Ptr node_surfels_;
-
-  ompl::base::StateSpacePtr state_space_;
   ompl::base::OptimizationObjectivePtr octocost_optimization_;
-  ompl::geometric::SimpleSetupPtr simple_setup_;
-
-  // to ensure safety when accessing global var curr_frame_
-  std::mutex global_mutex_;
-  // the topic to subscribe in order capture a frame
-  std::string planner_name_;
-  // The topic of octomap to subscribe, this octomap is published by map_server
-  std::string octomap_topic_;
-  // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
-  double octomap_voxel_size_;
-  // whether plugin is enabled
-  bool is_enabled_;
-  // related to density of created path
-  int interpolation_parameter_;
-  // max time the planner can spend before coming up with a solution
-  double planner_timeout_;
-  // whether otomap is recieved
-  volatile bool is_octomap_ready_;
-  // whether otomap is recieved
-  volatile bool is_node_poses_ready_;
-  // global mutex to guard octomap
-  std::mutex octomap_mutex_;
 };
 }  // namespace vox_nav_planning
 

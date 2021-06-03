@@ -7,3 +7,5 @@ octomap_msgs/Octomap original_octomap
 octomap_msgs/Octomap elevated_surfel_octomap
 # 6DOF poses of each surfel
 geometry_msgs/PoseArray elevated_surfel_poses
+#
+bool is_valid

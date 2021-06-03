@@ -19,7 +19,6 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 #include <rclcpp/service.hpp>
 #include <rclcpp/client.hpp>
-
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/transform_datatypes.h>
 #include <tf2_eigen/tf2_eigen.h>
@@ -29,7 +28,6 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
-
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
@@ -40,12 +38,10 @@
 #include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_utilities/map_manager_helpers.hpp>
-
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>
 #include <octomap/octomap.h>
 #include <octomap/octomap_utils.h>
-
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
 #include <pcl/conversions.h>
@@ -278,7 +274,7 @@ protected:
   //  see the struct, it is used to keep cost regression params orginzed
   CostRegressionParams cost_params_;
   // hther map has beene configured yet
-  bool map_configured_;
+  volatile bool map_configured_;
 };
 }  // namespace vox_nav_map_server
 

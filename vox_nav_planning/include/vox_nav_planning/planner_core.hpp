@@ -18,6 +18,8 @@
 
 // ROS
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp/service.hpp>
+#include <rclcpp/client.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/pose.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -25,6 +27,7 @@
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_utilities/planner_helpers.hpp>
+#include <vox_nav_msgs/srv/get_maps_and_surfels.hpp>
 // PCL
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
@@ -137,13 +140,6 @@ public:
   */
   virtual bool isStateValid(const ompl::base::State * state) = 0;
 
-  /**
-   * @brief Callback to subscribe ang get octomap
-   *
-   * @param octomap
-   */
-  virtual void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg) = 0;
-
 /**
  * @brief Get the Overlayed Start and Goal poses, only x and y are provided for goal ,
  * but internally planner finds closest valid node on octomap and reassigns goal to this pose
@@ -151,6 +147,38 @@ public:
  * @return std::vector<geometry_msgs::msg::PoseStamped>
  */
   virtual std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() = 0;
+
+  /**
+   * @brief
+   *
+   */
+  virtual void setupMap() = 0;
+
+protected:
+  rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+  rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
+  // octomap acquired from original PCD map
+  std::shared_ptr<octomap::OcTree> original_octomap_octree_;
+  std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
+  std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
+  std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
+  ompl::base::StateSpacePtr state_space_;
+  ompl::geometric::SimpleSetupPtr simple_setup_;
+  // to ensure safety when accessing global var curr_frame_
+  std::mutex global_mutex_;
+  // the topic to subscribe in order capture a frame
+  std::string planner_name_;
+  // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
+  double octomap_voxel_size_;
+  // whether plugin is enabled
+  bool is_enabled_;
+  // related to density of created path
+  int interpolation_parameter_;
+  // max time the planner can spend before coming up with a solution
+  double planner_timeout_;
+  // global mutex to guard octomap
+  std::mutex octomap_mutex_;
+  volatile bool is_map_ready_;
 };
 }  // namespace vox_nav_planning
 #endif  // VOX_NAV_PLANNING__PLANNER_CORE_HPP_

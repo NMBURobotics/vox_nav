@@ -75,55 +75,21 @@ public:
   bool isStateValid(const ompl::base::State * state) override;
 
   /**
-  * @brief Callback to subscribe ang get octomap
+  * @brief Get the Overlayed Start and Goal poses, only x and y are provided for goal ,
+  * but internally planner finds closest valid node on octomap and reassigns goal to this pose
   *
-  * @param octomap
+  * @return std::vector<geometry_msgs::msg::PoseStamped>
   */
-  virtual void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg) override;
-
-/**
- * @brief Get the Overlayed Start and Goal poses, only x and y are provided for goal ,
- * but internally planner finds closest valid node on octomap and reassigns goal to this pose
- *
- * @return std::vector<geometry_msgs::msg::PoseStamped>
- */
   std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() override;
+
+  /**
+   * @brief
+   *
+   */
+  void setupMap() override;
 
 protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se2_planner")};
-  rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
-  octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
-
-  std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-  std::shared_ptr<fcl::OcTree> fcl_octree_;
-  std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
-
-  std::shared_ptr<ompl::base::RealVectorBounds> se2_space_bounds_;
-  // This can be DBINS,REEDS or pure SE2, set this through parameters
-  ompl::base::StateSpacePtr se2_space_;
-  ompl::base::SpaceInformationPtr se2_state_space_information_;
-
-  // to ensure safety when accessing global var curr_frame_
-  std::mutex global_mutex_;
-  // the topic to subscribe in order capture a frame
-  std::string planner_name_;
-  // The topic of octomap to subscribe, this octomap is published by map_server
-  std::string octomap_topic_;
-  // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
-  double octomap_voxel_size_;
-  // whether plugin is enabled
-  bool is_enabled_;
-  // related to density of created path
-  int interpolation_parameter_;
-  // max time the planner can spend before coming up with a solution
-  double planner_timeout_;
-  // whether otomap is recieved
-  volatile bool is_octomap_ready_;
-  // global mutex to guard octomap
-  std::mutex octomap_mutex_;
-  // We only need to creae a FLC cotomap collision from
-  // octomap once, because this is static map
-  std::once_flag fcl_tree_from_octomap_once_;
   // Which state space is slected ? REEDS,DUBINS, SE2
   std::string selected_se2_space_name_;
 };

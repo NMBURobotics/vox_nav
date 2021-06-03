@@ -132,7 +132,7 @@ MapManager::MapManager()
     <rclcpp::Node>("map_manager_fromll_client_node");
 
   robot_localization_fromLL_client_ =
-    this->create_client
+    robot_localization_fromLL_client_node_->create_client
     <robot_localization::srv::FromLL>(
     "/fromLL");
 
@@ -387,7 +387,7 @@ void MapManager::regressCosts()
   }
 
   if (cost_params_.include_node_centers_in_cloud) {
-    cost_regressed_cloud += elevated_surfels_cloud;
+    //cost_regressed_cloud += elevated_surfels_cloud;
   }
   cost_regressed_cloud += *pure_non_traversable_pcl;
   *pcd_map_pointcloud_ = cost_regressed_cloud;
@@ -448,7 +448,9 @@ void MapManager::handleElevatedSurfels(
     plane_model.values[2];
   elevated_node.r = cost_params_.max_color_range;
   elevated_node.g = cost_params_.max_color_range;
-  elevated_nodes_cloud.points.push_back(elevated_node);
+
+  //elevated_nodes_cloud.points.push_back(elevated_node);
+
   geometry_msgs::msg::Pose elevated_node_pose;
   elevated_node_pose.position.x = elevated_node.x;
   elevated_node_pose.position.y = elevated_node.y;
@@ -467,12 +469,15 @@ void MapManager::getGetMapsAndSurfelsCallback(
 {
   if (!map_configured_) {
     RCLCPP_INFO(
-      get_logger(), "Map has not been configured yet cannot handle GetMapsAndSurfels request");
+      get_logger(), "Map has not been configured yet,  cannot handle GetMapsAndSurfels request");
+    response->is_valid = false;
+    return;
   }
-  RCLCPP_INFO(get_logger(), "Handling GetMapsAndSurfels request");
+  RCLCPP_INFO(get_logger(), "Map is Cofigured Handling an incoming request");
   response->original_octomap = *original_octomap_msg_;
   response->elevated_surfel_octomap = *elevated_surfel_octomap_msg_;
   response->elevated_surfel_poses = *elevated_surfel_poses_msg_;
+  response->is_valid = true;
 }
 }   // namespace vox_nav_map_server
 
