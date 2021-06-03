@@ -98,6 +98,12 @@ public:
 
   void handleOriginalOctomap();
 
+  void handleElevatedSurfels(
+    pcl::PointXYZRGB & surfel_center_point,
+    pcl::PointCloud<pcl::PointXYZRGB> & elevated_nodes_cloud,
+    const pcl::ModelCoefficients plane_model,
+    const std::vector<double> & rpy);
+
   /**
    * @brief
    *
@@ -142,13 +148,11 @@ protected:
   // reusable octomp message, dont need to recreate each time we publish
   visualization_msgs::msg::MarkerArray::SharedPtr octomap_markers_msg_;
   octomap_msgs::msg::Octomap::SharedPtr original_octomap_msg_;
-  octomap_msgs::msg::Octomap::SharedPtr surfel_octomap_msg_;
-  geometry_msgs::msg::PoseArray::SharedPtr surfel_poses_msg_;
+  octomap_msgs::msg::Octomap::SharedPtr elevated_surfel_octomap_msg_;
+  geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
 
   // we read gps coordinates of map from yaml
   vox_nav_msgs::msg::OrientedNavSatFix::SharedPtr static_map_gps_pose_;
-  // Publish nodes fro planner to use
-  geometry_msgs::msg::PoseArray::SharedPtr node_poses_;
   // otree object to read and store binary octomap from disk
   // rclcpp parameters from yaml file: full path to octomap file in disk
   std::string pcd_map_filename_;
@@ -201,6 +205,8 @@ protected:
   bool include_node_centers_in_cloud_;
   const double kMaxColorRange = 255.0;
   std::vector<double> cost_critic_weights_;
+
+  bool map_configured_;
 
   rclcpp::Service<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_service_;
 };

@@ -260,15 +260,14 @@ std::vector<double> rpy_from_plane(
   const pcl::ModelCoefficients plane_model)
 {
   std::vector<double> rpy({0.0, 0.0, 0.0});
-  const double kRAD2DEG = 180.0 / M_PI;
   float roll = std::atan2(
     plane_model.values[1],
     plane_model.values[2]);
   float pitch = std::atan2(
     plane_model.values[0],
     plane_model.values[2]);
-  rpy[0] = -roll * kRAD2DEG;
-  rpy[1] = pitch * kRAD2DEG;
+  rpy[0] = -roll;
+  rpy[1] = pitch;
   // Yaw shouldnt matter at coordinate fitted plane,
   // it can be anything in between [-M_PI, M_PI]
   rpy[2] = 0.0;

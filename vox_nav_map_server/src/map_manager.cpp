@@ -22,15 +22,15 @@
 namespace vox_nav_map_server
 {
 MapManager::MapManager()
-: Node("vox_nav_map_manager_rclcpp_node")
+: Node("vox_nav_map_manager_rclcpp_node"),
+  map_configured_(false)
 {
   RCLCPP_INFO(this->get_logger(), "Creating..");
   // This is populated by params, soinitialize pointer asap
   static_map_gps_pose_ = std::make_shared<vox_nav_msgs::msg::OrientedNavSatFix>();
-  node_poses_ = std::make_shared<geometry_msgs::msg::PoseArray>();
   original_octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
-  surfel_octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
-  surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>();
+  elevated_surfel_octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
+  elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>();
   octomap_pointcloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
   octomap_markers_msg_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
 
@@ -153,12 +153,13 @@ void MapManager::timerCallback()
 {
   // Since this is static map we need to georefence this only once not each time
   std::call_once(
-    align_static_map_once_, [this]() {
+    align_static_map_once_, [this]()
+    {
       while (!tf_buffer_->canTransform(utm_frame_id_, map_frame_id_, rclcpp::Time(0))) {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
         RCLCPP_INFO(
           this->get_logger(), "Waiting for %s to %s Transform to be available.",
-          utm_frame_id_.c_str(), map_frame_id_.c_str() );
+          utm_frame_id_.c_str(), map_frame_id_.c_str());
       }
       RCLCPP_INFO(
         get_logger(), "Configuring pcd map with given parameters,"
@@ -170,6 +171,8 @@ void MapManager::timerCallback()
       regressCosts();
       handleOriginalOctomap();
       RCLCPP_INFO(get_logger(), "Georeferenced given map, ready to publish");
+
+      map_configured_ = true;
     });
   publishMapVisuals();
 }
@@ -305,10 +308,10 @@ void MapManager::regressCosts()
     uniformly_sampled_nodes,
     cell_radius_);
 
-  pcl::PointCloud<pcl::PointXYZRGB> cost_regressd_cloud;
-  pcl::PointCloud<pcl::PointXYZRGB> elevated_nodes_cloud;
+  pcl::PointCloud<pcl::PointXYZRGB> cost_regressed_cloud;
+  pcl::PointCloud<pcl::PointXYZRGB> elevated_surfels_cloud;
   for (auto && i : surfels) {
-    auto surfel_center_point = surfel_center_point;
+    auto surfel_center_point = i.first;
     auto surfel_cloud = i.second;
 
     // fit a plane to this surfel cloud, in order to et its orientation
@@ -352,37 +355,36 @@ void MapManager::regressCosts()
       surfel_cloud = vox_nav_utilities::set_cloud_color(
         surfel_cloud,
         std::vector<double>({0.0, kMaxColorRange - total_cost, total_cost}));
-
-      pcl::PointXYZRGB elevated_node;
-      elevated_node.x = surfel_center_point.x + node_elevation_distance_ * plane_model.values[0];
-      elevated_node.y = surfel_center_point.y + node_elevation_distance_ * plane_model.values[1];
-      elevated_node.z = surfel_center_point.z + node_elevation_distance_ * plane_model.values[2];
-      elevated_node.r = kMaxColorRange;
-      elevated_node.g = kMaxColorRange;
-      elevated_nodes_cloud.points.push_back(elevated_node);
-
-      const double kRAD2DEG = 180.0 / M_PI;
-      geometry_msgs::msg::Pose elevated_node_pose;
-      elevated_node_pose.position.x = elevated_node.x;
-      elevated_node_pose.position.y = elevated_node.y;
-      elevated_node_pose.position.z = elevated_node.z;
-
-      elevated_node_pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-        rpy[0] / kRAD2DEG,
-        rpy[1] / kRAD2DEG,
-        rpy[2] / kRAD2DEG);
-      node_poses_->poses.push_back(elevated_node_pose);
+      handleElevatedSurfels(surfel_center_point, elevated_surfels_cloud, plane_model, rpy);
     }
+    cost_regressed_cloud += *surfel_cloud;
+  }
 
-    cost_regressd_cloud += *surfel_cloud;
+  octomap::Pointcloud surfel_octocloud;
+  for (auto && i : elevated_surfels_cloud.points) {
+    surfel_octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
+  }
+  auto elevated_surfels_octomap_octree = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+  elevated_surfels_octomap_octree->insertPointCloud(surfel_octocloud, octomap::point3d(0, 0, 0));
+
+  try {
+    octomap_msgs::fullMapToMsg<octomap::OcTree>(
+      *elevated_surfels_octomap_octree,
+      *elevated_surfel_octomap_msg_);
+    elevated_surfel_octomap_msg_->binary = false;
+    elevated_surfel_octomap_msg_->resolution = octomap_voxel_size_;
+  } catch (const std::exception & e) {
+    RCLCPP_ERROR(
+      get_logger(), "Exception while converting binary octomap %s:", e.what());
   }
 
   if (include_node_centers_in_cloud_) {
-    cost_regressd_cloud += elevated_nodes_cloud;
+    cost_regressed_cloud += elevated_surfels_cloud;
   }
-  cost_regressd_cloud += *pure_non_traversable_pcl;
-  *pcd_map_pointcloud_ = cost_regressd_cloud;
+  cost_regressed_cloud += *pure_non_traversable_pcl;
+  *pcd_map_pointcloud_ = cost_regressed_cloud;
 
+  // overlapping sufels duplicates some points , get rid of them by downsampling
   pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud(
     pcd_map_pointcloud_,
     pcd_map_downsample_voxel_size_);
@@ -423,19 +425,46 @@ void MapManager::handleOriginalOctomap()
   }
 }
 
+void MapManager::handleElevatedSurfels(
+  pcl::PointXYZRGB & surfel_center_point,
+  pcl::PointCloud<pcl::PointXYZRGB> & elevated_nodes_cloud,
+  const pcl::ModelCoefficients plane_model,
+  const std::vector<double> & rpy)
+{
+  pcl::PointXYZRGB elevated_node;
+  elevated_node.x = surfel_center_point.x + node_elevation_distance_ * plane_model.values[0];
+  elevated_node.y = surfel_center_point.y + node_elevation_distance_ * plane_model.values[1];
+  elevated_node.z = surfel_center_point.z + node_elevation_distance_ * plane_model.values[2];
+  elevated_node.r = kMaxColorRange;
+  elevated_node.g = kMaxColorRange;
+  elevated_nodes_cloud.points.push_back(elevated_node);
+
+  geometry_msgs::msg::Pose elevated_node_pose;
+  elevated_node_pose.position.x = elevated_node.x;
+  elevated_node_pose.position.y = elevated_node.y;
+  elevated_node_pose.position.z = elevated_node.z;
+
+  elevated_node_pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
+    rpy[0],
+    rpy[1],
+    rpy[2]);
+
+  elevated_surfel_poses_msg_->poses.push_back(elevated_node_pose);
+}
 
 void MapManager::getGetMapsAndSurfelsCallback(
   const std::shared_ptr<rmw_request_id_t> request_header,
   const std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Request> request,
   std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Response> response)
 {
-
+  if (!map_configured_) {
+    RCLCPP_INFO(
+      get_logger(), "Map has not been configured yet cannot handle GetMapsAndSurfels request");
+  }
   RCLCPP_INFO(get_logger(), "Handling GetMapsAndSurfels request");
-
   response->original_octomap = *original_octomap_msg_;
-  response->surfel_octomap = *original_octomap_msg_;
-  //response->surfel_poses
-  //response->surfel_poses = *original_octomap_msg_;
+  response->elevated_surfel_octomap = *elevated_surfel_octomap_msg_;
+  response->elevated_surfel_poses = *elevated_surfel_poses_msg_;
 }
 
 }   // namespace vox_nav_map_server

@@ -4,6 +4,6 @@
 # The original octomap that was acquired by conversion of pcd map
 octomap_msgs/Octomap original_octomap
 # The map that was created by elevated surfels, these are candidate nodes for navigation
-octomap_msgs/Octomap surfel_octomap
+octomap_msgs/Octomap elevated_surfel_octomap
 # 6DOF poses of each surfel
-geometry_msgs/PoseArray surfel_poses
+geometry_msgs/PoseArray elevated_surfel_poses
