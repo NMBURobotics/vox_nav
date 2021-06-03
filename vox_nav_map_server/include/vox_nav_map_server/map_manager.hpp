@@ -35,10 +35,11 @@
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <robot_localization/srv/from_ll.hpp>
-#include <vox_nav_map_server/cost_regression_utils.hpp>
 #include <vox_nav_msgs/msg/oriented_nav_sat_fix.hpp>
+#include <vox_nav_msgs/srv/get_maps_and_surfels.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
+#include <vox_nav_utilities/map_manager_helpers.hpp>
 
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>
@@ -92,23 +93,10 @@ public:
   */
   void timerCallback();
 
-  /**
-   * @brief given GPS lat long alt coordinates uses
-   *        robot_localization service to georefence this map
-   *
-   * @param request
-   * @param response
-   */
-  void fromGPSPoseToMapPose(
-    const robot_localization::srv::FromLL::Request::SharedPtr request,
-    robot_localization::srv::FromLL::Response::SharedPtr response);
 
-  /**
-   * @brief
-   *
-   * @param static_map_to_map_transfrom
-   */
-  void alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom);
+  void transfromPCDfromGPS2Map();
+
+  void handleOriginalOctomap();
 
   /**
    * @brief
@@ -121,38 +109,47 @@ public:
  *  is called from timerCallback to publish map
  *
  */
-  void publishAlignedMap();
+  void publishMapVisuals();
 
   /**
    * @brief
    *
    */
-  void fillOctomapMarkers();
+  void preProcessPCDMap();
+
+  void getGetMapsAndSurfelsCallback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Request> request,
+    std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Response> response);
 
 protected:
   // Used to creted a periodic callback function IOT publish transfrom/octomap/cloud etc.
   rclcpp::TimerBase::SharedPtr timer_;
   // publishes octomap in its native format
-  rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_publisher_;
   // publishes octomap in form of a point cloud message
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr octomap_pointloud_publisher_;
   // publish sampled node poses for planner to use.
   rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr node_poses_publisher_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr octomap_markers_publisher_;
+
   // robot_localization package provides a service to convert
   // lat,long,al GPS cooordinates to x,y,z map points
   rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr robot_localization_fromLL_client_;
   // clint node used for spinning the service callback of robot_localization_fromLL_client_
   rclcpp::Node::SharedPtr robot_localization_fromLL_client_node_;
   // reusable octomap point loud message, dont need to recreate each time we publish
-  sensor_msgs::msg::PointCloud2::SharedPtr octomap_pointcloud_ros_msg_;
+  sensor_msgs::msg::PointCloud2::SharedPtr octomap_pointcloud_msg_;
   // reusable octomp message, dont need to recreate each time we publish
-  octomap_msgs::msg::Octomap::SharedPtr octomap_ros_msg_;
+  visualization_msgs::msg::MarkerArray::SharedPtr octomap_markers_msg_;
+  octomap_msgs::msg::Octomap::SharedPtr original_octomap_msg_;
+  octomap_msgs::msg::Octomap::SharedPtr surfel_octomap_msg_;
+  geometry_msgs::msg::PoseArray::SharedPtr surfel_poses_msg_;
+
   // we read gps coordinates of map from yaml
   vox_nav_msgs::msg::OrientedNavSatFix::SharedPtr static_map_gps_pose_;
   // Publish nodes fro planner to use
   geometry_msgs::msg::PoseArray::SharedPtr node_poses_;
   // otree object to read and store binary octomap from disk
-  std::shared_ptr<octomap::ColorOcTree> octomap_octree_;
   // rclcpp parameters from yaml file: full path to octomap file in disk
   std::string pcd_map_filename_;
   // Pointcloud map is stroed here
@@ -183,6 +180,7 @@ protected:
   // Optional rigid body transform to apply to the cloud, if cloud
   // is depth camera frames we need to pull cloud back to conventional ROS frames
   vox_nav_utilities::RigidBodyTransformation pcd_map_transform_matrix_;
+
   // optional point cloud transformfrom yaml file
   double pcd_map_downsample_voxel_size_;
   int remove_outlier_mean_K_;
@@ -190,8 +188,6 @@ protected:
   double remove_outlier_radius_search_;
   int remove_outlier_min_neighbors_in_radius_;
   bool apply_filters_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr octomap_markers_publisher_;
-  visualization_msgs::msg::MarkerArray octomap_markers_;
 
   // Cost regression critics
   double cell_radius_;
@@ -205,6 +201,8 @@ protected:
   bool include_node_centers_in_cloud_;
   const double kMaxColorRange = 255.0;
   std::vector<double> cost_critic_weights_;
+
+  rclcpp::Service<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_service_;
 };
 }  // namespace vox_nav_map_server
 

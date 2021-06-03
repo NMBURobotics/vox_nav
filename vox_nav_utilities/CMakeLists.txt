@@ -56,6 +56,9 @@ add_library(planner_helpers SHARED src/planner_helpers.cpp)
 ament_target_dependencies(planner_helpers ${dependencies})
 target_link_libraries(planner_helpers ${LIBFCL_LIBRARIES} ompl)
 
+add_library(map_manager_helpers SHARED src/map_manager_helpers.cpp)
+ament_target_dependencies(map_manager_helpers ${dependencies})
+
 add_library(gps_waypoint_collector SHARED src/gps_waypoint_collector.cpp)
 ament_target_dependencies(gps_waypoint_collector ${dependencies})
 
@@ -73,6 +76,7 @@ target_link_libraries(planner_benchmarking_node ${LIBFCL_LIBRARIES} tf_helpers o
 
 install(TARGETS tf_helpers 
                 planner_helpers 
+                map_manager_helpers
                 gps_waypoint_collector 
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
@@ -91,6 +95,7 @@ install(DIRECTORY config launch
 
 ament_export_libraries(tf_helpers 
                         planner_helpers 
+                        map_manager_helpers
                         gps_waypoint_collector)
 ament_export_dependencies(${dependencies})
 ament_export_include_directories(include)

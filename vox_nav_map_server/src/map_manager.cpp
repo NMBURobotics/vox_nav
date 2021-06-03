@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "vox_nav_map_server/map_manager.hpp"
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -27,10 +28,14 @@ MapManager::MapManager()
   // This is populated by params, soinitialize pointer asap
   static_map_gps_pose_ = std::make_shared<vox_nav_msgs::msg::OrientedNavSatFix>();
   node_poses_ = std::make_shared<geometry_msgs::msg::PoseArray>();
+  original_octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
+  surfel_octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
+  surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>();
+  octomap_pointcloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
+  octomap_markers_msg_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
 
   // Declare this node's parameters
   declare_parameter("pcd_map_filename", "/home/ros2-foxy/f.pcd");
-  declare_parameter("octomap_publish_topic_name", "octomap");
   declare_parameter("octomap_voxel_size", 0.2);
   declare_parameter("octomap_publish_frequency", 10);
   declare_parameter("publish_octomap_as_pointcloud", true);
@@ -71,7 +76,6 @@ MapManager::MapManager()
 
   // get this node's parameters
   get_parameter("pcd_map_filename", pcd_map_filename_);
-  get_parameter("octomap_publish_topic_name", octomap_publish_topic_name_);
   get_parameter("octomap_voxel_size", octomap_voxel_size_);
   get_parameter("octomap_publish_frequency", octomap_publish_frequency_);
   get_parameter("publish_octomap_as_pointcloud", publish_octomap_as_pointcloud_);
@@ -110,47 +114,75 @@ MapManager::MapManager()
   get_parameter("include_node_centers_in_cloud", include_node_centers_in_cloud_);
   get_parameter("cost_critic_weights", cost_critic_weights_);
 
+  // service hooks
+  get_maps_and_surfels_service_ = this->create_service<vox_nav_msgs::srv::GetMapsAndSurfels>(
+    std::string("get_maps_and_surfels"),
+    std::bind(
+      &MapManager::getGetMapsAndSurfelsCallback, this,
+      std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
+    "map_manager_fromll_client_node");
+  robot_localization_fromLL_client_ =
+    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
+
   timer_ = this->create_wall_timer(
     std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
     std::bind(&MapManager::timerCallback, this));
 
-  octomap_octree_ = std::make_shared<octomap::ColorOcTree>(octomap_voxel_size_);
-  octomap_ros_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
-  octomap_pointcloud_ros_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
-
-  octomap_publisher_ = this->create_publisher<octomap_msgs::msg::Octomap>(
-    octomap_publish_topic_name_, rclcpp::SystemDefaultsQoS());
   octomap_pointloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     octomap_point_cloud_publish_topic_, rclcpp::SystemDefaultsQoS());
   octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
     "octomap_markers", rclcpp::SystemDefaultsQoS());
 
-  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
-    "map_manager_fromll_client_node");
-
-  robot_localization_fromLL_client_ =
-    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
-  // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-
-  node_poses_publisher_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
-    "node_poses", rclcpp::SystemDefaultsQoS());
 
   pcd_map_pointcloud_ = vox_nav_utilities::loadPointcloudFromPcd(pcd_map_filename_.c_str());
 
   RCLCPP_INFO(
-    this->get_logger(), "Loading a PCD map with %d points",
+    this->get_logger(), "Loaded a PCD map with %d points",
     pcd_map_pointcloud_->points.size());
+}
 
+MapManager::~MapManager()
+{
+  RCLCPP_INFO(this->get_logger(), "Destroying");
+}
+
+void MapManager::timerCallback()
+{
+  // Since this is static map we need to georefence this only once not each time
+  std::call_once(
+    align_static_map_once_, [this]() {
+      while (!tf_buffer_->canTransform(utm_frame_id_, map_frame_id_, rclcpp::Time(0))) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        RCLCPP_INFO(
+          this->get_logger(), "Waiting for %s to %s Transform to be available.",
+          utm_frame_id_.c_str(), map_frame_id_.c_str() );
+      }
+      RCLCPP_INFO(
+        get_logger(), "Configuring pcd map with given parameters,"
+        " But the map and octomap will be published at %i frequency rate",
+        octomap_publish_frequency_);
+
+      transfromPCDfromGPS2Map();
+      preProcessPCDMap();
+      regressCosts();
+      handleOriginalOctomap();
+      RCLCPP_INFO(get_logger(), "Georeferenced given map, ready to publish");
+    });
+  publishMapVisuals();
+}
+
+void MapManager::preProcessPCDMap()
+{
   pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud(
     pcd_map_pointcloud_,
     pcd_map_downsample_voxel_size_);
-
   RCLCPP_INFO(
-    this->get_logger(), "PCD Map downsampled, it now has %d points",
+    this->get_logger(), "PCD Map downsampled, it now has %d points"
+    " adjust the parameters if the map looks off",
     pcd_map_pointcloud_->points.size());
-
   if (apply_filters_) {
     pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
       pcd_map_pointcloud_,
@@ -163,127 +195,40 @@ MapManager::MapManager()
       remove_outlier_radius_search_,
       vox_nav_utilities::OutlierRemovalType::RadiusOutlierRemoval);
   }
-
+  // apply a rigid body transfrom if it was given one
   pcd_map_pointcloud_ = vox_nav_utilities::transformCloud(
     pcd_map_pointcloud_,
     vox_nav_utilities::getRigidBodyTransform(
       pcd_map_transform_matrix_.translation_,
       pcd_map_transform_matrix_.rpyIntrinsic_,
       get_logger()));
-
-  bool is_octomap_successfully_converted(false);
-
-  try {
-    is_octomap_successfully_converted = octomap_msgs::fullMapToMsg<octomap::ColorOcTree>(
-      *octomap_octree_, *octomap_ros_msg_);
-  } catch (const std::exception & e) {
-    std::cerr << e.what() << '\n';
-    RCLCPP_ERROR(
-      get_logger(),
-      "Exception while converting octomap %s:", e.what());
-  }
-
-  RCLCPP_INFO(
-    this->get_logger(),
-    "Created an Instance of MapManager");
+  // Experimental, this assumes we have no prior infromation of
+  // segmentation, so mark all points as traversable
+  // by painting them green > 0
+  pcd_map_pointcloud_ =
+    vox_nav_utilities::set_cloud_color(pcd_map_pointcloud_, std::vector<double>({0.0, 255.0, 0.0}));
 }
 
-MapManager::~MapManager()
+void MapManager::publishMapVisuals()
 {
-  RCLCPP_INFO(
-    this->get_logger(),
-    "Destroyed an Instance of MapManager");
-}
-
-void MapManager::timerCallback()
-{
-  // Since this is static map we need to georefence this only once not each time
-  std::call_once(
-    align_static_map_once_, [this]() {
-      while (!tf_buffer_->canTransform(utm_frame_id_, map_frame_id_, rclcpp::Time(0))) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-        RCLCPP_INFO(
-          this->get_logger(), "Waiting for %s to %s Transform to be available.",
-          utm_frame_id_.c_str(), map_frame_id_.c_str() );
-      }
-      RCLCPP_INFO(
-        get_logger(), "Going to align the static map to map frames once,"
-        " But the map and octomap will be published at %i frequency rate",
-        octomap_publish_frequency_);
-      RCLCPP_INFO(get_logger(), "Depending on the size of map , this might take a while..");
-      auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
-      auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
-      request->ll_point.latitude = static_map_gps_pose_->position.latitude;
-      request->ll_point.longitude = static_map_gps_pose_->position.longitude;
-      request->ll_point.altitude = static_map_gps_pose_->position.altitude;
-      fromGPSPoseToMapPose(request, response);
-
-      // "/fromLL" service only accounts for translational transform
-      // we still need to rotate the points according to yaw_offset
-      // yaw_offset determines rotation between utm and map frame
-      // Normally utm and map frmaes are aligned rotationally, but if there is yaw_offset set in
-      // navsat_transfrom_node we have to account for that yaw_offset here as well
-      // use classic rotation formula https://en.wikipedia.org/wiki/Rotation_matrix#In_two_dimensions;
-      // The rotation only happens in x and y since it is round the z axis(yaw)
-      double x = response->map_point.x;
-      double y = response->map_point.y;
-      double x_dot = x * std::cos(yaw_offset_) - y * std::sin(yaw_offset_);
-      double y_dot = x * std::sin(yaw_offset_) + y * std::cos(yaw_offset_);
-
-      // The translation from static_map origin to map is basically inverse of this transform
-      tf2::Transform static_map_translation;
-      static_map_translation.setOrigin(
-        tf2::Vector3(x_dot, y_dot, response->map_point.z));
-
-      // this is identity because map and utm frames are rotationally aligned
-      static_map_translation.setRotation(tf2::Quaternion::getIdentity());
-
-      tf2::Transform static_map_rotation;
-      tf2::Quaternion static_map_quaternion;
-      tf2::fromMsg(static_map_gps_pose_->orientation, static_map_quaternion);
-      // First align the static map origin to map in translation
-      // and then rotate the static map with its correct rotation
-      static_map_rotation.setOrigin(tf2::Vector3(0, 0, 0));
-      static_map_rotation.setRotation(static_map_quaternion);
-
-      tf2::Transform static_map_to_map_transfrom = static_map_rotation *
-      static_map_translation.inverse();
-
-      RCLCPP_INFO(this->get_logger(), "Regressing costs to given pcd map");
-
-      pcl_ros::transformPointCloud(
-        *pcd_map_pointcloud_, *pcd_map_pointcloud_, static_map_to_map_transfrom
-      );
-
-      regressCosts();
-      alignStaticMapToMap(static_map_to_map_transfrom);
-      fillOctomapMarkers();
-      RCLCPP_INFO(get_logger(), "Georeferenced given map, ready to publish");
-    });
-
-  publishAlignedMap();
-}
-
-void MapManager::publishAlignedMap()
-{
-  octomap_ros_msg_->header.stamp = this->now();
-  octomap_ros_msg_->header.frame_id = map_frame_id_;
-  octomap_publisher_->publish(*octomap_ros_msg_);
   if (publish_octomap_as_pointcloud_) {
-    octomap_pointcloud_ros_msg_->header.frame_id = map_frame_id_;
-    octomap_pointcloud_ros_msg_->header.stamp = this->now();
-    octomap_pointloud_publisher_->publish(*octomap_pointcloud_ros_msg_);
+    octomap_pointcloud_msg_->header.frame_id = map_frame_id_;
+    octomap_pointcloud_msg_->header.stamp = this->now();
+    octomap_pointloud_publisher_->publish(*octomap_pointcloud_msg_);
   }
   if (publish_octomap_markers_) {
-    octomap_markers_publisher_->publish(octomap_markers_);
+    octomap_markers_publisher_->publish(*octomap_markers_msg_);
   }
-  node_poses_publisher_->publish(*node_poses_);
 }
 
-void MapManager::fromGPSPoseToMapPose(
-  const robot_localization::srv::FromLL::Request::SharedPtr request,
-  robot_localization::srv::FromLL::Response::SharedPtr response)
+void MapManager::transfromPCDfromGPS2Map()
 {
+  auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
+  auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
+  request->ll_point.latitude = static_map_gps_pose_->position.latitude;
+  request->ll_point.longitude = static_map_gps_pose_->position.longitude;
+  request->ll_point.altitude = static_map_gps_pose_->position.altitude;
+
   while (!robot_localization_fromLL_client_->wait_for_service(std::chrono::seconds(1))) {
     if (!rclcpp::ok()) {
       RCLCPP_ERROR(
@@ -305,72 +250,113 @@ void MapManager::fromGPSPoseToMapPose(
   }
   auto result = result_future.get();
   response->map_point = result->map_point;
+
+  // "/fromLL" service only accounts for translational transform
+  // we still need to rotate the points according to yaw_offset
+  // yaw_offset determines rotation between utm and map frame
+  // Normally utm and map frmaes are aligned rotationally, but if there is yaw_offset set in
+  // navsat_transfrom_node we have to account for that yaw_offset here as well
+  // use classic rotation formula https://en.wikipedia.org/wiki/Rotation_matrix#In_two_dimensions;
+  // The rotation only happens in x and y since it is round the z axis(yaw)
+  double x = response->map_point.x;
+  double y = response->map_point.y;
+  double x_dot = x * std::cos(yaw_offset_) - y * std::sin(yaw_offset_);
+  double y_dot = x * std::sin(yaw_offset_) + y * std::cos(yaw_offset_);
+
+  // The translation from static_map origin to map is basically inverse of this transform
+  tf2::Transform static_map_translation;
+  static_map_translation.setOrigin(
+    tf2::Vector3(x_dot, y_dot, response->map_point.z));
+
+  // this is identity because map and utm frames are rotationally aligned
+  static_map_translation.setRotation(tf2::Quaternion::getIdentity());
+
+  tf2::Transform static_map_rotation;
+  tf2::Quaternion static_map_quaternion;
+  tf2::fromMsg(static_map_gps_pose_->orientation, static_map_quaternion);
+  // First align the static map origin to map in translation
+  // and then rotate the static map with its correct rotation
+  static_map_rotation.setOrigin(tf2::Vector3(0, 0, 0));
+  static_map_rotation.setRotation(static_map_quaternion);
+  tf2::Transform static_map_to_map_transfrom = static_map_rotation *
+    static_map_translation.inverse();
+
+  pcl_ros::transformPointCloud(
+    *pcd_map_pointcloud_, *pcd_map_pointcloud_, static_map_to_map_transfrom
+  );
 }
 
 void MapManager::regressCosts()
 {
-  // EXPERIMENTAL, THIS ASSUMES WE HAVE NO PRIOR INFORMATION OF
-  // SEGMENTATION, SO MARK ALL POINTS AS TRAVERSABLE
-  // BY PAINTING THEM GREEN > 0
-  pcd_map_pointcloud_ =
-    set_cloud_color(pcd_map_pointcloud_, std::vector<double>({0.0, 255.0, 0.0}));
+  // seperate traversble points from non-traversable ones
+  auto pure_traversable_pcl = vox_nav_utilities::get_traversable_points(pcd_map_pointcloud_);
+  auto pure_non_traversable_pcl =
+    vox_nav_utilities::get_non_traversable_points(pcd_map_pointcloud_);
 
-  // REMOVE NON TRAVERSABLE POINTS(RED POINTS)
-  auto pure_traversable_pcl = get_traversable_points(pcd_map_pointcloud_);
-  auto pure_non_traversable_pcl = get_non_traversable_points(pcd_map_pointcloud_);
-
-  // UNIFORMLY SAMPLE NODES ON TOP OF TRAVERSABLE CLOUD
-  auto uniformly_sampled_nodes = uniformly_sample_cloud(
+  // uniformly sample nodes on top of traversable cloud
+  auto uniformly_sampled_nodes = vox_nav_utilities::uniformly_sample_cloud(
     pure_traversable_pcl,
     cell_radius_);
 
-  // THIS IS BASICALLY VECTOR OF CLOUD SEGMENTS, EACH SEGMENT INCLUDES POINTS REPRESENTING CELL,
-  // THE FIRST ELEMNET OF PAIR IS CENTROID WHILE SECOND IS THE POINTCLOUD ITSELF
-  auto decomposed_cells = decompose_traversability_cloud(
+  // This is basically vector of cloud segments, each segments includes points representing a cell
+  // The first element of pair is surfel_center_point while the second is pointcloud itself
+  auto surfels = vox_nav_utilities::surfelize_traversability_cloud(
     pure_traversable_pcl,
     uniformly_sampled_nodes,
     cell_radius_);
 
   pcl::PointCloud<pcl::PointXYZRGB> cost_regressd_cloud;
   pcl::PointCloud<pcl::PointXYZRGB> elevated_nodes_cloud;
-  for (auto && i : decomposed_cells) {
-    auto plane_model = fit_plane_to_cloud(i.second, plane_fit_threshold_);
-    auto rpy = rpy_from_plane(plane_model);
-    double average_point_deviation = average_point_deviation_from_plane(i.second, plane_model);
-    double max_energy_gap = max_energy_gap_in_cloud(i.second, robot_mass_, average_speed_);
+  for (auto && i : surfels) {
+    auto surfel_center_point = surfel_center_point;
+    auto surfel_cloud = i.second;
 
+    // fit a plane to this surfel cloud, in order to et its orientation
+    auto plane_model = vox_nav_utilities::fit_plane_to_cloud(surfel_cloud, plane_fit_threshold_);
+
+    // extract rpy from plane equation
+    auto rpy = vox_nav_utilities::rpy_from_plane(plane_model);
+
+    // extract averge point deviation from surfel cloud this determines the roughness of cloud
+    double average_point_deviation = vox_nav_utilities::average_point_deviation_from_plane(
+      surfel_cloud,
+      plane_model);
+
+    // extract max energy grap from surfel cloud, the higher this , the higher cost
+    double max_energy_gap = vox_nav_utilities::max_energy_gap_in_cloud(
+      surfel_cloud,
+      robot_mass_,
+      average_speed_);
+
+    // regulate all costs to be less than 1.0
     double max_tilt = std::max(std::abs(rpy[0]), std::abs(rpy[1]));
-    double slope_cost = std::min(
-      max_tilt /
-      max_allowed_tilt_, 1.0) *
+    double slope_cost = std::min(max_tilt / max_allowed_tilt_, 1.0) *
       kMaxColorRange;
-    double energy_gap_cost = std::min(
-      max_energy_gap /
-      max_allowed_energy_gap_, 1.0) * kMaxColorRange;
+    double energy_gap_cost = std::min(max_energy_gap / max_allowed_energy_gap_, 1.0) *
+      kMaxColorRange;
     double deviation_of_points_cost = std::min(
-      average_point_deviation /
-      max_allowed_point_deviation_, 1.0) * kMaxColorRange;
+      average_point_deviation / max_allowed_point_deviation_, 1.0) *
+      kMaxColorRange;
 
     double total_cost =
       cost_critic_weights_[0] * slope_cost +
       cost_critic_weights_[1] * deviation_of_points_cost +
       cost_critic_weights_[2] * energy_gap_cost;
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr plane_fitted_cell(
-      new pcl::PointCloud<pcl::PointXYZRGB>);
-
+    // any roll or pitche thats higher than max_tilt will make that surfel NON traversable
     if (max_tilt > max_allowed_tilt_) {
-      plane_fitted_cell = set_cloud_color(
-        i.second,
+      surfel_cloud = vox_nav_utilities::set_cloud_color(
+        surfel_cloud,
         std::vector<double>({255.0, 0, 0}));
     } else {
-      plane_fitted_cell = set_cloud_color(
-        i.second,
+      surfel_cloud = vox_nav_utilities::set_cloud_color(
+        surfel_cloud,
         std::vector<double>({0.0, kMaxColorRange - total_cost, total_cost}));
+
       pcl::PointXYZRGB elevated_node;
-      elevated_node.x = i.first.x + node_elevation_distance_ * plane_model.values[0];
-      elevated_node.y = i.first.y + node_elevation_distance_ * plane_model.values[1];
-      elevated_node.z = i.first.z + node_elevation_distance_ * plane_model.values[2];
+      elevated_node.x = surfel_center_point.x + node_elevation_distance_ * plane_model.values[0];
+      elevated_node.y = surfel_center_point.y + node_elevation_distance_ * plane_model.values[1];
+      elevated_node.z = surfel_center_point.z + node_elevation_distance_ * plane_model.values[2];
       elevated_node.r = kMaxColorRange;
       elevated_node.g = kMaxColorRange;
       elevated_nodes_cloud.points.push_back(elevated_node);
@@ -386,11 +372,9 @@ void MapManager::regressCosts()
         rpy[1] / kRAD2DEG,
         rpy[2] / kRAD2DEG);
       node_poses_->poses.push_back(elevated_node_pose);
-
-      std::cout << rpy[0] << " " << rpy[1] << " " << rpy[2] << std::endl;
     }
 
-    cost_regressd_cloud += *plane_fitted_cell;
+    cost_regressd_cloud += *surfel_cloud;
   }
 
   if (include_node_centers_in_cloud_) {
@@ -405,20 +389,15 @@ void MapManager::regressCosts()
 }
 
 
-void MapManager::alignStaticMapToMap(const tf2::Transform & static_map_to_map_transfrom)
+void MapManager::handleOriginalOctomap()
 {
-
-
-  pcl::toROSMsg(*pcd_map_pointcloud_, *octomap_pointcloud_ros_msg_);
-
+  pcl::toROSMsg(*pcd_map_pointcloud_, *octomap_pointcloud_msg_);
   octomap::Pointcloud octocloud;
-  octomap::point3d sensorOrigin(0, 0, 0);
-
   for (auto && i : pcd_map_pointcloud_->points) {
     octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
   }
-
-  octomap_octree_->insertPointCloud(octocloud, sensorOrigin);
+  auto original_octomap_octree = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+  original_octomap_octree->insertPointCloud(octocloud, octomap::point3d(0, 0, 0));
 
   for (auto && i : pcd_map_pointcloud_->points) {
     double value = static_cast<double>(i.b / 255.0) -
@@ -426,91 +405,41 @@ void MapManager::alignStaticMapToMap(const tf2::Transform & static_map_to_map_tr
     if (i.r == 255) {
       value = 2.0;
     }
-    if (i.r == 255 && i.g == 255) {
-      value = 3.0;
-    }
-    octomap_octree_->setNodeValue(i.x, i.y, i.z, std::max(0.0, value));
+    original_octomap_octree->setNodeValue(i.x, i.y, i.z, std::max(0.0, value));
   }
-
+  auto header = std::make_shared<std_msgs::msg::Header>();
+  header->frame_id = map_frame_id_;
+  header->stamp = this->now();
+  vox_nav_utilities::fillOctomapMarkers(octomap_markers_msg_, header, original_octomap_octree);
   try {
-    octomap_msgs::fullMapToMsg<octomap::ColorOcTree>(*octomap_octree_, *octomap_ros_msg_);
-    octomap_ros_msg_->binary = false;
-    octomap_ros_msg_->resolution = octomap_voxel_size_;
+    octomap_msgs::fullMapToMsg<octomap::OcTree>(
+      *original_octomap_octree,
+      *original_octomap_msg_);
+    original_octomap_msg_->binary = false;
+    original_octomap_msg_->resolution = octomap_voxel_size_;
   } catch (const std::exception & e) {
-    std::cerr << e.what() << '\n';
     RCLCPP_ERROR(
-      get_logger(),
-      "Exception while converting binary octomap %s:", e.what());
+      get_logger(), "Exception while converting binary octomap %s:", e.what());
   }
 }
-void MapManager::fillOctomapMarkers()
+
+
+void MapManager::getGetMapsAndSurfelsCallback(
+  const std::shared_ptr<rmw_request_id_t> request_header,
+  const std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Request> request,
+  std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Response> response)
 {
-  auto tree_depth = octomap_octree_->getTreeDepth();
-  octomap_markers_.markers.resize(tree_depth + 1);
-  // now, traverse all leafs in the tree:
-  for (auto it = octomap_octree_->begin(tree_depth),
-    end = octomap_octree_->end(); it != end; ++it)
-  {
-    unsigned idx = it.getDepth();
-    assert(idx < octomap_markers_.markers.size());
-    geometry_msgs::msg::Point cubeCenter;
-    cubeCenter.x = it.getCoordinate().x();
-    cubeCenter.y = it.getCoordinate().y();
-    cubeCenter.z = it.getCoordinate().z();
-    octomap_markers_.markers[idx].points.push_back(cubeCenter);
 
-    std_msgs::msg::ColorRGBA color;
+  RCLCPP_INFO(get_logger(), "Handling GetMapsAndSurfels request");
 
-    color.g = 1.0 - it->getValue();
-    color.b = it->getValue();
-    color.a = 1.0;
-
-    if (it->getValue() == 2.0) {
-      color.r = 1.0;
-      color.g = 0.0;
-      color.b = 0.0;
-    }
-
-    if (it->getValue() == 3.0) {
-      color.r = 1.0;
-      color.g = 1.0;
-      color.b = 0.0;
-    }
-
-    if (!octomap_octree_->isNodeOccupied(*it)) {
-      color.r = 0.0;
-      color.g = 0.0;
-      color.b = 0.0;
-      color.a = 0.04;
-    }
-
-    octomap_markers_.markers[idx].colors.push_back(color);
-  }
-
-  for (unsigned i = 0; i < octomap_markers_.markers.size(); ++i) {
-    double size = octomap_octree_->getNodeSize(i);
-
-    octomap_markers_.markers[i].header.frame_id = map_frame_id_;
-    octomap_markers_.markers[i].header.stamp = this->now();
-    octomap_markers_.markers[i].ns = map_frame_id_;
-    octomap_markers_.markers[i].id = i;
-    octomap_markers_.markers[i].type =
-      visualization_msgs::msg::Marker::CUBE_LIST;
-    octomap_markers_.markers[i].scale.x = size;
-    octomap_markers_.markers[i].scale.y = size;
-    octomap_markers_.markers[i].scale.z = size;
-
-    if (octomap_markers_.markers[i].points.size() > 0) {
-      octomap_markers_.markers[i].action =
-        visualization_msgs::msg::Marker::ADD;
-    } else {
-      octomap_markers_.markers[i].action =
-        visualization_msgs::msg::Marker::DELETE;
-    }
-  }
+  response->original_octomap = *original_octomap_msg_;
+  response->surfel_octomap = *original_octomap_msg_;
+  //response->surfel_poses
+  //response->surfel_poses = *original_octomap_msg_;
 }
 
 }   // namespace vox_nav_map_server
+
 
 /**
  * @brief

@@ -45,8 +45,7 @@ OCTOMAP
 
 include_directories(include)
 
-add_executable(map_manager src/map_manager.cpp 
-                           src/cost_regression_utils.cpp)
+add_executable(map_manager src/map_manager.cpp)
 ament_target_dependencies(map_manager ${dependencies})
  
 install(TARGETS map_manager

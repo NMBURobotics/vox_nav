@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Norwegian University of Life Sciences, Fetullah Atas
+// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,63 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <vox_nav_map_server/cost_regression_utils.hpp>
+#include <memory>
+#include <string>
+#include "vox_nav_utilities/map_manager_helpers.hpp"
 
-#include <utility>
-#include <vector>
-
-namespace vox_nav_map_server
+namespace vox_nav_utilities
 {
+
+void fillOctomapMarkers(
+  visualization_msgs::msg::MarkerArray::SharedPtr & marker_array,
+  const std_msgs::msg::Header::SharedPtr & header,
+  const std::shared_ptr<octomap::OcTree> & octree)
+{
+  auto tree_depth = octree->getTreeDepth();
+  marker_array->markers.resize(tree_depth + 1);
+  // now, traverse all leafs in the tree:
+  for (auto it = octree->begin(tree_depth),
+    end = octree->end(); it != end; ++it)
+  {
+    if (octree->isNodeOccupied(*it)) {
+      unsigned idx = it.getDepth();
+      assert(idx < marker_array->markers.size());
+      geometry_msgs::msg::Point cubeCenter;
+      cubeCenter.x = it.getCoordinate().x();
+      cubeCenter.y = it.getCoordinate().y();
+      cubeCenter.z = it.getCoordinate().z();
+      marker_array->markers[idx].points.push_back(cubeCenter);
+      std_msgs::msg::ColorRGBA color;
+      color.g = 1.0 - it->getValue();
+      color.b = it->getValue();
+      color.a = 1.0;
+      if (it->getValue() > 1.0) {
+        color.r = 1.0;
+        color.g = 0.0;
+        color.b = 0.0;
+      }
+      marker_array->markers[idx].colors.push_back(color);
+    }
+  }
+  for (unsigned i = 0; i < marker_array->markers.size(); ++i) {
+    double size = octree->getNodeSize(i);
+    marker_array->markers[i].header = *header;
+    marker_array->markers[i].ns = header->frame_id;
+    marker_array->markers[i].id = i;
+    marker_array->markers[i].type =
+      visualization_msgs::msg::Marker::CUBE_LIST;
+    marker_array->markers[i].scale.x = size;
+    marker_array->markers[i].scale.y = size;
+    marker_array->markers[i].scale.z = size;
+    if (marker_array->markers[i].points.size() > 0) {
+      marker_array->markers[i].action =
+        visualization_msgs::msg::Marker::ADD;
+    } else {
+      marker_array->markers[i].action =
+        visualization_msgs::msg::Marker::DELETE;
+    }
+  }
+}
 
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr denoise_segmented_cloud(
   const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
@@ -122,7 +172,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr uniformly_sample_cloud(
 }
 
 std::vector<std::pair<pcl::PointXYZRGB,
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr>> decompose_traversability_cloud(
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr>> surfelize_traversability_cloud(
   const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pure_traversable_pcl,
   const pcl::PointCloud<pcl::PointXYZRGB>::Ptr uniformly_sampled_nodes,
   double radius)
@@ -219,7 +269,9 @@ std::vector<double> rpy_from_plane(
     plane_model.values[2]);
   rpy[0] = -roll * kRAD2DEG;
   rpy[1] = pitch * kRAD2DEG;
-  rpy[2] = 0;
+  // Yaw shouldnt matter at coordinate fitted plane,
+  // it can be anything in between [-M_PI, M_PI]
+  rpy[2] = 0.0;
   return rpy;
 }
 
@@ -263,4 +315,5 @@ double max_energy_gap_in_cloud(
     0.5 * m * std::pow(v, 2);
   return max_energy_gap;
 }
-}  // namespace vox_nav_map_server
+
+}  // namespace vox_nav_utilities

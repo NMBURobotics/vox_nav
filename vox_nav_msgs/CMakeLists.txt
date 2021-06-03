@@ -19,6 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/OrientedNavSatFix.msg"
   "srv/GetOctomap.srv"
   "srv/GetPointCloud.srv"
+  "srv/GetMapsAndSurfels.srv"
   "action/ComputePathToPose.action"
   "action/FollowPath.action"
   "action/NavigateToPose.action"

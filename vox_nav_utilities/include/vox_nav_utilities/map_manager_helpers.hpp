@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Norwegian University of Life Sciences, Fetullah Atas
+// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_MAP_SERVER__COST_REGRESSION_UTILS_HPP_
-#define VOX_NAV_MAP_SERVER__COST_REGRESSION_UTILS_HPP_
+#ifndef VOX_NAV_UTILITIES__MAP_MANAGER_HELPERS_HPP_
+#define VOX_NAV_UTILITIES__MAP_MANAGER_HELPERS_HPP_
 
+#include <rclcpp/rclcpp.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+#include <octomap_msgs/msg/octomap.hpp>
+#include <octomap_msgs/conversions.h>
+#include <octomap/octomap.h>
+#include <octomap/octomap_utils.h>
 #include <pcl/point_types.h>
 #include <pcl/common/common.h>
 #include <pcl/kdtree/kdtree_flann.h>
@@ -25,19 +31,30 @@
 
 #include <utility>
 #include <vector>
+#include <string>
+#include <memory>
 
-namespace vox_nav_map_server
+namespace vox_nav_utilities
 {
 
 /**
- * @brief Given a pointcloud, denoise it with use of K- neighbour points and return a pointer to denoised cloud
+ * @brief
  *
- * @param cloud
- * @param radius
- * @param tolerated_divergence_rate
- * @param min_num_neighbours
- * @return pcl::PointCloud<pcl::PointXYZRGB>::Ptr
  */
+void fillOctomapMarkers(
+  visualization_msgs::msg::MarkerArray::SharedPtr & marker_array,
+  const std_msgs::msg::Header::SharedPtr & header,
+  const std::shared_ptr<octomap::OcTree> & octree);
+
+/**
+* @brief Given a pointcloud, denoise it with use of K- neighbour points and return a pointer to denoised cloud
+*
+* @param cloud
+* @param radius
+* @param tolerated_divergence_rate
+* @param min_num_neighbours
+* @return pcl::PointCloud<pcl::PointXYZRGB>::Ptr
+*/
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr denoise_segmented_cloud(
   const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
   const double radius,
@@ -91,7 +108,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr uniformly_sample_cloud(
  * pcl::PointCloud<pcl::PointXYZRGB>::Ptr>>
  */
 std::vector<std::pair<pcl::PointXYZRGB,
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr>> decompose_traversability_cloud(
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr>> surfelize_traversability_cloud(
   const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pure_traversable_pcl,
   const pcl::PointCloud<pcl::PointXYZRGB>::Ptr uniformly_sampled_nodes,
   const double radius);
@@ -155,6 +172,7 @@ double max_energy_gap_in_cloud(
   const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
   const double m,
   const double v);
-}  // namespace vox_nav_map_server
 
-#endif  // VOX_NAV_MAP_SERVER__COST_REGRESSION_UTILS_HPP_
+}  // namespace vox_nav_utilities
+
+#endif  // VOX_NAV_UTILITIES__MAP_MANAGER_HELPERS_HPP_
