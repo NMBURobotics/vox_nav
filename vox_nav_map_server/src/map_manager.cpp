@@ -119,16 +119,22 @@ MapManager::MapManager()
     "remove_outlier_min_neighbors_in_radius",
     preprocess_params_.remove_outlier_min_neighbors_in_radius);
 
-  // service hooks
-  get_maps_and_surfels_service_ = this->create_service<vox_nav_msgs::srv::GetMapsAndSurfels>(
+  // service hooks for get maps and surfels
+  get_maps_and_surfels_service_ = this->create_service
+    <vox_nav_msgs::srv::GetMapsAndSurfels>(
     std::string("get_maps_and_surfels"),
     std::bind(
       &MapManager::getGetMapsAndSurfelsCallback, this,
       std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-  robot_localization_fromLL_client_node_ = std::make_shared<rclcpp::Node>(
-    "map_manager_fromll_client_node");
+
+  // service hooks for robot localization fromll service
+  robot_localization_fromLL_client_node_ = std::make_shared
+    <rclcpp::Node>("map_manager_fromll_client_node");
+
   robot_localization_fromLL_client_ =
-    robot_localization_fromLL_client_node_->create_client<robot_localization::srv::FromLL>("/fromLL");
+    this->create_client
+    <robot_localization::srv::FromLL>(
+    "/fromLL");
 
   timer_ = this->create_wall_timer(
     std::chrono::milliseconds(static_cast<int>(1000 / octomap_publish_frequency_)),
