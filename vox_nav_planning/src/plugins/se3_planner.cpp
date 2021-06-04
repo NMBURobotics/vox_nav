@@ -54,6 +54,7 @@ void SE3Planner::initialize(
   parent->get_parameter("planner_timeout", planner_timeout_);
   parent->get_parameter("interpolation_parameter", interpolation_parameter_);
   parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
+
   state_space_bounds_->setLow(
     0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
   state_space_bounds_->setHigh(
@@ -78,6 +79,7 @@ void SE3Planner::initialize(
 
   state_space_ = std::make_shared<ompl::base::SE3StateSpace>();
   state_space_->as<ompl::base::SE3StateSpace>()->setBounds(*state_space_bounds_);
+  
   simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
 
   elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);

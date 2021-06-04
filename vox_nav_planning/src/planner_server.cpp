@@ -50,9 +50,12 @@ PlannerServer::PlannerServer()
   declare_parameter("robot_body_dimens.x", 1.0);
   declare_parameter("robot_body_dimens.y", 0.8);
   declare_parameter("robot_body_dimens.z", 0.6);
+  declare_parameter("robot_mesh_path", "");
 
   get_parameter("expected_planner_frequency", expected_planner_frequency_);
   get_parameter("planner_plugin", planner_id_);
+  get_parameter("robot_mesh_path", robot_mesh_path_);
+
 
   declare_parameter(planner_id_ + ".plugin", planner_type_);
   get_parameter(planner_id_ + ".plugin", planner_type_);
@@ -238,6 +241,7 @@ void PlannerServer::publishPlan(
 {
   visualization_msgs::msg::MarkerArray marker_array;
   visualization_msgs::msg::Marker start_marker, goal_marker;
+
   auto path_idx = 0;
   for (auto && i : path) {
     visualization_msgs::msg::Marker marker;
@@ -245,16 +249,21 @@ void PlannerServer::publishPlan(
     marker.header.stamp = rclcpp::Clock().now();
     marker.ns = "path";
     marker.id = path_idx;
-    marker.type = visualization_msgs::msg::Marker::CUBE;
+    if (!robot_mesh_path_.empty()) {
+      marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
+      marker.mesh_resource = robot_mesh_path_;
+    } else {
+      marker.type = visualization_msgs::msg::Marker::CUBE;
+    }
     marker.action = visualization_msgs::msg::Marker::ADD;
     marker.lifetime = rclcpp::Duration::from_seconds(0);
     marker.pose = i.pose;
     marker.scale.x = get_parameter("robot_body_dimens.x").as_double();
     marker.scale.y = get_parameter("robot_body_dimens.y").as_double();
     marker.scale.z = get_parameter("robot_body_dimens.z").as_double();
-    marker.color.a = 0.5;
-    marker.color.r = 1.0;
-    marker.color.g = 0.0;
+    marker.color.a = 0.4;
+    marker.color.r = 0.0;
+    marker.color.g = 1.0;
     marker.color.b = 1.0;
     marker_array.markers.push_back(marker);
     path_idx++;

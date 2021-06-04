@@ -74,7 +74,7 @@ MapManager::MapManager()
   declare_parameter("plane_fit_threshold", 0.2);
   declare_parameter("robot_mass", 0.1);
   declare_parameter("average_speed", 1.0);
-  declare_parameter("include_node_centers_in_cloud", true);
+  declare_parameter("include_elevated_surfel_centroids", true);
   declare_parameter("cost_critic_weights", std::vector<double>({0.8, 0.1, 0.1}));
 
   // get this node's parameters
@@ -108,7 +108,7 @@ MapManager::MapManager()
   get_parameter("plane_fit_threshold", cost_params_.plane_fit_threshold);
   get_parameter("robot_mass", cost_params_.robot_mass);
   get_parameter("average_speed", cost_params_.average_speed);
-  get_parameter("include_node_centers_in_cloud", cost_params_.include_node_centers_in_cloud);
+  get_parameter("include_elevated_surfel_centroids", cost_params_.include_elevated_surfel_centroids);
   get_parameter("cost_critic_weights", cost_params_.cost_critic_weights);
   get_parameter("apply_filters", preprocess_params_.apply_filters);
   get_parameter("pcd_map_downsample_voxel_size", preprocess_params_.pcd_map_downsample_voxel_size);
@@ -398,7 +398,7 @@ void MapManager::regressCosts()
       get_logger(), "Exception while converting binary octomap %s:", e.what());
   }
 
-  if (cost_params_.include_node_centers_in_cloud) {
+  if (cost_params_.include_elevated_surfel_centroids) {
     cost_regressed_cloud += elevated_surfels_cloud;
   }
   cost_regressed_cloud += *pure_non_traversable_pcl;

@@ -126,17 +126,16 @@ protected:
   double max_planner_duration_;
   std::string planner_ids_concat_;
   double expected_planner_frequency_;
-
   // Clock
   rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
-
   // tf buffer to get transfroms
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   // tf listner for tf transforms
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
-
   // Publishers for the path
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
+  // obot mesh path, if there is one
+  std::string robot_mesh_path_;
 };
 
 }  // namespace vox_nav_planning

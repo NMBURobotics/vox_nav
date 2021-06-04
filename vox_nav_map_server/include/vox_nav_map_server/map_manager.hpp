@@ -101,7 +101,7 @@ public:
     double plane_fit_threshold;
     double robot_mass;
     double average_speed;
-    bool include_node_centers_in_cloud;
+    bool include_elevated_surfel_centroids;
     double max_color_range;
     std::vector<double> cost_critic_weights;
     CostRegressionParams()
@@ -113,7 +113,7 @@ public:
       plane_fit_threshold(10),
       robot_mass(0.1),
       average_speed(0.1),
-      include_node_centers_in_cloud(1),
+      include_elevated_surfel_centroids(1),
       max_color_range(255.0),
       cost_critic_weights({0.33, 0.33, 0.33})
     {}
