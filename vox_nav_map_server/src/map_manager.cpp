@@ -32,7 +32,8 @@ MapManager::MapManager()
   elevated_surfel_octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
   elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>();
   octomap_pointcloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
-  octomap_markers_msg_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
+  original_octomap_markers_msg_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
+  elevated_surfel_octomap_markers_msg_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
@@ -142,8 +143,13 @@ MapManager::MapManager()
 
   octomap_pointloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     octomap_point_cloud_publish_topic_, rclcpp::SystemDefaultsQoS());
+
   octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
     octomap_markers_publish_topic_, rclcpp::SystemDefaultsQoS());
+
+  elevated_surfel_octomap_markers_publisher_ =
+    this->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "elevated_surfel_markers", rclcpp::SystemDefaultsQoS());
 
   pcd_map_pointcloud_ = vox_nav_utilities::loadPointcloudFromPcd(pcd_map_filename_.c_str());
 
@@ -226,7 +232,8 @@ void MapManager::publishMapVisuals()
     octomap_pointcloud_msg_->header.frame_id = map_frame_id_;
     octomap_pointcloud_msg_->header.stamp = this->now();
     octomap_pointloud_publisher_->publish(*octomap_pointcloud_msg_);
-    octomap_markers_publisher_->publish(*octomap_markers_msg_);
+    octomap_markers_publisher_->publish(*original_octomap_markers_msg_);
+    elevated_surfel_octomap_markers_publisher_->publish(*elevated_surfel_octomap_markers_msg_);
   }
 }
 
@@ -375,6 +382,17 @@ void MapManager::regressCosts()
   auto elevated_surfels_octomap_octree = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
   elevated_surfels_octomap_octree->insertPointCloud(surfel_octocloud, octomap::point3d(0, 0, 0));
 
+  for (auto && i : elevated_surfels_cloud.points) {
+    elevated_surfels_octomap_octree->setNodeValue(i.x, i.y, i.z, 1.0);
+  }
+  auto header = std::make_shared<std_msgs::msg::Header>();
+  header->frame_id = map_frame_id_;
+  header->stamp = this->now();
+  vox_nav_utilities::fillOctomapMarkers(
+    elevated_surfel_octomap_markers_msg_,
+    header,
+    elevated_surfels_octomap_octree);
+
   try {
     octomap_msgs::fullMapToMsg<octomap::OcTree>(
       *elevated_surfels_octomap_octree,
@@ -387,7 +405,7 @@ void MapManager::regressCosts()
   }
 
   if (cost_params_.include_node_centers_in_cloud) {
-    //cost_regressed_cloud += elevated_surfels_cloud;
+    cost_regressed_cloud += elevated_surfels_cloud;
   }
   cost_regressed_cloud += *pure_non_traversable_pcl;
   *pcd_map_pointcloud_ = cost_regressed_cloud;
@@ -404,23 +422,31 @@ void MapManager::handleOriginalOctomap()
   pcl::toROSMsg(*pcd_map_pointcloud_, *octomap_pointcloud_msg_);
   octomap::Pointcloud octocloud;
   for (auto && i : pcd_map_pointcloud_->points) {
-    octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
+    if (!(i.r == 255 && i.g == 255)) {
+      octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
+    }
   }
   auto original_octomap_octree = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
   original_octomap_octree->insertPointCloud(octocloud, octomap::point3d(0, 0, 0));
 
   for (auto && i : pcd_map_pointcloud_->points) {
-    double value = static_cast<double>(i.b / 255.0) -
-      static_cast<double>(i.g / 255.0);
-    if (i.r == 255) {
-      value = 2.0;
+    if (!(i.r == 255 && i.g == 255)) {
+      octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
+      double value =
+        static_cast<double>(i.b / 255.0) -
+        static_cast<double>(i.g / 255.0);
+      if (i.r == 255) {
+        value = 2.0;
+      }
+      original_octomap_octree->setNodeValue(i.x, i.y, i.z, std::max(0.0, value));
     }
-    original_octomap_octree->setNodeValue(i.x, i.y, i.z, std::max(0.0, value));
   }
   auto header = std::make_shared<std_msgs::msg::Header>();
   header->frame_id = map_frame_id_;
   header->stamp = this->now();
-  vox_nav_utilities::fillOctomapMarkers(octomap_markers_msg_, header, original_octomap_octree);
+  vox_nav_utilities::fillOctomapMarkers(
+    original_octomap_markers_msg_, header,
+    original_octomap_octree);
   try {
     octomap_msgs::fullMapToMsg<octomap::OcTree>(
       *original_octomap_octree,
@@ -449,7 +475,7 @@ void MapManager::handleElevatedSurfels(
   elevated_node.r = cost_params_.max_color_range;
   elevated_node.g = cost_params_.max_color_range;
 
-  //elevated_nodes_cloud.points.push_back(elevated_node);
+  elevated_nodes_cloud.points.push_back(elevated_node);
 
   geometry_msgs::msg::Pose elevated_node_pose;
   elevated_node_pose.position.x = elevated_node.x;
