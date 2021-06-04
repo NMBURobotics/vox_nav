@@ -120,23 +120,19 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
       out_sample->points.front().y,
       out_sample->points.front().z);
 
-    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-      1,
-      0,
-      0,
-      out_sample->points.front().normal_x);
-
-    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-      0,
-      1,
-      0,
-      out_sample->points.front().normal_y);
-
-    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-      0,
-      0,
-      1,
+    auto sample_rot = vox_nav_utilities::getMsgQuaternionfromRPY(
+      out_sample->points.front().normal_x,
+      out_sample->points.front().normal_y,
       out_sample->points.front().normal_z);
+
+    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->x =
+      sample_rot.x;
+    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->y =
+      sample_rot.y;
+    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->z =
+      sample_rot.z;
+    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->w =
+      sample_rot.w;
 
     valid = isStateValid(state);
     ++attempts;
