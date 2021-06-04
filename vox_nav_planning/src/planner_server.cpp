@@ -40,10 +40,18 @@ PlannerServer::PlannerServer()
   RCLCPP_INFO(get_logger(), "Creating");
 
   // Declare this node's parameters
-  declare_parameter("expected_planner_frequency", expected_planner_frequency_);
-  get_parameter("expected_planner_frequency", expected_planner_frequency_);
+  declare_parameter("expected_planner_frequency", 1.0);
+  declare_parameter("planner_plugin", "SE2Planner");
+  declare_parameter("enabled", true);
+  declare_parameter("planner_name", "PRMStar");
+  declare_parameter("planner_timeout", 5.0);
+  declare_parameter("interpolation_parameter", 50);
+  declare_parameter("octomap_voxel_size", 0.2);
+  declare_parameter("robot_body_dimens.x", 1.0);
+  declare_parameter("robot_body_dimens.y", 0.8);
+  declare_parameter("robot_body_dimens.z", 0.6);
 
-  declare_parameter("planner_plugin", planner_id_);
+  get_parameter("expected_planner_frequency", expected_planner_frequency_);
   get_parameter("planner_plugin", planner_id_);
 
   declare_parameter(planner_id_ + ".plugin", planner_type_);
@@ -146,13 +154,13 @@ PlannerServer::computePlan(const std::shared_ptr<GoalHandleComputePathToPose> go
   geometry_msgs::msg::PoseStamped start_pose, goal_pose;
   vox_nav_utilities::getCurrentPose(start_pose, *tf_buffer_, "map", "base_link", 0.1);
   goal_pose = goal->pose;
+
   result->path.poses = getPlan(start_pose, goal_pose, planner_id_);
 
   if (result->path.poses.size() == 0) {
     RCLCPP_WARN(
-      get_logger(), "Planning algorithm %s failed to generate a valid"
-      " path to (%.2f, %.2f)", goal->planner_id.c_str(),
-      goal_pose.pose.position.x, goal_pose.pose.position.y);
+      get_logger(), "Planning algorithm %s failed to generate a valid",
+      goal->planner_id.c_str());
     return;
   }
 
@@ -208,31 +216,18 @@ PlannerServer::getPlan(
   const geometry_msgs::msg::PoseStamped & goal,
   const std::string & planner_id)
 {
-  RCLCPP_DEBUG(
-    get_logger(), "Attempting to a find path from (%.2f, %.2f) to "
-    "(%.2f, %.2f).", start.pose.position.x, start.pose.position.y,
-    goal.pose.position.x, goal.pose.position.y);
-
   if (planners_.find(planner_id) != planners_.end()) {
     std::vector<geometry_msgs::msg::PoseStamped> plan =
       planners_[planner_id]->createPlan(start, goal);
     return plan;
   } else {
-    if (planners_.size() == 1 && planner_id.empty()) {
-      RCLCPP_WARN_ONCE(
-        get_logger(), "No planners specified in action call. "
-        "Server will use only plugin %s in server."
-        " This warning will appear once.", planner_ids_concat_.c_str());
-      std::vector<geometry_msgs::msg::PoseStamped> plan =
-        planners_[planners_.begin()->first]->createPlan(start, goal);
-      return plan;
-    } else {
-      RCLCPP_ERROR(
-        get_logger(), "planner %s is not a valid planner. "
-        "Planner names are: %s", planner_id.c_str(),
-        planner_ids_concat_.c_str());
-    }
+    RCLCPP_ERROR(
+      get_logger(), "planner %s is not a valid planner. "
+      "Planner names are: %s", planner_id.c_str(),
+      planner_ids_concat_.c_str());
   }
+  RCLCPP_ERROR(get_logger(), "planner could not find a valid plan");
+  // if we are here, get plan was not succeeded , return an ampty path
   return std::vector<geometry_msgs::msg::PoseStamped>();
 }
 
@@ -254,9 +249,9 @@ void PlannerServer::publishPlan(
     marker.action = visualization_msgs::msg::Marker::ADD;
     marker.lifetime = rclcpp::Duration::from_seconds(0);
     marker.pose = i.pose;
-    marker.scale.x = 0.8;
-    marker.scale.y = 0.8;
-    marker.scale.z = 0.2;
+    marker.scale.x = get_parameter("robot_body_dimens.x").as_double();
+    marker.scale.y = get_parameter("robot_body_dimens.y").as_double();
+    marker.scale.z = get_parameter("robot_body_dimens.z").as_double();
     marker.color.a = 0.5;
     marker.color.r = 1.0;
     marker.color.g = 0.0;
@@ -265,6 +260,7 @@ void PlannerServer::publishPlan(
     path_idx++;
     start_marker = marker;
     goal_marker = marker;
+
   }
   // Publish goal and start states for debuging
   start_marker.pose = start_pose.pose;

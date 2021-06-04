@@ -34,31 +34,28 @@ void SE2Planner::initialize(
   rclcpp::Node * parent,
   const std::string & plugin_name)
 {
-  state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
   is_map_ready_ = false;
+  state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
 
-  parent->declare_parameter(plugin_name + ".enabled", true);
-  parent->declare_parameter(plugin_name + ".planner_name", "PRMStar");
-  parent->declare_parameter(plugin_name + ".planner_timeout", 5.0);
-  parent->declare_parameter(plugin_name + ".interpolation_parameter", 50);
-  parent->declare_parameter(plugin_name + ".octomap_topic", "octomap");
-  parent->declare_parameter(plugin_name + ".octomap_voxel_size", 0.2);
+  // declare only planner specific parameters here
+  // common parameters are declared in server
   parent->declare_parameter(plugin_name + ".se2_space", "REEDS");
+  parent->declare_parameter(plugin_name + ".z_elevation", 1.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -50.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 50.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.minyaw", -3.14);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxyaw", 3.14);
-  parent->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.5);
-  parent->declare_parameter(plugin_name + ".robot_body_dimens.y", 1.5);
-  parent->declare_parameter(plugin_name + ".robot_body_dimens.z", 0.4);
-  parent->get_parameter(plugin_name + ".enabled", is_enabled_);
-  parent->get_parameter(plugin_name + ".planner_name", planner_name_);
-  parent->get_parameter(plugin_name + ".planner_timeout", planner_timeout_);
-  parent->get_parameter(plugin_name + ".interpolation_parameter", interpolation_parameter_);
-  parent->get_parameter(plugin_name + ".octomap_voxel_size", octomap_voxel_size_);
+
+  parent->get_parameter("enabled", is_enabled_);
+  parent->get_parameter("planner_name", planner_name_);
+  parent->get_parameter("planner_timeout", planner_timeout_);
+  parent->get_parameter("interpolation_parameter", interpolation_parameter_);
+  parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
   parent->get_parameter(plugin_name + ".se2_space", selected_se2_space_name_);
+  parent->get_parameter(plugin_name + ".z_elevation", z_elevation_);
+
 
   state_space_bounds_->setLow(
     0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
@@ -86,13 +83,22 @@ void SE2Planner::initialize(
 
   typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
   CollisionGeometryPtr_t robot_body_box(new fcl::Box(
-      parent->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
-      parent->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
-      parent->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
+      parent->get_parameter("robot_body_dimens.x").as_double(),
+      parent->get_parameter("robot_body_dimens.y").as_double(),
+      parent->get_parameter("robot_body_dimens.z").as_double()));
 
   fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
   original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+
+  // service hooks for robot localization fromll service
+  get_maps_and_surfels_client_node_ = std::make_shared
+    <rclcpp::Node>("get_maps_and_surfels_client_node");
+
+  get_maps_and_surfels_client_ =
+    get_maps_and_surfels_client_node_->create_client
+    <vox_nav_msgs::srv::GetMapsAndSurfels>(
+    "get_maps_and_surfels");
 
   if (!is_enabled_) {
     RCLCPP_WARN(logger_, "SE2Planner plugin is disabled.");
@@ -127,6 +133,9 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
   double start_yaw, goal_yaw, nan;
   vox_nav_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan, start_yaw);
   vox_nav_utilities::getRPYfromMsgQuaternion(goal.pose.orientation, nan, nan, goal_yaw);
+
+  start_ = start;
+  goal_ = goal;
 
   se2_start[0] = start.pose.position.x;
   se2_start[1] = start.pose.position.y;
@@ -184,7 +193,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::createPlan(
       pose.header.stamp = rclcpp::Clock().now();
       pose.pose.position.x = se2_state->getX();
       pose.pose.position.y = se2_state->getY();
-      pose.pose.position.z = 0.5;
+      pose.pose.position.z = z_elevation_;
       pose.pose.orientation.x = this_pose_quat.getX();
       pose.pose.orientation.y = this_pose_quat.getY();
       pose.pose.orientation.z = this_pose_quat.getZ();
@@ -206,7 +215,7 @@ bool SE2Planner::isStateValid(const ompl::base::State * state)
   const ompl::base::SE2StateSpace::StateType * se2_state =
     state->as<ompl::base::SE2StateSpace::StateType>();
   // check validity of state Fdefined by pos & rot
-  fcl::Vec3f translation(se2_state->getX(), se2_state->getY(), 0.5);
+  fcl::Vec3f translation(se2_state->getX(), se2_state->getY(), z_elevation_);
   tf2::Quaternion myQuaternion;
   myQuaternion.setRPY(0, 0, se2_state->getYaw());
   fcl::Quaternion3f rotation(myQuaternion.getX(), myQuaternion.getY(),
@@ -281,10 +290,12 @@ void SE2Planner::setupMap()
 
 std::vector<geometry_msgs::msg::PoseStamped> SE2Planner::getOverlayedStartandGoal()
 {
-  RCLCPP_WARN(
-    logger_,
-    "SE2Planner::getOverlayedStartandGoal Not implemented!");
-  return std::vector<geometry_msgs::msg::PoseStamped>();
+  std::vector<geometry_msgs::msg::PoseStamped> start_pose_vector;
+  start_.pose.position.z = z_elevation_;
+  goal_.pose.position.z = z_elevation_;
+  start_pose_vector.push_back(start_);
+  start_pose_vector.push_back(goal_);
+  return start_pose_vector;
 }
 }  // namespace vox_nav_planning
 

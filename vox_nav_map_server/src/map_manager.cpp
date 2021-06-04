@@ -191,52 +191,6 @@ void MapManager::timerCallback()
   publishMapVisuals();
 }
 
-void MapManager::preProcessPCDMap()
-{
-  pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud(
-    pcd_map_pointcloud_,
-    preprocess_params_.pcd_map_downsample_voxel_size);
-  RCLCPP_INFO(
-    this->get_logger(), "PCD Map downsampled, it now has %d points"
-    " adjust the parameters if the map looks off",
-    pcd_map_pointcloud_->points.size());
-  if (preprocess_params_.apply_filters) {
-    pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
-      pcd_map_pointcloud_,
-      preprocess_params_.remove_outlier_mean_K,
-      preprocess_params_.remove_outlier_stddev_threshold,
-      vox_nav_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
-    pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
-      pcd_map_pointcloud_,
-      preprocess_params_.remove_outlier_min_neighbors_in_radius,
-      preprocess_params_.remove_outlier_radius_search,
-      vox_nav_utilities::OutlierRemovalType::RadiusOutlierRemoval);
-  }
-  // apply a rigid body transfrom if it was given one
-  pcd_map_pointcloud_ = vox_nav_utilities::transformCloud(
-    pcd_map_pointcloud_,
-    vox_nav_utilities::getRigidBodyTransform(
-      pcd_map_transform_matrix_.translation_,
-      pcd_map_transform_matrix_.rpyIntrinsic_,
-      get_logger()));
-  // Experimental, this assumes we have no prior infromation of
-  // segmentation, so mark all points as traversable
-  // by painting them green > 0
-  pcd_map_pointcloud_ =
-    vox_nav_utilities::set_cloud_color(pcd_map_pointcloud_, std::vector<double>({0.0, 255.0, 0.0}));
-}
-
-void MapManager::publishMapVisuals()
-{
-  if (publish_octomap_visuals_) {
-    octomap_pointcloud_msg_->header.frame_id = map_frame_id_;
-    octomap_pointcloud_msg_->header.stamp = this->now();
-    octomap_pointloud_publisher_->publish(*octomap_pointcloud_msg_);
-    octomap_markers_publisher_->publish(*original_octomap_markers_msg_);
-    elevated_surfel_octomap_markers_publisher_->publish(*elevated_surfel_octomap_markers_msg_);
-  }
-}
-
 void MapManager::transfromPCDfromGPS2Map()
 {
   auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
@@ -302,6 +256,41 @@ void MapManager::transfromPCDfromGPS2Map()
   );
 }
 
+void MapManager::preProcessPCDMap()
+{
+  pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud(
+    pcd_map_pointcloud_,
+    preprocess_params_.pcd_map_downsample_voxel_size);
+  RCLCPP_INFO(
+    this->get_logger(), "PCD Map downsampled, it now has %d points"
+    " adjust the parameters if the map looks off",
+    pcd_map_pointcloud_->points.size());
+  if (preprocess_params_.apply_filters) {
+    pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
+      pcd_map_pointcloud_,
+      preprocess_params_.remove_outlier_mean_K,
+      preprocess_params_.remove_outlier_stddev_threshold,
+      vox_nav_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
+    pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
+      pcd_map_pointcloud_,
+      preprocess_params_.remove_outlier_min_neighbors_in_radius,
+      preprocess_params_.remove_outlier_radius_search,
+      vox_nav_utilities::OutlierRemovalType::RadiusOutlierRemoval);
+  }
+  // apply a rigid body transfrom if it was given one
+  pcd_map_pointcloud_ = vox_nav_utilities::transformCloud(
+    pcd_map_pointcloud_,
+    vox_nav_utilities::getRigidBodyTransform(
+      pcd_map_transform_matrix_.translation_,
+      pcd_map_transform_matrix_.rpyIntrinsic_,
+      get_logger()));
+  // Experimental, this assumes we have no prior infromation of
+  // segmentation, so mark all points as traversable
+  // by painting them green > 0
+  pcd_map_pointcloud_ =
+    vox_nav_utilities::set_cloud_color(pcd_map_pointcloud_, std::vector<double>({0.0, 255.0, 0.0}));
+}
+
 void MapManager::regressCosts()
 {
   // seperate traversble points from non-traversable ones
@@ -320,9 +309,12 @@ void MapManager::regressCosts()
     pure_traversable_pcl,
     uniformly_sampled_nodes,
     cost_params_.cell_radius);
-
+  
+  // this is acquired by merging all surfels
   pcl::PointCloud<pcl::PointXYZRGB> cost_regressed_cloud;
+  // this is acquired by merging only elevated surfel cenroids
   pcl::PointCloud<pcl::PointXYZRGB> elevated_surfels_cloud;
+
   for (auto && i : surfels) {
     auto surfel_center_point = i.first;
     auto surfel_cloud = i.second;
@@ -361,7 +353,7 @@ void MapManager::regressCosts()
       cost_params_.cost_critic_weights[1] * deviation_of_points_cost +
       cost_params_.cost_critic_weights[2] * energy_gap_cost;
 
-    // any roll or pitche thats higher than max_tilt will make that surfel NON traversable
+    // any roll or pitch thats higher than max_tilt will make that surfel NON traversable
     if (max_tilt > cost_params_.max_allowed_tilt) {
       surfel_cloud = vox_nav_utilities::set_cloud_color(
         surfel_cloud,
@@ -385,9 +377,11 @@ void MapManager::regressCosts()
   for (auto && i : elevated_surfels_cloud.points) {
     elevated_surfels_octomap_octree->setNodeValue(i.x, i.y, i.z, 1.0);
   }
+
   auto header = std::make_shared<std_msgs::msg::Header>();
   header->frame_id = map_frame_id_;
   header->stamp = this->now();
+  
   vox_nav_utilities::fillOctomapMarkers(
     elevated_surfel_octomap_markers_msg_,
     header,
@@ -486,6 +480,17 @@ void MapManager::handleElevatedSurfels(
     rpy[1],
     rpy[2]);
   elevated_surfel_poses_msg_->poses.push_back(elevated_node_pose);
+}
+
+void MapManager::publishMapVisuals()
+{
+  if (publish_octomap_visuals_) {
+    octomap_pointcloud_msg_->header.frame_id = map_frame_id_;
+    octomap_pointcloud_msg_->header.stamp = this->now();
+    octomap_pointloud_publisher_->publish(*octomap_pointcloud_msg_);
+    octomap_markers_publisher_->publish(*original_octomap_markers_msg_);
+    elevated_surfel_octomap_markers_publisher_->publish(*elevated_surfel_octomap_markers_msg_);
+  }
 }
 
 void MapManager::getGetMapsAndSurfelsCallback(

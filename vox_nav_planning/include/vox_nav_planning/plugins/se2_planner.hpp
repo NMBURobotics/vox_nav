@@ -92,6 +92,9 @@ protected:
   rclcpp::Logger logger_{rclcpp::get_logger("se2_planner")};
   // Which state space is slected ? REEDS,DUBINS, SE2
   std::string selected_se2_space_name_;
+  double z_elevation_;
+  geometry_msgs::msg::PoseStamped start_;
+  geometry_msgs::msg::PoseStamped goal_;
 };
 }  // namespace vox_nav_planning
 

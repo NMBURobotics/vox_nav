@@ -40,27 +40,20 @@ void SE3Planner::initialize(
   elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
 
-  parent->declare_parameter(plugin_name + ".enabled", true);
-  parent->declare_parameter(plugin_name + ".planner_name", "PRMStar");
-  parent->declare_parameter(plugin_name + ".planner_timeout", 5.0);
-  parent->declare_parameter(plugin_name + ".interpolation_parameter", 50);
-  parent->declare_parameter(plugin_name + ".octomap_topic", "octomap");
-  parent->declare_parameter(plugin_name + ".octomap_voxel_size", 0.2);
+  // declare only planner specific parameters here
+  // common parameters are declared in server
   parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
   parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
-  parent->declare_parameter(plugin_name + ".robot_body_dimens.x", 1.0);
-  parent->declare_parameter(plugin_name + ".robot_body_dimens.y", 0.8);
-  parent->declare_parameter(plugin_name + ".robot_body_dimens.z", 0.6);
-  parent->get_parameter(plugin_name + ".enabled", is_enabled_);
-  parent->get_parameter(plugin_name + ".planner_name", planner_name_);
-  parent->get_parameter(plugin_name + ".planner_timeout", planner_timeout_);
-  parent->get_parameter(plugin_name + ".interpolation_parameter", interpolation_parameter_);
 
-  parent->get_parameter(plugin_name + ".octomap_voxel_size", octomap_voxel_size_);
+  parent->get_parameter("enabled", is_enabled_);
+  parent->get_parameter("planner_name", planner_name_);
+  parent->get_parameter("planner_timeout", planner_timeout_);
+  parent->get_parameter("interpolation_parameter", interpolation_parameter_);
+  parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
   state_space_bounds_->setLow(
     0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
   state_space_bounds_->setHigh(
@@ -76,9 +69,9 @@ void SE3Planner::initialize(
 
   typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
   CollisionGeometryPtr_t robot_body_box(new fcl::Box(
-      parent->get_parameter(plugin_name + ".robot_body_dimens.x").as_double(),
-      parent->get_parameter(plugin_name + ".robot_body_dimens.y").as_double(),
-      parent->get_parameter(plugin_name + ".robot_body_dimens.z").as_double()));
+      parent->get_parameter("robot_body_dimens.x").as_double(),
+      parent->get_parameter("robot_body_dimens.y").as_double(),
+      parent->get_parameter("robot_body_dimens.z").as_double()));
 
   fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
   robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
