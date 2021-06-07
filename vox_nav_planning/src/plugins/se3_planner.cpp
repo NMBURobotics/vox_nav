@@ -411,7 +411,7 @@ ompl::base::OptimizationObjectivePtr SE3Planner::getOptimizationObjective()
 
   octocost_optimization_ = octocost_objective;
 
-  return length_objective;
+  return octocost_optimization_;
 }
 
 std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::getOverlayedStartandGoal()

@@ -155,22 +155,6 @@ public:
   void handleOriginalOctomap();
 
   /**
-   * @brief After surfelizing original point cloud, The surfel centers needs to be elevated
-   * thourgh the normal vector by a given distance. This is essential for 2.5D based planning.
-   * The samples needs to be following the structure of ground plane.
-   *
-   * @param surfel_center_point
-   * @param elevated_nodes_cloud
-   * @param plane_model
-   * @param rpy
-   */
-  void handleElevatedSurfels(
-    pcl::PointXYZRGB & surfel_center_point,
-    pcl::PointCloud<pcl::PointXYZRGB> & elevated_nodes_cloud,
-    const pcl::ModelCoefficients plane_model,
-    const std::vector<double> & rpy);
-
-  /**
    * @brief Given preprocessed(denoise, rigid body trans. etc.) point cloud,
    * regresses costs to original point cloud based on features extracted from surfels
    * These are also know as cost critics.
@@ -219,7 +203,8 @@ protected:
   // publish sampled node poses for planner to use.
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr octomap_markers_publisher_;
   // publish sampled node poses for planner to use.
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr elevated_surfel_octomap_markers_publisher_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+    elevated_surfel_octomap_markers_publisher_;
   // robot_localization package provides a service to convert
   // lat,long,al GPS cooordinates to x,y,z map points
   rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr robot_localization_fromLL_client_;
@@ -248,6 +233,8 @@ protected:
   std::string pcd_map_filename_;
   // Pointcloud map is stroed here
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcd_map_pointcloud_;
+  // Pointcloud map is stroed here
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr elevated_surfel_pointcloud_;
   // rclcpp parameters from yaml file: topic name for published octomap
   std::string octomap_publish_topic_name_;
   // rclcpp parameters from yaml file: topic name for published octomap as cloud

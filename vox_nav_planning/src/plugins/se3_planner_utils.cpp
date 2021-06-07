@@ -45,13 +45,13 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
     se3_state->getY(),
     se3_state->getZ(), 0);
 
-  /*if (node_at_samppled_state) {
-    if (!node_at_samppled_state->getColor().r) {
-      cost = 1.0 * static_cast<double>(node_at_samppled_state->getColor().b / 255.0);
+  if (node_at_samppled_state) {
+    if (nodes_octree_->isNodeOccupied(node_at_samppled_state)) {
+      cost = 1.0 * static_cast<double>(node_at_samppled_state->getValue());
     }
   } else {
     cost = 5.0;
-  }*/
+  }
   return ompl::base::Cost(cost);
 }
 
