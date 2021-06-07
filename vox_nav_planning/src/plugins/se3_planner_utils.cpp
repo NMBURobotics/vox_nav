@@ -101,24 +101,25 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
   unsigned int attempts = 0;
   bool valid = false;
 
-  pcl::PointCloud<pcl::PointSurfel>::Ptr out_sample(new pcl::PointCloud<pcl::PointSurfel>);
-  pcl::RandomSample<pcl::PointSurfel> random_sample(true);
-  random_sample.setInputCloud(search_area_surfels_);
-  random_sample.setSample(1);
+  std::random_device rd;
+  std::mt19937 rng(rd());
+
   do {
-    pcl::Indices indices;
-    random_sample.filter(indices);
-    random_sample.filter(*out_sample);
+
+    int val = distrubutions_(rng);
+    std::cout << "drawed" << val << std::endl;
+
+    auto out_sample = search_area_surfels_->points.at(val);
 
     se3_state->setXYZ(
-      out_sample->points.front().x,
-      out_sample->points.front().y,
-      out_sample->points.front().z);
+      out_sample.x,
+      out_sample.y,
+      out_sample.z);
 
     auto sample_rot = vox_nav_utilities::getMsgQuaternionfromRPY(
-      out_sample->points.front().normal_x,
-      out_sample->points.front().normal_y,
-      out_sample->points.front().normal_z);
+      out_sample.normal_x,
+      out_sample.normal_y,
+      out_sample.normal_z);
 
     se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->x =
       sample_rot.x;
@@ -169,20 +170,17 @@ void OctoCellValidStateSampler::updateSearchArea(
   const geometry_msgs::msg::PoseStamped goal)
 {
   RCLCPP_INFO(logger_, "Updating search area");
-
-  search_area_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
+  search_area_surfels_ =
+    pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
-
-  float resolution = 1.6;
+  float resolution = 0.2;
   pcl::octree::OctreePointCloudSearch<pcl::PointSurfel> octree(resolution);
   octree.setInputCloud(workspace_surfels_);
   octree.addPointsFromInputCloud();
-
   pcl::PointSurfel searchPoint;
   searchPoint.x = (goal.pose.position.x + start.pose.position.x) / 2.0;
   searchPoint.y = (goal.pose.position.y + start.pose.position.y) / 2.0;
   searchPoint.z = (goal.pose.position.z + start.pose.position.z) / 2.0;
-
   // Neighbors within radius search
   std::vector<int> pointIdxRadiusSearch;
   std::vector<float> pointRadiusSquaredDistance;
@@ -191,9 +189,7 @@ void OctoCellValidStateSampler::updateSearchArea(
     std::pow( (goal.pose.position.y - start.pose.position.y), 2) +
     std::pow( (goal.pose.position.z - start.pose.position.z), 2)
   );
-
   RCLCPP_INFO(logger_, "Adjusting a search area with radius of: %.3f", radius);
-
   if (octree.radiusSearch(
       searchPoint, radius, pointIdxRadiusSearch,
       pointRadiusSquaredDistance) > 0)
@@ -202,6 +198,18 @@ void OctoCellValidStateSampler::updateSearchArea(
       search_area_surfels_->points.push_back(workspace_surfels_->points[pointIdxRadiusSearch[i]]);
     }
   }
+  /*search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
+    search_area_surfels_, 10.0);*/
+  std::vector<int> weights;
+  for (auto && i : search_area_surfels_->points) {
+    auto tilt = std::max(std::abs(i.normal_x), std::abs(i.normal_y)) * 180.0 / M_PI;
+    weights.push_back(40 / tilt);
+  }
+
+  std::discrete_distribution<> distrubutions(weights.begin(), weights.end());
+  distrubutions_ = distrubutions;
+
+
   RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
 }
 }  // namespace vox_nav_planning

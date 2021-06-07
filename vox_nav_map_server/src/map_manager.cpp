@@ -301,7 +301,7 @@ void MapManager::regressCosts()
     vox_nav_utilities::get_non_traversable_points(pcd_map_pointcloud_);
 
   // uniformly sample nodes on top of traversable cloud
-  auto uniformly_sampled_nodes = vox_nav_utilities::uniformly_sample_cloud(
+  auto uniformly_sampled_nodes = vox_nav_utilities::uniformly_sample_cloud<pcl::PointXYZRGB>(
     pure_traversable_pcl,
     cost_params_.cell_radius);
 

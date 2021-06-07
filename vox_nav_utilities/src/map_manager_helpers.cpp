@@ -151,21 +151,6 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr get_traversable_points(
   return pure_traversable_points;
 }
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr uniformly_sample_cloud(
-  const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-  const double radius)
-{
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr uniformly_sampled_cloud(
-    new pcl::PointCloud<pcl::PointXYZRGB>);
-  pcl::UniformSampling<pcl::PointXYZRGB> filter;
-  filter.setInputCloud(cloud);
-  filter.setRadiusSearch(radius);
-  filter.filter(*uniformly_sampled_cloud);
-  uniformly_sampled_cloud->height = 1;
-  uniformly_sampled_cloud->width = uniformly_sampled_cloud->points.size();
-  return uniformly_sampled_cloud;
-}
-
 std::vector<std::pair<pcl::PointXYZRGB,
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr>> surfelize_traversability_cloud(
   const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pure_traversable_pcl,

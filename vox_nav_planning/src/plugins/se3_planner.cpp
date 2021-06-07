@@ -212,7 +212,6 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
   simple_setup_->setup();
   // print the settings for this space
   simple_setup_->print(std::cout);
-
   simple_setup_->getSpaceInformation()->setValidStateSamplerAllocator(
     std::bind(
       &SE3Planner::
@@ -228,7 +227,7 @@ std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::createPlan(
     ompl::geometric::PathSimplifier * path_simlifier =
       new ompl::geometric::PathSimplifier(simple_setup_->getSpaceInformation());
 
-    path_simlifier->smoothBSpline(solution_path, 3);
+    path_simlifier->smoothBSpline(solution_path, 4, 0.2);
     solution_path.interpolate(interpolation_parameter_);
 
     for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount(); path_idx++) {

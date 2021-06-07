@@ -120,6 +120,7 @@ protected:
   pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
   std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
   std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
+  std::discrete_distribution<> distrubutions_;
 };
 }  // namespace vox_nav_planning
 

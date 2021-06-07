@@ -25,7 +25,6 @@
 #include <pcl/common/common.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/filters/extract_indices.h>
-#include <pcl/filters/uniform_sampling.h>
 #include <pcl/ModelCoefficients.h>
 #include <pcl/segmentation/sac_segmentation.h>
 
@@ -82,18 +81,6 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr get_traversable_points(
  */
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr get_non_traversable_points(
   const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
-
-/**
- * @brief Uniformly sample a point cloud from given point cloud and radius.
- * Retruns uniformly sampled point cloud
- *
- * @param cloud
- * @param radius
- * @return pcl::PointCloud<pcl::PointXYZRGB>::Ptr
- */
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr uniformly_sample_cloud(
-  const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-  const double radius);
 
 /**
  * @brief This function, partitionates full pure traversable cloud into cells with given radius.

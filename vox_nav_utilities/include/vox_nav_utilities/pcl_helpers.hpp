@@ -37,6 +37,7 @@
 #include <pcl/point_types.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/filters/uniform_sampling.h>
 
 #include <memory>
 #include <string>
@@ -180,6 +181,20 @@ typename pcl::PointCloud<P>::Ptr downsampleInputCloud(
   return downsampledCloud;
 }
 
+template<typename P>
+typename pcl::PointCloud<P>::Ptr  uniformly_sample_cloud(
+  const typename pcl::PointCloud<P>::Ptr cloud,
+  const double radius)
+{
+  typename pcl::PointCloud<P>::Ptr uniformly_sampled_cloud(new pcl::PointCloud<P>());
+  pcl::UniformSampling<P> filter;
+  filter.setInputCloud(cloud);
+  filter.setRadiusSearch(radius);
+  filter.filter(*uniformly_sampled_cloud);
+  uniformly_sampled_cloud->height = 1;
+  uniformly_sampled_cloud->width = uniformly_sampled_cloud->points.size();
+  return uniformly_sampled_cloud;
+}
 
 }  // namespace vox_nav_utilities
 
