@@ -88,7 +88,7 @@ OctoCellValidStateSampler::OctoCellValidStateSampler(
   name_ = "OctoCellValidStateSampler";
   RCLCPP_INFO(
     logger_,
-    "OctoCellValidStateSampler bases on an Octomap with %d nodes",
+    "OctoCellValidStateSampler bases on an Octomap with %d surfels",
     elevated_surfels_poses_.poses.size());
 
   updateSearchArea(start, goal);
@@ -100,11 +100,12 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
 
   unsigned int attempts = 0;
   bool valid = false;
+
+  pcl::PointCloud<pcl::PointSurfel>::Ptr out_sample(new pcl::PointCloud<pcl::PointSurfel>);
+  pcl::RandomSample<pcl::PointSurfel> random_sample(true);
+  random_sample.setInputCloud(search_area_surfels_);
+  random_sample.setSample(1);
   do {
-    pcl::PointCloud<pcl::PointSurfel>::Ptr out_sample(new pcl::PointCloud<pcl::PointSurfel>);
-    pcl::RandomSample<pcl::PointSurfel> random_sample(true);
-    random_sample.setInputCloud(search_area_surfels_);
-    random_sample.setSample(1);
     pcl::Indices indices;
     random_sample.filter(indices);
     random_sample.filter(*out_sample);
@@ -172,7 +173,7 @@ void OctoCellValidStateSampler::updateSearchArea(
   search_area_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
 
-  float resolution = 0.2;
+  float resolution = 1.6;
   pcl::octree::OctreePointCloudSearch<pcl::PointSurfel> octree(resolution);
   octree.setInputCloud(workspace_surfels_);
   octree.addPointsFromInputCloud();
@@ -201,6 +202,6 @@ void OctoCellValidStateSampler::updateSearchArea(
       search_area_surfels_->points.push_back(workspace_surfels_->points[pointIdxRadiusSearch[i]]);
     }
   }
-  RCLCPP_INFO(logger_, "Updated search area nodes");
+  RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
 }
 }  // namespace vox_nav_planning

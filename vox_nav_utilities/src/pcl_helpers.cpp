@@ -128,17 +128,6 @@ Eigen::Affine3f getRigidBodyTransform(
   return rigidBodyTransform;
 }
 
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsampleInputCloud(
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, double downsmaple_leaf_size)
-{
-  pcl::VoxelGrid<pcl::PointXYZRGB> voxelGrid;
-  voxelGrid.setInputCloud(inputCloud);
-  voxelGrid.setLeafSize(downsmaple_leaf_size, downsmaple_leaf_size, downsmaple_leaf_size);
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsampledCloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-  voxelGrid.filter(*downsampledCloud);
-  return downsampledCloud;
-}
-
 pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliersFromInputCloud(
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int mean_K, double stddev_thres,
   OutlierRemovalType outlier_removal_type)

@@ -67,7 +67,9 @@ PCL2OctomapConverter::PCL2OctomapConverter(/* args */)
 
   if (this->get_parameter("apply_filters").as_bool()) {
 
-    pointcloud_ = vox_nav_utilities::downsampleInputCloud(pointcloud_, downsample_voxel_size_);
+    pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+      pointcloud_,
+      downsample_voxel_size_);
     pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
       pointcloud_,
       remove_outlier_mean_K_,

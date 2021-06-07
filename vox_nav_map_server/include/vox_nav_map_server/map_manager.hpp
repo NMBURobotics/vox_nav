@@ -234,7 +234,7 @@ protected:
   // Pointcloud map is stroed here
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcd_map_pointcloud_;
   // Pointcloud map is stroed here
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr elevated_surfel_pointcloud_;
+  pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_pointcloud_;
   // rclcpp parameters from yaml file: topic name for published octomap
   std::string octomap_publish_topic_name_;
   // rclcpp parameters from yaml file: topic name for published octomap as cloud

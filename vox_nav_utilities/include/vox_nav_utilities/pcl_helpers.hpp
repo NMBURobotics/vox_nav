@@ -126,17 +126,6 @@ Eigen::Matrix3f getRotationMatrix(
   const rclcpp::Logger & node_logger);
 
 /*!
-* Downsample the point cloud using voxel grid method. Implementation is
-* based on the implementation from pcl. The explanation of the algorithm
-* can be found here:
-* http://pointclouds.org/documentation/tutorials/voxel_grid.php
-* @param[in] Input point cloud
-* @return Downsampled point cloud
-*/
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr downsampleInputCloud(
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, double downsmaple_leaf_size);
-
-/*!
 * Remove outliers from the point cloud. Function is based on
 * the StatisticalOutlierRemoval filter from pcl. The explanation on
 * how the algorithm works can be found here:
@@ -177,6 +166,18 @@ void  getNearstPoint(
       nearest_point = cloud->points[pointIdxNKNSearch[0]];
     }
   }
+}
+
+template<typename P>
+typename pcl::PointCloud<P>::Ptr downsampleInputCloud(
+  typename pcl::PointCloud<P>::Ptr inputCloud, double downsmaple_leaf_size)
+{
+  pcl::VoxelGrid<P> voxelGrid;
+  voxelGrid.setInputCloud(inputCloud);
+  voxelGrid.setLeafSize(downsmaple_leaf_size, downsmaple_leaf_size, downsmaple_leaf_size);
+  typename pcl::PointCloud<P>::Ptr downsampledCloud(new pcl::PointCloud<P>());
+  voxelGrid.filter(*downsampledCloud);
+  return downsampledCloud;
 }
 
 

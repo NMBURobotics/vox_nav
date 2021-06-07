@@ -161,11 +161,6 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr uniformly_sample_cloud(
   filter.setInputCloud(cloud);
   filter.setRadiusSearch(radius);
   filter.filter(*uniformly_sampled_cloud);
-  for (auto && i : uniformly_sampled_cloud->points) {
-    i.b = 255;
-    i.g = 0;
-    i.r = 0;
-  }
   uniformly_sampled_cloud->height = 1;
   uniformly_sampled_cloud->width = uniformly_sampled_cloud->points.size();
   return uniformly_sampled_cloud;
@@ -195,9 +190,6 @@ std::vector<std::pair<pcl::PointXYZRGB,
     {
       for (std::size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
         auto crr_point = pure_traversable_pcl->points[pointIdxRadiusSearch[i]];
-        crr_point.r = pointIdxRadiusSearch.size() * 3;
-        crr_point.g = 0;
-        crr_point.b = 0;
         points_within_this_cell->points.push_back(crr_point);
       }
     }

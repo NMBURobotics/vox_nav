@@ -55,7 +55,6 @@ vox_navGridMap::vox_navGridMap()
   map_publish_fps_ = this->get_parameter("map_publish_fps").as_int();
   min_points_in_cell_ = this->get_parameter("min_points_in_cell").as_int();
 
-
   pointloud_transform_matrix_.translation_.x() =
     this->get_parameter("cloud_transform.translation.x").as_double();
   pointloud_transform_matrix_.translation_.y() =
@@ -75,7 +74,8 @@ vox_navGridMap::vox_navGridMap()
     this->get_parameter("remove_outlier_stddev_threshold").as_double();
 
   pointcloud_ = vox_nav_utilities::loadPointcloudFromPcd(pcd_file_full_path_.c_str());
-  pointcloud_ = vox_nav_utilities::downsampleInputCloud(pointcloud_, downsample_voxel_size_);
+  pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+    pointcloud_, downsample_voxel_size_);
   pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
     pointcloud_,
     remove_outlier_mean_K_,

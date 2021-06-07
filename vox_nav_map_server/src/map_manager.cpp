@@ -260,9 +260,9 @@ void MapManager::transfromPCDfromGPS2Map()
 
 void MapManager::preProcessPCDMap()
 {
-  pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud(
-    pcd_map_pointcloud_,
-    preprocess_params_.pcd_map_downsample_voxel_size);
+  pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+    pcd_map_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
+
   RCLCPP_INFO(
     this->get_logger(), "PCD Map downsampled, it now has %d points"
     " adjust the parameters if the map looks off",
@@ -315,7 +315,7 @@ void MapManager::regressCosts()
   // this is acquired by merging all surfels
   pcl::PointCloud<pcl::PointXYZRGB> cost_regressed_cloud;
   // this is acquired by merging only elevated surfel cenroids
-  pcl::PointCloud<pcl::PointXYZRGB> elevated_surfels_cloud;
+  pcl::PointCloud<pcl::PointSurfel> elevated_surfels_cloud;
 
   for (auto && i : surfels) {
     auto surfel_center_point = i.first;
@@ -365,7 +365,7 @@ void MapManager::regressCosts()
         surfel_cloud,
         std::vector<double>({0.0, cost_params_.max_color_range - total_cost, total_cost}));
 
-      pcl::PointXYZRGB elevated_surfel;
+      pcl::PointSurfel elevated_surfel;
       elevated_surfel.x = surfel_center_point.x + cost_params_.node_elevation_distance *
         plane_model.values[0];
       elevated_surfel.y = surfel_center_point.y + cost_params_.node_elevation_distance *
@@ -390,12 +390,12 @@ void MapManager::regressCosts()
     cost_regressed_cloud += *surfel_cloud;
   }
   elevated_surfel_pointcloud_ =
-    pcl::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>(elevated_surfels_cloud);
+    pcl::make_shared<pcl::PointCloud<pcl::PointSurfel>>(elevated_surfels_cloud);
 
   // overlapping sufels duplicates some points , get rid of them by downsampling
-  elevated_surfel_pointcloud_ = vox_nav_utilities::downsampleInputCloud(
-    elevated_surfel_pointcloud_,
-    preprocess_params_.pcd_map_downsample_voxel_size);
+  elevated_surfel_pointcloud_ =
+    vox_nav_utilities::downsampleInputCloud<pcl::PointSurfel>(
+    elevated_surfel_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
 
   octomap::Pointcloud surfel_octocloud;
   for (auto && i : elevated_surfel_pointcloud_->points) {
@@ -435,9 +435,8 @@ void MapManager::regressCosts()
   *pcd_map_pointcloud_ = cost_regressed_cloud;
 
   // overlapping sufels duplicates some points , get rid of them by downsampling
-  pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud(
-    pcd_map_pointcloud_,
-    preprocess_params_.pcd_map_downsample_voxel_size);
+  pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+    pcd_map_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
 }
 
 void MapManager::handleOriginalOctomap()
