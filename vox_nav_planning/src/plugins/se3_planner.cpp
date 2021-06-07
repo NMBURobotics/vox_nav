@@ -79,7 +79,7 @@ void SE3Planner::initialize(
 
   state_space_ = std::make_shared<ompl::base::SE3StateSpace>();
   state_space_->as<ompl::base::SE3StateSpace>()->setBounds(*state_space_bounds_);
-  
+
   simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
 
   elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
@@ -391,11 +391,8 @@ ompl::base::ValidStateSamplerPtr SE3Planner::allocValidStateSampler(
     simple_setup_->getSpaceInformation(),
     nearest_elevated_surfel_to_start_,
     nearest_elevated_surfel_to_goal_,
-    elevated_surfel_octomap_octree_,
-    original_octomap_octree_,
     robot_collision_object_,
     original_octomap_collision_object_,
-    elevated_surfels_collision_object_,
     elevated_surfel_poses_msg_);
   return octocell_valid_state_sampler_;
 }
@@ -409,9 +406,12 @@ ompl::base::OptimizationObjectivePtr SE3Planner::getOptimizationObjective()
     new OctoCostOptimizationObjective(
       simple_setup_->getSpaceInformation(), elevated_surfel_octomap_octree_));
 
-  octocost_optimization_ = octocost_objective;
+  ompl::base::MultiOptimizationObjective * multi_optimization =
+    new ompl::base::MultiOptimizationObjective(simple_setup_->getSpaceInformation());
+  multi_optimization->addObjective(length_objective, 1.0);
+  multi_optimization->addObjective(octocost_objective, 2.0);
 
-  return octocost_optimization_;
+  return ompl::base::OptimizationObjectivePtr(multi_optimization);
 }
 
 std::vector<geometry_msgs::msg::PoseStamped> SE3Planner::getOverlayedStartandGoal()
