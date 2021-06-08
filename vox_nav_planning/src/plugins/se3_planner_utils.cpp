@@ -97,25 +97,17 @@ OctoCellValidStateSampler::OctoCellValidStateSampler(
 bool OctoCellValidStateSampler::sample(ompl::base::State * state)
 {
   auto se3_state = static_cast<ompl::base::SE3StateSpace::StateType *>(state);
-
   unsigned int attempts = 0;
   bool valid = false;
-
   std::random_device rd;
   std::mt19937 rng(rd());
-
   do {
-
     int val = distrubutions_(rng);
-    std::cout << "drawed" << val << std::endl;
-
-    auto out_sample = search_area_surfels_->points.at(val);
-
+    auto out_sample = workspace_surfels_->points.at(val);
     se3_state->setXYZ(
       out_sample.x,
       out_sample.y,
       out_sample.z);
-
     auto sample_rot = vox_nav_utilities::getMsgQuaternionfromRPY(
       out_sample.normal_x,
       out_sample.normal_y,
@@ -198,18 +190,16 @@ void OctoCellValidStateSampler::updateSearchArea(
       search_area_surfels_->points.push_back(workspace_surfels_->points[pointIdxRadiusSearch[i]]);
     }
   }
-  /*search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
-    search_area_surfels_, 10.0);*/
+  search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
+    search_area_surfels_, 1.6);
+
   std::vector<int> weights;
   for (auto && i : search_area_surfels_->points) {
-    auto tilt = std::max(std::abs(i.normal_x), std::abs(i.normal_y)) * 180.0 / M_PI;
-    weights.push_back(40 / tilt);
+    auto max_tilt_angle = std::max(std::abs(i.normal_x), std::abs(i.normal_y)) * 180.0 / M_PI;
+    weights.push_back(40 / max_tilt_angle);
   }
-
   std::discrete_distribution<> distrubutions(weights.begin(), weights.end());
   distrubutions_ = distrubutions;
-
-
   RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
 }
 }  // namespace vox_nav_planning
