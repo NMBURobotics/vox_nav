@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "vox_nav_planning/plugins/se3_planner_utils.hpp"
+#include "vox_nav_planning/plugins/composite_state_space.hpp"
 
 namespace vox_nav_planning
 {
@@ -96,7 +97,8 @@ OctoCellValidStateSampler::OctoCellValidStateSampler(
 
 bool OctoCellValidStateSampler::sample(ompl::base::State * state)
 {
-  auto se3_state = static_cast<ompl::base::SE3StateSpace::StateType *>(state);
+  auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
+
   unsigned int attempts = 0;
   bool valid = false;
   std::random_device rd;
@@ -104,6 +106,13 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
   do {
     int val = distrubutions_(rng);
     auto out_sample = workspace_surfels_->points.at(val);
+    cstate->setSE2(
+      out_sample.x,
+      out_sample.y, 0);
+    cstate->setZ(out_sample.z);
+
+    /*
+      auto se3_state = static_cast<ompl::base::SE3StateSpace::StateType *>(state);
     se3_state->setXYZ(
       out_sample.x,
       out_sample.y,
@@ -112,7 +121,6 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
       out_sample.normal_x,
       out_sample.normal_y,
       out_sample.normal_z);
-
     se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->x =
       sample_rot.x;
     se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->y =
@@ -120,7 +128,7 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
     se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->z =
       sample_rot.z;
     se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->w =
-      sample_rot.w;
+      sample_rot.w;*/
 
     valid = isStateValid(state);
     ++attempts;
@@ -131,14 +139,24 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
 bool OctoCellValidStateSampler::isStateValid(const ompl::base::State * state)
 {
   // cast the abstract state type to the type we expect
-  const ompl::base::SE3StateSpace::StateType * se3state =
-    state->as<ompl::base::SE3StateSpace::StateType>();
+  /* const ompl::base::SE3StateSpace::StateType * se3state =
+     state->as<ompl::base::SE3StateSpace::StateType>();
+   // extract the second component of the state and cast it to what we expect
+   const ompl::base::SO3StateSpace::StateType * rot =
+     se3state->as<ompl::base::SO3StateSpace::StateType>(1);
+   // check validity of state Fdefined by pos & rot*/
+
+  const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
+
+  // cast the abstract state type to the type we expect
+  const auto * dubins = cstate->as<ompl::base::DubinsStateSpace::StateType>(0);
   // extract the second component of the state and cast it to what we expect
-  const ompl::base::SO3StateSpace::StateType * rot =
-    se3state->as<ompl::base::SO3StateSpace::StateType>(1);
+  const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
   // check validity of state Fdefined by pos & rot
-  fcl::Vec3f translation(se3state->getX(), se3state->getY(), se3state->getZ());
-  fcl::Quaternion3f rotation(rot->w, rot->x, rot->y, rot->z);
+  fcl::Vec3f translation(dubins->getX(), dubins->getY(), z->values[0]);
+  fcl::Quaternion3f rotation(1, 0, 0, 0);
+
   robot_collision_object_->setTransform(rotation, translation);
   fcl::CollisionRequest requestType(1, false, 1, false);
   fcl::CollisionResult collisionResult;
