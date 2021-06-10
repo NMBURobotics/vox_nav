@@ -5,7 +5,7 @@
     </class>
   </library>
   <library path="vox_nav_composite_planner">
-    <class type="vox_nav_planning::CompositePlanner" base_class_type="vox_nav_planning::PlannerCore">
+    <class type="vox_nav_planning::ElevationPlanner" base_class_type="vox_nav_planning::PlannerCore">
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "vox_nav_planning/plugins/se3_planner_utils.hpp"
-#include "vox_nav_planning/plugins/composite_state_space.hpp"
+#include "vox_nav_planning/plugins/elevation_state_space.hpp"
 
 namespace vox_nav_planning
 {

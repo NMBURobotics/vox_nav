@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_PLANNING__PLUGINS__COMPOSITE_STATE_SPACE_HPP_
-#define VOX_NAV_PLANNING__PLUGINS__COMPOSITE_STATE_SPACE_HPP_
+#ifndef VOX_NAV_PLANNING__PLUGINS__ELEVATION_STATE_SPACE_HPP_
+#define VOX_NAV_PLANNING__PLUGINS__ELEVATION_STATE_SPACE_HPP_
 
 #include "ompl/base/spaces/DubinsStateSpace.h"
 #include "ompl/base/spaces/SE2StateSpace.h"
@@ -83,4 +83,4 @@ public:
 }  // namespace base
 }  // namespace ompl
 
-#endif  // VOX_NAV_PLANNING__PLUGINS__COMPOSITE_STATE_SPACE_HPP_
+#endif  // VOX_NAV_PLANNING__PLUGINS__ELEVATION_STATE_SPACE_HPP_

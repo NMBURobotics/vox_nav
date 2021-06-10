@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vox_nav_planning/plugins/composite_planner.hpp"
+#include "vox_nav_planning/plugins/elevation_planner.hpp"
 #include <pluginlib/class_list_macros.hpp>
 
 #include <string>
@@ -23,15 +23,15 @@
 namespace vox_nav_planning
 {
 
-CompositePlanner::CompositePlanner()
+ElevationPlanner::ElevationPlanner()
 {
 }
 
-CompositePlanner::~CompositePlanner()
+ElevationPlanner::~ElevationPlanner()
 {
 }
 
-void CompositePlanner::initialize(
+void ElevationPlanner::initialize(
   rclcpp::Node * parent,
   const std::string & plugin_name)
 {
@@ -99,21 +99,21 @@ void CompositePlanner::initialize(
     "get_maps_and_surfels");
 
   if (!is_enabled_) {
-    RCLCPP_WARN(logger_, "CompositePlanner plugin is disabled.");
+    RCLCPP_WARN(logger_, "ElevationPlanner plugin is disabled.");
   }
   RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
 
   setupMap();
 }
 
-std::vector<geometry_msgs::msg::PoseStamped> CompositePlanner::createPlan(
+std::vector<geometry_msgs::msg::PoseStamped> ElevationPlanner::createPlan(
   const geometry_msgs::msg::PoseStamped & start,
   const geometry_msgs::msg::PoseStamped & goal)
 {
   if (!is_enabled_) {
     RCLCPP_WARN(
       logger_,
-      "CompositePlanner plugin is disabled. Not performing anything returning an empty path"
+      "ElevationPlanner plugin is disabled. Not performing anything returning an empty path"
     );
     return std::vector<geometry_msgs::msg::PoseStamped>();
   }
@@ -208,7 +208,7 @@ std::vector<geometry_msgs::msg::PoseStamped> CompositePlanner::createPlan(
 
   simple_setup_->getSpaceInformation()->setValidStateSamplerAllocator(
     std::bind(
-      &CompositePlanner::
+      &ElevationPlanner::
       allocValidStateSampler, this, std::placeholders::_1));
 
   // attempt to solve the problem within one second of planning time
@@ -253,7 +253,7 @@ std::vector<geometry_msgs::msg::PoseStamped> CompositePlanner::createPlan(
   return plan_poses;
 }
 
-bool CompositePlanner::isStateValid(const ompl::base::State * state)
+bool ElevationPlanner::isStateValid(const ompl::base::State * state)
 {
 
   const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
@@ -285,7 +285,7 @@ bool CompositePlanner::isStateValid(const ompl::base::State * state)
 
 }
 
-void CompositePlanner::setupMap()
+void ElevationPlanner::setupMap()
 {
   const std::lock_guard<std::mutex> lock(octomap_mutex_);
 
@@ -363,7 +363,7 @@ void CompositePlanner::setupMap()
 
     simple_setup_->setOptimizationObjective(getOptimizationObjective());
     simple_setup_->setStateValidityChecker(
-      std::bind(&CompositePlanner::isStateValid, this, std::placeholders::_1));
+      std::bind(&ElevationPlanner::isStateValid, this, std::placeholders::_1));
 
     for (auto && i : elevated_surfel_poses_msg_->poses) {
       pcl::PointSurfel surfel;
@@ -380,7 +380,7 @@ void CompositePlanner::setupMap()
   }
 }
 
-ompl::base::ValidStateSamplerPtr CompositePlanner::allocValidStateSampler(
+ompl::base::ValidStateSamplerPtr ElevationPlanner::allocValidStateSampler(
   const ompl::base::SpaceInformation * si)
 {
   octocell_valid_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
@@ -393,7 +393,7 @@ ompl::base::ValidStateSamplerPtr CompositePlanner::allocValidStateSampler(
   return octocell_valid_state_sampler_;
 }
 
-ompl::base::OptimizationObjectivePtr CompositePlanner::getOptimizationObjective()
+ompl::base::OptimizationObjectivePtr ElevationPlanner::getOptimizationObjective()
 {
   // select a optimizatio objective
   ompl::base::OptimizationObjectivePtr length_objective(
@@ -410,7 +410,7 @@ ompl::base::OptimizationObjectivePtr CompositePlanner::getOptimizationObjective(
   return ompl::base::OptimizationObjectivePtr(multi_optimization);
 }
 
-std::vector<geometry_msgs::msg::PoseStamped> CompositePlanner::getOverlayedStartandGoal()
+std::vector<geometry_msgs::msg::PoseStamped> ElevationPlanner::getOverlayedStartandGoal()
 {
   std::vector<geometry_msgs::msg::PoseStamped> start_pose_vector;
   start_pose_vector.push_back(nearest_elevated_surfel_to_start_);
@@ -419,4 +419,4 @@ std::vector<geometry_msgs::msg::PoseStamped> CompositePlanner::getOverlayedStart
 }
 }  // namespace vox_nav_planning
 
-PLUGINLIB_EXPORT_CLASS(vox_nav_planning::CompositePlanner, vox_nav_planning::PlannerCore)
+PLUGINLIB_EXPORT_CLASS(vox_nav_planning::ElevationPlanner, vox_nav_planning::PlannerCore)

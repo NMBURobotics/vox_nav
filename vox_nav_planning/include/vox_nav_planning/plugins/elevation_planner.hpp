@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_PLANNING__PLUGINS__COMPOSITE_PLANNER_HPP_
-#define VOX_NAV_PLANNING__PLUGINS__COMPOSITE_PLANNER_HPP_
+#ifndef VOX_NAV_PLANNING__PLUGINS__ELEVATION_PLANNER_HPP_
+#define VOX_NAV_PLANNING__PLUGINS__ELEVATION_PLANNER_HPP_
 
 #include <vector>
 #include <string>
@@ -21,28 +21,28 @@
 
 #include "vox_nav_planning/planner_core.hpp"
 #include "vox_nav_planning/plugins/se3_planner_utils.hpp"
-#include <geometry_msgs/msg/pose_array.hpp>
-#include "vox_nav_planning/plugins/composite_state_space.hpp"
+#include "geometry_msgs/msg/pose_array.hpp"
+#include "vox_nav_planning/plugins/elevation_state_space.hpp"
 
 
 namespace vox_nav_planning
 {
 
-class CompositePlanner : public vox_nav_planning::PlannerCore
+class ElevationPlanner : public vox_nav_planning::PlannerCore
 {
 
 public:
 /**
- * @brief Construct a new CompositePlanner object
+ * @brief Construct a new ElevationPlanner object
  *
  */
-  CompositePlanner();
+  ElevationPlanner();
 
 /**
- * @brief Destroy the CompositePlanner object
+ * @brief Destroy the ElevationPlanner object
  *
  */
-  ~CompositePlanner();
+  ~ElevationPlanner();
 
   /**
    * @brief
@@ -136,4 +136,4 @@ protected:
 };
 }  // namespace vox_nav_planning
 
-#endif  // VOX_NAV_PLANNING__PLUGINS__COMPOSITE_PLANNER_HPP_
+#endif  // VOX_NAV_PLANNING__PLUGINS__ELEVATION_PLANNER_HPP_

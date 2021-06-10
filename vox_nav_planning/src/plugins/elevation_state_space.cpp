@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
- #include "vox_nav_planning/plugins/composite_state_space.hpp"
+ #include "vox_nav_planning/plugins/elevation_state_space.hpp"
 
 
 ompl::base::State * ompl::base::ElevationStateSpace::allocState() const
