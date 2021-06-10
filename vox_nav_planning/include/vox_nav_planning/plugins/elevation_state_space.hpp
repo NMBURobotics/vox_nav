@@ -18,69 +18,106 @@
 #include "ompl/base/spaces/DubinsStateSpace.h"
 #include "ompl/base/spaces/SE2StateSpace.h"
 #include "ompl/base/spaces/RealVectorStateSpace.h"
+#include "vox_nav_planning/planner_core.hpp"
+#include <pcl/octree/octree_search.h>
+#include <pcl/filters/random_sample.h>
 
 namespace ompl
 {
-namespace base
-{
-class ElevationStateSpace : public CompoundStateSpace
-{
-public:
-  class StateType : public CompoundStateSpace::StateType
+  namespace base
   {
-public:
-    StateType() = default;
 
-
-    DubinsStateSpace::StateType * getSE2()
+    class ElevationStateSampler : public StateSampler
     {
-      return as<DubinsStateSpace::StateType>(0);
-    }
+    public:
+      ElevationStateSampler(
+        const StateSpace * space,
+        const pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels,
+        const pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels);
 
-    RealVectorStateSpace::StateType * getZ()
+      void sampleUniform(State * state) override;
+
+      void sampleUniformNear(State * state, const State * near, double distance) override;
+
+      void sampleGaussian(State * state, const State * mean, double stdDev) override;
+
+    protected:
+      pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
+      pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
+    };
+
+
+    class ElevationStateSpace : public CompoundStateSpace
     {
-      return as<RealVectorStateSpace::StateType>(1);
-    }
+    public:
+      class StateType : public CompoundStateSpace::StateType
+      {
+      public:
+        StateType() = default;
 
-    void setSE2(double x, double y, double yaw)
-    {
-      as<DubinsStateSpace::StateType>(0)->setXY(x, y);
-      as<DubinsStateSpace::StateType>(0)->setYaw(yaw);
-    }
 
-    void setZ(double z)
-    {
-      as<RealVectorStateSpace::StateType>(1)->values[0] = z;
-    }
-  };
+        DubinsStateSpace::StateType * getSE2()
+        {
+          return as<DubinsStateSpace::StateType>(0);
+        }
 
-  ElevationStateSpace()
-  {
-    setName("Elevation" + getName());
-    type_ = 31; // why ?
-    addSubspace(std::make_shared<DubinsStateSpace>(), 1.0);
-    addSubspace(std::make_shared<RealVectorStateSpace>(1), 1.0);
-    lock();
-  }
+        RealVectorStateSpace::StateType * getZ()
+        {
+          return as<RealVectorStateSpace::StateType>(1);
+        }
 
-  ~ElevationStateSpace() override = default;
+        void setSE2(double x, double y, double yaw)
+        {
+          as<DubinsStateSpace::StateType>(0)->setXY(x, y);
+          as<DubinsStateSpace::StateType>(0)->setYaw(yaw);
+        }
 
-  void setBounds(const RealVectorBounds & se2_bounds, const RealVectorBounds & z_bounds)
-  {
-    as<DubinsStateSpace>(0)->setBounds(se2_bounds);
-    as<RealVectorStateSpace>(1)->setBounds(z_bounds);
-  }
+        void setZ(double z)
+        {
+          as<RealVectorStateSpace::StateType>(1)->values[0] = z;
+        }
+      };
 
-  State * allocState() const override;
+      ElevationStateSpace(
+        const geometry_msgs::msg::PoseStamped start,
+        const geometry_msgs::msg::PoseStamped goal,
+        const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses);
 
-  void freeState(State * state) const override;
+      ~ElevationStateSpace() override = default;
 
-  double distance(const State * state1, const State * state2) const override;
+      void setBounds(const RealVectorBounds & se2_bounds, const RealVectorBounds & z_bounds);
 
-  void interpolate(const State * from, const State * to, double t, State * state) const override;
- 
-};
-}  // namespace base
+      const RealVectorBounds getBounds() const;
+
+      State * allocState() const override;
+
+      void freeState(State * state) const override;
+
+      StateSamplerPtr allocDefaultStateSampler() const override;
+
+      double distance(
+        const State * state1,
+        const State * state2) const override;
+
+      void  interpolate(
+        const State * from, const State * to, double t,
+        State * state) const override;
+
+      void registerProjections() override;
+
+      void updateSearchArea(
+        const geometry_msgs::msg::PoseStamped start,
+        const geometry_msgs::msg::PoseStamped goal);
+
+    protected:
+      rclcpp::Logger logger_{rclcpp::get_logger("elevation_planner_utils")};
+      geometry_msgs::msg::PoseArray elevated_surfels_poses_;
+      pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
+      pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
+      std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
+      std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
+    };
+  } // namespace base
 }  // namespace ompl
 
 #endif  // VOX_NAV_PLANNING__PLUGINS__ELEVATION_STATE_SPACE_HPP_

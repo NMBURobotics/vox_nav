@@ -18,206 +18,231 @@
 namespace vox_nav_planning
 {
 
-OctoCostOptimizationObjective::OctoCostOptimizationObjective(
-  const ompl::base::SpaceInformationPtr & si,
-  const std::shared_ptr<octomap::OcTree> & elevated_surfels_octree)
-: ompl::base::StateCostIntegralObjective(si, true),
-  elevated_surfels_octree_(elevated_surfels_octree)
-{
-  description_ = "OctoCost Objective";
-  RCLCPP_INFO(
-    logger_,
-    "OctoCost Optimization objective bases on an Octomap with %d nodes",
-    elevated_surfels_octree_->size());
-}
-
-OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
-{
-}
-
-ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
-{
-  const ompl::base::SE3StateSpace::StateType * se3_state =
-    s->as<ompl::base::SE3StateSpace::StateType>();
-
-  float cost = 0.0;
-  auto node_at_samppled_state = elevated_surfels_octree_->search(
-    se3_state->getX(),
-    se3_state->getY(),
-    se3_state->getZ(), 0);
-
-  if (node_at_samppled_state) {
-    if (elevated_surfels_octree_->isNodeOccupied(node_at_samppled_state)) {
-      cost = 1.0 * static_cast<double>(node_at_samppled_state->getValue());
-    }
-  } else {
-    cost = 5.0;
-  }
-  return ompl::base::Cost(cost);
-}
-
-OctoCellValidStateSampler::OctoCellValidStateSampler(
-  const ompl::base::SpaceInformationPtr & si,
-  const geometry_msgs::msg::PoseStamped start,
-  const geometry_msgs::msg::PoseStamped goal,
-  const std::shared_ptr<fcl::CollisionObject> & robot_collision_object,
-  const std::shared_ptr<fcl::CollisionObject> & original_octomap_collision_object,
-  const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses)
-: ValidStateSampler(si.get()),
-  robot_collision_object_(robot_collision_object),
-  original_octomap_collision_object_(original_octomap_collision_object),
-  elevated_surfels_poses_(*elevated_surfels_poses)
-{
-  workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
-    new pcl::PointCloud<pcl::PointSurfel>);
-  search_area_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
-    new pcl::PointCloud<pcl::PointSurfel>);
-
-  for (auto && i : elevated_surfels_poses_.poses) {
-    pcl::PointSurfel surfel;
-    surfel.x = i.position.x;
-    surfel.y = i.position.y;
-    surfel.z = i.position.z;
-    double r, p, y;
-    vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
-    surfel.normal_x = r;
-    surfel.normal_y = p;
-    surfel.normal_z = y;
-    workspace_surfels_->points.push_back(surfel);
-  }
-
-  name_ = "OctoCellValidStateSampler";
-  RCLCPP_INFO(
-    logger_,
-    "OctoCellValidStateSampler bases on an Octomap with %d surfels",
-    elevated_surfels_poses_.poses.size());
-
-  updateSearchArea(start, goal);
-}
-
-bool OctoCellValidStateSampler::sample(ompl::base::State * state)
-{
-  auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
-
-  unsigned int attempts = 0;
-  bool valid = false;
-  std::random_device rd;
-  std::mt19937 rng(rd());
-  do {
-    int val = distrubutions_(rng);
-    auto out_sample = workspace_surfels_->points.at(val);
-    cstate->setSE2(
-      out_sample.x,
-      out_sample.y, 0);
-    cstate->setZ(out_sample.z);
-
-    /*
-      auto se3_state = static_cast<ompl::base::SE3StateSpace::StateType *>(state);
-    se3_state->setXYZ(
-      out_sample.x,
-      out_sample.y,
-      out_sample.z);
-    auto sample_rot = vox_nav_utilities::getMsgQuaternionfromRPY(
-      out_sample.normal_x,
-      out_sample.normal_y,
-      out_sample.normal_z);
-    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->x =
-      sample_rot.x;
-    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->y =
-      sample_rot.y;
-    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->z =
-      sample_rot.z;
-    se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->w =
-      sample_rot.w;*/
-
-    valid = isStateValid(state);
-    ++attempts;
-  } while (!valid && attempts < attempts_ && search_area_surfels_->points.size());
-  return valid;
-}
-
-bool OctoCellValidStateSampler::isStateValid(const ompl::base::State * state)
-{
-  // cast the abstract state type to the type we expect
-  /* const ompl::base::SE3StateSpace::StateType * se3state =
-     state->as<ompl::base::SE3StateSpace::StateType>();
-   // extract the second component of the state and cast it to what we expect
-   const ompl::base::SO3StateSpace::StateType * rot =
-     se3state->as<ompl::base::SO3StateSpace::StateType>(1);
-   // check validity of state Fdefined by pos & rot*/
-
-  const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
-
-  // cast the abstract state type to the type we expect
-  const auto * dubins = cstate->as<ompl::base::DubinsStateSpace::StateType>(0);
-  // extract the second component of the state and cast it to what we expect
-  const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-
-  // check validity of state Fdefined by pos & rot
-  fcl::Vec3f translation(dubins->getX(), dubins->getY(), z->values[0]);
-  fcl::Quaternion3f rotation(1, 0, 0, 0);
-
-  robot_collision_object_->setTransform(rotation, translation);
-  fcl::CollisionRequest requestType(1, false, 1, false);
-  fcl::CollisionResult collisionResult;
-  fcl::collide(
-    robot_collision_object_.get(),
-    original_octomap_collision_object_.get(), requestType, collisionResult);
-  return !collisionResult.isCollision();
-}
-
-bool OctoCellValidStateSampler::sampleNear(
-  ompl::base::State * state, const ompl::base::State * near,
-  const double distance)
-{
-  throw ompl::Exception("OctoCellValidStateSampler::sampleNear", "not implemented");
-  RCLCPP_ERROR(logger_, "Non implementd function call OctoCellValidStateSampler::sampleNear");
-  return false;
-}
-
-void OctoCellValidStateSampler::updateSearchArea(
-  const geometry_msgs::msg::PoseStamped start,
-  const geometry_msgs::msg::PoseStamped goal)
-{
-  RCLCPP_INFO(logger_, "Updating search area");
-  search_area_surfels_ =
-    pcl::PointCloud<pcl::PointSurfel>::Ptr(
-    new pcl::PointCloud<pcl::PointSurfel>);
-  float resolution = 0.2;
-  pcl::octree::OctreePointCloudSearch<pcl::PointSurfel> octree(resolution);
-  octree.setInputCloud(workspace_surfels_);
-  octree.addPointsFromInputCloud();
-  pcl::PointSurfel searchPoint;
-  searchPoint.x = (goal.pose.position.x + start.pose.position.x) / 2.0;
-  searchPoint.y = (goal.pose.position.y + start.pose.position.y) / 2.0;
-  searchPoint.z = (goal.pose.position.z + start.pose.position.z) / 2.0;
-  // Neighbors within radius search
-  std::vector<int> pointIdxRadiusSearch;
-  std::vector<float> pointRadiusSquaredDistance;
-  float radius = std::sqrt(
-    std::pow( (goal.pose.position.x - start.pose.position.x), 2) +
-    std::pow( (goal.pose.position.y - start.pose.position.y), 2) +
-    std::pow( (goal.pose.position.z - start.pose.position.z), 2)
-  );
-  RCLCPP_INFO(logger_, "Adjusting a search area with radius of: %.3f", radius);
-  if (octree.radiusSearch(
-      searchPoint, radius, pointIdxRadiusSearch,
-      pointRadiusSquaredDistance) > 0)
+  OctoCostOptimizationObjective::OctoCostOptimizationObjective(
+    const ompl::base::SpaceInformationPtr & si,
+    const std::shared_ptr<octomap::OcTree> & elevated_surfels_octree)
+  : ompl::base::StateCostIntegralObjective(si, true),
+    elevated_surfels_octree_(elevated_surfels_octree)
   {
-    for (std::size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
-      search_area_surfels_->points.push_back(workspace_surfels_->points[pointIdxRadiusSearch[i]]);
-    }
+    description_ = "OctoCost Objective";
+    RCLCPP_INFO(
+      logger_,
+      "OctoCost Optimization objective bases on an Octomap with %d nodes",
+      elevated_surfels_octree_->size());
   }
-  search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
-    search_area_surfels_, 1.6);
 
-  std::vector<int> weights;
-  for (auto && i : search_area_surfels_->points) {
-    auto max_tilt_angle = std::max(std::abs(i.normal_x), std::abs(i.normal_y)) * 180.0 / M_PI;
-    weights.push_back(40 / max_tilt_angle);
+  OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
+  {
   }
-  std::discrete_distribution<> distrubutions(weights.begin(), weights.end());
-  distrubutions_ = distrubutions;
-  RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
-}
+
+  ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
+  {
+    float cost = 0.0;
+
+    /*const ompl::base::SE3StateSpace::StateType * se3_state =
+      s->as<ompl::base::SE3StateSpace::StateType>();
+
+    auto node_at_samppled_state = elevated_surfels_octree_->search(
+      se3_state->getX(),
+      se3_state->getY(),
+      se3_state->getZ(), 0);
+
+    if (node_at_samppled_state) {
+      if (elevated_surfels_octree_->isNodeOccupied(node_at_samppled_state)) {
+        cost = 1.0 * static_cast<double>(node_at_samppled_state->getValue());
+      }
+    } else {
+      cost = 5.0;
+    }*/
+    
+    return ompl::base::Cost(cost);
+  }
+
+  OctoCellValidStateSampler::OctoCellValidStateSampler(
+    const ompl::base::SpaceInformationPtr & si,
+    const geometry_msgs::msg::PoseStamped start,
+    const geometry_msgs::msg::PoseStamped goal,
+    const std::shared_ptr<fcl::CollisionObject> & robot_collision_object,
+    const std::shared_ptr<fcl::CollisionObject> & original_octomap_collision_object,
+    const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses)
+  : ValidStateSampler(si.get()),
+    robot_collision_object_(robot_collision_object),
+    original_octomap_collision_object_(original_octomap_collision_object),
+    elevated_surfels_poses_(*elevated_surfels_poses)
+  {
+    workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
+      new pcl::PointCloud<pcl::PointSurfel>);
+    search_area_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
+      new pcl::PointCloud<pcl::PointSurfel>);
+
+    for (auto && i : elevated_surfels_poses_.poses) {
+      pcl::PointSurfel surfel;
+      surfel.x = i.position.x;
+      surfel.y = i.position.y;
+      surfel.z = i.position.z;
+      double r, p, y;
+      vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
+      surfel.normal_x = r;
+      surfel.normal_y = p;
+      surfel.normal_z = y;
+      workspace_surfels_->points.push_back(surfel);
+    }
+
+    name_ = "OctoCellValidStateSampler";
+    RCLCPP_INFO(
+      logger_,
+      "OctoCellValidStateSampler bases on an Octomap with %d surfels",
+      elevated_surfels_poses_.poses.size());
+
+    updateSearchArea(start, goal);
+  }
+
+  bool OctoCellValidStateSampler::sample(ompl::base::State * state)
+  {
+
+    unsigned int attempts = 0;
+    bool valid = false;
+
+    auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
+
+
+    do {
+
+      pcl::PointCloud<pcl::PointSurfel>::Ptr out_sample(new pcl::PointCloud<pcl::PointSurfel>);
+      pcl::RandomSample<pcl::PointSurfel> random_sample(true);
+      random_sample.setInputCloud(search_area_surfels_);
+      random_sample.setSample(1);
+      random_sample.setSeed(rand());
+      random_sample.filter(*out_sample);
+
+      cstate->setSE2(
+        out_sample->points.front().x,
+        out_sample->points.front().y, 0);
+      cstate->setZ(out_sample->points.front().z);
+
+      /*
+        auto se3_state = static_cast<ompl::base::SE3StateSpace::StateType *>(state);
+      se3_state->setXYZ(
+        out_sample.x,
+        out_sample.y,
+        out_sample.z);
+      auto sample_rot = vox_nav_utilities::getMsgQuaternionfromRPY(
+        out_sample.normal_x,
+        out_sample.normal_y,
+        out_sample.normal_z);
+      se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->x =
+        sample_rot.x;
+      se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->y =
+        sample_rot.y;
+      se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->z =
+        sample_rot.z;
+      se3_state->as<ompl::base::SO3StateSpace::StateType>(1)->w =
+        sample_rot.w;*/
+
+
+      valid = isStateValid(state);
+      ++attempts;
+
+
+      /*std::cout << "Sampling a valid state" << std::endl;
+      auto * sampled_state = state->as<ompl::base::ElevationStateSpace::StateType>();
+      std::cout << sampled_state->getSE2()->getX() << std::endl;
+      std::cout << sampled_state->getSE2()->getY() << std::endl;
+      std::cout << sampled_state->getZ()->values[0] << std::endl;
+      if (!valid) {
+        std::cout << "this statte is invalid" << std::endl;
+      }
+      */
+
+    } while (!valid && attempts < attempts_ && search_area_surfels_->points.size());
+    return valid;
+  }
+
+  bool OctoCellValidStateSampler::isStateValid(const ompl::base::State * state)
+  {
+    // cast the abstract state type to the type we expect
+    /* const ompl::base::SE3StateSpace::StateType * se3state =
+       state->as<ompl::base::SE3StateSpace::StateType>();
+     // extract the second component of the state and cast it to what we expect
+     const ompl::base::SO3StateSpace::StateType * rot =
+       se3state->as<ompl::base::SO3StateSpace::StateType>(1);
+     // check validity of state Fdefined by pos & rot*/
+
+    const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
+
+    // cast the abstract state type to the type we expect
+    const auto * dubins = cstate->as<ompl::base::DubinsStateSpace::StateType>(0);
+    // extract the second component of the state and cast it to what we expect
+    const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+    // check validity of state Fdefined by pos & rot
+    fcl::Vec3f translation(dubins->getX(), dubins->getY(), z->values[0]);
+    fcl::Quaternion3f rotation(1, 0, 0, 0);
+
+    robot_collision_object_->setTransform(rotation, translation);
+    fcl::CollisionRequest requestType(1, false, 1, false);
+    fcl::CollisionResult collisionResult;
+    fcl::collide(
+      robot_collision_object_.get(),
+      original_octomap_collision_object_.get(), requestType, collisionResult);
+    return !collisionResult.isCollision();
+  }
+
+  bool OctoCellValidStateSampler::sampleNear(
+    ompl::base::State * state, const ompl::base::State * near,
+    const double distance)
+  {
+    throw ompl::Exception("OctoCellValidStateSampler::sampleNear", "not implemented");
+    RCLCPP_ERROR(logger_, "Non implementd function call OctoCellValidStateSampler::sampleNear");
+    return false;
+  }
+
+  void OctoCellValidStateSampler::updateSearchArea(
+    const geometry_msgs::msg::PoseStamped start,
+    const geometry_msgs::msg::PoseStamped goal)
+  {
+    RCLCPP_INFO(logger_, "Updating search area");
+    search_area_surfels_ =
+      pcl::PointCloud<pcl::PointSurfel>::Ptr(
+      new pcl::PointCloud<pcl::PointSurfel>);
+    float resolution = 0.2;
+    pcl::octree::OctreePointCloudSearch<pcl::PointSurfel> octree(resolution);
+    octree.setInputCloud(workspace_surfels_);
+    octree.addPointsFromInputCloud();
+    pcl::PointSurfel searchPoint;
+    searchPoint.x = (goal.pose.position.x + start.pose.position.x) / 2.0;
+    searchPoint.y = (goal.pose.position.y + start.pose.position.y) / 2.0;
+    searchPoint.z = (goal.pose.position.z + start.pose.position.z) / 2.0;
+    // Neighbors within radius search
+    std::vector<int> pointIdxRadiusSearch;
+    std::vector<float> pointRadiusSquaredDistance;
+    float radius = std::sqrt(
+      std::pow( (goal.pose.position.x - start.pose.position.x), 2) +
+      std::pow( (goal.pose.position.y - start.pose.position.y), 2) +
+      std::pow( (goal.pose.position.z - start.pose.position.z), 2)
+    );
+    RCLCPP_INFO(logger_, "Adjusting a search area with radius of: %.3f", radius);
+    if (octree.radiusSearch(
+        searchPoint, radius, pointIdxRadiusSearch,
+        pointRadiusSquaredDistance) > 0)
+    {
+      for (std::size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
+        search_area_surfels_->points.push_back(workspace_surfels_->points[pointIdxRadiusSearch[i]]);
+      }
+    }
+
+    search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
+      search_area_surfels_, 1.6);
+
+
+    /*std::vector<int> weights;
+    for (auto && i : search_area_surfels_->points) {
+      auto max_tilt_angle = std::max(std::abs(i.normal_x), std::abs(i.normal_y)) * 180.0 / M_PI;
+      weights.push_back(40 / max_tilt_angle);
+    }
+    std::discrete_distribution<> distrubutions(weights.begin(), weights.end());
+    distrubutions_ = distrubutions;
+    */
+    RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
+  }
 }  // namespace vox_nav_planning
