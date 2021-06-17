@@ -117,6 +117,7 @@ namespace ompl
       std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
       std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
     };
+
   } // namespace base
 }  // namespace ompl
 
