@@ -82,10 +82,12 @@ ElevationStateSpace::ElevationStateSpace(
 : elevated_surfels_poses_(*elevated_surfels_poses)
 {
   setName("Elevation" + getName());
-  type_ = 31;       // why ?
+  type_ = 32;       // why ?
   addSubspace(std::make_shared<DubinsStateSpace>(), 1.0);
   addSubspace(std::make_shared<RealVectorStateSpace>(1), 1.0);
   lock();
+
+  dubins_ = std::make_shared<ompl::base::DubinsStateSpace>();
 
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
@@ -117,8 +119,12 @@ void ElevationStateSpace::setBounds(
   const RealVectorBounds & se2_bounds,
   const RealVectorBounds & z_bounds)
 {
+
   as<DubinsStateSpace>(0)->setBounds(se2_bounds);
   as<RealVectorStateSpace>(1)->setBounds(z_bounds);
+
+  dubins_->setBounds(se2_bounds);
+
 }
 
 const RealVectorBounds ElevationStateSpace::getBounds() const
@@ -152,56 +158,54 @@ StateSamplerPtr ElevationStateSpace::allocDefaultStateSampler() const
 
 double ompl::base::ElevationStateSpace::distance(const State * state1, const State * state2) const
 {
-  return CompoundStateSpace::distance(state1, state2);
+
+  const auto * start = state1->as<ElevationStateSpace::StateType>();
+  const auto * goal = state2->as<ElevationStateSpace::StateType>();
+
+  const auto * start_dubins = start->as<DubinsStateSpace::StateType>(0);
+  const auto * start_z = start->as<RealVectorStateSpace::StateType>(1);
+
+  const auto * goal_dubins = goal->as<DubinsStateSpace::StateType>(0);
+  const auto * goal_z = goal->as<RealVectorStateSpace::StateType>(1);
+
+  auto dist = dubins_->dubins(start_dubins, goal_dubins).length();
+
+  return dist;
 }
 
 void ompl::base::ElevationStateSpace::interpolate(
   const State * from, const State * to, double t,
   State * state) const
 {
-  CompoundStateSpace::interpolate(from, to, t, state);
+  const auto * start = from->as<ElevationStateSpace::StateType>();
+  const auto * goal = to->as<ElevationStateSpace::StateType>();
+  auto * intermediate_state = state->as<ElevationStateSpace::StateType>();
+
+  const auto * start_dubins = start->as<DubinsStateSpace::StateType>(0);
+  const auto * start_z = start->as<RealVectorStateSpace::StateType>(1);
+
+  const auto * goal_dubins = goal->as<DubinsStateSpace::StateType>(0);
+  const auto * goal_z = goal->as<RealVectorStateSpace::StateType>(1);
+
+  auto * intermediate_state_dubins = intermediate_state->as<DubinsStateSpace::StateType>(0);
+  auto * intermediate_state_z = intermediate_state->as<RealVectorStateSpace::StateType>(1);
+
+  dubins_->interpolate(start_dubins, goal_dubins, t, intermediate_state_dubins);
+
+  pcl::PointSurfel dubins_surfel, nearest_intermediate_surfel;
+  dubins_surfel.x = intermediate_state_dubins->getX();
+  dubins_surfel.y = intermediate_state_dubins->getY();
+  dubins_surfel.z = start_z->values[0];
+
+  vox_nav_utilities::getNearstPoint<
+    pcl::PointSurfel,
+    pcl::PointCloud<pcl::PointSurfel>::Ptr>(
+    nearest_intermediate_surfel,
+    dubins_surfel,
+    workspace_surfels_);
+  intermediate_state_z->values[0] = nearest_intermediate_surfel.z;
 }
 
-void ompl::base::ElevationStateSpace::registerProjections()
-{
-  class ElevationDefaultProjection : public ProjectionEvaluator
-  {
-  public:
-    ElevationDefaultProjection(const StateSpace * space)
-    : ProjectionEvaluator(space)
-    {
-    }
-
-    unsigned int getDimension() const override
-    {
-      return 3;
-    }
-
-    void defaultCellSizes() override
-    {
-      cellSizes_.resize(3);
-      bounds_ = space_->as<ElevationStateSpace>()->getBounds();
-      std::cout << "kokkokoko " << bounds_.high[0] << bounds_.low[0];
-      cellSizes_[0] = (bounds_.high[0] - bounds_.low[0]) / magic::PROJECTION_DIMENSION_SPLITS;
-      cellSizes_[1] = (bounds_.high[1] - bounds_.low[1]) / magic::PROJECTION_DIMENSION_SPLITS;
-      cellSizes_[2] = (bounds_.high[2] - bounds_.low[2]) / magic::PROJECTION_DIMENSION_SPLITS;
-    }
-
-    void project(const State * state, Eigen::Ref<Eigen::VectorXd> projection) const override
-    {
-      const auto * start = state->as<ElevationStateSpace::StateType>();
-      const auto * state_se2 = start->as<DubinsStateSpace::StateType>(0);
-      const auto * state_z = start->as<RealVectorStateSpace::StateType>(1);
-      double * data = new double[3];
-      data[0] = state_se2->getX();
-      data[1] = state_se2->getY();
-      data[2] = state_z->values[0];
-      projection = Eigen::Map<const Eigen::VectorXd>(data, 3);
-    }
-  };
-
-  registerDefaultProjection(std::make_shared<ElevationDefaultProjection>(this));
-}
 
 void ElevationStateSpace::updateSearchArea(
   const geometry_msgs::msg::PoseStamped start,

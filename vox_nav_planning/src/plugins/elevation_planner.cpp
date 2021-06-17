@@ -241,25 +241,31 @@ namespace vox_nav_planning
       ompl::geometric::PathSimplifier * path_simlifier =
         new ompl::geometric::PathSimplifier(simple_setup_->getSpaceInformation());
 
-      // solution_path.interpolate(interpolation_parameter_);
-      //  path_simlifier->smoothBSpline(solution_path, 2, 0.8);
+      solution_path.interpolate(interpolation_parameter_);
+      path_simlifier->smoothBSpline(solution_path, 3, 0.8);
 
       for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount(); path_idx++) {
-        const ompl::base::SE3StateSpace::StateType * se3state =
-          solution_path.getState(path_idx)->as<ompl::base::SE3StateSpace::StateType>();
+
+        const auto * cstate =
+          solution_path.getState(path_idx)->as<ompl::base::ElevationStateSpace::StateType>();
+        // cast the abstract state type to the type we expect
+        const auto * dubins_HOR = cstate->as<ompl::base::DubinsStateSpace::StateType>(0);
         // extract the second component of the state and cast it to what we expect
-        const ompl::base::SO3StateSpace::StateType * rot =
-          se3state->as<ompl::base::SO3StateSpace::StateType>(1);
+        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+        tf2::Quaternion this_pose_quat;
+        this_pose_quat.setRPY(0, 0, dubins_HOR->getYaw());
+
         geometry_msgs::msg::PoseStamped pose;
         pose.header.frame_id = start.header.frame_id;
         pose.header.stamp = rclcpp::Clock().now();
-        pose.pose.position.x = se3state->getX();
-        pose.pose.position.y = se3state->getY();
-        pose.pose.position.z = se3state->getZ();
-        pose.pose.orientation.x = rot->x;
-        pose.pose.orientation.y = rot->y;
-        pose.pose.orientation.z = rot->z;
-        pose.pose.orientation.w = rot->w;
+        pose.pose.position.x = dubins_HOR->getX();
+        pose.pose.position.y = dubins_HOR->getY();
+        pose.pose.position.z = z->values[0];
+        pose.pose.orientation.x = this_pose_quat.getX();
+        pose.pose.orientation.y = this_pose_quat.getY();
+        pose.pose.orientation.z = this_pose_quat.getZ();
+        pose.pose.orientation.w = this_pose_quat.getW();
         plan_poses.push_back(pose);
       }
       RCLCPP_INFO(
@@ -302,7 +308,7 @@ namespace vox_nav_planning
 
     //return collisionWithNodesResult.isCollision() && !collisionWitFullMapResult.isCollision();
 
-    return true;
+    return !collisionWitFullMapResult.isCollision();
   }
 
   void ElevationPlanner::setupMap()

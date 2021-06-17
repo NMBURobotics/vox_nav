@@ -139,7 +139,7 @@ namespace vox_nav_planning
     simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
 
     simple_setup_->setOptimizationObjective(getOptimizationObjective());
-    
+
     simple_setup_->setStateValidityChecker(
       std::bind(&Dubins3DPlanner::isStateValid, this, std::placeholders::_1));
 
@@ -270,11 +270,6 @@ namespace vox_nav_planning
         // extract the second component of the state and cast it to what we expect
         const auto * dubins_VER = cstate->as<ompl::base::DubinsStateSpace::StateType>(1);
 
-
-        // extract the second component of the state and cast it to what we expect
-        /*const ompl::base::SO3StateSpace::StateType * rot =
-          se3state->as<ompl::base::SO3StateSpace::StateType>(1);*/
-
         tf2::Quaternion this_pose_quat;
         this_pose_quat.setRPY(0, 0, dubins_HOR->getYaw());
 
@@ -289,7 +284,6 @@ namespace vox_nav_planning
         pose.pose.orientation.z = this_pose_quat.getZ();
         pose.pose.orientation.w = this_pose_quat.getW();
         plan_poses.push_back(pose);
-
       }
       RCLCPP_INFO(
         logger_, "Found A plan with %i poses", plan_poses.size());

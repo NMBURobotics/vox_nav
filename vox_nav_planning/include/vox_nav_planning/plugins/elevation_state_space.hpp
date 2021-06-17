@@ -103,8 +103,6 @@ namespace ompl
         const State * from, const State * to, double t,
         State * state) const override;
 
-      void registerProjections() override;
-
       void updateSearchArea(
         const geometry_msgs::msg::PoseStamped start,
         const geometry_msgs::msg::PoseStamped goal);
@@ -116,6 +114,9 @@ namespace ompl
       pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
       std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
       std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
+
+      std::shared_ptr<DubinsStateSpace> dubins_;
+
     };
 
   } // namespace base
