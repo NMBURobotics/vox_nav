@@ -14,7 +14,7 @@
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
-  <library path="vox_nav_se2_planner">
+  <library path="vox_nav_dubins_3d_planner">
     <class type="vox_nav_planning::Dubins3DPlanner" base_class_type="vox_nav_planning::PlannerCore">
       <description>TODO(fetullah.atas)</description>
     </class>

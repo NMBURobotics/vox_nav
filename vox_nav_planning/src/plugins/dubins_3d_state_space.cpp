@@ -30,8 +30,8 @@ Dubins3DStateSpace::Dubins3DStateSpace(
   addSubspace(std::make_shared<DubinsStateSpace>(turningRadius), 1.0);
   lock();
 
-  horizontal_dubins_ = dynamic_cast<DubinsStateSpace *>(this);
-  vertical_dubins_ = dynamic_cast<DubinsStateSpace *>(this);
+  horizontal_dubins_ = std::make_shared<ompl::base::DubinsStateSpace>(turningRadius, isSymmetric_);
+  vertical_dubins_ = std::make_shared<ompl::base::DubinsStateSpace>(turningRadius, isSymmetric_);
 }
 
 void Dubins3DStateSpace::setBounds(
@@ -40,6 +40,9 @@ void Dubins3DStateSpace::setBounds(
 {
   as<DubinsStateSpace>(0)->setBounds(horizontal_dubins_bounds);
   as<DubinsStateSpace>(1)->setBounds(vertical_dubins_bounds);
+
+  horizontal_dubins_->setBounds(horizontal_dubins_bounds);
+  vertical_dubins_->setBounds(vertical_dubins_bounds);
 }
 
 const RealVectorBounds Dubins3DStateSpace::getMergedBounds() const
@@ -110,5 +113,5 @@ void ompl::base::Dubins3DStateSpace::interpolate(
   auto * state_vertical = state_dubins_3d->as<DubinsStateSpace::StateType>(1);
 
   horizontal_dubins_->interpolate(start_horizontal, goal_horizontal, t, state_horizontal);
-  vertical_dubins_->interpolate(start_vertical, goal_horizontal, t, state_vertical);
+  vertical_dubins_->interpolate(start_vertical, goal_vertical, t, state_vertical);
 }

@@ -129,16 +129,17 @@ namespace vox_nav_planning
       return std::vector<geometry_msgs::msg::PoseStamped>();
     }
 
-    ompl::base::StateSpacePtr dubins_3d_state_space(new ompl::base::Dubins3DStateSpace(1.0,false));
+    ompl::base::StateSpacePtr dubins_3d_state_space(new ompl::base::Dubins3DStateSpace(1.0, false));
     dubins_3d_state_space->as<ompl::base::Dubins3DStateSpace>()->setBounds(
       *horizontal_dubins_bounds_,
       *vertical_dubins_bounds_);
 
     state_space_ = dubins_3d_state_space;
-    
+
     simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
 
     simple_setup_->setOptimizationObjective(getOptimizationObjective());
+    
     simple_setup_->setStateValidityChecker(
       std::bind(&Dubins3DPlanner::isStateValid, this, std::placeholders::_1));
 
@@ -208,7 +209,7 @@ namespace vox_nav_planning
       nearest_elevated_surfel_to_start_.pose.position.x,
       nearest_elevated_surfel_to_start_.pose.position.y, 0);
     se3_start->setVerticalDubins(
-      nearest_elevated_surfel_to_start_.pose.position.z, 
+      nearest_elevated_surfel_to_start_.pose.position.z,
       nearest_elevated_surfel_to_start_.pose.position.y, 0);
 
     se3_goal->setHorizontalDubins(
@@ -216,12 +217,16 @@ namespace vox_nav_planning
       nearest_elevated_surfel_to_goal_.pose.position.y, 0);
     se3_goal->setVerticalDubins(
       nearest_elevated_surfel_to_goal_.pose.position.z,
-       nearest_elevated_surfel_to_goal_.pose.position.y,0);
+      nearest_elevated_surfel_to_goal_.pose.position.y, 0);
 
     simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
 
-    RCLCPP_INFO(logger_, "%.2f  %.2f ", se3_goal->getHorizontalDubins()->getX(), se3_goal->getHorizontalDubins()->getY());
-    RCLCPP_INFO(logger_, "%.2f  %.2f ", se3_start->getVerticalDubins()->getX(), se3_start->getVerticalDubins()->getY());
+    RCLCPP_INFO(
+      logger_, "%.2f  %.2f ",
+      se3_goal->getHorizontalDubins()->getX(), se3_goal->getHorizontalDubins()->getY());
+    RCLCPP_INFO(
+      logger_, "%.2f  %.2f ",
+      se3_start->getVerticalDubins()->getX(), se3_start->getVerticalDubins()->getY());
 
 
     // create a planner for the defined space
@@ -237,10 +242,10 @@ namespace vox_nav_planning
     // print the settings for this space
     simple_setup_->print(std::cout);
 
-    simple_setup_->getSpaceInformation()->setValidStateSamplerAllocator(
+    /*simple_setup_->getSpaceInformation()->setValidStateSamplerAllocator(
       std::bind(
         &Dubins3DPlanner::
-        allocValidStateSampler, this, std::placeholders::_1));
+        allocValidStateSampler, this, std::placeholders::_1));*/
 
     // attempt to solve the problem within one second of planning time
     ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
@@ -252,26 +257,39 @@ namespace vox_nav_planning
       ompl::geometric::PathSimplifier * path_simlifier =
         new ompl::geometric::PathSimplifier(simple_setup_->getSpaceInformation());
 
-      // solution_path.interpolate(interpolation_parameter_);
-      //  path_simlifier->smoothBSpline(solution_path, 2, 0.8);
+      solution_path.interpolate(interpolation_parameter_);
+      path_simlifier->smoothBSpline(solution_path, 2, 0.8);
 
       for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount(); path_idx++) {
-        const ompl::base::SE3StateSpace::StateType * se3state =
-          solution_path.getState(path_idx)->as<ompl::base::SE3StateSpace::StateType>();
+
+        const auto * cstate =
+          solution_path.getState(path_idx)->as<ompl::base::Dubins3DStateSpace::StateType>();
+
+        // cast the abstract state type to the type we expect
+        const auto * dubins_HOR = cstate->as<ompl::base::DubinsStateSpace::StateType>(0);
         // extract the second component of the state and cast it to what we expect
-        const ompl::base::SO3StateSpace::StateType * rot =
-          se3state->as<ompl::base::SO3StateSpace::StateType>(1);
+        const auto * dubins_VER = cstate->as<ompl::base::DubinsStateSpace::StateType>(1);
+
+
+        // extract the second component of the state and cast it to what we expect
+        /*const ompl::base::SO3StateSpace::StateType * rot =
+          se3state->as<ompl::base::SO3StateSpace::StateType>(1);*/
+
+        tf2::Quaternion this_pose_quat;
+        this_pose_quat.setRPY(0, 0, dubins_HOR->getYaw());
+
         geometry_msgs::msg::PoseStamped pose;
         pose.header.frame_id = start.header.frame_id;
         pose.header.stamp = rclcpp::Clock().now();
-        pose.pose.position.x = se3state->getX();
-        pose.pose.position.y = se3state->getY();
-        pose.pose.position.z = se3state->getZ();
-        pose.pose.orientation.x = rot->x;
-        pose.pose.orientation.y = rot->y;
-        pose.pose.orientation.z = rot->z;
-        pose.pose.orientation.w = rot->w;
+        pose.pose.position.x = dubins_HOR->getX();
+        pose.pose.position.y = dubins_HOR->getY();
+        pose.pose.position.z = dubins_VER->getX();
+        pose.pose.orientation.x = this_pose_quat.getX();
+        pose.pose.orientation.y = this_pose_quat.getY();
+        pose.pose.orientation.z = this_pose_quat.getZ();
+        pose.pose.orientation.w = this_pose_quat.getW();
         plan_poses.push_back(pose);
+
       }
       RCLCPP_INFO(
         logger_, "Found A plan with %i poses", plan_poses.size());
@@ -303,9 +321,9 @@ namespace vox_nav_planning
 
     fcl::CollisionResult collisionWithNodesResult, collisionWitFullMapResult;
 
-   /* fcl::collide(
-      robot_collision_object_.get(),
-      elevated_surfels_collision_object_.get(), requestType, collisionWithNodesResult);*/
+    /* fcl::collide(
+       robot_collision_object_.get(),
+       elevated_surfels_collision_object_.get(), requestType, collisionWithNodesResult);*/
 
     fcl::collide(
       robot_collision_object_.get(),
@@ -313,7 +331,7 @@ namespace vox_nav_planning
 
     //return collisionWithNodesResult.isCollision() && !collisionWitFullMapResult.isCollision();
 
-    return true;
+    return !collisionWitFullMapResult.isCollision();
   }
 
   void Dubins3DPlanner::setupMap()

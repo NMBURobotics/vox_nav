@@ -139,8 +139,8 @@ namespace ompl
         State * state) const override;
 
     protected:
-      DubinsStateSpace * horizontal_dubins_;
-      DubinsStateSpace * vertical_dubins_;
+      std::shared_ptr<DubinsStateSpace> horizontal_dubins_;
+      std::shared_ptr<DubinsStateSpace> vertical_dubins_;
 
       double rho_;
       bool isSymmetric_;
