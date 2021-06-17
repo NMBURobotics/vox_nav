@@ -94,51 +94,51 @@ namespace vox_nav_planning
  * @brief Base class for creating a planner plugins
  *
  */
-class PlannerCore
-{
-public:
-  using Ptr = std::shared_ptr<PlannerCore>;
-  /**
-   * @brief Construct a new Planner Core object
-   *
-   */
-  PlannerCore() {}
+  class PlannerCore
+  {
+  public:
+    using Ptr = std::shared_ptr<PlannerCore>;
+    /**
+     * @brief Construct a new Planner Core object
+     *
+     */
+    PlannerCore() {}
 
-  /**
-   * @brief Destroy the Planner Core object
-   *
-   */
-  virtual ~PlannerCore() {}
+    /**
+     * @brief Destroy the Planner Core object
+     *
+     */
+    virtual ~PlannerCore() {}
 
-  /**
-   * @brief
-   *
-   * @param parent
-   * @param plugin_name
-   */
-  virtual void initialize(
-    rclcpp::Node * parent,
-    const std::string & plugin_name) = 0;
+    /**
+     * @brief
+     *
+     * @param parent
+     * @param plugin_name
+     */
+    virtual void initialize(
+      rclcpp::Node * parent,
+      const std::string & plugin_name) = 0;
 
-  /**
-   * @brief Method create the plan from a starting and ending goal.
-   *
-   * @param start The starting pose of the robot
-   * @param goal  The goal pose of the robot
-   * @return std::vector<geometry_msgs::msg::PoseStamped>   The sequence of poses to get from start to goal, if any
-   */
-  virtual std::vector<geometry_msgs::msg::PoseStamped> createPlan(
-    const geometry_msgs::msg::PoseStamped & start,
-    const geometry_msgs::msg::PoseStamped & goal) = 0;
+    /**
+     * @brief Method create the plan from a starting and ending goal.
+     *
+     * @param start The starting pose of the robot
+     * @param goal  The goal pose of the robot
+     * @return std::vector<geometry_msgs::msg::PoseStamped>   The sequence of poses to get from start to goal, if any
+     */
+    virtual std::vector<geometry_msgs::msg::PoseStamped> createPlan(
+      const geometry_msgs::msg::PoseStamped & start,
+      const geometry_msgs::msg::PoseStamped & goal) = 0;
 
-  /**
-  * @brief
-  *
-  * @param state
-  * @return true
-  * @return false
-  */
-  virtual bool isStateValid(const ompl::base::State * state) = 0;
+    /**
+    * @brief
+    *
+    * @param state
+    * @return true
+    * @return false
+    */
+    virtual bool isStateValid(const ompl::base::State * state) = 0;
 
 /**
  * @brief Get the Overlayed Start and Goal poses, only x and y are provided for goal ,
@@ -146,39 +146,39 @@ public:
  *
  * @return std::vector<geometry_msgs::msg::PoseStamped>
  */
-  virtual std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() = 0;
+    virtual std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() = 0;
 
-  /**
-   * @brief
-   *
-   */
-  virtual void setupMap() = 0;
+    /**
+     * @brief
+     *
+     */
+    virtual void setupMap() = 0;
 
-protected:
-  rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
-  rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
-  // octomap acquired from original PCD map
-  std::shared_ptr<octomap::OcTree> original_octomap_octree_;
-  std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
-  std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
-  std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-  ompl::base::StateSpacePtr state_space_;
-  ompl::geometric::SimpleSetupPtr simple_setup_;
-  // to ensure safety when accessing global var curr_frame_
-  std::mutex global_mutex_;
-  // the topic to subscribe in order capture a frame
-  std::string planner_name_;
-  // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
-  double octomap_voxel_size_;
-  // whether plugin is enabled
-  bool is_enabled_;
-  // related to density of created path
-  int interpolation_parameter_;
-  // max time the planner can spend before coming up with a solution
-  double planner_timeout_;
-  // global mutex to guard octomap
-  std::mutex octomap_mutex_;
-  volatile bool is_map_ready_;
-};
+  protected:
+    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+    rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
+    // octomap acquired from original PCD map
+    std::shared_ptr<octomap::OcTree> original_octomap_octree_;
+    std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
+    std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds_;
+    std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
+    ompl::base::StateSpacePtr state_space_;
+    ompl::geometric::SimpleSetupPtr simple_setup_;
+    // to ensure safety when accessing global var curr_frame_
+    std::mutex global_mutex_;
+    // the topic to subscribe in order capture a frame
+    std::string planner_name_;
+    // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
+    double octomap_voxel_size_;
+    // whether plugin is enabled
+    bool is_enabled_;
+    // related to density of created path
+    int interpolation_parameter_;
+    // max time the planner can spend before coming up with a solution
+    double planner_timeout_;
+    // global mutex to guard octomap
+    std::mutex octomap_mutex_;
+    volatile bool is_map_ready_;
+  };
 }  // namespace vox_nav_planning
 #endif  // VOX_NAV_PLANNING__PLANNER_CORE_HPP_

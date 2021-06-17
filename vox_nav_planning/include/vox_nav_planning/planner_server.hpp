@@ -40,103 +40,103 @@
 
 namespace vox_nav_planning
 {
-class PlannerServer : public rclcpp::Node
-{
-public:
-  using ComputePathToPose = vox_nav_msgs::action::ComputePathToPose;
-  using GoalHandleComputePathToPose = rclcpp_action::ServerGoalHandle<ComputePathToPose>;
-  /**
-   * @brief Construct a new Planner Server object
-   *
-   */
-  PlannerServer();
+  class PlannerServer : public rclcpp::Node
+  {
+  public:
+    using ComputePathToPose = vox_nav_msgs::action::ComputePathToPose;
+    using GoalHandleComputePathToPose = rclcpp_action::ServerGoalHandle<ComputePathToPose>;
+    /**
+     * @brief Construct a new Planner Server object
+     *
+     */
+    PlannerServer();
 
-  /**
-   * @brief Destroy the Planner Server object
-   *
-   */
-  ~PlannerServer();
+    /**
+     * @brief Destroy the Planner Server object
+     *
+     */
+    ~PlannerServer();
 
-  using PlannerMap = std::unordered_map<std::string, vox_nav_planning::PlannerCore::Ptr>;
+    using PlannerMap = std::unordered_map<std::string, vox_nav_planning::PlannerCore::Ptr>;
 
-  /**
-   * @brief Method to get plan from the desired plugin
-   * @param start starting pose
-   * @param goal goal request
-   * @return Path
-   */
-  std::vector<geometry_msgs::msg::PoseStamped> getPlan(
-    const geometry_msgs::msg::PoseStamped & start,
-    const geometry_msgs::msg::PoseStamped & goal,
-    const std::string & planner_id);
+    /**
+     * @brief Method to get plan from the desired plugin
+     * @param start starting pose
+     * @param goal goal request
+     * @return Path
+     */
+    std::vector<geometry_msgs::msg::PoseStamped> getPlan(
+      const geometry_msgs::msg::PoseStamped & start,
+      const geometry_msgs::msg::PoseStamped & goal,
+      const std::string & planner_id);
 
-  /**
-   * @brief
-   *
-   * @param uuid
-   * @param goal
-   * @return rclcpp_action::GoalResponse
-   */
-  rclcpp_action::GoalResponse handle_goal(
-    const rclcpp_action::GoalUUID & uuid,
-    std::shared_ptr<const ComputePathToPose::Goal> goal);
+    /**
+     * @brief
+     *
+     * @param uuid
+     * @param goal
+     * @return rclcpp_action::GoalResponse
+     */
+    rclcpp_action::GoalResponse handle_goal(
+      const rclcpp_action::GoalUUID & uuid,
+      std::shared_ptr<const ComputePathToPose::Goal> goal);
 
-  /**
-   * @brief
-   *
-   * @param goal_handle
-   * @return rclcpp_action::CancelResponse
-   */
-  rclcpp_action::CancelResponse handle_cancel(
-    const std::shared_ptr<GoalHandleComputePathToPose> goal_handle);
+    /**
+     * @brief
+     *
+     * @param goal_handle
+     * @return rclcpp_action::CancelResponse
+     */
+    rclcpp_action::CancelResponse handle_cancel(
+      const std::shared_ptr<GoalHandleComputePathToPose> goal_handle);
 
-  /**
-   * @brief
-   *
-   * @param goal_handle
-   */
-  void handle_accepted(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle);
+    /**
+     * @brief
+     *
+     * @param goal_handle
+     */
+    void handle_accepted(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle);
 
-protected:
-  // Our action server implements the ComputePathToPose action
-  rclcpp_action::Server<ComputePathToPose>::SharedPtr action_server_;
+  protected:
+    // Our action server implements the ComputePathToPose action
+    rclcpp_action::Server<ComputePathToPose>::SharedPtr action_server_;
 
-  /**
-   * @brief The action server callback which calls planner to get the path
-   */
-  void computePlan(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle);
+    /**
+     * @brief The action server callback which calls planner to get the path
+     */
+    void computePlan(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle);
 
-  /**
-   * @brief Publish a path for visualization purposes, add start and goal poses too
-   *
-   * @param path
-   * @param start_pose
-   * @param goal_pose
-   */
-  void publishPlan(
-    const std::vector<geometry_msgs::msg::PoseStamped> & path,
-    const geometry_msgs::msg::PoseStamped & start_pose,
-    const geometry_msgs::msg::PoseStamped & goal_pose);
+    /**
+     * @brief Publish a path for visualization purposes, add start and goal poses too
+     *
+     * @param path
+     * @param start_pose
+     * @param goal_pose
+     */
+    void publishPlan(
+      const std::vector<geometry_msgs::msg::PoseStamped> & path,
+      const geometry_msgs::msg::PoseStamped & start_pose,
+      const geometry_msgs::msg::PoseStamped & goal_pose);
 
-  // Planner
-  PlannerMap planners_;
-  pluginlib::ClassLoader<vox_nav_planning::PlannerCore> pc_loader_;
-  std::string planner_id_;
-  std::string planner_type_;
-  double max_planner_duration_;
-  std::string planner_ids_concat_;
-  double expected_planner_frequency_;
-  // Clock
-  rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
-  // tf buffer to get transfroms
-  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
-  // tf listner for tf transforms
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
-  // Publishers for the path
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
-  // obot mesh path, if there is one
-  std::string robot_mesh_path_;
-};
+    // Planner
+    PlannerMap planners_;
+    pluginlib::ClassLoader<vox_nav_planning::PlannerCore> pc_loader_;
+    std::string planner_id_;
+    std::string planner_type_;
+    double max_planner_duration_;
+    std::string planner_ids_concat_;
+    double expected_planner_frequency_;
+    // Clock
+    rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
+    // tf buffer to get transfroms
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+    // tf listner for tf transforms
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+    // Publishers for the path
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
+    // obot mesh path, if there is one
+    std::string robot_mesh_path_;
+  };
 
 }  // namespace vox_nav_planning
 

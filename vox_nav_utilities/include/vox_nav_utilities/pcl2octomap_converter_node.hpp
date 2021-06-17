@@ -39,72 +39,72 @@
 namespace vox_nav_utilities
 {
 
-class PCL2OctomapConverter : public rclcpp::Node
-{
-private:
-  // Optional rigid body transform to apply o the cloud, if cloud
-  // is depth camera frames we need to pull cloud back to conventional ROS frames
-  vox_nav_utilities::RigidBodyTransformation pointloud_transform_matrix_;
-  std::string input_pcd_filename_;
-  std::string output_binary_octomap_filename_;
-  double octomap_voxelsize_;
-  // optional point cloud transformfrom yaml file
-  double downsample_voxel_size_;
-  int remove_outlier_mean_K_;
-  double remove_outlier_stddev_threshold_;
-  double remove_outlier_radius_search_;
-  int remove_outlier_min_neighbors_in_radius_;
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud_;
-  // Used to creted a periodic callback function IOT publish transfrom/octomap/cloud etc.
-  rclcpp::TimerBase::SharedPtr timer_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr octomap_markers_publisher_;
-  visualization_msgs::msg::MarkerArray octomap_markers_;
+  class PCL2OctomapConverter : public rclcpp::Node
+  {
+  private:
+    // Optional rigid body transform to apply o the cloud, if cloud
+    // is depth camera frames we need to pull cloud back to conventional ROS frames
+    vox_nav_utilities::RigidBodyTransformation pointloud_transform_matrix_;
+    std::string input_pcd_filename_;
+    std::string output_binary_octomap_filename_;
+    double octomap_voxelsize_;
+    // optional point cloud transformfrom yaml file
+    double downsample_voxel_size_;
+    int remove_outlier_mean_K_;
+    double remove_outlier_stddev_threshold_;
+    double remove_outlier_radius_search_;
+    int remove_outlier_min_neighbors_in_radius_;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointcloud_;
+    // Used to creted a periodic callback function IOT publish transfrom/octomap/cloud etc.
+    rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr octomap_markers_publisher_;
+    visualization_msgs::msg::MarkerArray octomap_markers_;
 
-public:
+  public:
 /**
  * @brief Construct a new PCL2OctomapConverter object
  *
  */
-  PCL2OctomapConverter();
+    PCL2OctomapConverter();
 
-  /**
-   * @brief Destroy the PCL2OctomapConverter object
-   *
-   */
-  ~PCL2OctomapConverter();
+    /**
+     * @brief Destroy the PCL2OctomapConverter object
+     *
+     */
+    ~PCL2OctomapConverter();
 
-  /**
-   * @brief
-   *
-   * @param tree
-   * @param num_thresholded
-   * @param num_other
-   */
-  void calcThresholdedNodes(
-    const octomap::ColorOcTree tree,
-    unsigned int & num_thresholded,
-    unsigned int & num_other);
+    /**
+     * @brief
+     *
+     * @param tree
+     * @param num_thresholded
+     * @param num_other
+     */
+    void calcThresholdedNodes(
+      const octomap::ColorOcTree tree,
+      unsigned int & num_thresholded,
+      unsigned int & num_other);
 
-  /**
-   * @brief
-   *
-   * @param tree
-   */
-  void outputStatistics(const octomap::ColorOcTree tree);
+    /**
+     * @brief
+     *
+     * @param tree
+     */
+    void outputStatistics(const octomap::ColorOcTree tree);
 
-  /**
-   * @brief
-   *
-   */
-  void processConversion();
+    /**
+     * @brief
+     *
+     */
+    void processConversion();
 
-  /**
-   * @brief
-   *
-   */
-  void timerCallback();
-  
-};
+    /**
+     * @brief
+     *
+     */
+    void timerCallback();
+
+  };
 
 }  // namespace vox_nav_utilities
 #endif  // VOX_NAV_UTILITIES__PCL2OCTOMAP_CONVERTER_HPP_

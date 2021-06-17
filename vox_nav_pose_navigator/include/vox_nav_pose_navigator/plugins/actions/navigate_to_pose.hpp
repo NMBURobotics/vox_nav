@@ -23,39 +23,39 @@
 
 namespace vox_nav_pose_navigator
 {
-using NavigateToPose = vox_nav_msgs::action::NavigateToPose;
-class NavigateToPoseNode : public BaseActionClientNode<NavigateToPose>
-{
-public:
-  NavigateToPoseNode(
-    const std::string & xml_tag_name,
-    const std::string & action_name,
-    const BT::NodeConfiguration & conf)
-  : BaseActionClientNode<NavigateToPose>(xml_tag_name, action_name, conf)
+  using NavigateToPose = vox_nav_msgs::action::NavigateToPose;
+  class NavigateToPoseNode : public BaseActionClientNode<NavigateToPose>
   {
-  }
+  public:
+    NavigateToPoseNode(
+      const std::string & xml_tag_name,
+      const std::string & action_name,
+      const BT::NodeConfiguration & conf)
+    : BaseActionClientNode<NavigateToPose>(xml_tag_name, action_name, conf)
+    {
+    }
 
-  static BT::PortsList providedPorts()
-  {
-    return providedBasicPorts(
+    static BT::PortsList providedPorts()
+    {
+      return providedBasicPorts(
       {
         BT::InputPort<geometry_msgs::msg::PoseStamped>("pose", "pose"),
       });
-  }
-
-  void on_tick()
-  {
-    // Use the position and orientation fields from the XML attributes to initialize the goal
-    geometry_msgs::msg::PoseStamped pose;
-    if (!getInput("pose", pose)) {
-      RCLCPP_ERROR(
-        node_->get_logger(),
-        "NavigateToPoseNode: pose not provided");
-      return;
     }
-    goal_.pose = pose;
-  }
-};
+
+    void on_tick()
+    {
+      // Use the position and orientation fields from the XML attributes to initialize the goal
+      geometry_msgs::msg::PoseStamped pose;
+      if (!getInput("pose", pose)) {
+        RCLCPP_ERROR(
+          node_->get_logger(),
+          "NavigateToPoseNode: pose not provided");
+        return;
+      }
+      goal_.pose = pose;
+    }
+  };
 
 }  // namespace vox_nav_pose_navigator
 

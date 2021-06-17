@@ -34,13 +34,13 @@ namespace vox_nav_utilities
  * @param out_pose Place to store the resulting transformed pose
  * @return True if successful transform
  */
-bool transformPose(
-  const std::shared_ptr<tf2_ros::Buffer> tf,
-  const std::string frame,
-  const geometry_msgs::msg::PoseStamped & in_pose,
-  geometry_msgs::msg::PoseStamped & out_pose,
-  rclcpp::Duration & transform_tolerance
-);
+  bool transformPose(
+    const std::shared_ptr<tf2_ros::Buffer> tf,
+    const std::string frame,
+    const geometry_msgs::msg::PoseStamped & in_pose,
+    geometry_msgs::msg::PoseStamped & out_pose,
+    rclcpp::Duration & transform_tolerance
+  );
 
 /**
  * @brief Get the Current Pose object
@@ -53,10 +53,10 @@ bool transformPose(
  * @return true
  * @return false
  */
-bool getCurrentPose(
-  geometry_msgs::msg::PoseStamped & global_pose,
-  tf2_ros::Buffer & tf_buffer, const std::string global_frame = "map",
-  const std::string robot_frame = "base_link", const double transform_timeout = 0.1);
+  bool getCurrentPose(
+    geometry_msgs::msg::PoseStamped & global_pose,
+    tf2_ros::Buffer & tf_buffer, const std::string global_frame = "map",
+    const std::string robot_frame = "base_link", const double transform_timeout = 0.1);
 
 /**
  * @brief Get the Euclidian Dist Between Poses object
@@ -65,9 +65,9 @@ bool getCurrentPose(
  * @param b
  * @return double
  */
-double getEuclidianDistBetweenPoses(
-  const geometry_msgs::msg::PoseStamped a,
-  const geometry_msgs::msg::PoseStamped b);
+  double getEuclidianDistBetweenPoses(
+    const geometry_msgs::msg::PoseStamped a,
+    const geometry_msgs::msg::PoseStamped b);
 
 /**
  * @brief Provide tf2::Quaternion and get roll pitch yaw
@@ -77,7 +77,7 @@ double getEuclidianDistBetweenPoses(
  * @param pitch
  * @param yaw
  */
-void getRPYfromTFQuaternion(const tf2::Quaternion q, double & roll, double & pitch, double & yaw);
+  void getRPYfromTFQuaternion(const tf2::Quaternion q, double & roll, double & pitch, double & yaw);
 
 /**
  * @brief Get the Quaternionfrom R P Y object
@@ -87,7 +87,7 @@ void getRPYfromTFQuaternion(const tf2::Quaternion q, double & roll, double & pit
  * @param yaw
  * @return tf2::Quaternion
  */
-tf2::Quaternion getTFQuaternionfromRPY(const double roll, const double pitch, const double yaw);
+  tf2::Quaternion getTFQuaternionfromRPY(const double roll, const double pitch, const double yaw);
 
 /**
  * @brief Provide geometry_msgs::msg::Quaternion and get roll pitch yaw
@@ -97,9 +97,9 @@ tf2::Quaternion getTFQuaternionfromRPY(const double roll, const double pitch, co
  * @param pitch
  * @param yaw
  */
-void getRPYfromMsgQuaternion(
-  const geometry_msgs::msg::Quaternion q_msg, double & roll, double & pitch,
-  double & yaw);
+  void getRPYfromMsgQuaternion(
+    const geometry_msgs::msg::Quaternion q_msg, double & roll, double & pitch,
+    double & yaw);
 
 /**
  * @brief Get the Msg Quaternionfrom R P Y object
@@ -109,9 +109,9 @@ void getRPYfromMsgQuaternion(
  * @param yaw
  * @return geometry_msgs::msg::Quaternion
  */
-geometry_msgs::msg::Quaternion getMsgQuaternionfromRPY(
-  const double roll, const double pitch,
-  const double yaw);
+  geometry_msgs::msg::Quaternion getMsgQuaternionfromRPY(
+    const double roll, const double pitch,
+    const double yaw);
 
 }  // namespace vox_nav_utilities
 

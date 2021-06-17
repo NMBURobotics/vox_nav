@@ -27,38 +27,38 @@
 namespace vox_nav_pose_navigator
 {
 
-class NavigateToPoseActionServer : public rclcpp::Node
-{
-public:
-  NavigateToPoseActionServer(/* args */);
-  ~NavigateToPoseActionServer();
+  class NavigateToPoseActionServer : public rclcpp::Node
+  {
+  public:
+    NavigateToPoseActionServer(/* args */);
+    ~NavigateToPoseActionServer();
 
-protected:
-  // A couple declarations for convenince
-  using ActionServer = vox_nav_msgs::action::NavigateToPose;
-  using GoalHandle = rclcpp_action::ServerGoalHandle<ActionServer>;
+  protected:
+    // A couple declarations for convenince
+    using ActionServer = vox_nav_msgs::action::NavigateToPose;
+    using GoalHandle = rclcpp_action::ServerGoalHandle<ActionServer>;
 
 
-  // The action server presented by this node
-  rclcpp_action::Server<ActionServer>::SharedPtr action_server_;
+    // The action server presented by this node
+    rclcpp_action::Server<ActionServer>::SharedPtr action_server_;
 
-  // The three action server callbacks
-  rclcpp_action::GoalResponse handle_goal(
-    const rclcpp_action::GoalUUID & uuid,
-    std::shared_ptr<const ActionServer::Goal> goal);
+    // The three action server callbacks
+    rclcpp_action::GoalResponse handle_goal(
+      const rclcpp_action::GoalUUID & uuid,
+      std::shared_ptr<const ActionServer::Goal> goal);
 
-  rclcpp_action::CancelResponse handle_cancel(
-    const std::shared_ptr<GoalHandle> goal_handle);
+    rclcpp_action::CancelResponse handle_cancel(
+      const std::shared_ptr<GoalHandle> goal_handle);
 
-  void handle_accepted(
-    const std::shared_ptr<GoalHandle> goal_handle);
+    void handle_accepted(
+      const std::shared_ptr<GoalHandle> goal_handle);
 
-  // The routine to run on the separate thread
-  void navigate_to_pose(const std::shared_ptr<GoalHandle> goal_handle);
+    // The routine to run on the separate thread
+    void navigate_to_pose(const std::shared_ptr<GoalHandle> goal_handle);
 
-  // The XML string that defines the Behavior Tree used to implement the print_message action
-  static const char bt_xml_[];
-};
+    // The XML string that defines the Behavior Tree used to implement the print_message action
+    static const char bt_xml_[];
+  };
 }  // namespace vox_nav_pose_navigator
 
 #endif  // VOX_NAV_POSE_NAVIGATOR__NAVIGATE_TO_POSE_ACTION_SERVER_NODE_HPP_

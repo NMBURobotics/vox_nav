@@ -32,41 +32,41 @@ namespace vox_nav_control
  * @class ControllerCore
  * @brief controllerCore interface that acts as a virtual base class for all controllerCore plugins
  */
-class ControllerCore
-{
-public:
-  using Ptr = std::shared_ptr<vox_nav_control::ControllerCore>;
+  class ControllerCore
+  {
+  public:
+    using Ptr = std::shared_ptr<vox_nav_control::ControllerCore>;
 
-  /**
-   * @brief Virtual destructor
-   */
-  virtual ~ControllerCore() {}
+    /**
+     * @brief Virtual destructor
+     */
+    virtual ~ControllerCore() {}
 
-  /**
-   * @brief
-   *
-   * @param parent
-   * @param plugin_name
-   */
-  virtual void initialize(
-    rclcpp::Node * parent,
-    const std::string & plugin_name) = 0;
+    /**
+     * @brief
+     *
+     * @param parent
+     * @param plugin_name
+     */
+    virtual void initialize(
+      rclcpp::Node * parent,
+      const std::string & plugin_name) = 0;
 
-  /**
-   * @brief local setPlan - Sets the global plan
-   * @param path The global plan
-   */
-  virtual void setPlan(const nav_msgs::msg::Path & path) = 0;
+    /**
+     * @brief local setPlan - Sets the global plan
+     * @param path The global plan
+     */
+    virtual void setPlan(const nav_msgs::msg::Path & path) = 0;
 
-  /**
-   * @brief
-   *
-   * @param curr_robot_pose
-   * @return geometry_msgs::msg::Twist
-   */
-  virtual geometry_msgs::msg::Twist computeVelocityCommands(
-    geometry_msgs::msg::PoseStamped curr_robot_pose) = 0;
-};
+    /**
+     * @brief
+     *
+     * @param curr_robot_pose
+     * @return geometry_msgs::msg::Twist
+     */
+    virtual geometry_msgs::msg::Twist computeVelocityCommands(
+      geometry_msgs::msg::PoseStamped curr_robot_pose) = 0;
+  };
 
 }  // namespace vox_nav_control
 

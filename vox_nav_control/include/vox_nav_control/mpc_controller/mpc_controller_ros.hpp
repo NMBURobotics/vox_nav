@@ -39,8 +39,8 @@
 
 namespace vox_nav_control
 {
-namespace mpc_controller
-{
+  namespace mpc_controller
+  {
 /**
  * @brief A ROS wrapper around the Core MPC controller class.
  *        This class interfaces MPC controller with Controller Core.
@@ -48,96 +48,96 @@ namespace mpc_controller
  *        The controller server is an ROS2 action named follow_path
  *
  */
-class MPCControllerROS : public vox_nav_control::ControllerCore
-{
-public:
-  /**
-   * @brief Construct a new MPCControllerROS object
-   *
-   */
-  MPCControllerROS();
+    class MPCControllerROS : public vox_nav_control::ControllerCore
+    {
+    public:
+      /**
+       * @brief Construct a new MPCControllerROS object
+       *
+       */
+      MPCControllerROS();
 
-  /**
-   * @brief Destroy the MPCControllerROS object
-   *
-   */
-  ~MPCControllerROS();
+      /**
+       * @brief Destroy the MPCControllerROS object
+       *
+       */
+      ~MPCControllerROS();
 
-  /**
-   * @brief gets all parameters required by MPC controller. Sets up an ROS2 stuff, publisher etc.
-   *
-   * @param parent
-   * @param plugin_name
-   */
-  void initialize(
-    rclcpp::Node * parent,
-    const std::string & plugin_name) override;
+      /**
+       * @brief gets all parameters required by MPC controller. Sets up an ROS2 stuff, publisher etc.
+       *
+       * @param parent
+       * @param plugin_name
+       */
+      void initialize(
+        rclcpp::Node * parent,
+        const std::string & plugin_name) override;
 
-  /**
-   * @brief Set the Plan from controller server
-   *
-   * @param path
-   */
-  void setPlan(const nav_msgs::msg::Path & path) override;
+      /**
+       * @brief Set the Plan from controller server
+       *
+       * @param path
+       */
+      void setPlan(const nav_msgs::msg::Path & path) override;
 
-  /**
-   * @brief Compute required velocity commands to drive the robot along the reference_trajectory_
-   *
-   * @param curr_robot_pose
-   * @return geometry_msgs::msg::Twist
-   */
-  geometry_msgs::msg::Twist computeVelocityCommands(
-    geometry_msgs::msg::PoseStamped curr_robot_pose)
-  override;
+      /**
+       * @brief Compute required velocity commands to drive the robot along the reference_trajectory_
+       *
+       * @param curr_robot_pose
+       * @return geometry_msgs::msg::Twist
+       */
+      geometry_msgs::msg::Twist computeVelocityCommands(
+        geometry_msgs::msg::PoseStamped curr_robot_pose)
+      override;
 
-  /**
-   * @brief get the index of nearest trajectory state to current robot pose
-   *
-   * @param reference_traj
-   * @param curr_robot_pose
-   * @return int
-   */
-  int nearestStateIndex(
-    nav_msgs::msg::Path reference_traj,
-    geometry_msgs::msg::PoseStamped curr_robot_pose);
+      /**
+       * @brief get the index of nearest trajectory state to current robot pose
+       *
+       * @param reference_traj
+       * @param curr_robot_pose
+       * @return int
+       */
+      int nearestStateIndex(
+        nav_msgs::msg::Path reference_traj,
+        geometry_msgs::msg::PoseStamped curr_robot_pose);
 
-  /**
-   * @brief Get the Interpolated Reference States, This is determined by the look ahead distance set in the parameters.
-   *        As well as number of time Horizons(N)
-   *
-   * @param curr_robot_pose
-   * @return std::vector<MPCControllerCore::States>
-   */
-  std::vector<MPCControllerCore::States> getInterpolatedReferenceStates(
-    geometry_msgs::msg::PoseStamped curr_robot_pose);
+      /**
+       * @brief Get the Interpolated Reference States, This is determined by the look ahead distance set in the parameters.
+       *        As well as number of time Horizons(N)
+       *
+       * @param curr_robot_pose
+       * @return std::vector<MPCControllerCore::States>
+       */
+      std::vector<MPCControllerCore::States> getInterpolatedReferenceStates(
+        geometry_msgs::msg::PoseStamped curr_robot_pose);
 
-  /**
-   * @brief return cloest reference trajectory to be feed into conrol sceheme
-   *        The number of returned states will be determined according to time horizon(N)
-   *
-   * @param interpolated_ref_traj
-   */
-  void publishInterpolatedRefernceStates(
-    std::vector<MPCControllerCore::States> interpolated_ref_traj);
+      /**
+       * @brief return cloest reference trajectory to be feed into conrol sceheme
+       *        The number of returned states will be determined according to time horizon(N)
+       *
+       * @param interpolated_ref_traj
+       */
+      void publishInterpolatedRefernceStates(
+        std::vector<MPCControllerCore::States> interpolated_ref_traj);
 
-private:
-  // Given refernce traj to follow, this is set got from planner
-  nav_msgs::msg::Path reference_traj_;
-  // computed velocities as result of MPC
-  geometry_msgs::msg::Twist computed_velocity_;
-  // MPC core controller object
-  std::shared_ptr<MPCControllerCore> mpc_controller_;
-  // parameters struct used for MPC controller
-  MPCControllerCore::Parameters mpc_parameters_;
-  // Keep a copy of previously applied control inputs, this is neded
-  // by MPC algorithm
-  MPCControllerCore::ControlInput previous_control_;
-  // Publish local trajecory currently being fed to controller
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
-    interpolated_local_reference_traj_publisher_;
-};
+    private:
+      // Given refernce traj to follow, this is set got from planner
+      nav_msgs::msg::Path reference_traj_;
+      // computed velocities as result of MPC
+      geometry_msgs::msg::Twist computed_velocity_;
+      // MPC core controller object
+      std::shared_ptr<MPCControllerCore> mpc_controller_;
+      // parameters struct used for MPC controller
+      MPCControllerCore::Parameters mpc_parameters_;
+      // Keep a copy of previously applied control inputs, this is neded
+      // by MPC algorithm
+      MPCControllerCore::ControlInput previous_control_;
+      // Publish local trajecory currently being fed to controller
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+        interpolated_local_reference_traj_publisher_;
+    };
 
-}  // namespace mpc_controller
+  } // namespace mpc_controller
 }  // namespace vox_nav_control
 
 #endif  // VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_

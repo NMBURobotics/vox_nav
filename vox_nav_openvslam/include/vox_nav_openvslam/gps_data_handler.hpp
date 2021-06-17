@@ -40,11 +40,11 @@ namespace vox_nav_openvslam
  * @return true
  * @return false
  */
-bool writeMapInfotoYAML(
-  const std::string & file_path,
-  const std::string & map_db_path,
-  const std::string & sensor_type,
-  const std::shared_ptr<vox_nav_utilities::GPSWaypointCollector> & gps_waypoint_collector);
+  bool writeMapInfotoYAML(
+    const std::string & file_path,
+    const std::string & map_db_path,
+    const std::string & sensor_type,
+    const std::shared_ptr<vox_nav_utilities::GPSWaypointCollector> & gps_waypoint_collector);
 }  // namespace vox_nav_openvslam
 
 #endif    // vox_nav_OPENVSLAM__GPS_DATA_HANDLER_HPP_

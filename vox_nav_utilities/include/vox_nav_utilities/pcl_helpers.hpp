@@ -52,16 +52,16 @@ namespace vox_nav_utilities
 * @brief
 *
 */
-struct RigidBodyTransformation
-{
-  Eigen::Vector3d translation_ {0.0, 0.0, 0.0};
+  struct RigidBodyTransformation
+  {
+    Eigen::Vector3d translation_ {0.0, 0.0, 0.0};
 
-  // intrinsic rotation (opposite from the ROS convention), order X-Y-Z
-  Eigen::Vector3d rpyIntrinsic_ {0.0, 0.0, 0.0};
-};
-enum class XYZ: int {X, Y, Z};
+    // intrinsic rotation (opposite from the ROS convention), order X-Y-Z
+    Eigen::Vector3d rpyIntrinsic_ {0.0, 0.0, 0.0};
+  };
+  enum class XYZ: int {X, Y, Z};
 
-enum class OutlierRemovalType: int {RadiusOutlierRemoval, StatisticalOutlierRemoval};
+  enum class OutlierRemovalType: int {RadiusOutlierRemoval, StatisticalOutlierRemoval};
 
 /**
  * @brief
@@ -69,8 +69,8 @@ enum class OutlierRemovalType: int {RadiusOutlierRemoval, StatisticalOutlierRemo
  * @param inputCloud
  * @return Eigen::Vector3d
  */
-Eigen::Vector3d calculateMeanOfPointPositions(
-  pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud);
+  Eigen::Vector3d calculateMeanOfPointPositions(
+    pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud);
 
 /**
  * @brief
@@ -79,9 +79,9 @@ Eigen::Vector3d calculateMeanOfPointPositions(
  * @param transformMatrix
  * @return pcl::PointCloud<pcl::PointXYZRGB>::Ptr
  */
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformCloud(
-  pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud,
-  const Eigen::Affine3f & transformMatrix);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformCloud(
+    pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud,
+    const Eigen::Affine3f & transformMatrix);
 
 /**
  * @brief
@@ -89,7 +89,7 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformCloud(
  * @param filename
  * @return pcl::PointCloud<pcl::PointXYZRGB>::Ptr
  */
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr loadPointcloudFromPcd(const std::string & filename);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr loadPointcloudFromPcd(const std::string & filename);
 
 /*!
  * Finds clusters in the input cloud and returns vector point clouds.
@@ -98,8 +98,8 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr loadPointcloudFromPcd(const std::string &
  * @param[in] pointer to the pcl point cloud
  * @return vector of point clouds. Vector will be empty if no clusters are found.
  */
-std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> extractClusterCloudsFromPointcloud(
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud);
+  std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> extractClusterCloudsFromPointcloud(
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud);
 
 /**
  * @brief Get the Rigid Body Transform object
@@ -109,10 +109,10 @@ std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> extractClusterCloudsFromPoin
  * @param node_logger
  * @return Eigen::Affine3f
  */
-Eigen::Affine3f getRigidBodyTransform(
-  const Eigen::Vector3d & translation,
-  const Eigen::Vector3d & intrinsicRpy,
-  const rclcpp::Logger & node_logger);
+  Eigen::Affine3f getRigidBodyTransform(
+    const Eigen::Vector3d & translation,
+    const Eigen::Vector3d & intrinsicRpy,
+    const rclcpp::Logger & node_logger);
 
 /**
  * @brief Get the Rotation Matrix object
@@ -122,9 +122,9 @@ Eigen::Affine3f getRigidBodyTransform(
  * @param node_logger
  * @return Eigen::Matrix3f
  */
-Eigen::Matrix3f getRotationMatrix(
-  double angle, XYZ axis,
-  const rclcpp::Logger & node_logger);
+  Eigen::Matrix3f getRotationMatrix(
+    double angle, XYZ axis,
+    const rclcpp::Logger & node_logger);
 
 /*!
 * Remove outliers from the point cloud. Function is based on
@@ -134,9 +134,9 @@ Eigen::Matrix3f getRotationMatrix(
 * @param[in] Input point cloud
 * @return Point cloud where outliers have been removed.
 */
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliersFromInputCloud(
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int mean_K, double stddev_thres,
-  OutlierRemovalType outlier_removal_type);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliersFromInputCloud(
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int mean_K, double stddev_thres,
+    OutlierRemovalType outlier_removal_type);
 
 /**
 * @brief publish clustering objects' in one point cloud
@@ -145,56 +145,56 @@ pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliersFromInputCloud(
 * @param cloud_clusters
 * @param trans
 */
-void publishClustersCloud(
-  const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
-  const std_msgs::msg::Header header,
-  const std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clusters_array);
+  void publishClustersCloud(
+    const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
+    const std_msgs::msg::Header header,
+    const std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clusters_array);
 
-template<typename P, typename T>
-void  getNearstPoint(
-  P & nearest_point,
-  const P & search_point,
-  const T & cloud)
-{
-  pcl::KdTreeFLANN<P> kdtree;
-  kdtree.setInputCloud(cloud);
-  // K nearest neighbor search
-  int K = 1;
-  std::vector<int> pointIdxNKNSearch(K);
-  std::vector<float> pointNKNSquaredDistance(K);
-  if (kdtree.nearestKSearch(search_point, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0) {
-    for (std::size_t i = 0; i < pointIdxNKNSearch.size(); ++i) {
-      nearest_point = cloud->points[pointIdxNKNSearch[0]];
+  template<typename P, typename T>
+  void  getNearstPoint(
+    P & nearest_point,
+    const P & search_point,
+    const T & cloud)
+  {
+    pcl::KdTreeFLANN<P> kdtree;
+    kdtree.setInputCloud(cloud);
+    // K nearest neighbor search
+    int K = 1;
+    std::vector<int> pointIdxNKNSearch(K);
+    std::vector<float> pointNKNSquaredDistance(K);
+    if (kdtree.nearestKSearch(search_point, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0) {
+      for (std::size_t i = 0; i < pointIdxNKNSearch.size(); ++i) {
+        nearest_point = cloud->points[pointIdxNKNSearch[0]];
+      }
     }
   }
-}
 
-template<typename P>
-typename pcl::PointCloud<P>::Ptr downsampleInputCloud(
-  typename pcl::PointCloud<P>::Ptr inputCloud, double downsmaple_leaf_size)
-{
-  pcl::VoxelGrid<P> voxelGrid;
-  voxelGrid.setInputCloud(inputCloud);
-  voxelGrid.setLeafSize(downsmaple_leaf_size, downsmaple_leaf_size, downsmaple_leaf_size);
-  typename pcl::PointCloud<P>::Ptr downsampledCloud(new pcl::PointCloud<P>());
-  voxelGrid.filter(*downsampledCloud);
-  return downsampledCloud;
-}
+  template<typename P>
+  typename pcl::PointCloud<P>::Ptr downsampleInputCloud(
+    typename pcl::PointCloud<P>::Ptr inputCloud, double downsmaple_leaf_size)
+  {
+    pcl::VoxelGrid<P> voxelGrid;
+    voxelGrid.setInputCloud(inputCloud);
+    voxelGrid.setLeafSize(downsmaple_leaf_size, downsmaple_leaf_size, downsmaple_leaf_size);
+    typename pcl::PointCloud<P>::Ptr downsampledCloud(new pcl::PointCloud<P>());
+    voxelGrid.filter(*downsampledCloud);
+    return downsampledCloud;
+  }
 
-template<typename P>
-typename pcl::PointCloud<P>::Ptr  uniformly_sample_cloud(
-  const typename pcl::PointCloud<P>::Ptr cloud,
-  const double radius)
-{
-  typename pcl::PointCloud<P>::Ptr uniformly_sampled_cloud(new pcl::PointCloud<P>());
-  pcl::UniformSampling<P> filter;
-  filter.setInputCloud(cloud);
-  filter.setRadiusSearch(radius);
-  filter.filter(*uniformly_sampled_cloud);
-  uniformly_sampled_cloud->height = 1;
-  uniformly_sampled_cloud->width = uniformly_sampled_cloud->points.size();
-  return uniformly_sampled_cloud;
-}
+  template<typename P>
+  typename pcl::PointCloud<P>::Ptr  uniformly_sample_cloud(
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    const double radius)
+  {
+    typename pcl::PointCloud<P>::Ptr uniformly_sampled_cloud(new pcl::PointCloud<P>());
+    pcl::UniformSampling<P> filter;
+    filter.setInputCloud(cloud);
+    filter.setRadiusSearch(radius);
+    filter.filter(*uniformly_sampled_cloud);
+    uniformly_sampled_cloud->height = 1;
+    uniformly_sampled_cloud->width = uniformly_sampled_cloud->points.size();
+    return uniformly_sampled_cloud;
+  }
 
 }  // namespace vox_nav_utilities
 

@@ -23,49 +23,49 @@
 
 namespace vox_nav_pose_navigator
 {
-using FollowPath = vox_nav_msgs::action::FollowPath;
+  using FollowPath = vox_nav_msgs::action::FollowPath;
 
-class FollowPathNode : public BaseActionClientNode<FollowPath>
-{
-public:
-  FollowPathNode(
-    const std::string & xml_tag_name,
-    const std::string & action_name,
-    const BT::NodeConfiguration & conf)
-  : BaseActionClientNode<FollowPath>(xml_tag_name, action_name, conf)
+  class FollowPathNode : public BaseActionClientNode<FollowPath>
   {
-    config().blackboard->set("path_updated", false);
-  }
+  public:
+    FollowPathNode(
+      const std::string & xml_tag_name,
+      const std::string & action_name,
+      const BT::NodeConfiguration & conf)
+    : BaseActionClientNode<FollowPath>(xml_tag_name, action_name, conf)
+    {
+      config().blackboard->set("path_updated", false);
+    }
 
-  static BT::PortsList providedPorts()
-  {
-    return providedBasicPorts(
+    static BT::PortsList providedPorts()
+    {
+      return providedBasicPorts(
       {
         BT::InputPort<nav_msgs::msg::Path>("path", "Path to follow"),
         BT::InputPort<std::string>("controller_id", ""),
       });
-  }
-
-  void on_tick()
-  {
-    getInput("path", goal_.path);
-    getInput("controller_id", goal_.controller_id);
-  }
-
-  void on_wait_for_result()
-  {
-    // Check if the goal has been updated
-    if (config().blackboard->get<bool>("path_updated")) {
-      // Reset the flag in the blackboard
-      config().blackboard->set("path_updated", false);
-
-      // Grab the new goal and set the flag so that we send the new goal to
-      // the action server on the next loop iteration
-      getInput("path", goal_.path);
-      goal_updated_ = true;
     }
-  }
-};
+
+    void on_tick()
+    {
+      getInput("path", goal_.path);
+      getInput("controller_id", goal_.controller_id);
+    }
+
+    void on_wait_for_result()
+    {
+      // Check if the goal has been updated
+      if (config().blackboard->get<bool>("path_updated")) {
+        // Reset the flag in the blackboard
+        config().blackboard->set("path_updated", false);
+
+        // Grab the new goal and set the flag so that we send the new goal to
+        // the action server on the next loop iteration
+        getInput("path", goal_.path);
+        goal_updated_ = true;
+      }
+    }
+  };
 
 }  // namespace vox_nav_pose_navigator
 

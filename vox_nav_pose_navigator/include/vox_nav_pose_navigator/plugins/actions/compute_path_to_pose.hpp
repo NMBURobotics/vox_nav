@@ -25,50 +25,50 @@
 namespace vox_nav_pose_navigator
 {
 
-using ComputePathToPose = vox_nav_msgs::action::ComputePathToPose;
+  using ComputePathToPose = vox_nav_msgs::action::ComputePathToPose;
 
-class ComputePathToPoseNode : public BaseActionClientNode<ComputePathToPose>
-{
-public:
-  explicit ComputePathToPoseNode(
-    const std::string & xml_tag_name,
-    const std::string & action_name,
-    const BT::NodeConfiguration & conf)
-  : BaseActionClientNode<ComputePathToPose>(xml_tag_name, action_name, conf)
+  class ComputePathToPoseNode : public BaseActionClientNode<ComputePathToPose>
   {
-  }
+  public:
+    explicit ComputePathToPoseNode(
+      const std::string & xml_tag_name,
+      const std::string & action_name,
+      const BT::NodeConfiguration & conf)
+    : BaseActionClientNode<ComputePathToPose>(xml_tag_name, action_name, conf)
+    {
+    }
 
-  static BT::PortsList providedPorts()
-  {
-    return providedBasicPorts(
+    static BT::PortsList providedPorts()
+    {
+      return providedBasicPorts(
       {
         BT::OutputPort<nav_msgs::msg::Path>("path", "Path created by ComputePathToPose node"),
         BT::InputPort<geometry_msgs::msg::PoseStamped>("pose", "Destination to plan to"),
         BT::InputPort<std::string>("planner_id", ""),
       });
-  }
-
-  void  on_tick()
-  {
-    getInput("pose", goal_.pose);
-    getInput("planner_id", goal_.planner_id);
-  }
-
-  BT::NodeStatus on_success()
-  {
-    setOutput("path", result_.result->path);
-
-    if (first_time_) {
-      first_time_ = false;
-    } else {
-      config().blackboard->set("path_updated", true);
     }
-    return BT::NodeStatus::SUCCESS;
-  }
 
-private:
-  bool first_time_{true};
-};
+    void  on_tick()
+    {
+      getInput("pose", goal_.pose);
+      getInput("planner_id", goal_.planner_id);
+    }
+
+    BT::NodeStatus on_success()
+    {
+      setOutput("path", result_.result->path);
+
+      if (first_time_) {
+        first_time_ = false;
+      } else {
+        config().blackboard->set("path_updated", true);
+      }
+      return BT::NodeStatus::SUCCESS;
+    }
+
+  private:
+    bool first_time_{true};
+  };
 }  // namespace vox_nav_pose_navigator
 
 

@@ -54,7 +54,7 @@ namespace vox_nav_planning
     } else {
       cost = 5.0;
     }*/
-    
+
     return ompl::base::Cost(cost);
   }
 

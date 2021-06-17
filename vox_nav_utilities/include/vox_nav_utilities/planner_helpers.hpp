@@ -68,9 +68,9 @@ namespace vox_nav_utilities
  * @param color_octomap_octree
  * @return geometry_msgs::msg::PoseStamped
  */
-geometry_msgs::msg::PoseStamped getNearstNode(
-  const geometry_msgs::msg::PoseStamped & state,
-  const std::shared_ptr<octomap::OcTree> & nodes_octree);
+  geometry_msgs::msg::PoseStamped getNearstNode(
+    const geometry_msgs::msg::PoseStamped & state,
+    const std::shared_ptr<octomap::OcTree> & nodes_octree);
 
 /**
  * @brief
@@ -80,11 +80,11 @@ geometry_msgs::msg::PoseStamped getNearstNode(
  * @param si
  * @param logger
  */
-void initializeSelectedPlanner(
-  ompl::base::PlannerPtr & planner,
-  const std::string & selected_planner_name,
-  const ompl::base::SpaceInformationPtr & si,
-  const rclcpp::Logger logger);
+  void initializeSelectedPlanner(
+    ompl::base::PlannerPtr & planner,
+    const std::string & selected_planner_name,
+    const ompl::base::SpaceInformationPtr & si,
+    const rclcpp::Logger logger);
 
 }  // namespace vox_nav_utilities
 
