@@ -119,6 +119,9 @@ ElevationStateSpace::ElevationStateSpace(
   lock();
 
   dubins_ = std::make_shared<ompl::base::DubinsStateSpace>();
+  reeds_sheep_ = std::make_shared<ompl::base::ReedsSheppStateSpace>();
+  se2_ = std::make_shared<ompl::base::SE2StateSpace>();
+
 
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
@@ -150,18 +153,21 @@ void ElevationStateSpace::setBounds(
   const RealVectorBounds & se2_bounds,
   const RealVectorBounds & z_bounds)
 {
-  as<DubinsStateSpace>(0)->setBounds(se2_bounds);
+  as<SE2StateSpace>(0)->setBounds(se2_bounds);
   as<RealVectorStateSpace>(1)->setBounds(z_bounds);
+
   dubins_->setBounds(se2_bounds);
+  reeds_sheep_->setBounds(se2_bounds);
+  se2_->setBounds(se2_bounds);
 }
 
 const RealVectorBounds ElevationStateSpace::getBounds() const
 {
   auto merged_bounds = std::make_shared<ompl::base::RealVectorBounds>(3);
-  merged_bounds->setLow(0, as<DubinsStateSpace>(0)->getBounds().low[0]);
-  merged_bounds->setHigh(0, as<DubinsStateSpace>(0)->getBounds().high[0]);
-  merged_bounds->setLow(1, as<DubinsStateSpace>(0)->getBounds().low[1]);
-  merged_bounds->setHigh(1, as<DubinsStateSpace>(0)->getBounds().high[1]);
+  merged_bounds->setLow(0, as<SE2StateSpace>(0)->getBounds().low[0]);
+  merged_bounds->setHigh(0, as<SE2StateSpace>(0)->getBounds().high[0]);
+  merged_bounds->setLow(1, as<SE2StateSpace>(0)->getBounds().low[1]);
+  merged_bounds->setHigh(1, as<SE2StateSpace>(0)->getBounds().high[1]);
   merged_bounds->setLow(2, as<RealVectorStateSpace>(1)->getBounds().low[0]);
   merged_bounds->setHigh(2, as<RealVectorStateSpace>(1)->getBounds().high[0]);
   return *merged_bounds;
@@ -186,33 +192,51 @@ StateSamplerPtr ElevationStateSpace::allocDefaultStateSampler() const
 
 double ompl::base::ElevationStateSpace::distance(const State * state1, const State * state2) const
 {
-  const auto * state1_dubins =
-    state1->as<StateType>()->as<DubinsStateSpace::StateType>(0);
-  const auto * state2_dubins =
-    state2->as<StateType>()->as<DubinsStateSpace::StateType>(0);
+  const auto * state1_se2 =
+    state1->as<StateType>()->as<SE2StateSpace::StateType>(0);
+  const auto * state1_z =
+    state1->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+  const auto * state2_se2 =
+    state2->as<StateType>()->as<SE2StateSpace::StateType>(0);
+  const auto * state2_z =
+    state2->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  if (isSymmetric_) {
-    return rho_ * std::min(
-      dubins_->dubins(state1_dubins, state2_dubins).length(),
-      dubins_->dubins(state2_dubins, state1_dubins).length());
+  if (false) { // DUBINS
+    if (isSymmetric_) {
+      return rho_ * std::min(
+        dubins_->dubins(state1_se2, state2_se2).length(),
+        dubins_->dubins(state2_se2, state1_se2).length());
+    }
+    return rho_ * dubins_->dubins(state1_se2, state2_se2).length();
+  } else if (true) { // REEDS
+    return rho_ * reeds_sheep_->reedsShepp(state1_se2, state2_se2).length();
+  } else {
+    return se2_->distance(state1_se2, state2_se2);
   }
-  return rho_ * dubins_->dubins(state1_dubins, state2_dubins).length();
+
+  return 0.0;
 }
 
 void ompl::base::ElevationStateSpace::interpolate(
   const State * from, const State * to, double t,
   State * state) const
 {
-  const auto * from_dubins = from->as<StateType>()->as<DubinsStateSpace::StateType>(0);
+  const auto * from_dubins = from->as<StateType>()->as<SE2StateSpace::StateType>(0);
   const auto * from_z = from->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  const auto * to_dubins = to->as<StateType>()->as<DubinsStateSpace::StateType>(0);
+  const auto * to_dubins = to->as<StateType>()->as<SE2StateSpace::StateType>(0);
   const auto * to_z = to->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  auto * state_dubins = state->as<StateType>()->as<DubinsStateSpace::StateType>(0);
+  auto * state_dubins = state->as<StateType>()->as<SE2StateSpace::StateType>(0);
   auto * state_z = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  dubins_->interpolate(from_dubins, to_dubins, t, state_dubins);
+  if (false) { //DUBINS
+    dubins_->interpolate(from_dubins, to_dubins, t, state_dubins);
+  } else if (false) { // REEDS
+    reeds_sheep_->interpolate(from_dubins, to_dubins, t, state_dubins);
+  } else {
+    se2_->interpolate(from_dubins, to_dubins, t, state_dubins);
+  }
 
   pcl::PointSurfel dubins_surfel, nearest_intermediate_surfel;
   dubins_surfel.x = state_dubins->getX();
