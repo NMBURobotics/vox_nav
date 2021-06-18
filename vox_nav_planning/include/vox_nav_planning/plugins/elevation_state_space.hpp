@@ -55,7 +55,6 @@ namespace ompl
       public:
         StateType() = default;
 
-
         DubinsStateSpace::StateType * getSE2()
         {
           return as<DubinsStateSpace::StateType>(0);
@@ -81,7 +80,8 @@ namespace ompl
       ElevationStateSpace(
         const geometry_msgs::msg::PoseStamped start,
         const geometry_msgs::msg::PoseStamped goal,
-        const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses);
+        const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses,
+        double turningRadius = 1.0, bool isSymmetric = false);
 
       ~ElevationStateSpace() override = default;
 
@@ -116,7 +116,32 @@ namespace ompl
       std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
 
       std::shared_ptr<DubinsStateSpace> dubins_;
+      double rho_;
+      bool isSymmetric_;
+    };
 
+    class ElevationMotionValidator : public MotionValidator
+    {
+    public:
+      ElevationMotionValidator(SpaceInformation * si)
+      : MotionValidator(si)
+      {
+        defaultSettings();
+      }
+      ElevationMotionValidator(const SpaceInformationPtr & si)
+      : MotionValidator(si)
+      {
+        defaultSettings();
+      }
+      ~ElevationMotionValidator() override = default;
+      bool checkMotion(const State * s1, const State * s2) const override;
+      bool checkMotion(
+        const State * s1, const State * s2,
+        std::pair<State *, double> & lastValid) const override;
+
+    private:
+      ElevationStateSpace * stateSpace_;
+      void defaultSettings();
     };
 
   } // namespace base

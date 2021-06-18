@@ -45,6 +45,34 @@ void ElevationStateSampler::sampleUniform(State * state)
 
 void ElevationStateSampler::sampleUniformNear(State * state, const State * near, double distance)
 {
+  search_area_surfels_ =
+    pcl::PointCloud<pcl::PointSurfel>::Ptr(
+    new pcl::PointCloud<pcl::PointSurfel>);
+  float resolution = 0.2;
+  pcl::octree::OctreePointCloudSearch<pcl::PointSurfel> octree(resolution);
+  octree.setInputCloud(workspace_surfels_);
+  octree.addPointsFromInputCloud();
+  pcl::PointSurfel search_point;
+  const auto * search_point_dubins =
+    near->as<ElevationStateSpace::StateType>()->as<DubinsStateSpace::StateType>(0);
+  const auto * search_point_z =
+    near->as<ElevationStateSpace::StateType>()->as<RealVectorStateSpace::StateType>(1);
+
+  search_point.x = search_point_dubins->getX();
+  search_point.y = search_point_dubins->getY();
+  search_point.z = search_point_z->values[0];
+  // Neighbors within radius search
+  std::vector<int> pointIdxRadiusSearch;
+  std::vector<float> pointRadiusSquaredDistance;
+  if (octree.radiusSearch(
+      search_point, distance, pointIdxRadiusSearch,
+      pointRadiusSquaredDistance) > 0)
+  {
+    for (std::size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
+      search_area_surfels_->points.push_back(workspace_surfels_->points[pointIdxRadiusSearch[i]]);
+    }
+  }
+
   auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
   pcl::PointCloud<pcl::PointSurfel>::Ptr out_sample(new pcl::PointCloud<pcl::PointSurfel>);
   pcl::RandomSample<pcl::PointSurfel> random_sample(true);
@@ -78,11 +106,14 @@ void ElevationStateSampler::sampleGaussian(State * state, const State * mean, do
 ElevationStateSpace::ElevationStateSpace(
   const geometry_msgs::msg::PoseStamped start,
   const geometry_msgs::msg::PoseStamped goal,
-  const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses)
-: elevated_surfels_poses_(*elevated_surfels_poses)
+  const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses,
+  double turningRadius, bool isSymmetric)
+:  rho_(turningRadius),
+  isSymmetric_(isSymmetric),
+  elevated_surfels_poses_(*elevated_surfels_poses)
 {
-  setName("Elevation" + getName());
-  type_ = 32;       // why ?
+  setName("ElevationStateSpace" + getName());
+  type_ = 32;
   addSubspace(std::make_shared<DubinsStateSpace>(), 1.0);
   addSubspace(std::make_shared<RealVectorStateSpace>(1), 1.0);
   lock();
@@ -119,12 +150,9 @@ void ElevationStateSpace::setBounds(
   const RealVectorBounds & se2_bounds,
   const RealVectorBounds & z_bounds)
 {
-
   as<DubinsStateSpace>(0)->setBounds(se2_bounds);
   as<RealVectorStateSpace>(1)->setBounds(z_bounds);
-
   dubins_->setBounds(se2_bounds);
-
 }
 
 const RealVectorBounds ElevationStateSpace::getBounds() const
@@ -158,44 +186,38 @@ StateSamplerPtr ElevationStateSpace::allocDefaultStateSampler() const
 
 double ompl::base::ElevationStateSpace::distance(const State * state1, const State * state2) const
 {
+  const auto * state1_dubins =
+    state1->as<StateType>()->as<DubinsStateSpace::StateType>(0);
+  const auto * state2_dubins =
+    state2->as<StateType>()->as<DubinsStateSpace::StateType>(0);
 
-  const auto * start = state1->as<ElevationStateSpace::StateType>();
-  const auto * goal = state2->as<ElevationStateSpace::StateType>();
-
-  const auto * start_dubins = start->as<DubinsStateSpace::StateType>(0);
-  const auto * start_z = start->as<RealVectorStateSpace::StateType>(1);
-
-  const auto * goal_dubins = goal->as<DubinsStateSpace::StateType>(0);
-  const auto * goal_z = goal->as<RealVectorStateSpace::StateType>(1);
-
-  auto dist = dubins_->dubins(start_dubins, goal_dubins).length();
-
-  return dist;
+  if (isSymmetric_) {
+    return rho_ * std::min(
+      dubins_->dubins(state1_dubins, state2_dubins).length(),
+      dubins_->dubins(state2_dubins, state1_dubins).length());
+  }
+  return rho_ * dubins_->dubins(state1_dubins, state2_dubins).length();
 }
 
 void ompl::base::ElevationStateSpace::interpolate(
   const State * from, const State * to, double t,
   State * state) const
 {
-  const auto * start = from->as<ElevationStateSpace::StateType>();
-  const auto * goal = to->as<ElevationStateSpace::StateType>();
-  auto * intermediate_state = state->as<ElevationStateSpace::StateType>();
+  const auto * from_dubins = from->as<StateType>()->as<DubinsStateSpace::StateType>(0);
+  const auto * from_z = from->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  const auto * start_dubins = start->as<DubinsStateSpace::StateType>(0);
-  const auto * start_z = start->as<RealVectorStateSpace::StateType>(1);
+  const auto * to_dubins = to->as<StateType>()->as<DubinsStateSpace::StateType>(0);
+  const auto * to_z = to->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  const auto * goal_dubins = goal->as<DubinsStateSpace::StateType>(0);
-  const auto * goal_z = goal->as<RealVectorStateSpace::StateType>(1);
+  auto * state_dubins = state->as<StateType>()->as<DubinsStateSpace::StateType>(0);
+  auto * state_z = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  auto * intermediate_state_dubins = intermediate_state->as<DubinsStateSpace::StateType>(0);
-  auto * intermediate_state_z = intermediate_state->as<RealVectorStateSpace::StateType>(1);
-
-  dubins_->interpolate(start_dubins, goal_dubins, t, intermediate_state_dubins);
+  dubins_->interpolate(from_dubins, to_dubins, t, state_dubins);
 
   pcl::PointSurfel dubins_surfel, nearest_intermediate_surfel;
-  dubins_surfel.x = intermediate_state_dubins->getX();
-  dubins_surfel.y = intermediate_state_dubins->getY();
-  dubins_surfel.z = start_z->values[0];
+  dubins_surfel.x = state_dubins->getX();
+  dubins_surfel.y = state_dubins->getY();
+  dubins_surfel.z = from_z->values[0];
 
   vox_nav_utilities::getNearstPoint<
     pcl::PointSurfel,
@@ -203,7 +225,8 @@ void ompl::base::ElevationStateSpace::interpolate(
     nearest_intermediate_surfel,
     dubins_surfel,
     workspace_surfels_);
-  intermediate_state_z->values[0] = nearest_intermediate_surfel.z;
+
+  state_z->values[0] = nearest_intermediate_surfel.z;
 }
 
 

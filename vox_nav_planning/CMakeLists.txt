@@ -73,13 +73,6 @@ add_library(${vox_nav_elevation_planner_exc_name} SHARED src/plugins/elevation_p
 ament_target_dependencies(${vox_nav_elevation_planner_exc_name} ${dependencies})
 target_link_libraries(${vox_nav_elevation_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
-set(vox_nav_dubins_3d_planner_exc_name vox_nav_dubins_3d_planner)
-add_library(${vox_nav_dubins_3d_planner_exc_name} SHARED src/plugins/dubins_3d_planner.cpp
-                                                   src/plugins/se3_planner_utils.cpp
-                                                   src/plugins/dubins_3d_state_space.cpp)
-ament_target_dependencies(${vox_nav_dubins_3d_planner_exc_name} ${dependencies})
-target_link_libraries(${vox_nav_dubins_3d_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
-
 set(vox_nav_se2_planner_exc_name vox_nav_se2_planner)
 add_library(${vox_nav_se2_planner_exc_name} SHARED src/plugins/se2_planner.cpp)
 ament_target_dependencies(${vox_nav_se2_planner_exc_name} ${dependencies})
@@ -87,7 +80,6 @@ target_link_libraries(${vox_nav_se2_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIB
 
 install(TARGETS ${vox_nav_se3_planner_exc_name} 
                 ${vox_nav_elevation_planner_exc_name} 
-                ${vox_nav_dubins_3d_planner_exc_name}
                 ${vox_nav_se2_planner_exc_name}
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -114,7 +106,6 @@ endif()
 ament_export_include_directories(include)
 ament_export_libraries(${vox_nav_se3_planner_exc_name} 
                        ${vox_nav_elevation_planner_exc_name}
-                       ${vox_nav_dubins_3d_planner_exc_name}
                        ${vox_nav_se2_planner_exc_name})
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 

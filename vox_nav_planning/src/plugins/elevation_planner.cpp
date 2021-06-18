@@ -122,9 +122,11 @@ namespace vox_nav_planning
     ompl::base::StateSpacePtr elevation_state_space(new ompl::base::ElevationStateSpace(
         start, goal,
         elevated_surfel_poses_msg_));
+
     elevation_state_space->as<ompl::base::ElevationStateSpace>()->setBounds(
       *state_space_bounds_,
       *z_bound_);
+
     state_space_ = elevation_state_space;
     simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
 
@@ -293,22 +295,26 @@ namespace vox_nav_planning
 
     // check validity of state Fdefined by pos & rot
     fcl::Vec3f translation(dubins->getX(), dubins->getY(), z->values[0]);
-    fcl::Quaternion3f rotation(1, 0, 0, 0);
+
+    tf2::Quaternion myQuaternion;
+    myQuaternion.setRPY(0, 0, dubins->getYaw());
+
+    fcl::Quaternion3f rotation(
+      myQuaternion.getX(), myQuaternion.getY(),
+      myQuaternion.getZ(), myQuaternion.getW());
+
     robot_collision_object_->setTransform(rotation, translation);
-
-    fcl::CollisionResult collisionWithNodesResult, collisionWitFullMapResult;
-
-    fcl::collide(
-      robot_collision_object_.get(),
-      elevated_surfels_collision_object_.get(), requestType, collisionWithNodesResult);
+    fcl::CollisionResult collisionWithSurfelsResult, collisionWithFullMapResult;
 
     fcl::collide(
       robot_collision_object_.get(),
-      original_octomap_collision_object_.get(), requestType, collisionWitFullMapResult);
+      elevated_surfels_collision_object_.get(), requestType, collisionWithSurfelsResult);
 
-    //return collisionWithNodesResult.isCollision() && !collisionWitFullMapResult.isCollision();
+    fcl::collide(
+      robot_collision_object_.get(),
+      original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
 
-    return !collisionWitFullMapResult.isCollision();
+    return collisionWithSurfelsResult.isCollision() && !collisionWithFullMapResult.isCollision();
   }
 
   void ElevationPlanner::setupMap()
