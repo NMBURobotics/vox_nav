@@ -228,11 +228,6 @@ namespace vox_nav_planning
     // print the settings for this space
     simple_setup_->print(std::cout);
 
-    simple_setup_->getSpaceInformation()->setValidStateSamplerAllocator(
-      std::bind(
-        &ElevationPlanner::
-        allocValidStateSampler, this, std::placeholders::_1));
-
     // attempt to solve the problem within one second of planning time
     ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
     std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
@@ -396,26 +391,13 @@ namespace vox_nav_planning
     }
   }
 
-  ompl::base::ValidStateSamplerPtr ElevationPlanner::allocValidStateSampler(
-    const ompl::base::SpaceInformation * si)
-  {
-    octocell_valid_state_sampler_ = std::make_shared<OctoCellValidStateSampler>(
-      simple_setup_->getSpaceInformation(),
-      nearest_elevated_surfel_to_start_,
-      nearest_elevated_surfel_to_goal_,
-      robot_collision_object_,
-      original_octomap_collision_object_,
-      elevated_surfel_poses_msg_);
-    return octocell_valid_state_sampler_;
-  }
-
   ompl::base::OptimizationObjectivePtr ElevationPlanner::getOptimizationObjective()
   {
     // select a optimizatio objective
     ompl::base::OptimizationObjectivePtr length_objective(
       new ompl::base::PathLengthOptimizationObjective(simple_setup_->getSpaceInformation()));
     ompl::base::OptimizationObjectivePtr octocost_objective(
-      new OctoCostOptimizationObjective(
+      new ompl::base::OctoCostOptimizationObjective(
         simple_setup_->getSpaceInformation(), elevated_surfel_octomap_octree_));
 
     ompl::base::MultiOptimizationObjective * multi_optimization =

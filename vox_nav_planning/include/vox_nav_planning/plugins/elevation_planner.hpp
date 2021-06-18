@@ -20,7 +20,6 @@
 #include <memory>
 
 #include "vox_nav_planning/planner_core.hpp"
-#include "vox_nav_planning/plugins/se3_planner_utils.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "vox_nav_planning/plugins/elevation_state_space.hpp"
 
@@ -80,23 +79,6 @@ namespace vox_nav_planning
     void nodePosesCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg);
 
     /**
-     * @brief
-     *
-     * @param si
-     * @return ompl::base::ValidStateSamplerPtr
-     */
-    ompl::base::ValidStateSamplerPtr allocValidStateSampler(
-      const ompl::base::SpaceInformation * si);
-
-    /**
-     * @brief
-     *
-     * @param space
-     * @return ompl::base::StateSamplerPtr
-     */
-    ompl::base::StateSamplerPtr allocStateSampler(const ompl::base::StateSpace * space);
-
-    /**
      * @brief Get the Opt Objective object
      *
      * @return ompl::base::OptimizationObjectivePtr
@@ -132,9 +114,7 @@ namespace vox_nav_planning
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
     std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
-    std::shared_ptr<OctoCellValidStateSampler> octocell_valid_state_sampler_;
     ompl::base::OptimizationObjectivePtr octocost_optimization_;
-
     std::shared_ptr<ompl::base::RealVectorBounds> z_bound_;
 
   };

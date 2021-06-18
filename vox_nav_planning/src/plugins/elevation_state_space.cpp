@@ -17,6 +17,47 @@
 #include "ompl/tools/config/MagicConstants.h"
 using namespace ompl::base;
 
+OctoCostOptimizationObjective::OctoCostOptimizationObjective(
+  const ompl::base::SpaceInformationPtr & si,
+  const std::shared_ptr<octomap::OcTree> & elevated_surfels_octree)
+: ompl::base::StateCostIntegralObjective(si, true),
+  elevated_surfels_octree_(elevated_surfels_octree)
+{
+  description_ = "OctoCost Objective";
+
+  /*RCLCPP_INFO(
+    logger_,
+    "OctoCost Optimization objective bases on an Octomap with %d nodes",
+    elevated_surfels_octree_->size());*/
+}
+
+OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
+{
+}
+
+ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
+{
+  float cost = 0.0;
+
+  /*const ompl::base::SE3StateSpace::StateType * se3_state =
+    s->as<ompl::base::SE3StateSpace::StateType>();
+
+  auto node_at_samppled_state = elevated_surfels_octree_->search(
+    se3_state->getX(),
+    se3_state->getY(),
+    se3_state->getZ(), 0);
+
+  if (node_at_samppled_state) {
+    if (elevated_surfels_octree_->isNodeOccupied(node_at_samppled_state)) {
+      cost = 1.0 * static_cast<double>(node_at_samppled_state->getValue());
+    }
+  } else {
+    cost = 5.0;
+  }*/
+
+  return ompl::base::Cost(cost);
+}
+
 
 ElevationStateSampler::ElevationStateSampler(
   const StateSpace * space,
