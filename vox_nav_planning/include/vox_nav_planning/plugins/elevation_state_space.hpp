@@ -27,6 +27,37 @@ namespace ompl
   namespace base
   {
 
+    class OctoCostOptimizationObjective : public StateCostIntegralObjective
+    {
+    public:
+      /**
+       * @brief Construct a new Octo Cost Optimization Objective object
+       *
+       * @param si
+       * @param tree
+      */
+      OctoCostOptimizationObjective(
+        const SpaceInformationPtr & si,
+        const std::shared_ptr<octomap::OcTree> & elevated_surfels_octree);
+
+      /**
+       * @brief Destroy the Octo Cost Optimization Objective object
+       *
+       */
+      ~OctoCostOptimizationObjective();
+
+      /**
+       * @brief get amount of the cost assigned to this state
+       *
+       * @param s
+       * @return Cost
+       */
+      Cost stateCost(const State * s) const override;
+
+    protected:
+      std::shared_ptr<octomap::OcTree> elevated_surfels_octree_;
+    };
+
     class ElevationStateSampler : public StateSampler
     {
     public:
