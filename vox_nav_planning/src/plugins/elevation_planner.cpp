@@ -244,7 +244,6 @@ namespace vox_nav_planning
 
     simple_setup_->setPlanner(planner);
     simple_setup_->setup();
-    // print the settings for this space
     simple_setup_->print(std::cout);
 
     // attempt to solve the problem within one second of planning time
@@ -258,7 +257,7 @@ namespace vox_nav_planning
         new ompl::geometric::PathSimplifier(simple_setup_->getSpaceInformation());
 
       solution_path.interpolate(interpolation_parameter_);
-      path_simlifier->smoothBSpline(solution_path, 3, 0.8);
+      path_simlifier->smoothBSpline(solution_path, 2, 0.1);
 
       for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount(); path_idx++) {
 
