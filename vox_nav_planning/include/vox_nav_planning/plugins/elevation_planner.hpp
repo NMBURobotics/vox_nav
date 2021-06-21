@@ -86,6 +86,15 @@ namespace vox_nav_planning
     ompl::base::OptimizationObjectivePtr getOptimizationObjective();
 
     /**
+     * @brief
+     *
+     * @param si
+     * @return ompl::base::ValidStateSamplerPtr
+     */
+    ompl::base::ValidStateSamplerPtr allocValidStateSampler(
+      const ompl::base::SpaceInformation * si);
+
+    /**
    * @brief Get the Overlayed Start and Goal poses, only x and y are provided for goal ,
    * but internally planner finds closest valid node on octomap and reassigns goal to this pose
    *

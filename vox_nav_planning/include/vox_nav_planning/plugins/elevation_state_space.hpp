@@ -63,26 +63,6 @@ namespace ompl
       std::shared_ptr<octomap::OcTree> elevated_surfels_octree_;
     };
 
-    class ElevationStateSampler : public StateSampler
-    {
-    public:
-      ElevationStateSampler(
-        const StateSpace * space,
-        const pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels,
-        const pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels);
-
-      void sampleUniform(State * state) override;
-
-      void sampleUniformNear(State * state, const State * near, double distance) override;
-
-      void sampleGaussian(State * state, const State * mean, double stdDev) override;
-
-    protected:
-      pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
-      pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
-    };
-
-
     class ElevationStateSpace : public CompoundStateSpace
     {
     public:
@@ -140,8 +120,6 @@ namespace ompl
 
       void freeState(State * state) const override;
 
-      StateSamplerPtr allocDefaultStateSampler() const override;
-
       double distance(
         const State * state1,
         const State * state2) const override;
@@ -150,17 +128,10 @@ namespace ompl
         const State * from, const State * to, double t,
         State * state) const override;
 
-      void updateSearchArea(
-        const geometry_msgs::msg::PoseStamped start,
-        const geometry_msgs::msg::PoseStamped goal);
-
     protected:
       rclcpp::Logger logger_{rclcpp::get_logger("elevation_planner_utils")};
       geometry_msgs::msg::PoseArray elevated_surfels_poses_;
       pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
-      pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
-      std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-      std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
       SE2StateType se2_state_type_;
 
       std::shared_ptr<DubinsStateSpace> dubins_;
@@ -171,6 +142,67 @@ namespace ompl
       bool isSymmetric_;
     };
 
+    class OctoCellValidStateSampler : public ValidStateSampler
+    {
+    public:
+      /**
+       * @brief Construct a new Octo Cell State Sampler object
+       *
+       * @param si
+       * @param tree
+       */
+      OctoCellValidStateSampler(
+        const ompl::base::SpaceInformationPtr & si,
+        const geometry_msgs::msg::PoseStamped start,
+        const geometry_msgs::msg::PoseStamped goal,
+        const std::shared_ptr<fcl::CollisionObject> & robot_collision_object,
+        const std::shared_ptr<fcl::CollisionObject> & original_octomap_collision_object,
+        const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses);
+
+      /**
+       * @brief
+       *
+       * @param state
+       * @return true
+       * @return false
+       */
+      bool sample(ompl::base::State * state) override;
+
+      /**
+       * @brief
+       *
+       * @param state
+       * @param near
+       * @param distance
+       * @return true
+       * @return false
+       */
+      bool sampleNear(
+        ompl::base::State * state,
+        const ompl::base::State * near,
+        const double distance) override;
+
+      /**
+       * @brief
+       *
+       * @param start
+       * @param goal
+       */
+      void updateSearchArea(
+        const geometry_msgs::msg::PoseStamped start,
+        const geometry_msgs::msg::PoseStamped goal);
+
+      bool  isStateValid(const ompl::base::State * state);
+
+    protected:
+      rclcpp::Logger logger_{rclcpp::get_logger("OctoCellValidStateSampler")};
+      geometry_msgs::msg::PoseArray elevated_surfels_poses_;
+      pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
+      pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
+      std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
+      std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
+      std::discrete_distribution<> distrubutions_;
+    };
 
   } // namespace base
 }  // namespace ompl

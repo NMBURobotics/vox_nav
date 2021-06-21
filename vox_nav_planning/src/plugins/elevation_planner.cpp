@@ -148,6 +148,7 @@ namespace vox_nav_planning
     simple_setup_->setStateValidityChecker(
       std::bind(&ElevationPlanner::isStateValid, this, std::placeholders::_1));
 
+
     for (auto && i : elevated_surfel_poses_msg_->poses) {
       pcl::PointSurfel surfel;
       surfel.x = i.position.x;
@@ -222,7 +223,6 @@ namespace vox_nav_planning
     se3_goal->setZ(
       nearest_elevated_surfel_to_goal_.pose.position.z);
 
-
     simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
 
     RCLCPP_INFO(logger_, "%.2f  %.2f ", se3_goal->getSE2()->getX(), se3_goal->getSE2()->getY());
@@ -236,6 +236,11 @@ namespace vox_nav_planning
       planner_name_,
       simple_setup_->getSpaceInformation(),
       logger_);
+
+    simple_setup_->getSpaceInformation()->setValidStateSamplerAllocator(
+      std::bind(
+        &ElevationPlanner::
+        allocValidStateSampler, this, std::placeholders::_1));
 
     simple_setup_->setPlanner(planner);
     simple_setup_->setup();
@@ -296,17 +301,17 @@ namespace vox_nav_planning
     const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
 
     // cast the abstract state type to the type we expect
-    const auto * dubins = cstate->as<ompl::base::DubinsStateSpace::StateType>(0);
+    const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
     // extract the second component of the state and cast it to what we expect
     const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
 
     fcl::CollisionRequest requestType(1, false, 1, false);
 
     // check validity of state Fdefined by pos & rot
-    fcl::Vec3f translation(dubins->getX(), dubins->getY(), z->values[0]);
+    fcl::Vec3f translation(se2->getX(), se2->getY(), z->values[0]);
 
     tf2::Quaternion myQuaternion;
-    myQuaternion.setRPY(0, 0, dubins->getYaw());
+    myQuaternion.setRPY(0, 0, se2->getYaw());
 
     fcl::Quaternion3f rotation(
       myQuaternion.getX(), myQuaternion.getY(),
@@ -420,6 +425,19 @@ namespace vox_nav_planning
     multi_optimization->addObjective(octocost_objective, 2.0);
 
     return ompl::base::OptimizationObjectivePtr(multi_optimization);
+  }
+
+  ompl::base::ValidStateSamplerPtr ElevationPlanner::allocValidStateSampler(
+    const ompl::base::SpaceInformation * si)
+  {
+    auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
+      simple_setup_->getSpaceInformation(),
+      nearest_elevated_surfel_to_start_,
+      nearest_elevated_surfel_to_goal_,
+      robot_collision_object_,
+      original_octomap_collision_object_,
+      elevated_surfel_poses_msg_);
+    return valid_sampler;
   }
 
   std::vector<geometry_msgs::msg::PoseStamped> ElevationPlanner::getOverlayedStartandGoal()

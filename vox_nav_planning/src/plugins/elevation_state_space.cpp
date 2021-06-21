@@ -58,92 +58,6 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
   return ompl::base::Cost(cost);
 }
 
-
-ElevationStateSampler::ElevationStateSampler(
-  const StateSpace * space,
-  const pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels,
-  const pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels)
-: StateSampler(space),
-  workspace_surfels_(workspace_surfels),
-  search_area_surfels_(search_area_surfels)
-{
-}
-
-void ElevationStateSampler::sampleUniform(State * state)
-{
-  auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
-  pcl::PointCloud<pcl::PointSurfel>::Ptr out_sample(new pcl::PointCloud<pcl::PointSurfel>);
-  pcl::RandomSample<pcl::PointSurfel> random_sample(true);
-  random_sample.setInputCloud(search_area_surfels_);
-  random_sample.setSample(1);
-  random_sample.setSeed(rand());
-  random_sample.filter(*out_sample);
-  cstate->setSE2(
-    out_sample->points.front().x,
-    out_sample->points.front().y, 0);
-  cstate->setZ(out_sample->points.front().z);
-}
-
-void ElevationStateSampler::sampleUniformNear(State * state, const State * near, double distance)
-{
-  search_area_surfels_ =
-    pcl::PointCloud<pcl::PointSurfel>::Ptr(
-    new pcl::PointCloud<pcl::PointSurfel>);
-  float resolution = 0.2;
-  pcl::octree::OctreePointCloudSearch<pcl::PointSurfel> octree(resolution);
-  octree.setInputCloud(workspace_surfels_);
-  octree.addPointsFromInputCloud();
-  pcl::PointSurfel search_point;
-  const auto * search_point_dubins =
-    near->as<ElevationStateSpace::StateType>()->as<DubinsStateSpace::StateType>(0);
-  const auto * search_point_z =
-    near->as<ElevationStateSpace::StateType>()->as<RealVectorStateSpace::StateType>(1);
-
-  search_point.x = search_point_dubins->getX();
-  search_point.y = search_point_dubins->getY();
-  search_point.z = search_point_z->values[0];
-  // Neighbors within radius search
-  std::vector<int> pointIdxRadiusSearch;
-  std::vector<float> pointRadiusSquaredDistance;
-  if (octree.radiusSearch(
-      search_point, distance, pointIdxRadiusSearch,
-      pointRadiusSquaredDistance) > 0)
-  {
-    for (std::size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
-      search_area_surfels_->points.push_back(workspace_surfels_->points[pointIdxRadiusSearch[i]]);
-    }
-  }
-
-  auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
-  pcl::PointCloud<pcl::PointSurfel>::Ptr out_sample(new pcl::PointCloud<pcl::PointSurfel>);
-  pcl::RandomSample<pcl::PointSurfel> random_sample(true);
-  random_sample.setInputCloud(search_area_surfels_);
-  random_sample.setSample(1);
-  random_sample.setSeed(rand());
-  random_sample.filter(*out_sample);
-  cstate->setSE2(
-    out_sample->points.front().x,
-    out_sample->points.front().y, 0);
-  cstate->setZ(out_sample->points.front().z);
-  space_->enforceBounds(state);
-}
-
-void ElevationStateSampler::sampleGaussian(State * state, const State * mean, double stdDev)
-{
-  auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
-  pcl::PointCloud<pcl::PointSurfel>::Ptr out_sample(new pcl::PointCloud<pcl::PointSurfel>);
-  pcl::RandomSample<pcl::PointSurfel> random_sample(true);
-  random_sample.setInputCloud(search_area_surfels_);
-  random_sample.setSample(1);
-  random_sample.setSeed(rand());
-  random_sample.filter(*out_sample);
-  cstate->setSE2(
-    out_sample->points.front().x,
-    out_sample->points.front().y, 0);
-  cstate->setZ(out_sample->points.front().z);
-  space_->enforceBounds(state);
-}
-
 ElevationStateSpace::ElevationStateSpace(
   const geometry_msgs::msg::PoseStamped start,
   const geometry_msgs::msg::PoseStamped goal,
@@ -167,8 +81,6 @@ ElevationStateSpace::ElevationStateSpace(
 
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
-  search_area_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
-    new pcl::PointCloud<pcl::PointSurfel>);
 
   for (auto && i : elevated_surfels_poses_.poses) {
     pcl::PointSurfel surfel;
@@ -187,8 +99,6 @@ ElevationStateSpace::ElevationStateSpace(
     logger_,
     "OctoCellStateSampler bases on an Octomap with %d surfels",
     elevated_surfels_poses_.poses.size());
-
-  updateSearchArea(start, goal);
 }
 
 void ElevationStateSpace::setBounds(
@@ -225,11 +135,6 @@ State * ElevationStateSpace::allocState() const
 void ElevationStateSpace::freeState(State * state) const
 {
   CompoundStateSpace::freeState(state);
-}
-
-StateSamplerPtr ElevationStateSpace::allocDefaultStateSampler() const
-{
-  return std::make_shared<ElevationStateSampler>(this, workspace_surfels_, search_area_surfels_);
 }
 
 double ompl::base::ElevationStateSpace::distance(const State * state1, const State * state2) const
@@ -294,8 +199,69 @@ void ompl::base::ElevationStateSpace::interpolate(
   state_z->values[0] = nearest_intermediate_surfel.z;
 }
 
+OctoCellValidStateSampler::OctoCellValidStateSampler(
+  const ompl::base::SpaceInformationPtr & si,
+  const geometry_msgs::msg::PoseStamped start,
+  const geometry_msgs::msg::PoseStamped goal,
+  const std::shared_ptr<fcl::CollisionObject> & robot_collision_object,
+  const std::shared_ptr<fcl::CollisionObject> & original_octomap_collision_object,
+  const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses)
+: ValidStateSampler(si.get()),
+  robot_collision_object_(robot_collision_object),
+  original_octomap_collision_object_(original_octomap_collision_object),
+  elevated_surfels_poses_(*elevated_surfels_poses)
+{
+  workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
+    new pcl::PointCloud<pcl::PointSurfel>);
+  search_area_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
+    new pcl::PointCloud<pcl::PointSurfel>);
 
-void ElevationStateSpace::updateSearchArea(
+  for (auto && i : elevated_surfels_poses_.poses) {
+    pcl::PointSurfel surfel;
+    surfel.x = i.position.x;
+    surfel.y = i.position.y;
+    surfel.z = i.position.z;
+    double r, p, y;
+    vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
+    surfel.normal_x = r;
+    surfel.normal_y = p;
+    surfel.normal_z = y;
+    workspace_surfels_->points.push_back(surfel);
+  }
+
+  name_ = "OctoCellValidStateSampler";
+  RCLCPP_INFO(
+    logger_,
+    "OctoCellValidStateSampler bases on an Octomap with %d surfels",
+    elevated_surfels_poses_.poses.size());
+
+  updateSearchArea(start, goal);
+}
+
+bool OctoCellValidStateSampler::sample(ompl::base::State * state)
+{
+  auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
+  std::random_device rd;
+  std::mt19937 rng(rd());
+  int val = distrubutions_(rng);
+  auto out_sample = search_area_surfels_->points.at(val);
+  cstate->setSE2(
+    out_sample.x,
+    out_sample.y, 0);
+  cstate->setZ(out_sample.z);
+  return true;
+}
+
+bool OctoCellValidStateSampler::sampleNear(
+  ompl::base::State * state, const ompl::base::State * near,
+  const double distance)
+{
+  throw ompl::Exception("OctoCellValidStateSampler::sampleNear", "not implemented");
+  RCLCPP_ERROR(logger_, "Non implementd function call OctoCellValidStateSampler::sampleNear");
+  return false;
+}
+
+void OctoCellValidStateSampler::updateSearchArea(
   const geometry_msgs::msg::PoseStamped start,
   const geometry_msgs::msg::PoseStamped goal)
 {
@@ -329,5 +295,12 @@ void ElevationStateSpace::updateSearchArea(
     }
   }
 
+  std::vector<int> weights;
+  for (auto && i : search_area_surfels_->points) {
+    auto max_tilt_angle = std::max(std::abs(i.normal_x), std::abs(i.normal_y)) * 180.0 / M_PI;
+    weights.push_back(40 / max_tilt_angle);
+  }
+  std::discrete_distribution<> distrubutions(weights.begin(), weights.end());
+  distrubutions_ = distrubutions;
   RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
 }
