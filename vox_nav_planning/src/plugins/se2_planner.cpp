@@ -41,6 +41,7 @@ namespace vox_nav_planning
     // common parameters are declared in server
     parent->declare_parameter(plugin_name + ".se2_space", "REEDS");
     parent->declare_parameter(plugin_name + ".z_elevation", 1.0);
+    parent->declare_parameter(plugin_name + ".rho", 1.5);
     parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -50.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 50.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
@@ -56,7 +57,6 @@ namespace vox_nav_planning
     parent->get_parameter(plugin_name + ".se2_space", selected_se2_space_name_);
     parent->get_parameter(plugin_name + ".rho", rho_);
     parent->get_parameter(plugin_name + ".z_elevation", z_elevation_);
-
 
     se2_bounds_->setLow(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
