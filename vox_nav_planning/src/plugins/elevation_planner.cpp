@@ -119,8 +119,12 @@ namespace vox_nav_planning
       return std::vector<geometry_msgs::msg::PoseStamped>();
     }
 
+    ompl::base::ElevationStateSpace::SE2StateType se2_state_type =
+      ompl::base::ElevationStateSpace::SE2StateType::DUBINS;
+
     ompl::base::StateSpacePtr elevation_state_space(new ompl::base::ElevationStateSpace(
         start, goal,
+        se2_state_type,
         elevated_surfel_poses_msg_));
 
     elevation_state_space->as<ompl::base::ElevationStateSpace>()->setBounds(

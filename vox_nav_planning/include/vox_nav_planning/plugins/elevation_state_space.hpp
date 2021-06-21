@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2021 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 #define VOX_NAV_PLANNING__PLUGINS__ELEVATION_STATE_SPACE_HPP_
 
 #include "ompl/base/spaces/DubinsStateSpace.h"
+#include "ompl/base/spaces/ReedsSheppStateSpace.h"
 #include "ompl/base/spaces/SE2StateSpace.h"
 #include "ompl/base/spaces/RealVectorStateSpace.h"
 #include "vox_nav_planning/planner_core.hpp"
@@ -26,22 +27,25 @@ namespace ompl
 {
   namespace base
   {
-
+    /**
+     * @brief Class desgined to define a optimization objective BASED ON
+     * OCTOMAP'S cell values.
+     */
     class OctoCostOptimizationObjective : public StateCostIntegralObjective
     {
     public:
       /**
-       * @brief Construct a new Octo Cost Optimization Objective object
+       * @brief Construct a new OctoCostOptimization Objective object
        *
-       * @param si
-       * @param tree
+       * @param si space information
+       * @param tree shared ptr to octomap octree
       */
       OctoCostOptimizationObjective(
         const SpaceInformationPtr & si,
         const std::shared_ptr<octomap::OcTree> & elevated_surfels_octree);
 
       /**
-       * @brief Destroy the Octo Cost Optimization Objective object
+       * @brief Destroy the OctoCostOptimization Objective object
        *
        */
       ~OctoCostOptimizationObjective();
@@ -49,12 +53,13 @@ namespace ompl
       /**
        * @brief get amount of the cost assigned to this state
        *
-       * @param s
+       * @param s state pointer
        * @return Cost
        */
       Cost stateCost(const State * s) const override;
 
     protected:
+      // Octree where the elevated surfesl are stored in
       std::shared_ptr<octomap::OcTree> elevated_surfels_octree_;
     };
 
@@ -108,9 +113,17 @@ namespace ompl
         }
       };
 
+      enum SE2StateType
+      {
+        SE2,
+        DUBINS,
+        REDDSSHEEP
+      };
+
       ElevationStateSpace(
         const geometry_msgs::msg::PoseStamped start,
         const geometry_msgs::msg::PoseStamped goal,
+        const SE2StateType state_type,
         const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses,
         double turningRadius = 1.0,
         bool isSymmetric = false);
@@ -148,11 +161,11 @@ namespace ompl
       pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
       std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
       std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
+      SE2StateType se2_state_type_;
 
       std::shared_ptr<DubinsStateSpace> dubins_;
       std::shared_ptr<ReedsSheppStateSpace> reeds_sheep_;
       std::shared_ptr<SE2StateSpace> se2_;
-
 
       double rho_;
       bool isSymmetric_;

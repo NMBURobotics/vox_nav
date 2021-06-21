@@ -147,11 +147,13 @@ void ElevationStateSampler::sampleGaussian(State * state, const State * mean, do
 ElevationStateSpace::ElevationStateSpace(
   const geometry_msgs::msg::PoseStamped start,
   const geometry_msgs::msg::PoseStamped goal,
+  const SE2StateType state_type,
   const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses,
   double turningRadius, bool isSymmetric)
 :  rho_(turningRadius),
   isSymmetric_(isSymmetric),
-  elevated_surfels_poses_(*elevated_surfels_poses)
+  elevated_surfels_poses_(*elevated_surfels_poses),
+  se2_state_type_(state_type)
 {
   setName("ElevationStateSpace" + getName());
   type_ = 32;
@@ -159,10 +161,9 @@ ElevationStateSpace::ElevationStateSpace(
   addSubspace(std::make_shared<RealVectorStateSpace>(1), 1.0);
   lock();
 
-  dubins_ = std::make_shared<ompl::base::DubinsStateSpace>();
-  reeds_sheep_ = std::make_shared<ompl::base::ReedsSheppStateSpace>();
   se2_ = std::make_shared<ompl::base::SE2StateSpace>();
-
+  dubins_ = std::make_shared<ompl::base::DubinsStateSpace>(rho_, isSymmetric_);
+  reeds_sheep_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(rho_);
 
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
@@ -197,9 +198,9 @@ void ElevationStateSpace::setBounds(
   as<SE2StateSpace>(0)->setBounds(se2_bounds);
   as<RealVectorStateSpace>(1)->setBounds(z_bounds);
 
+  se2_->setBounds(se2_bounds);
   dubins_->setBounds(se2_bounds);
   reeds_sheep_->setBounds(se2_bounds);
-  se2_->setBounds(se2_bounds);
 }
 
 const RealVectorBounds ElevationStateSpace::getBounds() const
@@ -242,20 +243,19 @@ double ompl::base::ElevationStateSpace::distance(const State * state1, const Sta
   const auto * state2_z =
     state2->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  if (false) { // DUBINS
+  if (se2_state_type_ == SE2StateType::SE2) {
+    return se2_->distance(state1_se2, state2_se2);
+  } else if (se2_state_type_ == SE2StateType::DUBINS) {
     if (isSymmetric_) {
       return rho_ * std::min(
         dubins_->dubins(state1_se2, state2_se2).length(),
         dubins_->dubins(state2_se2, state1_se2).length());
     }
     return rho_ * dubins_->dubins(state1_se2, state2_se2).length();
-  } else if (true) { // REEDS
-    return rho_ * reeds_sheep_->reedsShepp(state1_se2, state2_se2).length();
   } else {
-    return se2_->distance(state1_se2, state2_se2);
+    return rho_ * reeds_sheep_->reedsShepp(state1_se2, state2_se2).length();
   }
-
-  return 0.0;
+  return 0;
 }
 
 void ompl::base::ElevationStateSpace::interpolate(
@@ -271,12 +271,12 @@ void ompl::base::ElevationStateSpace::interpolate(
   auto * state_dubins = state->as<StateType>()->as<SE2StateSpace::StateType>(0);
   auto * state_z = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  if (false) { //DUBINS
-    dubins_->interpolate(from_dubins, to_dubins, t, state_dubins);
-  } else if (false) { // REEDS
-    reeds_sheep_->interpolate(from_dubins, to_dubins, t, state_dubins);
-  } else {
+  if (se2_state_type_ == SE2StateType::SE2) {
     se2_->interpolate(from_dubins, to_dubins, t, state_dubins);
+  } else if (se2_state_type_ == SE2StateType::DUBINS) {
+    dubins_->interpolate(from_dubins, to_dubins, t, state_dubins);
+  } else {
+    reeds_sheep_->interpolate(from_dubins, to_dubins, t, state_dubins);
   }
 
   pcl::PointSurfel dubins_surfel, nearest_intermediate_surfel;
