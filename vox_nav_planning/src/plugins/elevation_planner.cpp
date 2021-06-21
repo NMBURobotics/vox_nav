@@ -36,14 +36,16 @@ namespace vox_nav_planning
     const std::string & plugin_name)
   {
     is_map_ready_ = false;
-    state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
-    z_bound_ = std::make_shared<ompl::base::RealVectorBounds>(1);
+    se2_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
+    z_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
 
     elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
       new pcl::PointCloud<pcl::PointSurfel>);
 
     // declare only planner specific parameters here
     // common parameters are declared in server
+    parent->declare_parameter(plugin_name + ".se2_space", "REEDS");
+    parent->declare_parameter(plugin_name + ".rho", 1.5);
     parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
@@ -56,20 +58,33 @@ namespace vox_nav_planning
     parent->get_parameter("planner_timeout", planner_timeout_);
     parent->get_parameter("interpolation_parameter", interpolation_parameter_);
     parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
+    parent->get_parameter(plugin_name + ".se2_space", selected_se2_space_name_);
+    parent->get_parameter(plugin_name + ".rho", rho_);
 
-    state_space_bounds_->setLow(
+    se2_bounds_->setLow(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
-    state_space_bounds_->setHigh(
+    se2_bounds_->setHigh(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.maxx").as_double());
-    state_space_bounds_->setLow(
+    se2_bounds_->setLow(
       1, parent->get_parameter(plugin_name + ".state_space_boundries.miny").as_double());
-    state_space_bounds_->setHigh(
+    se2_bounds_->setHigh(
       1, parent->get_parameter(plugin_name + ".state_space_boundries.maxy").as_double());
 
-    z_bound_->setLow(
+    z_bounds_->setLow(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minz").as_double());
-    z_bound_->setHigh(
+    z_bounds_->setHigh(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.maxz").as_double());
+
+
+    if (selected_se2_space_name_ == "SE2") {
+      state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
+      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::SE2;
+    } else if (selected_se2_space_name_ == "DUBINS") {
+      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::DUBINS;
+    } else {
+      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::REDDSSHEEP;
+    }
+
 
     typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
     CollisionGeometryPtr_t robot_body_box(new fcl::Box(
@@ -119,21 +134,16 @@ namespace vox_nav_planning
       return std::vector<geometry_msgs::msg::PoseStamped>();
     }
 
-    ompl::base::ElevationStateSpace::SE2StateType se2_state_type =
-      ompl::base::ElevationStateSpace::SE2StateType::DUBINS;
+    state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
+      start, goal,
+      se2_space_type_,
+      elevated_surfel_poses_msg_, rho_, false);
 
-    ompl::base::StateSpacePtr elevation_state_space(new ompl::base::ElevationStateSpace(
-        start, goal,
-        se2_state_type,
-        elevated_surfel_poses_msg_));
+    state_space_->as<ompl::base::ElevationStateSpace>()->setBounds(
+      *se2_bounds_,
+      *z_bounds_);
 
-    elevation_state_space->as<ompl::base::ElevationStateSpace>()->setBounds(
-      *state_space_bounds_,
-      *z_bound_);
-
-    state_space_ = elevation_state_space;
     simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
-
     simple_setup_->setOptimizationObjective(getOptimizationObjective());
     simple_setup_->setStateValidityChecker(
       std::bind(&ElevationPlanner::isStateValid, this, std::placeholders::_1));

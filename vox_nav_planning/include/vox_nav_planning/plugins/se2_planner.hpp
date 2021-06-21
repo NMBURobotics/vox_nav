@@ -92,9 +92,16 @@ namespace vox_nav_planning
     rclcpp::Logger logger_{rclcpp::get_logger("se2_planner")};
     // Which state space is slected ? REEDS,DUBINS, SE2
     std::string selected_se2_space_name_;
+    // Distance of robot above the flat ground plane, NOte
+    // this planner is supposed to operate on even flat ground
+    // z_elevation is constant everywhere
     double z_elevation_;
     geometry_msgs::msg::PoseStamped start_;
     geometry_msgs::msg::PoseStamped goal_;
+    ompl::base::StateSpacePtr state_space_;
+    std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
+    // curve radius for reeds and dubins only
+    double rho_;
   };
 }  // namespace vox_nav_planning
 

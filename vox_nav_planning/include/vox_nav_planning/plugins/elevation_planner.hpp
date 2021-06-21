@@ -100,13 +100,12 @@ namespace vox_nav_planning
     void setupMap() override;
 
   protected:
-    rclcpp::Logger logger_{rclcpp::get_logger("composite_planner")};
+    rclcpp::Logger logger_{rclcpp::get_logger("elevation_planner")};
     // Surfels centers are elevated by node_elevation_distance_, and are stored in this
     // octomap, this maps is used by planner to sample states that are
     // strictly laying on ground but not touching. So it constrains the path to be on ground
     // while it can elevate thorogh ramps or slopes
     std::shared_ptr<octomap::OcTree> elevated_surfel_octomap_octree_;
-    ompl::base::StateSpacePtr composite_state_space_;
     // it is also required to have orientation information of surfels, they are kept in
     // elevated_surfel_poses_msg_
     geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
@@ -115,8 +114,15 @@ namespace vox_nav_planning
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
     std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
     ompl::base::OptimizationObjectivePtr octocost_optimization_;
-    std::shared_ptr<ompl::base::RealVectorBounds> z_bound_;
+    ompl::base::StateSpacePtr state_space_;
 
+    std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
+    std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
+
+    std::string selected_se2_space_name_;
+    ompl::base::ElevationStateSpace::SE2StateType se2_space_type_;
+    // curve radius for reeds and dubins only
+    double rho_;
   };
 }  // namespace vox_nav_planning
 

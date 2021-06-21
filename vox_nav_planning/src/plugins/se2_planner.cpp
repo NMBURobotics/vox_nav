@@ -35,7 +35,7 @@ namespace vox_nav_planning
     const std::string & plugin_name)
   {
     is_map_ready_ = false;
-    state_space_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
+    se2_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
 
     // declare only planner specific parameters here
     // common parameters are declared in server
@@ -54,31 +54,32 @@ namespace vox_nav_planning
     parent->get_parameter("interpolation_parameter", interpolation_parameter_);
     parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
     parent->get_parameter(plugin_name + ".se2_space", selected_se2_space_name_);
+    parent->get_parameter(plugin_name + ".rho", rho_);
     parent->get_parameter(plugin_name + ".z_elevation", z_elevation_);
 
 
-    state_space_bounds_->setLow(
+    se2_bounds_->setLow(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
-    state_space_bounds_->setHigh(
+    se2_bounds_->setHigh(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.maxx").as_double());
-    state_space_bounds_->setLow(
+    se2_bounds_->setLow(
       1, parent->get_parameter(plugin_name + ".state_space_boundries.miny").as_double());
-    state_space_bounds_->setHigh(
+    se2_bounds_->setHigh(
       1, parent->get_parameter(plugin_name + ".state_space_boundries.maxy").as_double());
-    state_space_bounds_->setLow(
+    se2_bounds_->setLow(
       2, parent->get_parameter(plugin_name + ".state_space_boundries.minyaw").as_double());
-    state_space_bounds_->setHigh(
+    se2_bounds_->setHigh(
       2, parent->get_parameter(plugin_name + ".state_space_boundries.maxyaw").as_double());
 
-    state_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(2.5);
-    state_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds_);
-    if (selected_se2_space_name_ == "DUBINS") {
-      state_space_ = std::make_shared<ompl::base::DubinsStateSpace>(2.5, false);
-      state_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*state_space_bounds_);
-    } else if (selected_se2_space_name_ == "SE2") {
+    if (selected_se2_space_name_ == "SE2") {
       state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
-      state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*state_space_bounds_);
+    } else if (selected_se2_space_name_ == "DUBINS") {
+      state_space_ = std::make_shared<ompl::base::DubinsStateSpace>(rho_, false);
+    } else {
+      state_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(rho_);
     }
+
+    state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*se2_bounds_);
     simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
 
     typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
