@@ -24,7 +24,6 @@ OctoCostOptimizationObjective::OctoCostOptimizationObjective(
   elevated_surfels_octree_(elevated_surfels_octree)
 {
   description_ = "OctoCost Objective";
-
   /*RCLCPP_INFO(
     logger_,
     "OctoCost Optimization objective bases on an Octomap with %d nodes",
@@ -38,7 +37,6 @@ OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
 ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
 {
   float cost = 0.0;
-
   /*const ompl::base::SE3StateSpace::StateType * se3_state =
     s->as<ompl::base::SE3StateSpace::StateType>();
 
@@ -46,7 +44,6 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
     se3_state->getX(),
     se3_state->getY(),
     se3_state->getZ(), 0);
-
   if (node_at_samppled_state) {
     if (elevated_surfels_octree_->isNodeOccupied(node_at_samppled_state)) {
       cost = 1.0 * static_cast<double>(node_at_samppled_state->getValue());
@@ -54,13 +51,10 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
   } else {
     cost = 5.0;
   }*/
-
   return ompl::base::Cost(cost);
 }
 
 ElevationStateSpace::ElevationStateSpace(
-  const geometry_msgs::msg::PoseStamped start,
-  const geometry_msgs::msg::PoseStamped goal,
   const SE2StateType state_type,
   const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses,
   double turningRadius, bool isSymmetric)

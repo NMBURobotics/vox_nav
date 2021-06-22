@@ -101,8 +101,6 @@ namespace ompl
       };
 
       ElevationStateSpace(
-        const geometry_msgs::msg::PoseStamped start,
-        const geometry_msgs::msg::PoseStamped goal,
         const SE2StateType state_type,
         const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses,
         double turningRadius = 1.0,
