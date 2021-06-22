@@ -288,12 +288,20 @@ void OctoCellValidStateSampler::updateSearchArea(
     }
   }
 
+  RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
+  search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
+    search_area_surfels_, radius / 10);
+
+  RCLCPP_INFO(
+    logger_, "Uniformly sampled %d search area surfels,", search_area_surfels_->points.size());
+
+
   std::vector<int> weights;
   for (auto && i : search_area_surfels_->points) {
-    auto max_tilt_angle = std::max(std::abs(i.normal_x), std::abs(i.normal_y)) * 180.0 / M_PI;
-    weights.push_back(40 / max_tilt_angle);
+    //auto max_tilt_angle = std::max(std::abs(i.normal_x), std::abs(i.normal_y)) * 180.0 / M_PI;
+    //weights.push_back(40 / max_tilt_angle);
+    weights.push_back(1);
   }
   std::discrete_distribution<> distrubutions(weights.begin(), weights.end());
   distrubutions_ = distrubutions;
-  RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
 }
