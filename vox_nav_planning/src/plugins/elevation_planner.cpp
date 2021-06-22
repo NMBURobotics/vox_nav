@@ -143,63 +143,27 @@ namespace vox_nav_planning
     se3_start(state_space_),
     se3_goal(state_space_);
 
-    pcl::PointSurfel start_nearest_surfel, goal_nearest_surfel;
-    pcl::PointSurfel start_actual, goal_acual;
-
-    start_actual.x = start.pose.position.x;
-    start_actual.y = start.pose.position.y;
-    start_actual.z = start.pose.position.z;
-
-    goal_acual.x = goal.pose.position.x;
-    goal_acual.y = goal.pose.position.y;
-    goal_acual.z = goal.pose.position.z;
-
-    vox_nav_utilities::getNearstPoint<
-      pcl::PointSurfel,
-      pcl::PointCloud<pcl::PointSurfel>::Ptr>(
-      start_nearest_surfel, start_actual,
+    vox_nav_utilities::determineValidNearestGoalStart(
+      nearest_elevated_surfel_to_start_,
+      nearest_elevated_surfel_to_goal_,
+      start,
+      goal,
       elevated_surfel_cloud_);
-
-    vox_nav_utilities::getNearstPoint<
-      pcl::PointSurfel,
-      pcl::PointCloud<pcl::PointSurfel>::Ptr>(
-      goal_nearest_surfel, goal_acual,
-      elevated_surfel_cloud_);
-
-    nearest_elevated_surfel_to_start_.pose.position.x = start_nearest_surfel.x;
-    nearest_elevated_surfel_to_start_.pose.position.y = start_nearest_surfel.y;
-    nearest_elevated_surfel_to_start_.pose.position.z = start_nearest_surfel.z;
-    nearest_elevated_surfel_to_start_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-      start_nearest_surfel.normal_x,
-      start_nearest_surfel.normal_y,
-      start_nearest_surfel.normal_z
-    );
-
-    nearest_elevated_surfel_to_goal_.pose.position.x = goal_nearest_surfel.x;
-    nearest_elevated_surfel_to_goal_.pose.position.y = goal_nearest_surfel.y;
-    nearest_elevated_surfel_to_goal_.pose.position.z = goal_nearest_surfel.z;
-    nearest_elevated_surfel_to_goal_.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-      goal_nearest_surfel.normal_x,
-      goal_nearest_surfel.normal_y,
-      goal_nearest_surfel.normal_z);
 
     se3_start->setSE2(
       nearest_elevated_surfel_to_start_.pose.position.x,
       nearest_elevated_surfel_to_start_.pose.position.y, 0);
-    se3_start->setZ(
-      nearest_elevated_surfel_to_start_.pose.position.z);
+    se3_start->setZ(nearest_elevated_surfel_to_start_.pose.position.z);
 
     se3_goal->setSE2(
       nearest_elevated_surfel_to_goal_.pose.position.x,
       nearest_elevated_surfel_to_goal_.pose.position.y, 0);
-    se3_goal->setZ(
-      nearest_elevated_surfel_to_goal_.pose.position.z);
+    se3_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
 
     simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
 
     RCLCPP_INFO(logger_, "%.2f  %.2f ", se3_goal->getSE2()->getX(), se3_goal->getSE2()->getY());
     RCLCPP_INFO(logger_, "%.2f  %.2f ", se3_start->getSE2()->getX(), se3_start->getSE2()->getY());
-
 
     // create a planner for the defined space
     ompl::base::PlannerPtr planner;

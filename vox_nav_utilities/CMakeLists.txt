@@ -54,7 +54,7 @@ ament_target_dependencies(tf_helpers ${dependencies})
 
 add_library(planner_helpers SHARED src/planner_helpers.cpp)
 ament_target_dependencies(planner_helpers ${dependencies})
-target_link_libraries(planner_helpers ${LIBFCL_LIBRARIES} ompl)
+target_link_libraries(planner_helpers ${LIBFCL_LIBRARIES} tf_helpers ompl)
 
 add_library(map_manager_helpers SHARED src/map_manager_helpers.cpp)
 ament_target_dependencies(map_manager_helpers ${dependencies})

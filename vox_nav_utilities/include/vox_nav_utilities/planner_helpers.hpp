@@ -21,6 +21,8 @@
 #include "tf2_ros/buffer.h"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "vox_nav_utilities/tf_helpers.hpp"
+#include "vox_nav_utilities/pcl_helpers.hpp"
 // OMPL BASE
 #include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
 #include <ompl/base/OptimizationObjective.h>
@@ -57,6 +59,11 @@
 #include <octomap_msgs/conversions.h>
 #include <octomap/octomap.h>
 #include <octomap/octomap_utils.h>
+// PCL
+#include <pcl/common/common.h>
+#include <pcl/common/pca.h>
+#include <pcl/common/transforms.h>
+#include <pcl/point_types.h>
 
 namespace vox_nav_utilities
 {
@@ -86,6 +93,38 @@ namespace vox_nav_utilities
     const ompl::base::SpaceInformationPtr & si,
     const rclcpp::Logger logger);
 
+  /**
+   * @brief populate pcl surfel from geometry msgs Pose
+   *
+   * @param pose
+   * @return pcl::PointSurfel
+   */
+  pcl::PointSurfel poseMsg2PCLSurfel(const geometry_msgs::msg::PoseStamped & pose_stamped);
+
+  /**
+   * @brief
+   *
+   * @param surfel
+   * @return geometry_msgs::msg::PoseStamped
+   */
+  geometry_msgs::msg::PoseStamped PCLSurfel2PoseMsg(const pcl::PointSurfel & surfel);
+
+/**
+ * @brief
+ *
+ * @param nearest_valid_start
+ * @param nearest_valid_goal
+ * @param actual_start
+ * @param actual_goal
+ * @param elevated_surfel_cloud
+ */
+  void determineValidNearestGoalStart(
+    geometry_msgs::msg::PoseStamped & nearest_valid_start,
+    geometry_msgs::msg::PoseStamped & nearest_valid_goal,
+    const geometry_msgs::msg::PoseStamped & actual_start,
+    const geometry_msgs::msg::PoseStamped & actual_goal,
+    const pcl::PointCloud<pcl::PointSurfel>::Ptr & elevated_surfel_cloud
+  );
 }  // namespace vox_nav_utilities
 
 #endif  // VOX_NAV_UTILITIES__PLANNER_HELPERS_HPP_

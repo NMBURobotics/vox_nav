@@ -189,10 +189,9 @@ void ompl::base::ElevationStateSpace::interpolate(
   dubins_surfel.y = state_dubins->getY();
   dubins_surfel.z = from_z->values[0];
 
-  vox_nav_utilities::getNearstPoint<
+  nearest_intermediate_surfel = vox_nav_utilities::getNearstPoint<
     pcl::PointSurfel,
     pcl::PointCloud<pcl::PointSurfel>::Ptr>(
-    nearest_intermediate_surfel,
     dubins_surfel,
     workspace_surfels_);
 

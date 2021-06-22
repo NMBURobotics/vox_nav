@@ -151,11 +151,11 @@ namespace vox_nav_utilities
     const std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clusters_array);
 
   template<typename P, typename T>
-  void  getNearstPoint(
-    P & nearest_point,
+  P  getNearstPoint(
     const P & search_point,
     const T & cloud)
   {
+    P nearest_point;
     pcl::KdTreeFLANN<P> kdtree;
     kdtree.setInputCloud(cloud);
     // K nearest neighbor search
@@ -167,6 +167,7 @@ namespace vox_nav_utilities
         nearest_point = cloud->points[pointIdxNKNSearch[0]];
       }
     }
+    return nearest_point;
   }
 
   template<typename P>

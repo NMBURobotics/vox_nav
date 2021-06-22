@@ -92,4 +92,67 @@ namespace vox_nav_utilities
     }
   }
 
+
+  pcl::PointSurfel poseMsg2PCLSurfel(const geometry_msgs::msg::PoseStamped & pose_stamped)
+  {
+    pcl::PointSurfel surfel;
+    surfel.x = pose_stamped.pose.position.x;
+    surfel.y = pose_stamped.pose.position.y;
+    surfel.z = pose_stamped.pose.position.z;
+
+    double normal_x, normal_y, normal_z;
+    vox_nav_utilities::getRPYfromMsgQuaternion(
+      pose_stamped.pose.orientation,
+      normal_x,
+      normal_y,
+      normal_z);
+
+    surfel.normal_x = normal_x;
+    surfel.normal_y = normal_y;
+    surfel.normal_z = normal_z;
+    return surfel;
+  }
+
+  geometry_msgs::msg::PoseStamped PCLSurfel2PoseMsg(const pcl::PointSurfel & surfel)
+  {
+    geometry_msgs::msg::PoseStamped pose_stamped;
+    pose_stamped.pose.position.x = surfel.x;
+    pose_stamped.pose.position.y = surfel.y;
+    pose_stamped.pose.position.z = surfel.z;
+    pose_stamped.pose.orientation =
+      vox_nav_utilities::getMsgQuaternionfromRPY(
+      surfel.normal_x,
+      surfel.normal_y,
+      surfel.normal_z
+      );
+
+    return pose_stamped;
+  }
+
+  void determineValidNearestGoalStart(
+    geometry_msgs::msg::PoseStamped & nearest_valid_start,
+    geometry_msgs::msg::PoseStamped & nearest_valid_goal,
+    const geometry_msgs::msg::PoseStamped & actual_start,
+    const geometry_msgs::msg::PoseStamped & actual_goal,
+    const pcl::PointCloud<pcl::PointSurfel>::Ptr & elevated_surfel_cloud
+  )
+  {
+    pcl::PointSurfel start_nearest_surfel, goal_nearest_surfel;
+    start_nearest_surfel = vox_nav_utilities::poseMsg2PCLSurfel(actual_start);
+    goal_nearest_surfel = vox_nav_utilities::poseMsg2PCLSurfel(actual_goal);
+    start_nearest_surfel = vox_nav_utilities::getNearstPoint<
+      pcl::PointSurfel,
+      pcl::PointCloud<pcl::PointSurfel>::Ptr>(
+      start_nearest_surfel,
+      elevated_surfel_cloud);
+
+    goal_nearest_surfel = vox_nav_utilities::getNearstPoint<
+      pcl::PointSurfel,
+      pcl::PointCloud<pcl::PointSurfel>::Ptr>(
+      goal_nearest_surfel,
+      elevated_surfel_cloud);
+
+    nearest_valid_start = vox_nav_utilities::PCLSurfel2PoseMsg(start_nearest_surfel);
+    nearest_valid_goal = vox_nav_utilities::PCLSurfel2PoseMsg(goal_nearest_surfel);
+  }
 }  // namespace vox_nav_utilities
