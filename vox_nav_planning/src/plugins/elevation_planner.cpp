@@ -38,7 +38,6 @@ namespace vox_nav_planning
     is_map_ready_ = false;
     se2_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
     z_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
-
     elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
       new pcl::PointCloud<pcl::PointSurfel>);
 
@@ -53,7 +52,6 @@ namespace vox_nav_planning
     parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
 
-    parent->get_parameter("enabled", is_enabled_);
     parent->get_parameter("planner_name", planner_name_);
     parent->get_parameter("planner_timeout", planner_timeout_);
     parent->get_parameter("interpolation_parameter", interpolation_parameter_);
@@ -69,12 +67,10 @@ namespace vox_nav_planning
       1, parent->get_parameter(plugin_name + ".state_space_boundries.miny").as_double());
     se2_bounds_->setHigh(
       1, parent->get_parameter(plugin_name + ".state_space_boundries.maxy").as_double());
-
     z_bounds_->setLow(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minz").as_double());
     z_bounds_->setHigh(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.maxz").as_double());
-
 
     if (selected_se2_space_name_ == "SE2") {
       state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
@@ -84,7 +80,6 @@ namespace vox_nav_planning
     } else {
       se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::REDDSSHEEP;
     }
-
 
     typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
     CollisionGeometryPtr_t robot_body_box(new fcl::Box(
@@ -107,9 +102,6 @@ namespace vox_nav_planning
       <vox_nav_msgs::srv::GetMapsAndSurfels>(
       "get_maps_and_surfels");
 
-    if (!is_enabled_) {
-      RCLCPP_WARN(logger_, "ElevationPlanner plugin is disabled.");
-    }
     RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
 
     setupMap();
@@ -119,14 +111,6 @@ namespace vox_nav_planning
     const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal)
   {
-    if (!is_enabled_) {
-      RCLCPP_WARN(
-        logger_,
-        "ElevationPlanner plugin is disabled. Not performing anything returning an empty path"
-      );
-      return std::vector<geometry_msgs::msg::PoseStamped>();
-    }
-
     if (!is_map_ready_) {
       RCLCPP_WARN(
         logger_, "A valid Octomap has not been receievd yet, Try later again."
@@ -137,7 +121,9 @@ namespace vox_nav_planning
     state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
       start, goal,
       se2_space_type_,
-      elevated_surfel_poses_msg_, rho_, false);
+      elevated_surfel_poses_msg_,
+      rho_ /*only valid for duins or reeds*/,
+      false /*only valid for dubins*/);
 
     state_space_->as<ompl::base::ElevationStateSpace>()->setBounds(
       *se2_bounds_,
@@ -147,20 +133,6 @@ namespace vox_nav_planning
     simple_setup_->setOptimizationObjective(getOptimizationObjective());
     simple_setup_->setStateValidityChecker(
       std::bind(&ElevationPlanner::isStateValid, this, std::placeholders::_1));
-
-
-    for (auto && i : elevated_surfel_poses_msg_->poses) {
-      pcl::PointSurfel surfel;
-      surfel.x = i.position.x;
-      surfel.y = i.position.y;
-      surfel.z = i.position.z;
-      double r, p, y;
-      vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
-      surfel.normal_x = r;
-      surfel.normal_y = p;
-      surfel.normal_z = y;
-      elevated_surfel_cloud_->points.push_back(surfel);
-    }
 
     // set the start and goal states
     double start_yaw, goal_yaw, nan;
@@ -369,9 +341,6 @@ namespace vox_nav_planning
         continue;
       }
 
-      elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>(
-        response->elevated_surfel_poses);
-
       auto original_octomap_octree =
         dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(response->original_octomap));
       original_octomap_octree_ = std::make_shared<octomap::OcTree>(*original_octomap_octree);
@@ -393,6 +362,21 @@ namespace vox_nav_planning
       auto original_octomap_fcl_octree = std::make_shared<fcl::OcTree>(original_octomap_octree_);
       original_octomap_collision_object_ = std::make_shared<fcl::CollisionObject>(
         std::shared_ptr<fcl::CollisionGeometry>(original_octomap_fcl_octree));
+
+      elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>(
+        response->elevated_surfel_poses);
+      for (auto && i : elevated_surfel_poses_msg_->poses) {
+        pcl::PointSurfel surfel;
+        surfel.x = i.position.x;
+        surfel.y = i.position.y;
+        surfel.z = i.position.z;
+        double r, p, y;
+        vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
+        surfel.normal_x = r;
+        surfel.normal_y = p;
+        surfel.normal_z = y;
+        elevated_surfel_cloud_->points.push_back(surfel);
+      }
 
       RCLCPP_INFO(
         logger_,

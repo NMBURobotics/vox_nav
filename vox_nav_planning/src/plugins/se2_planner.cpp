@@ -49,7 +49,6 @@ namespace vox_nav_planning
     parent->declare_parameter(plugin_name + ".state_space_boundries.minyaw", -3.14);
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxyaw", 3.14);
 
-    parent->get_parameter("enabled", is_enabled_);
     parent->get_parameter("planner_name", planner_name_);
     parent->get_parameter("planner_timeout", planner_timeout_);
     parent->get_parameter("interpolation_parameter", interpolation_parameter_);
@@ -101,9 +100,6 @@ namespace vox_nav_planning
       <vox_nav_msgs::srv::GetMapsAndSurfels>(
       "get_maps_and_surfels");
 
-    if (!is_enabled_) {
-      RCLCPP_WARN(logger_, "SE2Planner plugin is disabled.");
-    }
     RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
 
     setupMap();
@@ -113,13 +109,6 @@ namespace vox_nav_planning
     const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal)
   {
-    if (!is_enabled_) {
-      RCLCPP_WARN(
-        logger_,
-        "SE2Planner plugin is disabled. Not performing anything returning an empty path"
-      );
-      return std::vector<geometry_msgs::msg::PoseStamped>();
-    }
     if (!is_map_ready_) {
       RCLCPP_WARN(
         logger_, "A valid Octomap has not been receievd yet, Try later again."

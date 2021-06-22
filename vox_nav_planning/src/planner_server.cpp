@@ -42,7 +42,6 @@ namespace vox_nav_planning
     // Declare this node's parameters
     declare_parameter("expected_planner_frequency", 1.0);
     declare_parameter("planner_plugin", "SE2Planner");
-    declare_parameter("enabled", true);
     declare_parameter("planner_name", "PRMStar");
     declare_parameter("planner_timeout", 5.0);
     declare_parameter("interpolation_parameter", 50);

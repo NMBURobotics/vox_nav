@@ -168,8 +168,6 @@ namespace vox_nav_planning
     std::string planner_name_;
     // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
     double octomap_voxel_size_;
-    // whether plugin is enabled
-    bool is_enabled_;
     // related to density of created path
     int interpolation_parameter_;
     // max time the planner can spend before coming up with a solution
