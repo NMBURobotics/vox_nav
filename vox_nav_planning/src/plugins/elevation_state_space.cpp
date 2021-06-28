@@ -37,12 +37,10 @@ OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
 ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
 {
   float cost = 0.0;
-
   const auto * s_se2 =
     s->as<ElevationStateSpace::StateType>()->as<SE2StateSpace::StateType>(0);
   const auto * s_z =
     s->as<ElevationStateSpace::StateType>()->as<RealVectorStateSpace::StateType>(1);
-
   auto node_at_samppled_state = elevated_surfels_octree_->search(
     s_se2->getX(),
     s_se2->getY(),
@@ -288,8 +286,9 @@ void OctoCellValidStateSampler::updateSearchArea(
   }
 
   RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
+
   search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
-    search_area_surfels_, radius / 5);
+    search_area_surfels_, radius / 2);
 
   RCLCPP_INFO(
     logger_, "Uniformly sampled %d search area surfels,", search_area_surfels_->points.size());

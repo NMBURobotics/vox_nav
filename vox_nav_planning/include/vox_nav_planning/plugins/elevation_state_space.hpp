@@ -198,7 +198,6 @@ namespace ompl
       pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
       std::discrete_distribution<> distrubutions_;
     };
-
   } // namespace base
 }  // namespace ompl
 
