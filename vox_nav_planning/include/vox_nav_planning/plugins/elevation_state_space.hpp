@@ -61,6 +61,7 @@ namespace ompl
     protected:
       // Octree where the elevated surfesl are stored in
       std::shared_ptr<octomap::OcTree> elevated_surfels_octree_;
+      rclcpp::Logger logger_{rclcpp::get_logger("octo_cost_optimization_objective")};
     };
 
     class ElevationStateSpace : public CompoundStateSpace
@@ -71,16 +72,6 @@ namespace ompl
       public:
         StateType() = default;
 
-        SE2StateSpace::StateType * getSE2()
-        {
-          return as<SE2StateSpace::StateType>(0);
-        }
-
-        RealVectorStateSpace::StateType * getZ()
-        {
-          return as<RealVectorStateSpace::StateType>(1);
-        }
-
         void setSE2(double x, double y, double yaw)
         {
           as<SE2StateSpace::StateType>(0)->setXY(x, y);
@@ -90,6 +81,16 @@ namespace ompl
         void setZ(double z)
         {
           as<RealVectorStateSpace::StateType>(1)->values[0] = z;
+        }
+
+        SE2StateSpace::StateType * getSE2()
+        {
+          return as<SE2StateSpace::StateType>(0);
+        }
+
+        RealVectorStateSpace::StateType * getZ()
+        {
+          return as<RealVectorStateSpace::StateType>(1);
         }
       };
 
@@ -123,15 +124,17 @@ namespace ompl
         const State * state2) const override;
 
       void  interpolate(
-        const State * from, const State * to, double t,
+        const State * from,
+        const State * to,
+        double t,
         State * state) const override;
 
     protected:
-      rclcpp::Logger logger_{rclcpp::get_logger("elevation_planner_utils")};
+      rclcpp::Logger logger_{rclcpp::get_logger("elevation_state_space")};
       geometry_msgs::msg::PoseArray elevated_surfels_poses_;
       pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
-      SE2StateType se2_state_type_;
 
+      SE2StateType se2_state_type_;
       std::shared_ptr<DubinsStateSpace> dubins_;
       std::shared_ptr<ReedsSheppStateSpace> reeds_sheep_;
       std::shared_ptr<SE2StateSpace> se2_;
@@ -153,8 +156,6 @@ namespace ompl
         const ompl::base::SpaceInformationPtr & si,
         const geometry_msgs::msg::PoseStamped start,
         const geometry_msgs::msg::PoseStamped goal,
-        const std::shared_ptr<fcl::CollisionObject> & robot_collision_object,
-        const std::shared_ptr<fcl::CollisionObject> & original_octomap_collision_object,
         const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses);
 
       /**
@@ -190,15 +191,11 @@ namespace ompl
         const geometry_msgs::msg::PoseStamped start,
         const geometry_msgs::msg::PoseStamped goal);
 
-      bool  isStateValid(const ompl::base::State * state);
-
     protected:
-      rclcpp::Logger logger_{rclcpp::get_logger("OctoCellValidStateSampler")};
+      rclcpp::Logger logger_{rclcpp::get_logger("octo_cell_valid_state_sampler")};
       geometry_msgs::msg::PoseArray elevated_surfels_poses_;
       pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
       pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
-      std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-      std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
       std::discrete_distribution<> distrubutions_;
     };
 

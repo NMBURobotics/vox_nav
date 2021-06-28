@@ -73,6 +73,7 @@ namespace vox_nav_map_server
   class MapManager : public rclcpp::Node
   {
   public:
+
     struct PCDPreProcessingParams
     {
       double pcd_map_downsample_voxel_size;
@@ -132,7 +133,7 @@ namespace vox_nav_map_server
     ~MapManager();
 
     /**
-    * @brief periodically called function to publish octomap and its pointcloud data
+    * @brief periodically called function to publish octomap visuals
     *
     */
     void timerCallback();

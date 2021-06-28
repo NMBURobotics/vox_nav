@@ -365,8 +365,6 @@ namespace vox_nav_planning
       simple_setup_->getSpaceInformation(),
       nearest_elevated_surfel_to_start_,
       nearest_elevated_surfel_to_goal_,
-      robot_collision_object_,
-      original_octomap_collision_object_,
       elevated_surfel_poses_msg_);
     return valid_sampler;
   }

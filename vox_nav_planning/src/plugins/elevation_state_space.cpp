@@ -24,10 +24,10 @@ OctoCostOptimizationObjective::OctoCostOptimizationObjective(
   elevated_surfels_octree_(elevated_surfels_octree)
 {
   description_ = "OctoCost Objective";
-  /*RCLCPP_INFO(
+  RCLCPP_INFO(
     logger_,
     "OctoCost Optimization objective bases on an Octomap with %d nodes",
-    elevated_surfels_octree_->size());*/
+    elevated_surfels_octree_->size());
 }
 
 OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
@@ -37,20 +37,23 @@ OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
 ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
 {
   float cost = 0.0;
-  /*const ompl::base::SE3StateSpace::StateType * se3_state =
-    s->as<ompl::base::SE3StateSpace::StateType>();
+
+  const auto * s_se2 =
+    s->as<ElevationStateSpace::StateType>()->as<SE2StateSpace::StateType>(0);
+  const auto * s_z =
+    s->as<ElevationStateSpace::StateType>()->as<RealVectorStateSpace::StateType>(1);
 
   auto node_at_samppled_state = elevated_surfels_octree_->search(
-    se3_state->getX(),
-    se3_state->getY(),
-    se3_state->getZ(), 0);
+    s_se2->getX(),
+    s_se2->getY(),
+    s_z->values[0], 0);
   if (node_at_samppled_state) {
     if (elevated_surfels_octree_->isNodeOccupied(node_at_samppled_state)) {
       cost = 1.0 * static_cast<double>(node_at_samppled_state->getValue());
     }
   } else {
     cost = 5.0;
-  }*/
+  }
   return ompl::base::Cost(cost);
 }
 
@@ -65,7 +68,7 @@ ElevationStateSpace::ElevationStateSpace(
 {
   setName("ElevationStateSpace" + getName());
   type_ = 32;
-  addSubspace(std::make_shared<DubinsStateSpace>(), 1.0);
+  addSubspace(std::make_shared<SE2StateSpace>(), 1.0);
   addSubspace(std::make_shared<RealVectorStateSpace>(1), 1.0);
   lock();
 
@@ -196,12 +199,8 @@ OctoCellValidStateSampler::OctoCellValidStateSampler(
   const ompl::base::SpaceInformationPtr & si,
   const geometry_msgs::msg::PoseStamped start,
   const geometry_msgs::msg::PoseStamped goal,
-  const std::shared_ptr<fcl::CollisionObject> & robot_collision_object,
-  const std::shared_ptr<fcl::CollisionObject> & original_octomap_collision_object,
   const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses)
 : ValidStateSampler(si.get()),
-  robot_collision_object_(robot_collision_object),
-  original_octomap_collision_object_(original_octomap_collision_object),
   elevated_surfels_poses_(*elevated_surfels_poses)
 {
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
@@ -290,11 +289,10 @@ void OctoCellValidStateSampler::updateSearchArea(
 
   RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
   search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
-    search_area_surfels_, radius / 10);
+    search_area_surfels_, radius / 5);
 
   RCLCPP_INFO(
     logger_, "Uniformly sampled %d search area surfels,", search_area_surfels_->points.size());
-
 
   std::vector<int> weights;
   for (auto && i : search_area_surfels_->points) {
