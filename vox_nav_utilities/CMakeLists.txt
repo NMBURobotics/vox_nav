@@ -29,9 +29,11 @@ find_package(ompl REQUIRED)
 find_package(OCTOMAP REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(PCL REQUIRED)
 
 include_directories(include
-                   ${OMPL_INCLUDE_DIRS})
+                   ${OMPL_INCLUDE_DIRS}
+                   ${PCL_INCLUDE_DIRS})
 
 set(dependencies
   rclcpp
@@ -50,6 +52,7 @@ set(dependencies
 )
 
 add_library(tf_helpers SHARED src/tf_helpers.cpp src/pcl_helpers.cpp)
+target_link_libraries(tf_helpers ${PCL_LIBRARIES})
 ament_target_dependencies(tf_helpers ${dependencies})
 
 add_library(planner_helpers SHARED src/planner_helpers.cpp)

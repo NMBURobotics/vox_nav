@@ -36,8 +36,10 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_types.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <pcl/segmentation/supervoxel_clustering.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/uniform_sampling.h>
+
 
 #include <memory>
 #include <string>
@@ -195,6 +197,30 @@ namespace vox_nav_utilities
     uniformly_sampled_cloud->height = 1;
     uniformly_sampled_cloud->width = uniformly_sampled_cloud->points.size();
     return uniformly_sampled_cloud;
+  }
+
+  template<typename P>
+  typename pcl::SupervoxelClustering<P>  super_voxelize_cloud(
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    const bool disable_transform,
+    const double voxel_resolution,
+    const double seed_resolution,
+    const double color_importance,
+    const double spatial_importance,
+    const double normal_importance
+  )
+  {
+    pcl::SupervoxelClustering<P> super(voxel_resolution, seed_resolution);
+
+    if (disable_transform) {
+      super.setUseSingleCameraTransform(false);
+    }
+    super.setInputCloud(cloud);
+    super.setColorImportance(color_importance);
+    super.setSpatialImportance(spatial_importance);
+    super.setNormalImportance(normal_importance);
+
+    return super;
   }
 
 }  // namespace vox_nav_utilities

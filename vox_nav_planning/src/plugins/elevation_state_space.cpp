@@ -201,6 +201,13 @@ OctoCellValidStateSampler::OctoCellValidStateSampler(
 : ValidStateSampler(si.get()),
   elevated_surfels_poses_(*elevated_surfels_poses)
 {
+  valid_state_sampler_node_ = std::make_shared
+    <rclcpp::Node>("valid_state_sampler_node");
+
+  supervoxel_adjacency_marker_pub_ =
+    valid_state_sampler_node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "supervoxel_adjacency_markers", rclcpp::SystemDefaultsQoS());
+
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
   search_area_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
@@ -284,11 +291,106 @@ void OctoCellValidStateSampler::updateSearchArea(
       search_area_surfels_->points.push_back(workspace_surfels_->points[pointIdxRadiusSearch[i]]);
     }
   }
-
   RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
 
-  search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
-    search_area_surfels_, radius / 2);
+  auto search_area_point_cloud =
+    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(new pcl::PointCloud<pcl::PointXYZRGBA>);
+
+  for (auto && i : search_area_surfels_->points) {
+    pcl::PointXYZRGBA point;
+    point.x = i.x;
+    point.y = i.y;
+    point.z = i.z;
+    search_area_point_cloud->points.push_back(point);
+  }
+
+  bool disable_transform = false;
+  float voxel_resolution = 0.8;
+  float seed_resolution = 1.0f;
+  float color_importance = 0.0f;
+  float spatial_importance = 1.0f;
+  float normal_importance = 1.0f;
+
+  auto super = vox_nav_utilities::super_voxelize_cloud<pcl::PointXYZRGBA>(
+    search_area_point_cloud,
+    disable_transform,
+    voxel_resolution,
+    seed_resolution,
+    color_importance,
+    spatial_importance,
+    normal_importance);
+
+
+  std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> supervoxel_clusters;
+
+  pcl::console::print_highlight("Extracting supervoxels!\n");
+  super.extract(supervoxel_clusters);
+  pcl::console::print_info("Found %d supervoxels\n", supervoxel_clusters.size());
+  pcl::console::print_highlight("Getting supervoxel adjacency\n");
+  std::multimap<std::uint32_t, std::uint32_t> supervoxel_adjacency;
+
+  super.getSupervoxelAdjacency(supervoxel_adjacency);
+
+  auto voxel_centroid_cloud = super.getVoxelCentroidCloud();
+  auto labeled_voxel_cloud = super.getLabeledVoxelCloud();
+
+  visualization_msgs::msg::MarkerArray lines;
+
+  pcl::PointCloud<pcl::PointXYZRGBA> adjacent_supervoxel_centers;
+
+  int index = 0;
+  //To make a graph of the supervoxel adjacency, we need to iterate through the supervoxel adjacency multimap
+  for (auto label_itr = supervoxel_adjacency.cbegin(); label_itr != supervoxel_adjacency.cend();
+  )
+  {
+    // First get the label
+    std::uint32_t supervoxel_label = label_itr->first;
+    // Now get the supervoxel corresponding to the label
+    auto supervoxel = supervoxel_clusters.at(supervoxel_label);
+
+    visualization_msgs::msg::Marker marker;
+    marker.header.frame_id = "map";
+    marker.header.stamp = rclcpp::Clock().now();
+    marker.ns = "my_namespace";
+    marker.id = index;
+    marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+    marker.action = visualization_msgs::msg::Marker::ADD;
+
+    marker.scale.x = 0.3;
+    geometry_msgs::msg::Point point;
+    point.x = supervoxel->centroid_.x;
+    point.y = supervoxel->centroid_.y;
+    point.z = supervoxel->centroid_.z;
+
+    std_msgs::msg::ColorRGBA clr;
+    clr.r = 1.0;
+    clr.g = 1.0;
+    clr.a = 1.0;
+
+    marker.points.push_back(point);
+    marker.colors.push_back(clr);
+
+    // intCloudT adjacent_supervoxel_centers;
+    for (auto adjacent_itr = supervoxel_adjacency.equal_range(supervoxel_label).first;
+      adjacent_itr != supervoxel_adjacency.equal_range(supervoxel_label).second; ++adjacent_itr)
+    {
+      auto neighbor_supervoxel =
+        supervoxel_clusters.at(adjacent_itr->second);
+      adjacent_supervoxel_centers.push_back(neighbor_supervoxel->centroid_);
+
+      geometry_msgs::msg::Point n_point;
+      n_point.x = neighbor_supervoxel->centroid_.x;
+      n_point.y = neighbor_supervoxel->centroid_.y;
+      n_point.z = neighbor_supervoxel->centroid_.z;
+      marker.points.push_back(n_point);
+      marker.colors.push_back(clr);
+    }
+    //Move iterator forward to next label
+    label_itr = supervoxel_adjacency.upper_bound(supervoxel_label);
+    index++;
+    lines.markers.push_back(marker);
+  }
+  supervoxel_adjacency_marker_pub_->publish(lines);
 
   RCLCPP_INFO(
     logger_, "Uniformly sampled %d search area surfels,", search_area_surfels_->points.size());
