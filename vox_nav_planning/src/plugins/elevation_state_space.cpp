@@ -201,13 +201,6 @@ OctoCellValidStateSampler::OctoCellValidStateSampler(
 : ValidStateSampler(si.get()),
   elevated_surfels_poses_(*elevated_surfels_poses)
 {
-  valid_state_sampler_node_ = std::make_shared
-    <rclcpp::Node>("valid_state_sampler_node");
-
-  super_voxel_adjacency_marker_pub_ =
-    valid_state_sampler_node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "supervoxel_adjacency_markers", rclcpp::SystemDefaultsQoS());
-
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
 
@@ -385,6 +378,7 @@ void SuperVoxelValidStateSampler::updateSearchArea(
   std_msgs::msg::Header header;
   header.frame_id = "map";
   header.stamp = rclcpp::Clock().now();
+  
   visualization_msgs::msg::MarkerArray supervoxel_marker_array;
   vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
     supervoxel_clusters_, supervoxel_adjacency, header, supervoxel_marker_array);

@@ -146,10 +146,6 @@ namespace ompl
 
     protected:
       rclcpp::Logger logger_{rclcpp::get_logger("octo_cell_valid_state_sampler")};
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
-        super_voxel_adjacency_marker_pub_;
-      rclcpp::Node::SharedPtr valid_state_sampler_node_;
-
       geometry_msgs::msg::PoseArray elevated_surfels_poses_;
       pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
       pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;

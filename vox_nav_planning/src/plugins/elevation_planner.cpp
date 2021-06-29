@@ -361,7 +361,7 @@ namespace vox_nav_planning
   ompl::base::ValidStateSamplerPtr ElevationPlanner::allocValidStateSampler(
     const ompl::base::SpaceInformation * si)
   {
-    auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
+    auto valid_sampler = std::make_shared<ompl::base::SuperVoxelValidStateSampler>(
       simple_setup_->getSpaceInformation(),
       nearest_elevated_surfel_to_start_,
       nearest_elevated_surfel_to_goal_,
