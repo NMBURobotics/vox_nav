@@ -320,7 +320,6 @@ void OctoCellValidStateSampler::updateSearchArea(
     spatial_importance,
     normal_importance);
 
-
   std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> supervoxel_clusters;
 
   pcl::console::print_highlight("Extracting supervoxels!\n");
@@ -339,8 +338,10 @@ void OctoCellValidStateSampler::updateSearchArea(
   pcl::PointCloud<pcl::PointXYZRGBA> adjacent_supervoxel_centers;
 
   int index = 0;
-  //To make a graph of the supervoxel adjacency, we need to iterate through the supervoxel adjacency multimap
-  for (auto label_itr = supervoxel_adjacency.cbegin(); label_itr != supervoxel_adjacency.cend();
+  // To make a graph of the supervoxel adjacency,
+  // we need to iterate through the supervoxel adjacency multimap
+  for (auto label_itr = supervoxel_adjacency.cbegin();
+    label_itr != supervoxel_adjacency.cend();
   )
   {
     // First get the label
@@ -356,7 +357,7 @@ void OctoCellValidStateSampler::updateSearchArea(
     marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
     marker.action = visualization_msgs::msg::Marker::ADD;
 
-    marker.scale.x = 0.3;
+    marker.scale.x = 0.1;
     geometry_msgs::msg::Point point;
     point.x = supervoxel->centroid_.x;
     point.y = supervoxel->centroid_.y;
@@ -365,10 +366,26 @@ void OctoCellValidStateSampler::updateSearchArea(
     std_msgs::msg::ColorRGBA clr;
     clr.r = 1.0;
     clr.g = 1.0;
-    clr.a = 1.0;
+    clr.a = 0.4;
 
     marker.points.push_back(point);
     marker.colors.push_back(clr);
+
+    visualization_msgs::msg::Marker sphere;
+    sphere.header.frame_id = "map";
+    sphere.header.stamp = rclcpp::Clock().now();
+    sphere.ns = "my_namespace";
+    sphere.id = index + 1000;
+    sphere.type = visualization_msgs::msg::Marker::SPHERE;
+    sphere.action = visualization_msgs::msg::Marker::ADD;
+    sphere.pose.position = point;
+    sphere.scale.x = 0.3;
+    sphere.scale.y = 0.3;
+    sphere.scale.z = 0.3;
+    sphere.color.a = 1.0; // Don't forget to set the alpha!
+    sphere.color.g = 1.0;
+    sphere.color.b = 1.0;
+    lines.markers.push_back(sphere);
 
     // intCloudT adjacent_supervoxel_centers;
     for (auto adjacent_itr = supervoxel_adjacency.equal_range(supervoxel_label).first;

@@ -124,44 +124,45 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        utm:
-          map:
-            odom:
-              base_link:
-                camera_bottom_screw_frame:
-                  camera_link:
-                    camera_depth_frame:
-                      camera_color_frame:
-                        camera_color_optical_frame:
-                          {}
-                      camera_depth_optical_frame:
+        map:
+          odom:
+            base_link:
+              camera_bottom_screw_frame:
+                camera_link:
+                  camera_depth_frame:
+                    camera_color_frame:
+                      camera_color_optical_frame:
                         {}
-                      camera_left_ir_frame:
-                        camera_left_ir_optical_frame:
-                          {}
-                      camera_right_ir_frame:
-                        camera_right_ir_optical_frame:
-                          {}
-                front_left_wheel:
-                  {}
-                front_right_wheel:
-                  {}
-                gps:
-                  {}
-                imu_link:
-                  {}
-                rear_axle:
-                  {}
-                rear_left_wheel:
-                  {}
-                rear_right_wheel:
-                  {}
-                steering_wheel:
-                  {}
-                velodyne_link:
-                  {}
-                wide_angle_camera_link:
-                  {}
+                    camera_depth_optical_frame:
+                      {}
+                    camera_left_ir_frame:
+                      camera_left_ir_optical_frame:
+                        {}
+                    camera_right_ir_frame:
+                      camera_right_ir_optical_frame:
+                        {}
+              front_left_wheel:
+                {}
+              front_right_wheel:
+                {}
+              gps:
+                {}
+              imu_link:
+                {}
+              rear_axle:
+                {}
+              rear_left_wheel:
+                {}
+              rear_right_wheel:
+                {}
+              steering_wheel:
+                {}
+              velodyne_link:
+                {}
+              wide_angle_camera_link:
+                {}
+        utm:
+          {}
       Update Interval: 0
       Value: true
     - Class: rviz_default_plugins/Image
@@ -313,7 +314,7 @@ Visualization Manager:
       Name: OctoMap PointCloud2
       Position Transformer: XYZ
       Selectable: true
-      Size (Pixels): 2
+      Size (Pixels): 4
       Size (m): 0.20000000298023224
       Style: Points
       Topic:
@@ -362,7 +363,7 @@ Visualization Manager:
       Enabled: true
       Name: Global Plan
       Namespaces:
-        {}
+        path: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -374,7 +375,7 @@ Visualization Manager:
       Enabled: true
       Name: Local Plan
       Namespaces:
-        {}
+        path: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -414,6 +415,18 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /start_goal_poses
       Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Namespaces:
+        my_namespace: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /supervoxel_adjacency_markers
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -448,25 +461,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 114.35895538330078
+      Distance: 84.97559356689453
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.6577086448669434
-        Y: 32.02135467529297
-        Z: -7.256490061990917e-05
+        X: -3.254296064376831
+        Y: -5.132702827453613
+        Z: -9.062122262548655e-05
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.109796404838562
+      Pitch: 1.2697957754135132
       Target Frame: map
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 1.5400209426879883
+      Yaw: 3.1531944274902344
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016
