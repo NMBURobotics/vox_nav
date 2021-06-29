@@ -200,7 +200,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::SupervoxelClustering<P>  super_voxelize_cloud(
+  typename pcl::SupervoxelClustering<P> super_voxelize_cloud(
     const typename pcl::PointCloud<P>::Ptr cloud,
     const bool disable_transform,
     const double voxel_resolution,
@@ -221,6 +221,33 @@ namespace vox_nav_utilities
     super.setNormalImportance(normal_importance);
 
     return super;
+  }
+
+  template<typename P>
+  typename pcl::PointCloud<P>::Ptr  get_subcloud_within_radius(
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    const P & search_point,
+    const double radius)
+  {
+    typename pcl::PointCloud<P>::Ptr subcloud_within_radius(new pcl::PointCloud<P>());
+    float resolution = 0.2;
+    pcl::octree::OctreePointCloudSearch<P> octree(resolution);
+    octree.setInputCloud(cloud);
+    octree.addPointsFromInputCloud();
+
+    // Neighbors within radius search
+    std::vector<int> pointIdxRadiusSearch;
+    std::vector<float> pointRadiusSquaredDistance;
+
+    if (octree.radiusSearch(
+        search_point, radius, pointIdxRadiusSearch,
+        pointRadiusSquaredDistance) > 0)
+    {
+      for (std::size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
+        subcloud_within_radius->points.push_back(cloud->points[pointIdxRadiusSearch[i]]);
+      }
+    }
+    return subcloud_within_radius;
   }
 
 }  // namespace vox_nav_utilities

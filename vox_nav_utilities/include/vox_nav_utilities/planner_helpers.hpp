@@ -20,6 +20,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/buffer.h"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "geometry_msgs/msg/pose_array.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "vox_nav_utilities/tf_helpers.hpp"
 #include "vox_nav_utilities/pcl_helpers.hpp"
@@ -125,6 +127,53 @@ namespace vox_nav_utilities
     const geometry_msgs::msg::PoseStamped & actual_goal,
     const pcl::PointCloud<pcl::PointSurfel>::Ptr & elevated_surfel_cloud
   );
+
+  /**
+   * @brief
+   *
+   * @param poses
+   * @param surfels
+   */
+  void fillSurfelsfromMsgPoses(
+    const geometry_msgs::msg::PoseArray & poses,
+    pcl::PointCloud<pcl::PointSurfel>::Ptr & surfels);
+
+  /**
+  * @brief
+  *
+  * @param poses
+  * @param surfels
+  */
+  void fillMsgPosesfromSurfels(
+    geometry_msgs::msg::PoseArray & poses,
+    const pcl::PointCloud<pcl::PointSurfel>::Ptr & surfels);
+
+  /**
+   * @brief
+   *
+   * @param supervoxel_adjacency
+   * @param header
+   * @param marker_array
+   */
+  void fillSuperVoxelMarkersfromAdjacency(
+    const std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> & supervoxel_clusters,
+    const std::multimap<std::uint32_t, std::uint32_t> & supervoxel_adjacency,
+    const std_msgs::msg::Header & header,
+    visualization_msgs::msg::MarkerArray & marker_array
+  );
+
+  /**
+   * @brief
+   *
+   * @param a
+   * @param b
+   * @return geometry_msgs::msg::PoseStamped
+   */
+  geometry_msgs::msg::PoseStamped getLinearInterpolatedPose(
+    const geometry_msgs::msg::PoseStamped a,
+    const geometry_msgs::msg::PoseStamped b
+  );
+
 }  // namespace vox_nav_utilities
 
 #endif  // VOX_NAV_UTILITIES__PLANNER_HELPERS_HPP_

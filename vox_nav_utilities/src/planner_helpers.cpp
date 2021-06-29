@@ -155,4 +155,120 @@ namespace vox_nav_utilities
     nearest_valid_start = vox_nav_utilities::PCLSurfel2PoseMsg(start_nearest_surfel);
     nearest_valid_goal = vox_nav_utilities::PCLSurfel2PoseMsg(goal_nearest_surfel);
   }
+
+  void fillSurfelsfromMsgPoses(
+    const geometry_msgs::msg::PoseArray & poses,
+    pcl::PointCloud<pcl::PointSurfel>::Ptr & surfels)
+  {
+    for (auto && i : poses.poses) {
+      pcl::PointSurfel surfel;
+      surfel.x = i.position.x;
+      surfel.y = i.position.y;
+      surfel.z = i.position.z;
+      double r, p, y;
+      vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
+      surfel.normal_x = r;
+      surfel.normal_y = p;
+      surfel.normal_z = y;
+      surfels->points.push_back(surfel);
+    }
+  }
+
+  void fillMsgPosesfromSurfels(
+    geometry_msgs::msg::PoseArray & poses,
+    const pcl::PointCloud<pcl::PointSurfel>::Ptr & surfels)
+  {
+    for (auto && i : surfels->points) {
+      geometry_msgs::msg::Pose pose;
+      pose.position.x = i.x;
+      pose.position.y = i.y;
+      pose.position.z = i.z;
+      pose.orientation =
+        vox_nav_utilities::getMsgQuaternionfromRPY(i.normal_x, i.normal_y, i.normal_z);
+      poses.poses.push_back(pose);
+    }
+  }
+
+  void fillSuperVoxelMarkersfromAdjacency(
+    const std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> & supervoxel_clusters,
+    const std::multimap<std::uint32_t, std::uint32_t> & supervoxel_adjacency,
+    const std_msgs::msg::Header & header,
+    visualization_msgs::msg::MarkerArray & marker_array)
+  {
+    int index = 0;
+    // To make a graph of the supervoxel adjacency,
+    // we need to iterate through the supervoxel adjacency multimap
+    for (auto label_itr = supervoxel_adjacency.cbegin();
+      label_itr != supervoxel_adjacency.cend(); )
+    {
+      // First get the label
+      std::uint32_t supervoxel_label = label_itr->first;
+      // Now get the supervoxel corresponding to the label
+      auto supervoxel = supervoxel_clusters.at(supervoxel_label);
+
+      visualization_msgs::msg::Marker line_strip;
+      line_strip.header = header;
+      line_strip.ns = "supervoxel_markers_ns";
+      line_strip.id = index;
+      line_strip.type = visualization_msgs::msg::Marker::LINE_STRIP;
+      line_strip.action = visualization_msgs::msg::Marker::ADD;
+      line_strip.scale.x = 0.1;
+      geometry_msgs::msg::Point point;
+      point.x = supervoxel->centroid_.x;
+      point.y = supervoxel->centroid_.y;
+      point.z = supervoxel->centroid_.z;
+      std_msgs::msg::ColorRGBA yellow_color;
+      yellow_color.r = 1.0;
+      yellow_color.g = 1.0;
+      yellow_color.a = 0.4;
+      line_strip.points.push_back(point);
+      line_strip.colors.push_back(yellow_color);
+
+      visualization_msgs::msg::Marker sphere;
+      sphere.header = header;
+      sphere.ns = "supervoxel_markers_ns";
+      sphere.id = index + 10000;
+      sphere.type = visualization_msgs::msg::Marker::SPHERE;
+      sphere.action = visualization_msgs::msg::Marker::ADD;
+      sphere.pose.position = point;
+      sphere.scale.x = 0.3;
+      sphere.scale.y = 0.3;
+      sphere.scale.z = 0.3;
+      sphere.color.a = 1.0;
+      sphere.color.g = 1.0;
+      sphere.color.b = 1.0;
+
+      for (auto adjacent_itr = supervoxel_adjacency.equal_range(supervoxel_label).first;
+        adjacent_itr != supervoxel_adjacency.equal_range(supervoxel_label).second; ++adjacent_itr)
+      {
+        auto neighbor_supervoxel =
+          supervoxel_clusters.at(adjacent_itr->second);
+
+        geometry_msgs::msg::Point n_point;
+        n_point.x = neighbor_supervoxel->centroid_.x;
+        n_point.y = neighbor_supervoxel->centroid_.y;
+        n_point.z = neighbor_supervoxel->centroid_.z;
+        line_strip.points.push_back(n_point);
+        line_strip.colors.push_back(yellow_color);
+      }
+      // Move iterator forward to next label
+      label_itr = supervoxel_adjacency.upper_bound(supervoxel_label);
+      index++;
+
+      marker_array.markers.push_back(sphere);
+      marker_array.markers.push_back(line_strip);
+    }
+  }
+
+  geometry_msgs::msg::PoseStamped getLinearInterpolatedPose(
+    const geometry_msgs::msg::PoseStamped a,
+    const geometry_msgs::msg::PoseStamped b
+  )
+  {
+    geometry_msgs::msg::PoseStamped linear_interpolated_pose;
+    linear_interpolated_pose.pose.position.x = (a.pose.position.x + b.pose.position.x) / 2.0;
+    linear_interpolated_pose.pose.position.y = (a.pose.position.y + b.pose.position.y) / 2.0;
+    linear_interpolated_pose.pose.position.z = (a.pose.position.z + b.pose.position.z) / 2.0;
+    return linear_interpolated_pose;
+  }
 }  // namespace vox_nav_utilities

@@ -28,35 +28,15 @@ namespace ompl
 {
   namespace base
   {
-    /**
-     * @brief Class desgined to define a optimization objective BASED ON
-     * OCTOMAP'S cell values.
-     */
     class OctoCostOptimizationObjective : public StateCostIntegralObjective
     {
     public:
-      /**
-       * @brief Construct a new OctoCostOptimization Objective object
-       *
-       * @param si space information
-       * @param tree shared ptr to octomap octree
-      */
       OctoCostOptimizationObjective(
         const SpaceInformationPtr & si,
         const std::shared_ptr<octomap::OcTree> & elevated_surfels_octree);
 
-      /**
-       * @brief Destroy the OctoCostOptimization Objective object
-       *
-       */
       ~OctoCostOptimizationObjective();
 
-      /**
-       * @brief get amount of the cost assigned to this state
-       *
-       * @param s state pointer
-       * @return Cost
-       */
       Cost stateCost(const State * s) const override;
 
     protected:
@@ -147,47 +127,19 @@ namespace ompl
     class OctoCellValidStateSampler : public ValidStateSampler
     {
     public:
-      /**
-       * @brief Construct a new Octo Cell State Sampler object
-       *
-       * @param si
-       * @param tree
-       */
       OctoCellValidStateSampler(
         const ompl::base::SpaceInformationPtr & si,
         const geometry_msgs::msg::PoseStamped start,
         const geometry_msgs::msg::PoseStamped goal,
         const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses);
 
-      /**
-       * @brief
-       *
-       * @param state
-       * @return true
-       * @return false
-       */
       bool sample(ompl::base::State * state) override;
 
-      /**
-       * @brief
-       *
-       * @param state
-       * @param near
-       * @param distance
-       * @return true
-       * @return false
-       */
       bool sampleNear(
         ompl::base::State * state,
         const ompl::base::State * near,
         const double distance) override;
 
-      /**
-       * @brief
-       *
-       * @param start
-       * @param goal
-       */
       void updateSearchArea(
         const geometry_msgs::msg::PoseStamped start,
         const geometry_msgs::msg::PoseStamped goal);
@@ -195,13 +147,47 @@ namespace ompl
     protected:
       rclcpp::Logger logger_{rclcpp::get_logger("octo_cell_valid_state_sampler")};
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
-        supervoxel_adjacency_marker_pub_;
+        super_voxel_adjacency_marker_pub_;
       rclcpp::Node::SharedPtr valid_state_sampler_node_;
 
       geometry_msgs::msg::PoseArray elevated_surfels_poses_;
       pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
       pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
       std::discrete_distribution<> distrubutions_;
+    };
+
+    class SuperVoxelValidStateSampler : public ValidStateSampler
+    {
+    public:
+      SuperVoxelValidStateSampler(
+        const ompl::base::SpaceInformationPtr & si,
+        const geometry_msgs::msg::PoseStamped start,
+        const geometry_msgs::msg::PoseStamped goal,
+        const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses);
+
+      bool sample(ompl::base::State * state) override;
+
+      bool sampleNear(
+        ompl::base::State * state,
+        const ompl::base::State * near,
+        const double distance) override;
+
+      void updateSearchArea(
+        const geometry_msgs::msg::PoseStamped start,
+        const geometry_msgs::msg::PoseStamped goal);
+
+    protected:
+      rclcpp::Logger logger_{rclcpp::get_logger("super_voxel_valid_state_sampler")};
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+        super_voxel_adjacency_marker_pub_;
+      rclcpp::Node::SharedPtr valid_state_sampler_node_;
+
+      geometry_msgs::msg::PoseArray elevated_surfels_poses_;
+      pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
+      pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
+      std::discrete_distribution<> distrubutions_;
+
+      std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> supervoxel_clusters_;
     };
   } // namespace base
 }  // namespace ompl
