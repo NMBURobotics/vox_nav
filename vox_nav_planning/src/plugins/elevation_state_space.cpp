@@ -378,7 +378,7 @@ void SuperVoxelValidStateSampler::updateSearchArea(
   std_msgs::msg::Header header;
   header.frame_id = "map";
   header.stamp = rclcpp::Clock().now();
-  
+
   visualization_msgs::msg::MarkerArray supervoxel_marker_array;
   vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
     supervoxel_clusters_, supervoxel_adjacency, header, supervoxel_marker_array);
@@ -386,4 +386,115 @@ void SuperVoxelValidStateSampler::updateSearchArea(
   super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array);
   RCLCPP_INFO(
     logger_, "Uniformly sampled %d search area surfels,", search_area_surfels_->points.size());
+
+  //////////////// EXPERIMENTAL ASTAR
+
+  // specify some types
+  typedef boost::adjacency_list<
+      boost::listS,
+      boost::vecS,
+      boost::undirectedS,
+      boost::no_property,
+      boost::property<boost::edge_weight_t, ompl::base::cost>>
+    GraphT; // graph type
+
+  typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
+  typedef GraphT::vertex_descriptor vertex;
+  typedef GraphT::edge_descriptor edge_descriptor;
+  typedef GraphT::vertex_iterator vertex_iterator;
+  typedef std::pair<int, int> edge;
+
+  // Handle Locations
+  std::vector<location> locations_as_vector;
+  for (auto && i :voxel_centroid_cloud->points) {
+    location crr_location;
+    crr_location.x = i.x;
+    crr_location.y = i.y;
+    crr_location.z = i.z;
+    locations_as_vector.push_back(crr_location);
+  }
+  location * locations = locations_as_vector.data();
+
+  // Handle Edges
+  std::vector<edge> edge_pairs_as_vector;
+  std::vector<float> weights_as_vector;
+
+  for (auto label_itr = supervoxel_adjacency.cbegin();
+    label_itr != supervoxel_adjacency.cend(); )
+  {
+    std::uint32_t supervoxel_label = label_itr->first;
+    auto supervoxel = supervoxel_clusters_.at(supervoxel_label);
+
+    for (auto adjacent_itr = supervoxel_adjacency.equal_range(supervoxel_label).first;
+      adjacent_itr != supervoxel_adjacency.equal_range(supervoxel_label).second; ++adjacent_itr)
+    {
+      auto neighbor_supervoxel = supervoxel_clusters_.at(adjacent_itr->second);
+      edge_pairs_as_vector.push_back(
+        std::make_pair<int, int>(adjacent_itr->first, adjacent_itr->second));
+
+      float distance = std::sqrt(
+        std::pow(neighbor_supervoxel->centroid_.x - supervoxel->centroid_.x, 2) +
+        std::pow(neighbor_supervoxel->centroid_.y - supervoxel->centroid_.y, 2) +
+        std::pow(neighbor_supervoxel->centroid_.z - supervoxel->centroid_.z, 2));
+      weights_as_vector.push_back(distance);
+    }
+
+    label_itr = supervoxel_adjacency.upper_bound(supervoxel_label);
+  }
+
+  edge * edge_array = edge_pairs_as_vector.data();
+  cost * weights = weights_as_vector.data();
+  unsigned int num_edges = sizeof(edge_array) / sizeof(edge);
+
+  // create graph
+  GraphT g(voxel_centroid_cloud->points.size());
+  WeightMap weightmap = get(boost::edge_weight, g);
+
+  for (std::size_t j = 0; j < num_edges; ++j) {
+    edge_descriptor e;
+    bool inserted;
+    boost::tie(e, inserted) = boost::add_edge(
+      edge_array[j].first,
+      edge_array[j].second, g);
+    weightmap[e] = weights[j];
+  }
+
+  // pick random start/goal
+  std::mt19937 gen(std::time(0));
+  vertex st = boost::random_vertex(g, gen);
+  vertex gl = boost::random_vertex(g, gen);
+
+  std::vector<GraphT::vertex_descriptor> p(boost::num_vertices(g));
+  std::vector<cost> d(boost::num_vertices(g));
+
+  RCLCPP_INFO(
+    logger_, "Running astar,");
+  try {
+    // call astar named parameter interface
+    boost::astar_search(
+      g, st,
+      distance_heuristic<GraphT, cost, location *>(locations, gl),
+      boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(gl)));
+
+    RCLCPP_INFO(
+      logger_, "Maybe astart failed ?,");
+
+  } catch (found_goal fg) { // found a path to the goal
+    std::list<vertex> shortest_path;
+    for (vertex v = gl;; v = p[v]) {
+      shortest_path.push_front(v);
+      if (p[v] == v) {
+        break;
+      }
+    }
+
+    std::list<vertex>::iterator spi = shortest_path.begin();
+    for (++spi; spi != shortest_path.end(); ++spi) {
+      //cout << " -> " << name[*spi];
+    }
+
+    RCLCPP_INFO(
+      logger_, "Found path with astar,");
+  }
+
 }
