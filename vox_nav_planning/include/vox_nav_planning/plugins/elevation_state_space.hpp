@@ -208,9 +208,9 @@ namespace ompl
       : m_location(l), m_goal(goal) {}
       CostType operator()(Vertex u)
       {
-        CostType dx = m_location[m_goal].x - m_location[u].x;
-        CostType dy = m_location[m_goal].y - m_location[u].y;
-        CostType dz = m_location[m_goal].z - m_location[u].z;
+        CostType dx = m_location->points[m_goal].x - m_location->points[u].x;
+        CostType dy = m_location->points[m_goal].y - m_location->points[u].y;
+        CostType dz = m_location->points[m_goal].z - m_location->points[u].z;
 
         return ::sqrt(dx * dx + dy * dy + dz * dz);
       }
@@ -219,6 +219,7 @@ namespace ompl
       LocMap m_location;
       Vertex m_goal;
     };
+
 
     struct found_goal {}; // exception for termination
 

@@ -383,41 +383,48 @@ void SuperVoxelValidStateSampler::updateSearchArea(
   vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
     supervoxel_clusters_, supervoxel_adjacency, header, supervoxel_marker_array);
 
-  super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array);
   RCLCPP_INFO(
     logger_, "Uniformly sampled %d search area surfels,", search_area_surfels_->points.size());
 
-  //////////////// EXPERIMENTAL ASTAR
+  using namespace boost;
 
   // specify some types
-  typedef boost::adjacency_list<
-      boost::listS,
-      boost::vecS,
-      boost::undirectedS,
-      boost::no_property,
-      boost::property<boost::edge_weight_t, ompl::base::cost>>
-    GraphT; // graph type
+  typedef adjacency_list<
+      setS,             // edge
+      vecS,             // vertex
+      undirectedS,      // type
+      std::uint32_t,    // vertex property
+      property<edge_weight_t, cost>>  // edge property
+    mygraph_t;
 
-  typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
-  typedef GraphT::vertex_descriptor vertex;
-  typedef GraphT::edge_descriptor edge_descriptor;
-  typedef GraphT::vertex_iterator vertex_iterator;
+  typedef property_map<mygraph_t, edge_weight_t>::type WeightMap;
+  typedef mygraph_t::vertex_descriptor vertex;
+  typedef mygraph_t::edge_descriptor edge_descriptor;
+  typedef mygraph_t::vertex_iterator vertex_iterator;
   typedef std::pair<int, int> edge;
 
-  // Handle Locations
-  std::vector<location> locations_as_vector;
-  for (auto && i :voxel_centroid_cloud->points) {
-    location crr_location;
-    crr_location.x = i.x;
-    crr_location.y = i.y;
-    crr_location.z = i.z;
-    locations_as_vector.push_back(crr_location);
-  }
-  location * locations = locations_as_vector.data();
+  // specify some types
+  typedef pcl::SupervoxelClustering<pcl::PointXYZRGBA>::VoxelAdjacencyList PCLGraphT;
+  PCLGraphT pcl_g;
+  super.getSupervoxelAdjacencyList(pcl_g);
+  RCLCPP_INFO(logger_, "Running astar,");
+  RCLCPP_INFO(logger_, "Graph has %d vertices", boost::num_vertices(pcl_g));
+  RCLCPP_INFO(logger_, "Graph has %d edges", boost::num_edges(pcl_g));
 
-  // Handle Edges
-  std::vector<edge> edge_pairs_as_vector;
-  std::vector<float> weights_as_vector;
+  mygraph_t g;
+  WeightMap weightmap = get(edge_weight, g);
+  //Add a vertex for each label, store ids in map
+  std::map<std::uint32_t, vertex> label_ID_map;
+  for (auto label_itr = supervoxel_adjacency.cbegin();
+    label_itr != supervoxel_adjacency.cend(); )
+  {
+    std::uint32_t supervoxel_label = label_itr->first;
+    auto supervoxel = supervoxel_clusters_.at(supervoxel_label);
+    vertex node_id = boost::add_vertex(g);
+    g[node_id] = (supervoxel_label);
+    label_ID_map.insert(std::make_pair(supervoxel_label, node_id));
+    label_itr = supervoxel_adjacency.upper_bound(supervoxel_label);
+  }
 
   for (auto label_itr = supervoxel_adjacency.cbegin();
     label_itr != supervoxel_adjacency.cend(); )
@@ -428,58 +435,67 @@ void SuperVoxelValidStateSampler::updateSearchArea(
     for (auto adjacent_itr = supervoxel_adjacency.equal_range(supervoxel_label).first;
       adjacent_itr != supervoxel_adjacency.equal_range(supervoxel_label).second; ++adjacent_itr)
     {
-      auto neighbor_supervoxel = supervoxel_clusters_.at(adjacent_itr->second);
-      edge_pairs_as_vector.push_back(
-        std::make_pair<int, int>(adjacent_itr->first, adjacent_itr->second));
+      // First get the label
+      std::uint32_t neighbor_supervoxel_label = adjacent_itr->second;
+      auto neighbor_supervoxel = supervoxel_clusters_.at(neighbor_supervoxel_label);
 
-      float distance = std::sqrt(
-        std::pow(neighbor_supervoxel->centroid_.x - supervoxel->centroid_.x, 2) +
-        std::pow(neighbor_supervoxel->centroid_.y - supervoxel->centroid_.y, 2) +
-        std::pow(neighbor_supervoxel->centroid_.z - supervoxel->centroid_.z, 2));
-      weights_as_vector.push_back(distance);
+      bool edge_added;
+      edge_descriptor e;
+      vertex u = (label_ID_map.find(supervoxel_label))->second;
+      vertex v = (label_ID_map.find(neighbor_supervoxel_label))->second;
+      boost::tie(e, edge_added) = boost::add_edge(u, v, g);
+
+      //Calc distance between centers, set as edge weight
+      if (edge_added) {
+        auto centroid_data = supervoxel->centroid_;
+        auto neighb_centroid_data = neighbor_supervoxel->centroid_;
+
+        for (auto neighb_itr = supervoxel_adjacency.cbegin();
+          neighb_itr != supervoxel_adjacency.cend(); )
+        {
+          auto ghost_neighbor_label = neighb_itr->first;
+          if (ghost_neighbor_label == neighbor_supervoxel_label) {
+            neighb_centroid_data = supervoxel_clusters_.at(ghost_neighbor_label)->centroid_;
+            break;
+          }
+          // Move iterator forward to next label
+          neighb_itr = supervoxel_adjacency.upper_bound(ghost_neighbor_label);
+        }
+
+        float length = 1.0;
+        weightmap[e] = length;
+      }
     }
-
+    // Move iterator forward to next label
     label_itr = supervoxel_adjacency.upper_bound(supervoxel_label);
   }
 
-  edge * edge_array = edge_pairs_as_vector.data();
-  cost * weights = weights_as_vector.data();
-  unsigned int num_edges = sizeof(edge_array) / sizeof(edge);
+  RCLCPP_INFO(logger_, "Running astar,");
+  RCLCPP_INFO(logger_, "Graph has %d vertices", boost::num_vertices(g));
+  RCLCPP_INFO(logger_, "Graph has %d edges", boost::num_edges(g));
 
-  // create graph
-  GraphT g(voxel_centroid_cloud->points.size());
-  WeightMap weightmap = get(boost::edge_weight, g);
+  vertex st = boost::vertex(0, g);
+  vertex gl = boost::vertex(80, g);
 
-  for (std::size_t j = 0; j < num_edges; ++j) {
-    edge_descriptor e;
-    bool inserted;
-    boost::tie(e, inserted) = boost::add_edge(
-      edge_array[j].first,
-      edge_array[j].second, g);
-    weightmap[e] = weights[j];
-  }
+  std::cout << st << std::endl;
+  std::cout << gl << std::endl;
 
-  // pick random start/goal
-  std::mt19937 gen(std::time(0));
-  vertex st = boost::random_vertex(g, gen);
-  vertex gl = boost::random_vertex(g, gen);
-
-  std::vector<GraphT::vertex_descriptor> p(boost::num_vertices(g));
+  std::vector<vertex> p(boost::num_vertices(g));
   std::vector<cost> d(boost::num_vertices(g));
 
-  RCLCPP_INFO(
-    logger_, "Running astar,");
+
   try {
     // call astar named parameter interface
-    boost::astar_search(
+    auto heuristic = distance_heuristic<mygraph_t, cost,
+        pcl::PointCloud<pcl::PointXYZRGBA>::Ptr>(voxel_centroid_cloud, gl);
+    auto visitor = astar_goal_visitor<vertex>(gl);
+    boost::astar_search_tree(
       g, st,
-      distance_heuristic<GraphT, cost, location *>(locations, gl),
-      boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(astar_goal_visitor<vertex>(gl)));
+      heuristic,
+      boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
+    RCLCPP_INFO(logger_, "Maybe astar failed ?,");
 
-    RCLCPP_INFO(
-      logger_, "Maybe astart failed ?,");
-
-  } catch (found_goal fg) { // found a path to the goal
+  } catch (found_goal fg) {      // found a path to the goal
     std::list<vertex> shortest_path;
     for (vertex v = gl;; v = p[v]) {
       shortest_path.push_front(v);
@@ -488,13 +504,43 @@ void SuperVoxelValidStateSampler::updateSearchArea(
       }
     }
 
+    visualization_msgs::msg::Marker line_strip;
+    line_strip.id = 3666;
+    line_strip.header = header;
+    line_strip.ns = "supervoxel_markers_ns";
+    line_strip.type = visualization_msgs::msg::Marker::LINE_STRIP;
+    line_strip.action = visualization_msgs::msg::Marker::ADD;
+    line_strip.scale.x = 0.4;
+    std_msgs::msg::ColorRGBA yellow_color;
+    yellow_color.r = 1.0;
+    yellow_color.g = 1.0;
+    yellow_color.a = 1.0;
+
     std::list<vertex>::iterator spi = shortest_path.begin();
+
+    int index;
     for (++spi; spi != shortest_path.end(); ++spi) {
-      //cout << " -> " << name[*spi];
+      std::uint32_t key = 0;
+      for (auto & i : label_ID_map) {
+        if (i.second == *spi) {
+          key = i.first;
+          break; // to stop searching
+        }
+      }
+      geometry_msgs::msg::Point n_point;
+      n_point.x = supervoxel_clusters_.at(key)->centroid_.x;
+      n_point.y = supervoxel_clusters_.at(key)->centroid_.y;
+      n_point.z = supervoxel_clusters_.at(key)->centroid_.z;
+      line_strip.points.push_back(n_point);
+      line_strip.colors.push_back(yellow_color);
+      index++;
     }
 
+    supervoxel_marker_array.markers.push_back(line_strip);
+
     RCLCPP_INFO(
-      logger_, "Found path with astar,");
+      logger_, "Found path with astar %d poses,", index);
   }
 
+  super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array);
 }
