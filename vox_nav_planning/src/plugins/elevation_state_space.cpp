@@ -475,14 +475,10 @@ void SuperVoxelValidStateSampler::updateSearchArea(
   RCLCPP_INFO(logger_, "Graph has %d edges", boost::num_edges(g));
 
   vertex st = boost::vertex(0, g);
-  vertex gl = boost::vertex(80, g);
-
-  std::cout << st << std::endl;
-  std::cout << gl << std::endl;
+  vertex gl = boost::vertex(boost::num_vertices(g) - 1, g);
 
   std::vector<vertex> p(boost::num_vertices(g));
   std::vector<cost> d(boost::num_vertices(g));
-
 
   try {
     // call astar named parameter interface
