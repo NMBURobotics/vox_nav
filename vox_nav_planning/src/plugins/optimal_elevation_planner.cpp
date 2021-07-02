@@ -203,16 +203,17 @@ namespace vox_nav_planning
     //Add a vertex for each label, store ids in map
     std::map<std::uint32_t, vertex_descriptor> supervoxel_label_id_map;
     for (auto it = supervoxel_adjacency.cbegin();
-      it != supervoxel_adjacency.cend(); ++it)
+      it != supervoxel_adjacency.cend(); )
     {
       std::uint32_t supervoxel_label = it->first;
       vertex_descriptor supervoxel_id = boost::add_vertex(g);
       g[supervoxel_id] = (supervoxel_label);
       supervoxel_label_id_map.insert(std::make_pair(supervoxel_label, supervoxel_id));
+      it = supervoxel_adjacency.upper_bound(supervoxel_label);
     }
 
     for (auto it = supervoxel_adjacency.cbegin();
-      it != supervoxel_adjacency.cend(); ++it)
+      it != supervoxel_adjacency.cend(); )
     {
       std::uint32_t supervoxel_label = it->first;
       auto supervoxel = supervoxel_clusters_.at(supervoxel_label);
@@ -229,12 +230,13 @@ namespace vox_nav_planning
         if (edge_added) {
           pcl::PointXYZRGBA centroid_data = supervoxel->centroid_;
           pcl::PointXYZRGBA neighbour_centroid_data = neighbour_supervoxel->centroid_;
-          float length = vox_nav_utilities::PCLPointEuclideanDist<>(
+          float length = vox_nav_utilities::PCLPointEuclideanDist<pcl::PointXYZRGBA>(
             centroid_data,
             neighbour_centroid_data);
           weightmap[e] = length;
         }
       }
+      it = supervoxel_adjacency.upper_bound(supervoxel_label);
     }
 
     RCLCPP_INFO(logger_, "Running astar,");
