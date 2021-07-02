@@ -114,7 +114,7 @@ namespace vox_nav_planning
   {
     if (!is_map_ready_) {
       RCLCPP_WARN(
-        logger_, "A valid Octomap has not been receievd yet, Try later again."
+        logger_, "A valid Octomap has not been recieved yet, Try later again."
       );
       return std::vector<geometry_msgs::msg::PoseStamped>();
     }
@@ -134,7 +134,9 @@ namespace vox_nav_planning
       elevated_surfel_cloud_, search_point_surfel,
       radius);
 
-    RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels->points.size());
+    RCLCPP_INFO(
+      logger_, "Updated search area surfels has, %d surfels",
+      search_area_surfels->points.size());
 
     auto search_area_point_cloud =
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(new pcl::PointCloud<pcl::PointXYZRGBA>);
@@ -182,12 +184,18 @@ namespace vox_nav_planning
       supervoxel_clusters_, supervoxel_adjacency, header, supervoxel_marker_array);
     super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array);
 
+    struct VertexProperty
+    {
+      std::uint32_t label;
+      std::string name;
+    };
+
     // specify some types
     typedef boost::adjacency_list<
-        boost::setS,           // edge
-        boost::vecS,           // vertex
-        boost::undirectedS,    // type
-        std::uint32_t,         // vertex property
+        boost::setS,            // edge
+        boost::vecS,            // vertex
+        boost::undirectedS,     // type
+        VertexProperty,         // vertex property
         boost::property<boost::edge_weight_t, cost>> // edge property
       GraphT;
 
@@ -207,7 +215,7 @@ namespace vox_nav_planning
     {
       std::uint32_t supervoxel_label = it->first;
       vertex_descriptor supervoxel_id = boost::add_vertex(g);
-      g[supervoxel_id] = (supervoxel_label);
+      g[supervoxel_id].label = (supervoxel_label);
       supervoxel_label_id_map.insert(std::make_pair(supervoxel_label, supervoxel_id));
       it = supervoxel_adjacency.upper_bound(supervoxel_label);
     }
@@ -313,7 +321,7 @@ namespace vox_nav_planning
     }
 
     RCLCPP_INFO(
-      logger_, "Found path with astar %d poses,", plan_poses.size());
+      logger_, "Found path with astar %d which includes poses,", plan_poses.size());
 
     //simple_setup_->clear();
     return plan_poses;
