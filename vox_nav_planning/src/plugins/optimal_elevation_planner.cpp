@@ -207,7 +207,6 @@ namespace vox_nav_planning
 
     GraphT g;
     WeightMap weightmap = get(boost::edge_weight, g);
-
     //Add a vertex for each label, store ids in map
     std::map<std::uint32_t, vertex_descriptor> supervoxel_label_id_map;
     for (auto it = supervoxel_adjacency.cbegin();
@@ -251,10 +250,34 @@ namespace vox_nav_planning
     RCLCPP_INFO(logger_, "Graph has %d vertices", boost::num_vertices(g));
     RCLCPP_INFO(logger_, "Graph has %d edges", boost::num_edges(g));
 
-    // TO BE CHANGED
-    vertex_descriptor st = boost::vertex(0, g);
-    vertex_descriptor gl = boost::vertex(boost::num_vertices(g) - 1, g);
+    pcl::PointXYZRGBA start_as_pcl_point, goal_as_pcl_point;
+    start_as_pcl_point.x = start.pose.position.x;
+    start_as_pcl_point.y = start.pose.position.y;
+    start_as_pcl_point.z = start.pose.position.z;
+    goal_as_pcl_point.x = goal.pose.position.x;
+    goal_as_pcl_point.y = goal.pose.position.y;
+    goal_as_pcl_point.z = goal.pose.position.z;
 
+    vertex_descriptor st;
+    vertex_descriptor gl;
+
+    for (auto itr = supervoxel_label_id_map.begin(); itr != supervoxel_label_id_map.end(); ++itr) {
+      double start_dist, goal_dist = INFINITY;
+      auto sv_centroid = supervoxel_clusters_.at(itr->first)->centroid_;
+
+      if (vox_nav_utilities::PCLPointEuclideanDist<>(
+          start_as_pcl_point, sv_centroid) < start_dist)
+      {
+        start_dist = vox_nav_utilities::PCLPointEuclideanDist<>(start_as_pcl_point, sv_centroid);
+        st = itr->second;
+      }
+
+      if (vox_nav_utilities::PCLPointEuclideanDist<>(goal_as_pcl_point, sv_centroid) < goal_dist) {
+        goal_dist = vox_nav_utilities::PCLPointEuclideanDist<>(goal_as_pcl_point, sv_centroid);
+        gl = itr->second;
+      }
+    }
+    // TO BE CHANGED
     std::vector<vertex_descriptor> p(boost::num_vertices(g));
     std::vector<cost> d(boost::num_vertices(g));
     std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
