@@ -55,40 +55,45 @@ OCTOMAP
 LIBFCL
 pcl_ros)
 
-set(vox_nav_planner_server_exc_name vox_nav_planner_server)
-add_executable(${vox_nav_planner_server_exc_name} src/planner_server.cpp)
-ament_target_dependencies(${vox_nav_planner_server_exc_name} ${dependencies})
-target_link_libraries(${vox_nav_planner_server_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
+# PLANNER SERVER ##############################################
+add_executable(planner_server src/planner_server.cpp)
+ament_target_dependencies(planner_server ${dependencies})
+target_link_libraries(planner_server ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
-set(vox_nav_elevation_planner_exc_name vox_nav_composite_planner)
-add_library(${vox_nav_elevation_planner_exc_name} SHARED src/plugins/elevation_planner.cpp
-                                                         src/plugins/elevation_state_space.cpp)
-ament_target_dependencies(${vox_nav_elevation_planner_exc_name} ${dependencies})
-target_link_libraries(${vox_nav_elevation_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
+# SE2 PLANNE R##################################################
+set(se2_planner vox_nav_se2_planner)
+add_library(se2_planner SHARED src/plugins/se2_planner.cpp)
+ament_target_dependencies(se2_planner ${dependencies})
+target_link_libraries(se2_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
-set(vox_nav_se2_planner_exc_name vox_nav_se2_planner)
-add_library(${vox_nav_se2_planner_exc_name} SHARED src/plugins/se2_planner.cpp)
-ament_target_dependencies(${vox_nav_se2_planner_exc_name} ${dependencies})
-target_link_libraries(${vox_nav_se2_planner_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
+# ELEVATION PLANNER ############################################
+add_library(elevation_planner SHARED src/plugins/elevation_planner.cpp
+                                      src/plugins/elevation_state_space.cpp)
+ament_target_dependencies(elevation_planner ${dependencies})
+target_link_libraries(elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
-install(TARGETS ${vox_nav_elevation_planner_exc_name} 
-                ${vox_nav_se2_planner_exc_name}
+# OPTIMAL ELEVATION PLANNER ####################################
+add_library(optimal_elevation_planner SHARED src/plugins/optimal_elevation_planner.cpp
+                                             src/plugins/elevation_state_space.cpp)
+ament_target_dependencies(optimal_elevation_planner ${dependencies})
+target_link_libraries(optimal_elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
+
+install(TARGETS optimal_elevation_planner 
+                elevation_planner
+                se2_planner
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
+  RUNTIME DESTINATION bin)
 
-install(TARGETS ${vox_nav_planner_server_exc_name}
+install(TARGETS planner_server
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
-  DESTINATION include/
-)
+        DESTINATION include/)
 
 install(
   DIRECTORY  
-  DESTINATION share/${PROJECT_NAME}
-)
+  DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
@@ -96,8 +101,8 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_include_directories(include)
-ament_export_libraries(${vox_nav_elevation_planner_exc_name}
-                       ${vox_nav_se2_planner_exc_name})
+ament_export_libraries(optimal_elevation_planner
+                       elevation_planner
+                       se2_planner)
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
-
 ament_package()

@@ -1,21 +1,16 @@
 <class_libraries>
-  <library path="vox_nav_se3_planner">
-    <class type="vox_nav_planning::SE3Planner" base_class_type="vox_nav_planning::PlannerCore">
+  <library path="optimal_elevation_planner">
+    <class type="vox_nav_planning::OptimalElevationPlanner" base_class_type="vox_nav_planning::PlannerCore">
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
-  <library path="vox_nav_composite_planner">
+  <library path="elevation_planner">
     <class type="vox_nav_planning::ElevationPlanner" base_class_type="vox_nav_planning::PlannerCore">
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
-  <library path="vox_nav_se2_planner">
+  <library path="se2_planner">
     <class type="vox_nav_planning::SE2Planner" base_class_type="vox_nav_planning::PlannerCore">
-      <description>TODO(fetullah.atas)</description>
-    </class>
-  </library>
-  <library path="vox_nav_dubins_3d_planner">
-    <class type="vox_nav_planning::Dubins3DPlanner" base_class_type="vox_nav_planning::PlannerCore">
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
