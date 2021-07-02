@@ -36,6 +36,8 @@ namespace vox_nav_planning
     const std::string & plugin_name)
   {
     is_map_ready_ = false;
+    se2_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
+    z_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
     elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
       new pcl::PointCloud<pcl::PointSurfel>);
 
@@ -64,8 +66,6 @@ namespace vox_nav_planning
     z_bounds_->setHigh(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.maxz").as_double());
 
-    state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
-
     typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
     CollisionGeometryPtr_t robot_body_box(new fcl::Box(
         parent->get_parameter("robot_body_dimens.x").as_double(),
@@ -78,7 +78,6 @@ namespace vox_nav_planning
     elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
     original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
 
-    // service hooks for robot localization fromll service
     get_maps_and_surfels_client_node_ = std::make_shared
       <rclcpp::Node>("get_maps_and_surfels_client_node");
 
@@ -86,6 +85,10 @@ namespace vox_nav_planning
       get_maps_and_surfels_client_node_->create_client
       <vox_nav_msgs::srv::GetMapsAndSurfels>(
       "get_maps_and_surfels");
+
+    super_voxel_adjacency_marker_pub_ =
+      parent->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "supervoxel_adjacency_markers", rclcpp::SystemDefaultsQoS());
 
     RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
 
@@ -120,63 +123,176 @@ namespace vox_nav_planning
     vox_nav_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan, start_yaw);
     vox_nav_utilities::getRPYfromMsgQuaternion(goal.pose.orientation, nan, nan, goal_yaw);
 
-    ompl::base::ScopedState<ompl::base::ElevationStateSpace>
-    se3_start(state_space_),
-    se3_goal(state_space_);
+    RCLCPP_INFO(logger_, "Updating search area");
 
-    vox_nav_utilities::determineValidNearestGoalStart(
-      nearest_elevated_surfel_to_start_,
-      nearest_elevated_surfel_to_goal_,
-      start,
-      goal,
-      elevated_surfel_cloud_);
+    double radius = vox_nav_utilities::getEuclidianDistBetweenPoses(goal, start) / 2.0;
+    auto search_point_pose = vox_nav_utilities::getLinearInterpolatedPose(goal, start);
+    auto search_point_surfel = vox_nav_utilities::poseMsg2PCLSurfel(search_point_pose);
 
-    se3_start->setSE2(
-      nearest_elevated_surfel_to_start_.pose.position.x,
-      nearest_elevated_surfel_to_start_.pose.position.y, start_yaw);
-    se3_start->setZ(nearest_elevated_surfel_to_start_.pose.position.z);
+    auto search_area_surfels =
+      vox_nav_utilities::get_subcloud_within_radius<pcl::PointSurfel>(
+      elevated_surfel_cloud_, search_point_surfel,
+      radius);
 
-    se3_goal->setSE2(
-      nearest_elevated_surfel_to_goal_.pose.position.x,
-      nearest_elevated_surfel_to_goal_.pose.position.y, goal_yaw);
-    se3_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
+    RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels->points.size());
 
-    simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
+    auto search_area_point_cloud =
+      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(new pcl::PointCloud<pcl::PointXYZRGBA>);
 
-    auto si = simple_setup_->getSpaceInformation();
-    // create a planner for the defined space
-    ompl::base::PlannerPtr planner;
-    vox_nav_utilities::initializeSelectedPlanner(
-      planner,
-      planner_name_,
-      si,
-      logger_);
+    for (auto && i : search_area_surfels->points) {
+      pcl::PointXYZRGBA point;
+      point.x = i.x;
+      point.y = i.y;
+      point.z = i.z;
+      search_area_point_cloud->points.push_back(point);
+    }
 
-    si->setValidStateSamplerAllocator(
-      std::bind(
-        &OptimalElevationPlanner::
-        allocValidStateSampler, this, std::placeholders::_1));
+    bool disable_transform = false;
+    float voxel_resolution = 0.8;
+    float seed_resolution = 1.0f;
+    float color_importance = 0.0f;
+    float spatial_importance = 1.0f;
+    float normal_importance = 1.0f;
 
-    simple_setup_->setPlanner(planner);
-    simple_setup_->setup();
-    simple_setup_->print(std::cout);
+    auto super = vox_nav_utilities::super_voxelize_cloud<pcl::PointXYZRGBA>(
+      search_area_point_cloud,
+      disable_transform,
+      voxel_resolution,
+      seed_resolution,
+      color_importance,
+      spatial_importance,
+      normal_importance);
 
-    // attempt to solve the problem within one second of planning time
-    ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
+    RCLCPP_INFO(logger_, "Extracting supervoxels!");
+    super.extract(supervoxel_clusters_);
+    RCLCPP_INFO(logger_, "Found %d supervoxels", supervoxel_clusters_.size());
+    RCLCPP_INFO(logger_, "Getting supervoxel adjacency");
+
+    std::multimap<std::uint32_t, std::uint32_t> supervoxel_adjacency;
+
+    super.getSupervoxelAdjacency(supervoxel_adjacency);
+    auto voxel_centroid_cloud = super.getVoxelCentroidCloud();
+    auto labeled_voxel_cloud = super.getLabeledVoxelCloud();
+    std_msgs::msg::Header header;
+    header.frame_id = "map";
+    header.stamp = rclcpp::Clock().now();
+
+    visualization_msgs::msg::MarkerArray supervoxel_marker_array;
+    vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
+      supervoxel_clusters_, supervoxel_adjacency, header, supervoxel_marker_array);
+    super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array);
+
+    // specify some types
+    typedef boost::adjacency_list<
+        boost::setS,           // edge
+        boost::vecS,           // vertex
+        boost::undirectedS,    // type
+        std::uint32_t,         // vertex property
+        boost::property<boost::edge_weight_t, cost>> // edge property
+      GraphT;
+
+    typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
+    typedef GraphT::vertex_descriptor vertex_descriptor;
+    typedef GraphT::edge_descriptor edge_descriptor;
+    typedef GraphT::vertex_iterator vertex_iterator;
+    typedef std::pair<int, int> edge;
+
+    GraphT g;
+    WeightMap weightmap = get(boost::edge_weight, g);
+
+    //Add a vertex for each label, store ids in map
+    std::map<std::uint32_t, vertex_descriptor> supervoxel_label_id_map;
+    for (auto it = supervoxel_adjacency.cbegin();
+      it != supervoxel_adjacency.cend(); ++it)
+    {
+      std::uint32_t supervoxel_label = it->first;
+      vertex_descriptor supervoxel_id = boost::add_vertex(g);
+      g[supervoxel_id] = (supervoxel_label);
+      supervoxel_label_id_map.insert(std::make_pair(supervoxel_label, supervoxel_id));
+    }
+
+    for (auto it = supervoxel_adjacency.cbegin();
+      it != supervoxel_adjacency.cend(); ++it)
+    {
+      std::uint32_t supervoxel_label = it->first;
+      auto supervoxel = supervoxel_clusters_.at(supervoxel_label);
+      for (auto adjacent_it = supervoxel_adjacency.equal_range(supervoxel_label).first;
+        adjacent_it != supervoxel_adjacency.equal_range(supervoxel_label).second; ++adjacent_it)
+      {
+        std::uint32_t neighbour_supervoxel_label = adjacent_it->second;
+        auto neighbour_supervoxel = supervoxel_clusters_.at(neighbour_supervoxel_label);
+        edge_descriptor e; bool edge_added;
+        vertex_descriptor u = (supervoxel_label_id_map.find(supervoxel_label))->second;
+        vertex_descriptor v = (supervoxel_label_id_map.find(neighbour_supervoxel_label))->second;
+        boost::tie(e, edge_added) = boost::add_edge(u, v, g);
+        //Calc distance between centers, set as edge weight
+        if (edge_added) {
+          pcl::PointXYZRGBA centroid_data = supervoxel->centroid_;
+          pcl::PointXYZRGBA neighbour_centroid_data = neighbour_supervoxel->centroid_;
+          float length = vox_nav_utilities::PCLPointEuclideanDist<>(
+            centroid_data,
+            neighbour_centroid_data);
+          weightmap[e] = length;
+        }
+      }
+    }
+
+    RCLCPP_INFO(logger_, "Running astar,");
+    RCLCPP_INFO(logger_, "Graph has %d vertices", boost::num_vertices(g));
+    RCLCPP_INFO(logger_, "Graph has %d edges", boost::num_edges(g));
+
+    // TO BE CHANGED
+    vertex_descriptor st = boost::vertex(0, g);
+    vertex_descriptor gl = boost::vertex(boost::num_vertices(g) - 1, g);
+
+    std::vector<vertex_descriptor> p(boost::num_vertices(g));
+    std::vector<cost> d(boost::num_vertices(g));
     std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
+    ompl::geometric::PathGeometricPtr solution_path =
+      std::make_shared<ompl::geometric::PathGeometric>(simple_setup_->getSpaceInformation());
+    ompl::geometric::PathSimplifierPtr path_simlifier =
+      std::make_shared<ompl::geometric::PathSimplifier>(simple_setup_->getSpaceInformation());
 
-    if (solved) {
-      ompl::geometric::PathGeometric solution_path = simple_setup_->getSolutionPath();
-      ompl::geometric::PathSimplifier * path_simlifier = new ompl::geometric::PathSimplifier(si);
-      solution_path.interpolate(interpolation_parameter_);
-      path_simlifier->smoothBSpline(solution_path, 1, 0.1);
+    try {
+      // call astar named parameter interface
+      auto heuristic = distance_heuristic<GraphT, cost,
+          pcl::PointCloud<pcl::PointXYZRGBA>::Ptr>(voxel_centroid_cloud, gl);
+      auto visitor = astar_goal_visitor<vertex_descriptor>(gl);
+      boost::astar_search_tree(
+        g, st,
+        heuristic,
+        boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
+      RCLCPP_WARN(logger_, "AStar failed to find a valid path!");
+    } catch (found_goal fg) {    // found a path to the goal
+      std::list<vertex_descriptor> shortest_path;
+      for (vertex_descriptor v = gl;; v = p[v]) {
+        shortest_path.push_front(v);
+        if (p[v] == v) {break;}
+      }
+      std::list<vertex_descriptor>::iterator spi = shortest_path.begin();
+      for (++spi; spi != shortest_path.end(); ++spi) {
+        std::uint32_t key;
+        for (auto & i : supervoxel_label_id_map) {
+          if (i.second == *spi) {
+            key = i.first;
+            break;
+          }
+        }
+        auto state_position = supervoxel_clusters_.at(key)->centroid_;
+        auto state = state_space_->allocState();
+        auto * compound_state = state->as<ompl::base::ElevationStateSpace::StateType>();
+        compound_state->setSE2(state_position.x, state_position.y, 0);
+        compound_state->setZ(state_position.z);
+        solution_path->append(state);
+      }
 
-      for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount(); path_idx++) {
+      solution_path->interpolate(interpolation_parameter_);
+      path_simlifier->smoothBSpline(*solution_path, 1, 0.1);
+
+      for (std::size_t path_idx = 0; path_idx < solution_path->getStateCount(); path_idx++) {
         const auto * cstate =
-          solution_path.getState(path_idx)->as<ompl::base::ElevationStateSpace::StateType>();
-        // cast the abstract state type to the type we expect
+          solution_path->getState(path_idx)->as<ompl::base::ElevationStateSpace::StateType>();
         const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        // extract the second component of the state and cast it to what we expect
         const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
         tf2::Quaternion this_pose_quat;
         this_pose_quat.setRPY(0, 0, se2->getYaw());
@@ -192,13 +308,10 @@ namespace vox_nav_planning
         pose.pose.orientation.w = this_pose_quat.getW();
         plan_poses.push_back(pose);
       }
-
-      RCLCPP_INFO(
-        logger_, "Found A plan with %i poses", plan_poses.size());
-    } else {
-      RCLCPP_WARN(
-        logger_, "No solution for requested path planning !");
     }
+
+    RCLCPP_INFO(
+      logger_, "Found path with astar %d poses,", plan_poses.size());
 
     //simple_setup_->clear();
     return plan_poses;
@@ -321,17 +434,6 @@ namespace vox_nav_planning
         elevated_surfel_octomap_octree_->size());
 
     }
-  }
-
-  ompl::base::ValidStateSamplerPtr OptimalElevationPlanner::allocValidStateSampler(
-    const ompl::base::SpaceInformation * si)
-  {
-    auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
-      simple_setup_->getSpaceInformation(),
-      nearest_elevated_surfel_to_start_,
-      nearest_elevated_surfel_to_goal_,
-      elevated_surfel_poses_msg_);
-    return valid_sampler;
   }
 
   std::vector<geometry_msgs::msg::PoseStamped> OptimalElevationPlanner::getOverlayedStartandGoal()

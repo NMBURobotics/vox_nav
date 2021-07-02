@@ -250,6 +250,18 @@ namespace vox_nav_utilities
     return subcloud_within_radius;
   }
 
+  template<typename P>
+  double PCLPointEuclideanDist(
+    const P & a,
+    const P & b)
+  {
+    double distance = std::sqrt(
+      std::pow(a.x - b.x, 2) +
+      std::pow(a.y - b.y, 2) +
+      std::pow(a.z - b.z, 2));
+    return distance;
+  }
+
 }  // namespace vox_nav_utilities
 
 #endif  // VOX_NAV_UTILITIES__PCL_HELPERS_HPP_

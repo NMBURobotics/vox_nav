@@ -73,7 +73,6 @@ namespace vox_nav_planning
       0, parent->get_parameter(plugin_name + ".state_space_boundries.maxz").as_double());
 
     if (selected_se2_space_name_ == "SE2") {
-      state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
       se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::SE2;
     } else if (selected_se2_space_name_ == "DUBINS") {
       se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::DUBINS;
@@ -361,7 +360,7 @@ namespace vox_nav_planning
   ompl::base::ValidStateSamplerPtr ElevationPlanner::allocValidStateSampler(
     const ompl::base::SpaceInformation * si)
   {
-    auto valid_sampler = std::make_shared<ompl::base::SuperVoxelValidStateSampler>(
+    auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
       simple_setup_->getSpaceInformation(),
       nearest_elevated_surfel_to_start_,
       nearest_elevated_surfel_to_goal_,

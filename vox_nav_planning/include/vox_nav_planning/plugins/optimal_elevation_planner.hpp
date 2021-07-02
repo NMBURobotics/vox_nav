@@ -18,9 +18,15 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <boost/graph/astar_search.hpp>
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/random.hpp>
+#include <boost/random.hpp>
+#include <boost/graph/graphviz.hpp>
 
 #include "vox_nav_planning/planner_core.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 #include "vox_nav_planning/plugins/elevation_state_space.hpp"
 
 
@@ -121,6 +127,52 @@ namespace vox_nav_planning
     std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
     std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
 
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+      super_voxel_adjacency_marker_pub_;
+    std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> supervoxel_clusters_;
+  };
+
+  typedef float cost;
+  // euclidean distance heuristic
+  template<class Graph, class CostType, class LocMap>
+  class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
+  {
+  public:
+    typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
+    distance_heuristic(LocMap l, Vertex goal)
+    : m_location(l), m_goal(goal) {}
+    CostType operator()(Vertex u)
+    {
+      CostType dx = m_location->points[m_goal].x - m_location->points[u].x;
+      CostType dy = m_location->points[m_goal].y - m_location->points[u].y;
+      CostType dz = m_location->points[m_goal].z - m_location->points[u].z;
+      return ::sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+  private:
+    LocMap m_location;
+    Vertex m_goal;
+  };
+
+
+  struct found_goal {};   // exception for termination
+  // visitor that terminates when we find the goal
+  template<class Vertex>
+  class astar_goal_visitor : public boost::default_astar_visitor
+  {
+  public:
+    astar_goal_visitor(Vertex goal)
+    : m_goal(goal) {}
+    template<class Graph>
+    void examine_vertex(Vertex u, Graph & g)
+    {
+      if (u == m_goal) {
+        throw found_goal();
+      }
+    }
+
+  private:
+    Vertex m_goal;
   };
 }  // namespace vox_nav_planning
 
