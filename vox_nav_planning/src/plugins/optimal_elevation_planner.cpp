@@ -277,7 +277,7 @@ namespace vox_nav_planning
         heuristic,
         boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
       RCLCPP_WARN(logger_, "AStar failed to find a valid path!");
-    } catch (found_goal fg) {    // found a path to the goal
+    } catch (FoundGoal found_goal) {    // found a path to the goal
       std::list<vertex_descriptor> shortest_path;
       for (vertex_descriptor v = goal_vertex;; v = p[v]) {
         shortest_path.push_front(v);

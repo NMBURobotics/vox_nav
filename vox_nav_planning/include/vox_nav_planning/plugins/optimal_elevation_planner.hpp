@@ -180,8 +180,8 @@ namespace vox_nav_planning
     Graph g_;
   };
 
-  struct found_goal {};   // exception for termination
-  // visitor that terminates when we find the goal
+  // exception for termination
+  struct FoundGoal {};
   template<class Vertex>
   class astar_goal_visitor : public boost::default_astar_visitor
   {
@@ -192,7 +192,7 @@ namespace vox_nav_planning
     void examine_vertex(Vertex u, Graph & g)
     {
       if (u == goal_vertex_) {
-        throw found_goal();
+        throw FoundGoal();
       }
     }
 
