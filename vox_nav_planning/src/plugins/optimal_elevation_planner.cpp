@@ -112,6 +112,9 @@ namespace vox_nav_planning
     const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal)
   {
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+
     if (!is_map_ready_) {
       RCLCPP_WARN(
         logger_, "A valid Octomap has not been recieved yet, Try later again."
@@ -181,27 +184,6 @@ namespace vox_nav_planning
     vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
       supervoxel_clusters_, supervoxel_adjacency, header, supervoxel_marker_array);
     super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array);
-
-    struct VertexProperty
-    {
-      std::uint32_t label;
-      std::string name;
-    };
-
-    // specify some types
-    typedef boost::adjacency_list<
-        boost::setS,            // edge
-        boost::vecS,            // vertex
-        boost::undirectedS,     // type
-        VertexProperty,         // vertex property
-        boost::property<boost::edge_weight_t, cost>> // edge property
-      GraphT;
-
-    typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
-    typedef GraphT::vertex_descriptor vertex_descriptor;
-    typedef GraphT::edge_descriptor edge_descriptor;
-    typedef GraphT::vertex_iterator vertex_iterator;
-    typedef std::pair<int, int> edge;
 
     GraphT g;
     WeightMap weightmap = get(boost::edge_weight, g);
@@ -319,7 +301,7 @@ namespace vox_nav_planning
       }
 
       solution_path->interpolate(interpolation_parameter_);
-      path_simlifier->smoothBSpline(*solution_path, 1, 0.1);
+      path_simlifier->smoothBSpline(*solution_path, 2, 0.1);
 
       for (std::size_t path_idx = 0; path_idx < solution_path->getStateCount(); path_idx++) {
         const auto * cstate =
@@ -345,7 +327,10 @@ namespace vox_nav_planning
     RCLCPP_INFO(
       logger_, "Found path with astar %d which includes poses,", plan_poses.size());
 
-    //simple_setup_->clear();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> ms_double = t2 - t1;
+    std::cout << "Whole A star path finding took " << ms_double.count() << " ms" << std::endl;
+
     return plan_poses;
   }
 

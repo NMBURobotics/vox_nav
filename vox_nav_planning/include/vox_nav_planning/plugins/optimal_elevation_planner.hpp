@@ -108,6 +108,28 @@ namespace vox_nav_planning
     void setupMap() override;
 
   protected:
+    typedef float cost;
+
+    struct VertexProperty
+    {
+      std::uint32_t label;
+      std::string name;
+    };
+    // specify some types
+    typedef boost::adjacency_list<
+        boost::setS,            // edge
+        boost::vecS,            // vertex
+        boost::undirectedS,     // type
+        VertexProperty,         // vertex property
+        boost::property<boost::edge_weight_t, cost>> // edge property
+      GraphT;
+
+    typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
+    typedef GraphT::vertex_descriptor vertex_descriptor;
+    typedef GraphT::edge_descriptor edge_descriptor;
+    typedef GraphT::vertex_iterator vertex_iterator;
+    typedef std::pair<int, int> edge;
+
     rclcpp::Logger logger_{rclcpp::get_logger("optimal_elevation_planner")};
     // Surfels centers are elevated by node_elevation_distance_, and are stored in this
     // octomap, this maps is used by planner to sample states that are
@@ -132,7 +154,6 @@ namespace vox_nav_planning
     std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> supervoxel_clusters_;
   };
 
-  typedef float cost;
   // euclidean distance heuristic
   template<class Graph, class CostType, class SuperVoxelClustersType>
   class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
