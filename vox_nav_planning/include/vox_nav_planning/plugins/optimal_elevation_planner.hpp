@@ -68,7 +68,6 @@ namespace vox_nav_planning
 
     /**
     * @brief
-    *
     * @param state
     * @return true
     * @return false

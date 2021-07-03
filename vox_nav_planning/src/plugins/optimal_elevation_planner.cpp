@@ -178,6 +178,7 @@ namespace vox_nav_planning
     header.frame_id = "map";
     header.stamp = rclcpp::Clock().now();
     visualization_msgs::msg::MarkerArray supervoxel_marker_array;
+    super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array); // publish empty to reset previous
     vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
       supervoxel_clusters_, supervoxel_adjacency, header, supervoxel_marker_array);
     super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array);
