@@ -223,7 +223,11 @@ namespace vox_nav_planning
           float length = vox_nav_utilities::PCLPointEuclideanDist<pcl::PointXYZRGBA>(
             centroid_data,
             neighbour_centroid_data);
-          weightmap[e] = length;
+
+          // Lets also add elevation as weight
+          float absolute_elevation = std::abs(centroid_data.z - neighbour_centroid_data.z);
+
+          weightmap[e] = length + absolute_elevation;
         }
       }
       it = supervoxel_adjacency.upper_bound(supervoxel_label);

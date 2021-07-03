@@ -57,8 +57,9 @@
 
 /**
  * @brief namespace for vox_nav map server. The map server reads map from disk.
- *        The map needs to octomap native format .bt
- *        When you created the map the origin of the map must have been saved.
+ *        The map needs to cd native format .pcd
+ *        When you created the map the datum of the map must have been saved.
+ *        Datum is GPS coordinates and orination info from absolute headed IMU.
  *        Using this origin this map is georefenced and published as octomap as well as pointcloud that represents this map
  *
  */
@@ -66,14 +67,14 @@ namespace vox_nav_map_server
 {
 
 /**
- * @brief Manages a PCD MAP, the PCD map is converted to a cost regressed Octomap.
+ * @brief Hey Karen!, If you would like to see a manager this is your chance!. This
+ * Manages a PCD MAP, the PCD map is converted to a cost regressed Octomap and a service interface is provided to access map.
  *
  *
  */
   class MapManager : public rclcpp::Node
   {
   public:
-
     struct PCDPreProcessingParams
     {
       double pcd_map_downsample_voxel_size;
