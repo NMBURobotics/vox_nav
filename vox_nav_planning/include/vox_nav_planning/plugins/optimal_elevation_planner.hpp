@@ -134,26 +134,30 @@ namespace vox_nav_planning
 
   typedef float cost;
   // euclidean distance heuristic
-  template<class Graph, class CostType, class LocMap>
+  template<class Graph, class CostType, class SuperVoxelClustersType>
   class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
   {
   public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-    distance_heuristic(LocMap l, Vertex goal)
-    : m_location(l), m_goal(goal) {}
+    distance_heuristic(SuperVoxelClustersType sc, Vertex goal_vertex, Graph g)
+    : supervoxel_clusters_(sc), goal_vertex_(goal_vertex), g_(g) {}
     CostType operator()(Vertex u)
     {
-      CostType dx = m_location->points[m_goal].x - m_location->points[u].x;
-      CostType dy = m_location->points[m_goal].y - m_location->points[u].y;
-      CostType dz = m_location->points[m_goal].z - m_location->points[u].z;
+      auto u_vertex_label = g_[u].label;
+      auto goal_vertex_label = g_[u].label;
+      auto u_supervoxel_centroid = supervoxel_clusters_.at(u_vertex_label)->centroid_;
+      auto goal_supervoxel_centroid = supervoxel_clusters_.at(goal_vertex_label)->centroid_;
+      CostType dx = u_supervoxel_centroid.x - goal_supervoxel_centroid.x;
+      CostType dy = u_supervoxel_centroid.y - goal_supervoxel_centroid.y;
+      CostType dz = u_supervoxel_centroid.z - goal_supervoxel_centroid.z;
       return ::sqrt(dx * dx + dy * dy + dz * dz);
     }
 
   private:
-    LocMap m_location;
-    Vertex m_goal;
+    SuperVoxelClustersType supervoxel_clusters_;
+    Vertex goal_vertex_;
+    Graph g_;
   };
-
 
   struct found_goal {};   // exception for termination
   // visitor that terminates when we find the goal

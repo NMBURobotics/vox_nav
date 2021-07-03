@@ -173,8 +173,6 @@ namespace vox_nav_planning
     std::multimap<std::uint32_t, std::uint32_t> supervoxel_adjacency;
 
     super.getSupervoxelAdjacency(supervoxel_adjacency);
-    auto voxel_centroid_cloud = super.getVoxelCentroidCloud();
-    auto labeled_voxel_cloud = super.getLabeledVoxelCloud();
     std_msgs::msg::Header header;
     header.frame_id = "map";
     header.stamp = rclcpp::Clock().now();
@@ -258,28 +256,28 @@ namespace vox_nav_planning
     goal_as_pcl_point.y = goal.pose.position.y;
     goal_as_pcl_point.z = goal.pose.position.z;
 
-    vertex_descriptor st;
-    vertex_descriptor gl;
-
+    // Match requested start and goal poses with valid vertexes on Graph
+    vertex_descriptor start_vertex, goal_vertex;
+    double start_dist = INFINITY;
+    double goal_dist = INFINITY;
     for (auto itr = supervoxel_label_id_map.begin(); itr != supervoxel_label_id_map.end(); ++itr) {
-      double start_dist, goal_dist = INFINITY;
       auto sv_centroid = supervoxel_clusters_.at(itr->first)->centroid_;
-
       if (vox_nav_utilities::PCLPointEuclideanDist<>(
-          start_as_pcl_point, sv_centroid) < start_dist)
+          start_as_pcl_point,
+          sv_centroid) < start_dist)
       {
         start_dist = vox_nav_utilities::PCLPointEuclideanDist<>(start_as_pcl_point, sv_centroid);
-        st = itr->second;
+        start_vertex = itr->second;
       }
-
       if (vox_nav_utilities::PCLPointEuclideanDist<>(goal_as_pcl_point, sv_centroid) < goal_dist) {
         goal_dist = vox_nav_utilities::PCLPointEuclideanDist<>(goal_as_pcl_point, sv_centroid);
-        gl = itr->second;
+        goal_vertex = itr->second;
       }
     }
-    // TO BE CHANGED
+
     std::vector<vertex_descriptor> p(boost::num_vertices(g));
     std::vector<cost> d(boost::num_vertices(g));
+
     std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
     ompl::geometric::PathGeometricPtr solution_path =
       std::make_shared<ompl::geometric::PathGeometric>(simple_setup_->getSpaceInformation());
@@ -289,16 +287,17 @@ namespace vox_nav_planning
     try {
       // call astar named parameter interface
       auto heuristic = distance_heuristic<GraphT, cost,
-          pcl::PointCloud<pcl::PointXYZRGBA>::Ptr>(voxel_centroid_cloud, gl);
-      auto visitor = astar_goal_visitor<vertex_descriptor>(gl);
+          std::map<uint32_t, pcl::shared_ptr<pcl::Supervoxel<pcl::PointXYZRGBA>>>>(
+        supervoxel_clusters_, goal_vertex, g);
+      auto visitor = astar_goal_visitor<vertex_descriptor>(goal_vertex);
       boost::astar_search_tree(
-        g, st,
+        g, start_vertex,
         heuristic,
         boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
       RCLCPP_WARN(logger_, "AStar failed to find a valid path!");
     } catch (found_goal fg) {    // found a path to the goal
       std::list<vertex_descriptor> shortest_path;
-      for (vertex_descriptor v = gl;; v = p[v]) {
+      for (vertex_descriptor v = goal_vertex;; v = p[v]) {
         shortest_path.push_front(v);
         if (p[v] == v) {break;}
       }
