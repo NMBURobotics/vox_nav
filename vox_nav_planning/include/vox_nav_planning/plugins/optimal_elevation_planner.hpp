@@ -23,12 +23,10 @@
 #include <boost/graph/random.hpp>
 #include <boost/random.hpp>
 #include <boost/graph/graphviz.hpp>
-
 #include "vox_nav_planning/planner_core.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "vox_nav_planning/plugins/elevation_state_space.hpp"
-
 
 namespace vox_nav_planning
 {

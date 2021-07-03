@@ -265,68 +265,73 @@ namespace vox_nav_planning
         goal_vertex = itr->second;
       }
     }
-
     std::vector<vertex_descriptor> p(boost::num_vertices(g));
     std::vector<Cost> d(boost::num_vertices(g));
-
     std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
     ompl::geometric::PathGeometricPtr solution_path =
       std::make_shared<ompl::geometric::PathGeometric>(simple_setup_->getSpaceInformation());
     ompl::geometric::PathSimplifierPtr path_simlifier =
       std::make_shared<ompl::geometric::PathSimplifier>(simple_setup_->getSpaceInformation());
-
     try {
-      auto heuristic = distance_heuristic<GraphT, Cost, SuperVoxelClusters>(
+      auto astar_heuristic = distance_heuristic<GraphT, Cost, SuperVoxelClusters>(
         supervoxel_clusters_, goal_vertex, g);
-      auto visitor = astar_goal_visitor<vertex_descriptor>(goal_vertex);
+      auto astar_visitor = astar_goal_visitor<vertex_descriptor>(goal_vertex);
       boost::astar_search_tree(
         g, start_vertex,
-        heuristic,
-        boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
+        astar_heuristic,
+        boost::predecessor_map(&p[0])
+        .distance_map(&d[0])
+        .visitor(astar_visitor));
+      // If a path found exception will be throns and code block here
+      // should not be eecuted. If code executed up until here,
+      // A path was NOT found. Warn user about it
       RCLCPP_WARN(logger_, "AStar failed to find a valid path!");
-    } catch (FoundGoal found_goal) {    // found a path to the goal
+    } catch (FoundGoal found_goal) {    // found a path to the goal, catch the exception
       std::list<vertex_descriptor> shortest_path;
       for (vertex_descriptor v = goal_vertex;; v = p[v]) {
         shortest_path.push_front(v);
         if (p[v] == v) {break;}
       }
-      std::list<vertex_descriptor>::iterator spi = shortest_path.begin();
-      for (++spi; spi != shortest_path.end(); ++spi) {
-        std::uint32_t key;
+      auto shortest_path_iterator = shortest_path.begin();
+      for (++shortest_path_iterator; shortest_path_iterator != shortest_path.end();
+        ++shortest_path_iterator)
+      {
+        // Match vertex_descriptor of current vertex in shortess_path to its eqiuvalent
+        // in supervoxel_label_id_map, do this to get
+        std::uint32_t label;
         for (auto & i : supervoxel_label_id_map) {
-          if (i.second == *spi) {
-            key = i.first;
+          if (i.second == *shortest_path_iterator) {
+            label = g[*shortest_path_iterator].label;
             break;
           }
         }
-        auto state_position = supervoxel_clusters_.at(key)->centroid_;
-        auto state = state_space_->allocState();
-        auto * compound_state = state->as<ompl::base::ElevationStateSpace::StateType>();
-        compound_state->setSE2(state_position.x, state_position.y, 0);
-        compound_state->setZ(state_position.z);
-        solution_path->append(state);
+        // Fill the solution vertex to OMPL path
+        // tis is needed for path smoothing and interpolation
+        auto solution_state_position = supervoxel_clusters_.at(label)->centroid_;
+        auto solution_state = state_space_->allocState();
+        auto * compound_elevation_state =
+          solution_state->as<ompl::base::ElevationStateSpace::StateType>();
+        compound_elevation_state->setSE2(
+          solution_state_position.x, solution_state_position.y,
+          0 /*assume a 0 yaw*/);
+        compound_elevation_state->setZ(solution_state_position.z);
+        solution_path->append(compound_elevation_state);
       }
-
       solution_path->interpolate(interpolation_parameter_);
       path_simlifier->smoothBSpline(*solution_path, 2, 0.1);
-
       for (std::size_t path_idx = 0; path_idx < solution_path->getStateCount(); path_idx++) {
-        const auto * cstate =
+        const auto * compound_elevation_state =
           solution_path->getState(path_idx)->as<ompl::base::ElevationStateSpace::StateType>();
-        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-        tf2::Quaternion this_pose_quat;
-        this_pose_quat.setRPY(0, 0, se2->getYaw());
+        const auto * se2 = compound_elevation_state->as<ompl::base::SE2StateSpace::StateType>(0);
+        const auto * z =
+          compound_elevation_state->as<ompl::base::RealVectorStateSpace::StateType>(1);
         geometry_msgs::msg::PoseStamped pose;
         pose.header.frame_id = start.header.frame_id;
         pose.header.stamp = rclcpp::Clock().now();
         pose.pose.position.x = se2->getX();
         pose.pose.position.y = se2->getY();
         pose.pose.position.z = z->values[0];
-        pose.pose.orientation.x = this_pose_quat.getX();
-        pose.pose.orientation.y = this_pose_quat.getY();
-        pose.pose.orientation.z = this_pose_quat.getZ();
-        pose.pose.orientation.w = this_pose_quat.getW();
+        pose.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, se2->getYaw());
         plan_poses.push_back(pose);
       }
     }
