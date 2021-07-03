@@ -112,44 +112,41 @@ namespace vox_nav_planning
     const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal)
   {
-
+    // get a stamp of time to calculate how much time it costs
     auto t1 = std::chrono::high_resolution_clock::now();
 
     if (!is_map_ready_) {
       RCLCPP_WARN(
-        logger_, "A valid Octomap has not been recieved yet, Try later again."
+        logger_, "A valid Octomap has not been recieved yet !, Try later again."
       );
       return std::vector<geometry_msgs::msg::PoseStamped>();
     }
-    // set the start and goal states
-    double start_yaw, goal_yaw, nan;
-    vox_nav_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan, start_yaw);
-    vox_nav_utilities::getRPYfromMsgQuaternion(goal.pose.orientation, nan, nan, goal_yaw);
 
-    RCLCPP_INFO(logger_, "Updating search area");
+    RCLCPP_INFO(logger_, "Updating search area according to given start and goal states");
 
     double radius = vox_nav_utilities::getEuclidianDistBetweenPoses(goal, start) / 2.0;
     auto search_point_pose = vox_nav_utilities::getLinearInterpolatedPose(goal, start);
     auto search_point_surfel = vox_nav_utilities::poseMsg2PCLSurfel(search_point_pose);
 
+    // we determined a search point and radius, now with this info lets get
+    // a sub point cloud that falls within boundries
     auto search_area_surfels =
       vox_nav_utilities::get_subcloud_within_radius<pcl::PointSurfel>(
-      elevated_surfel_cloud_, search_point_surfel,
+      elevated_surfel_cloud_,
+      search_point_surfel,
       radius);
 
-    RCLCPP_INFO(
-      logger_, "Updated search area surfels has, %d surfels",
-      search_area_surfels->points.size());
-
-    auto search_area_point_cloud =
+    auto search_area_rgba_pointcloud =
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr(new pcl::PointCloud<pcl::PointXYZRGBA>);
-
+    // Fill surfels that are in serach space as XYZRGBA pointcloud
+    // This is required by pcl::SupervoxelClustering
     for (auto && i : search_area_surfels->points) {
+      // neglect rgba fields
       pcl::PointXYZRGBA point;
       point.x = i.x;
       point.y = i.y;
       point.z = i.z;
-      search_area_point_cloud->points.push_back(point);
+      search_area_rgba_pointcloud->points.push_back(point);
     }
 
     bool disable_transform = false;
@@ -160,7 +157,7 @@ namespace vox_nav_planning
     float normal_importance = 1.0f;
 
     auto super = vox_nav_utilities::super_voxelize_cloud<pcl::PointXYZRGBA>(
-      search_area_point_cloud,
+      search_area_rgba_pointcloud,
       disable_transform,
       voxel_resolution,
       seed_resolution,
@@ -171,23 +168,26 @@ namespace vox_nav_planning
     RCLCPP_INFO(logger_, "Extracting supervoxels!");
     super.extract(supervoxel_clusters_);
     RCLCPP_INFO(logger_, "Found %d supervoxels", supervoxel_clusters_.size());
-    RCLCPP_INFO(logger_, "Getting supervoxel adjacency");
 
     std::multimap<std::uint32_t, std::uint32_t> supervoxel_adjacency;
-
     super.getSupervoxelAdjacency(supervoxel_adjacency);
+
+    // Lets visualize supervxoel centroids and its adjacency
+    // yeah this looks cool but certainly computationally expensive
     std_msgs::msg::Header header;
     header.frame_id = "map";
     header.stamp = rclcpp::Clock().now();
-
     visualization_msgs::msg::MarkerArray supervoxel_marker_array;
     vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
       supervoxel_clusters_, supervoxel_adjacency, header, supervoxel_marker_array);
     super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array);
 
+    // lets actually construct a boost::graph of supervoxels and the adjacency of them
+    // we can then perfectly use all boost::graph algortihms on this graph
+    // edge weights are set as distances
     GraphT g;
     WeightMap weightmap = get(boost::edge_weight, g);
-    //Add a vertex for each label, store ids in map
+    //Add a vertex for each label, store ids in a map
     std::map<std::uint32_t, vertex_descriptor> supervoxel_label_id_map;
     for (auto it = supervoxel_adjacency.cbegin();
       it != supervoxel_adjacency.cend(); )
@@ -199,6 +199,7 @@ namespace vox_nav_planning
       it = supervoxel_adjacency.upper_bound(supervoxel_label);
     }
 
+    // fill edges acquired from supervoxel clustering
     for (auto it = supervoxel_adjacency.cbegin();
       it != supervoxel_adjacency.cend(); )
     {
@@ -213,7 +214,8 @@ namespace vox_nav_planning
         vertex_descriptor u = (supervoxel_label_id_map.find(supervoxel_label))->second;
         vertex_descriptor v = (supervoxel_label_id_map.find(neighbour_supervoxel_label))->second;
         boost::tie(e, edge_added) = boost::add_edge(u, v, g);
-        //Calc distance between centers, set as edge weight
+        // Calc distance between centers, set this as edge weight
+        // the more distane the heavier final cost
         if (edge_added) {
           pcl::PointXYZRGBA centroid_data = supervoxel->centroid_;
           pcl::PointXYZRGBA neighbour_centroid_data = neighbour_supervoxel->centroid_;
@@ -226,9 +228,11 @@ namespace vox_nav_planning
       it = supervoxel_adjacency.upper_bound(supervoxel_label);
     }
 
-    RCLCPP_INFO(logger_, "Running astar,");
-    RCLCPP_INFO(logger_, "Graph has %d vertices", boost::num_vertices(g));
-    RCLCPP_INFO(logger_, "Graph has %d edges", boost::num_edges(g));
+    RCLCPP_INFO(
+      logger_,
+      "Constructed Boost Graph from supervoxel clustering with %d vertices and %d edges",
+      boost::num_vertices(g),
+      boost::num_edges(g));
 
     pcl::PointXYZRGBA start_as_pcl_point, goal_as_pcl_point;
     start_as_pcl_point.x = start.pose.position.x;
@@ -240,25 +244,30 @@ namespace vox_nav_planning
 
     // Match requested start and goal poses with valid vertexes on Graph
     vertex_descriptor start_vertex, goal_vertex;
-    double start_dist = INFINITY;
-    double goal_dist = INFINITY;
+
+    // Simple O(N) algorithm to find closest vertex to start and goal poses on boost::graph g
+    double start_dist = INFINITY, goal_dist = INFINITY;
     for (auto itr = supervoxel_label_id_map.begin(); itr != supervoxel_label_id_map.end(); ++itr) {
-      auto sv_centroid = supervoxel_clusters_.at(itr->first)->centroid_;
-      if (vox_nav_utilities::PCLPointEuclideanDist<>(
-          start_as_pcl_point,
-          sv_centroid) < start_dist)
-      {
-        start_dist = vox_nav_utilities::PCLPointEuclideanDist<>(start_as_pcl_point, sv_centroid);
+      auto voxel_centroid = supervoxel_clusters_.at(itr->first)->centroid_;
+
+      auto start_dist_to_crr_voxel_centroid = vox_nav_utilities::PCLPointEuclideanDist<>(
+        start_as_pcl_point, voxel_centroid);
+
+      auto goal_dist_to_crr_voxel_centroid = vox_nav_utilities::PCLPointEuclideanDist<>(
+        goal_as_pcl_point, voxel_centroid);
+
+      if (start_dist_to_crr_voxel_centroid < start_dist) {
+        start_dist = start_dist_to_crr_voxel_centroid;
         start_vertex = itr->second;
       }
-      if (vox_nav_utilities::PCLPointEuclideanDist<>(goal_as_pcl_point, sv_centroid) < goal_dist) {
-        goal_dist = vox_nav_utilities::PCLPointEuclideanDist<>(goal_as_pcl_point, sv_centroid);
+      if (goal_dist_to_crr_voxel_centroid < goal_dist) {
+        goal_dist = goal_dist_to_crr_voxel_centroid;
         goal_vertex = itr->second;
       }
     }
 
     std::vector<vertex_descriptor> p(boost::num_vertices(g));
-    std::vector<cost> d(boost::num_vertices(g));
+    std::vector<Cost> d(boost::num_vertices(g));
 
     std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
     ompl::geometric::PathGeometricPtr solution_path =
@@ -267,9 +276,7 @@ namespace vox_nav_planning
       std::make_shared<ompl::geometric::PathSimplifier>(simple_setup_->getSpaceInformation());
 
     try {
-      // call astar named parameter interface
-      auto heuristic = distance_heuristic<GraphT, cost,
-          std::map<uint32_t, pcl::shared_ptr<pcl::Supervoxel<pcl::PointXYZRGBA>>>>(
+      auto heuristic = distance_heuristic<GraphT, Cost, SuperVoxelClusters>(
         supervoxel_clusters_, goal_vertex, g);
       auto visitor = astar_goal_visitor<vertex_descriptor>(goal_vertex);
       boost::astar_search_tree(
@@ -323,13 +330,13 @@ namespace vox_nav_planning
         plan_poses.push_back(pose);
       }
     }
-
     RCLCPP_INFO(
       logger_, "Found path with astar %d which includes poses,", plan_poses.size());
 
     auto t2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> ms_double = t2 - t1;
-    std::cout << "Whole A star path finding took " << ms_double.count() << " ms" << std::endl;
+    RCLCPP_INFO(
+      logger_, "Whole Astar path finding function took %.4f milliseconds.", ms_double.count());
 
     return plan_poses;
   }

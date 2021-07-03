@@ -108,20 +108,21 @@ namespace vox_nav_planning
     void setupMap() override;
 
   protected:
-    typedef float cost;
-
     struct VertexProperty
     {
       std::uint32_t label;
       std::string name;
     };
+
+    typedef float Cost;
+
     // specify some types
     typedef boost::adjacency_list<
         boost::setS,            // edge
         boost::vecS,            // vertex
         boost::undirectedS,     // type
         VertexProperty,         // vertex property
-        boost::property<boost::edge_weight_t, cost>> // edge property
+        boost::property<boost::edge_weight_t, Cost>> // edge property
       GraphT;
 
     typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
@@ -129,6 +130,7 @@ namespace vox_nav_planning
     typedef GraphT::edge_descriptor edge_descriptor;
     typedef GraphT::vertex_iterator vertex_iterator;
     typedef std::pair<int, int> edge;
+    typedef std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> SuperVoxelClusters;
 
     rclcpp::Logger logger_{rclcpp::get_logger("optimal_elevation_planner")};
     // Surfels centers are elevated by node_elevation_distance_, and are stored in this
@@ -143,7 +145,6 @@ namespace vox_nav_planning
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
     std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
-    ompl::base::OptimizationObjectivePtr octocost_optimization_;
 
     ompl::base::StateSpacePtr state_space_;
     std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
@@ -151,7 +152,7 @@ namespace vox_nav_planning
 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
       super_voxel_adjacency_marker_pub_;
-    std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> supervoxel_clusters_;
+    SuperVoxelClusters supervoxel_clusters_;
   };
 
   // euclidean distance heuristic
