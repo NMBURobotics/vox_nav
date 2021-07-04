@@ -104,6 +104,18 @@ namespace vox_nav_planning
      */
     void setupMap() override;
 
+    /**
+     * @brief
+     *
+     * @param a
+     * @param b
+     * @return true
+     * @return false
+     */
+    bool isEdgeinCollision(
+      const pcl::PointXYZRGBA & a,
+      const pcl::PointXYZRGBA & b);
+
   protected:
     struct VertexProperty
     {

@@ -14,7 +14,6 @@
 
 #include "vox_nav_planning/plugins/optimal_elevation_planner.hpp"
 #include <pluginlib/class_list_macros.hpp>
-
 #include <string>
 #include <memory>
 #include <vector>
@@ -133,9 +132,7 @@ namespace vox_nav_planning
     auto t1 = std::chrono::high_resolution_clock::now();
 
     if (!is_map_ready_) {
-      RCLCPP_WARN(
-        logger_, "A valid Octomap has not been recieved yet !, Try later again."
-      );
+      RCLCPP_WARN(logger_, "A valid Octomap has not been recieved yet !, Try later again.");
       return std::vector<geometry_msgs::msg::PoseStamped>();
     }
 
@@ -176,20 +173,87 @@ namespace vox_nav_planning
     RCLCPP_INFO(logger_, "Extracting supervoxels!");
     super.extract(supervoxel_clusters_);
     RCLCPP_INFO(logger_, "Found %d supervoxels", supervoxel_clusters_.size());
-
     std::multimap<std::uint32_t, std::uint32_t> supervoxel_adjacency;
     super.getSupervoxelAdjacency(supervoxel_adjacency);
 
     // Lets visualize supervxoel centroids and its adjacency
-    // yeah this looks cool but certainly computationally expensive
+    // Yeah this looks cool but certainly computationally expensive
     std_msgs::msg::Header header;
     header.frame_id = "map";
     header.stamp = rclcpp::Clock().now();
-    visualization_msgs::msg::MarkerArray supervoxel_marker_array;
-    super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array); // publish empty to reset previous
-    vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
-      supervoxel_clusters_, supervoxel_adjacency, header, supervoxel_marker_array);
-    super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array);
+    visualization_msgs::msg::MarkerArray marker_array;
+    // Publish empty to reset previous
+    super_voxel_adjacency_marker_pub_->publish(marker_array);
+    /*vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
+      supervoxel_clusters_, supervoxel_adjacency, header, marker_array);*/
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // CAREFUL , GONNA BE FUNCTIONIZED
+    int index = 0;
+    // To make a graph of the supervoxel adjacency,
+    // we need to iterate through the supervoxel adjacency multimap
+    for (auto label_itr = supervoxel_adjacency.cbegin();
+      label_itr != supervoxel_adjacency.cend(); )
+    {
+      // First get the label
+      std::uint32_t supervoxel_label = label_itr->first;
+      // Now get the supervoxel corresponding to the label
+      auto supervoxel = supervoxel_clusters_.at(supervoxel_label);
+      visualization_msgs::msg::Marker line_strip;
+      line_strip.header = header;
+      line_strip.ns = "supervoxel_markers_ns";
+      line_strip.id = index;
+      line_strip.type = visualization_msgs::msg::Marker::LINE_STRIP;
+      line_strip.action = visualization_msgs::msg::Marker::ADD;
+      line_strip.scale.x = 0.1;
+      geometry_msgs::msg::Point point;
+      point.x = supervoxel->centroid_.x;
+      point.y = supervoxel->centroid_.y;
+      point.z = supervoxel->centroid_.z;
+      std_msgs::msg::ColorRGBA yellow_color;
+      yellow_color.r = 1.0;
+      yellow_color.g = 1.0;
+      yellow_color.a = 0.4;
+
+      visualization_msgs::msg::Marker sphere;
+      sphere.header = header;
+      sphere.ns = "supervoxel_markers_ns";
+      sphere.id = index + 10000;
+      sphere.type = visualization_msgs::msg::Marker::SPHERE;
+      sphere.action = visualization_msgs::msg::Marker::ADD;
+      sphere.pose.position = point;
+      sphere.scale.x = 0.3;
+      sphere.scale.y = 0.3;
+      sphere.scale.z = 0.3;
+      sphere.color.a = 1.0;
+      sphere.color.g = 1.0;
+      sphere.color.b = 1.0;
+
+      for (auto adjacent_itr = supervoxel_adjacency.equal_range(supervoxel_label).first;
+        adjacent_itr != supervoxel_adjacency.equal_range(supervoxel_label).second; ++adjacent_itr)
+      {
+        auto neighbour_supervoxel = supervoxel_clusters_.at(adjacent_itr->second);
+        if (isEdgeinCollision(supervoxel->centroid_, neighbour_supervoxel->centroid_)) {
+          continue;
+        }
+        geometry_msgs::msg::Point n_point;
+        n_point.x = neighbour_supervoxel->centroid_.x;
+        n_point.y = neighbour_supervoxel->centroid_.y;
+        n_point.z = neighbour_supervoxel->centroid_.z;
+        line_strip.points.push_back(point);
+        line_strip.colors.push_back(yellow_color);
+        line_strip.points.push_back(n_point);
+        line_strip.colors.push_back(yellow_color);
+      }
+      // Move iterator forward to next label
+      label_itr = supervoxel_adjacency.upper_bound(supervoxel_label);
+      index++;
+      marker_array.markers.push_back(sphere);
+      marker_array.markers.push_back(line_strip);
+    }
+    // CAREFUL , GONNA BE FUNCTIONIZED
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+    super_voxel_adjacency_marker_pub_->publish(marker_array);
 
     // lets construct a boost::graph of supervoxels and the adjacency of them
     // we can then use all boost::graph algortihms on this graph
@@ -220,6 +284,9 @@ namespace vox_nav_planning
       {
         std::uint32_t neighbour_supervoxel_label = adjacent_it->second;
         auto neighbour_supervoxel = supervoxel_clusters_.at(neighbour_supervoxel_label);
+        if (isEdgeinCollision(supervoxel->centroid_, neighbour_supervoxel->centroid_)) {
+          continue;
+        }
         edge_descriptor e; bool edge_added;
         vertex_descriptor u = (supervoxel_label_id_map.find(supervoxel_label))->second;
         vertex_descriptor v = (supervoxel_label_id_map.find(neighbour_supervoxel_label))->second;
@@ -262,12 +329,12 @@ namespace vox_nav_planning
     // Simple O(N) algorithm to find closest vertex to start and goal poses on boost::graph g
     double start_dist_min = INFINITY, goal_dist_min = INFINITY;
     for (auto itr = supervoxel_label_id_map.begin(); itr != supervoxel_label_id_map.end(); ++itr) {
-      auto voxel_centroid = supervoxel_clusters_.at(itr->first)->centroid_;
 
-      auto start_dist_to_crr_voxel_centroid = vox_nav_utilities::PCLPointEuclideanDist<>(
-        start_as_pcl_point, voxel_centroid);
-      auto goal_dist_to_crr_voxel_centroid = vox_nav_utilities::PCLPointEuclideanDist<>(
-        goal_as_pcl_point, voxel_centroid);
+      auto voxel_centroid = supervoxel_clusters_.at(itr->first)->centroid_;
+      auto start_dist_to_crr_voxel_centroid =
+        vox_nav_utilities::PCLPointEuclideanDist<>(start_as_pcl_point, voxel_centroid);
+      auto goal_dist_to_crr_voxel_centroid =
+        vox_nav_utilities::PCLPointEuclideanDist<>(goal_as_pcl_point, voxel_centroid);
 
       if (start_dist_to_crr_voxel_centroid < start_dist_min) {
         start_dist_min = start_dist_to_crr_voxel_centroid;
@@ -286,20 +353,19 @@ namespace vox_nav_planning
     ompl::geometric::PathSimplifierPtr path_simlifier =
       std::make_shared<ompl::geometric::PathSimplifier>(simple_setup_->getSpaceInformation());
     try {
-      auto astar_heuristic = distance_heuristic<GraphT, Cost, SuperVoxelClusters>(
-        supervoxel_clusters_, goal_vertex, g);
+      auto astar_heuristic =
+        distance_heuristic<GraphT, Cost, SuperVoxelClusters>(supervoxel_clusters_, goal_vertex, g);
       auto astar_visitor = astar_goal_visitor<vertex_descriptor>(goal_vertex);
       boost::astar_search_tree(
-        g, start_vertex,
-        astar_heuristic,
+        g, start_vertex, astar_heuristic,
         boost::predecessor_map(&p[0])
-        .distance_map(&d[0])
-        .visitor(astar_visitor));
+        .distance_map(&d[0]).visitor(astar_visitor));
       // If a path found exception will be throns and code block here
-      // should not be eecuted. If code executed up until here,
+      // Should not be eecuted. If code executed up until here,
       // A path was NOT found. Warn user about it
       RCLCPP_WARN(logger_, "AStar failed to find a valid path!");
-    } catch (FoundGoal found_goal) {    // found a path to the goal, catch the exception
+    } catch (FoundGoal found_goal) {
+      // Found a path to the goal, catch the exception
       std::list<vertex_descriptor> shortest_path;
       for (vertex_descriptor v = goal_vertex;; v = p[v]) {
         shortest_path.push_front(v);
@@ -310,7 +376,7 @@ namespace vox_nav_planning
         ++shortest_path_iterator)
       {
         // Match vertex_descriptor of current vertex in shortess_path to its eqiuvalent
-        // in supervoxel_label_id_map, do this to get
+        // In supervoxel_label_id_map, do this to get
         std::uint32_t label;
         for (auto & i : supervoxel_label_id_map) {
           if (i.second == *shortest_path_iterator) {
@@ -385,6 +451,38 @@ namespace vox_nav_planning
       original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
 
     return collisionWithSurfelsResult.isCollision() && !collisionWithFullMapResult.isCollision();
+  }
+
+  bool OptimalElevationPlanner::isEdgeinCollision(
+    const pcl::PointXYZRGBA & a,
+    const pcl::PointXYZRGBA & b)
+  {
+    fcl::Vec3f edge_center(
+      (a.x + b.x) / 2.0,
+      (a.y + b.y) / 2.0,
+      (a.z + b.z) / 2.0);
+
+    double dx = a.x - b.x;
+    double dy = a.y - b.y;
+    double dz = a.z - b.z;
+
+    double roll, pitch, yaw;
+    roll = std::atan2((dz), std::sqrt(dy * dy + dx * dx));
+    pitch = 0;
+    yaw = std::atan2(dx, dy);
+
+    tf2::Quaternion quat;
+    quat.setRPY(roll, pitch, yaw);
+    fcl::Quaternion3f rotation(quat.getX(), quat.getY(), quat.getZ(), quat.getW());
+
+    robot_collision_object_->setTransform(rotation, edge_center);
+
+    fcl::CollisionResult collisionWithFullMapResult;
+    fcl::CollisionRequest requestType(1, false, 1, false);
+    fcl::collide(
+      robot_collision_object_.get(),
+      original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
+    return collisionWithFullMapResult.isCollision();
   }
 
   void OptimalElevationPlanner::setupMap()
