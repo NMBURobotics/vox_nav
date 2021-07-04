@@ -90,8 +90,9 @@ namespace vox_nav_planning
       parent->create_publisher<visualization_msgs::msg::MarkerArray>(
       "supervoxel_adjacency_markers", rclcpp::SystemDefaultsQoS());
 
-    RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
-
+    RCLCPP_INFO(
+      logger_,
+      "Selected planner is: AStar optimal planner, this dos not bases on OMPL %s");
     setupMap();
 
     // WARN elevated_surfel_poses_msg_ needs to be populated by  setupMap();

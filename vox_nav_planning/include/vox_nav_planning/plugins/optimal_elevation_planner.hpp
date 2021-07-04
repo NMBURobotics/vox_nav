@@ -159,17 +159,19 @@ namespace vox_nav_planning
   public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
     distance_heuristic(SuperVoxelClustersType sc, Vertex goal_vertex, Graph g)
-    : supervoxel_clusters_(sc), goal_vertex_(goal_vertex), g_(g) {}
+    : supervoxel_clusters_(sc), goal_vertex_(goal_vertex), g_(g)
+    {
+    }
     CostType operator()(Vertex u)
     {
       auto u_vertex_label = g_[u].label;
-      auto goal_vertex_label = g_[u].label;
+      auto goal_vertex_label = g_[goal_vertex_].label;
       auto u_supervoxel_centroid = supervoxel_clusters_.at(u_vertex_label)->centroid_;
       auto goal_supervoxel_centroid = supervoxel_clusters_.at(goal_vertex_label)->centroid_;
       CostType dx = u_supervoxel_centroid.x - goal_supervoxel_centroid.x;
       CostType dy = u_supervoxel_centroid.y - goal_supervoxel_centroid.y;
       CostType dz = u_supervoxel_centroid.z - goal_supervoxel_centroid.z;
-      return ::sqrt(dx * dx + dy * dy + dz * dz);
+      return std::sqrt(dx * dx + dy * dy + dz * dz);
     }
 
   private:
@@ -185,7 +187,9 @@ namespace vox_nav_planning
   {
   public:
     astar_goal_visitor(Vertex goal_vertex)
-    : goal_vertex_(goal_vertex) {}
+    : goal_vertex_(goal_vertex)
+    {
+    }
     template<class Graph>
     void examine_vertex(Vertex u, Graph & g)
     {
