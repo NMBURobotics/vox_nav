@@ -49,9 +49,25 @@ namespace vox_nav_planning
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
+    parent->declare_parameter("supervoxel_disable_transform", false);
+    parent->declare_parameter("supervoxel_resolution", 0.8);
+    parent->declare_parameter("supervoxel_seed_resolution", 1.0);
+    parent->declare_parameter("supervoxel_color_importance", 0.0);
+    parent->declare_parameter("supervoxel_spatial_importance", 1.0);
+    parent->declare_parameter("supervoxel_normal_importance", 1.0);
+    parent->declare_parameter("distance_penalty_weight", 1.0);
+    parent->declare_parameter("elevation_penalty_weight", 1.0);
 
     parent->get_parameter("interpolation_parameter", interpolation_parameter_);
     parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
+    parent->get_parameter("supervoxel_disable_transform", supervoxel_disable_transform_);
+    parent->get_parameter("supervoxel_resolution", supervoxel_resolution_);
+    parent->get_parameter("supervoxel_seed_resolution", supervoxel_seed_resolution_);
+    parent->get_parameter("supervoxel_color_importance", supervoxel_color_importance_);
+    parent->get_parameter("supervoxel_spatial_importance", supervoxel_spatial_importance_);
+    parent->get_parameter("supervoxel_normal_importance", supervoxel_normal_importance_);
+    parent->get_parameter("distance_penalty_weight", distance_penalty_weight_);
+    parent->get_parameter("elevation_penalty_weight", elevation_penalty_weight_);
 
     se2_bounds_->setLow(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
@@ -113,7 +129,7 @@ namespace vox_nav_planning
     const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal)
   {
-    // get a stamp of time to calculate how much time it costs
+    // get a stamp of time to calculate how much time this function costs
     auto t1 = std::chrono::high_resolution_clock::now();
 
     if (!is_map_ready_) {
@@ -122,8 +138,6 @@ namespace vox_nav_planning
       );
       return std::vector<geometry_msgs::msg::PoseStamped>();
     }
-
-    RCLCPP_INFO(logger_, "Updating search area according to given start and goal states");
 
     double radius = vox_nav_utilities::getEuclidianDistBetweenPoses(goal, start) / 2.0;
     auto search_point_pose = vox_nav_utilities::getLinearInterpolatedPose(goal, start);
@@ -150,21 +164,14 @@ namespace vox_nav_planning
       search_area_rgba_pointcloud->points.push_back(point);
     }
 
-    bool disable_transform = false;
-    float voxel_resolution = 0.8;
-    float seed_resolution = 1.0f;
-    float color_importance = 0.0f;
-    float spatial_importance = 1.0f;
-    float normal_importance = 1.0f;
-
     auto super = vox_nav_utilities::super_voxelize_cloud<pcl::PointXYZRGBA>(
       search_area_rgba_pointcloud,
-      disable_transform,
-      voxel_resolution,
-      seed_resolution,
-      color_importance,
-      spatial_importance,
-      normal_importance);
+      supervoxel_disable_transform_,
+      supervoxel_resolution_,
+      supervoxel_seed_resolution_,
+      supervoxel_color_importance_,
+      supervoxel_spatial_importance_,
+      supervoxel_normal_importance_);
 
     RCLCPP_INFO(logger_, "Extracting supervoxels!");
     super.extract(supervoxel_clusters_);
@@ -184,9 +191,10 @@ namespace vox_nav_planning
       supervoxel_clusters_, supervoxel_adjacency, header, supervoxel_marker_array);
     super_voxel_adjacency_marker_pub_->publish(supervoxel_marker_array);
 
-    // lets actually construct a boost::graph of supervoxels and the adjacency of them
-    // we can then perfectly use all boost::graph algortihms on this graph
-    // edge weights are set as distances
+    // lets construct a boost::graph of supervoxels and the adjacency of them
+    // we can then use all boost::graph algortihms on this graph
+    // edge weights are set as distances or elevations, see the configration to
+    // adjust the weights of penalties
     GraphT g;
     WeightMap weightmap = get(boost::edge_weight, g);
     //Add a vertex for each label, store ids in a map
@@ -221,14 +229,14 @@ namespace vox_nav_planning
         if (edge_added) {
           pcl::PointXYZRGBA centroid_data = supervoxel->centroid_;
           pcl::PointXYZRGBA neighbour_centroid_data = neighbour_supervoxel->centroid_;
-          float length = vox_nav_utilities::PCLPointEuclideanDist<pcl::PointXYZRGBA>(
+
+          float absolute_distance = vox_nav_utilities::PCLPointEuclideanDist<>(
             centroid_data,
             neighbour_centroid_data);
-
           // Lets also add elevation as weight
           float absolute_elevation = std::abs(centroid_data.z - neighbour_centroid_data.z);
-
-          weightmap[e] = length + absolute_elevation;
+          weightmap[e] = distance_penalty_weight_ * absolute_distance +
+            elevation_penalty_weight_ * absolute_elevation;
         }
       }
       it = supervoxel_adjacency.upper_bound(supervoxel_label);
@@ -236,7 +244,7 @@ namespace vox_nav_planning
 
     RCLCPP_INFO(
       logger_,
-      "Constructed Boost Graph from supervoxel clustering with %d vertices and %d edges",
+      "Constructed a Boost Graph from supervoxel clustering with %d vertices and %d edges",
       boost::num_vertices(g),
       boost::num_edges(g));
 
@@ -252,22 +260,21 @@ namespace vox_nav_planning
     vertex_descriptor start_vertex, goal_vertex;
 
     // Simple O(N) algorithm to find closest vertex to start and goal poses on boost::graph g
-    double start_dist = INFINITY, goal_dist = INFINITY;
+    double start_dist_min = INFINITY, goal_dist_min = INFINITY;
     for (auto itr = supervoxel_label_id_map.begin(); itr != supervoxel_label_id_map.end(); ++itr) {
       auto voxel_centroid = supervoxel_clusters_.at(itr->first)->centroid_;
 
       auto start_dist_to_crr_voxel_centroid = vox_nav_utilities::PCLPointEuclideanDist<>(
         start_as_pcl_point, voxel_centroid);
-
       auto goal_dist_to_crr_voxel_centroid = vox_nav_utilities::PCLPointEuclideanDist<>(
         goal_as_pcl_point, voxel_centroid);
 
-      if (start_dist_to_crr_voxel_centroid < start_dist) {
-        start_dist = start_dist_to_crr_voxel_centroid;
+      if (start_dist_to_crr_voxel_centroid < start_dist_min) {
+        start_dist_min = start_dist_to_crr_voxel_centroid;
         start_vertex = itr->second;
       }
-      if (goal_dist_to_crr_voxel_centroid < goal_dist) {
-        goal_dist = goal_dist_to_crr_voxel_centroid;
+      if (goal_dist_to_crr_voxel_centroid < goal_dist_min) {
+        goal_dist_min = goal_dist_to_crr_voxel_centroid;
         goal_vertex = itr->second;
       }
     }

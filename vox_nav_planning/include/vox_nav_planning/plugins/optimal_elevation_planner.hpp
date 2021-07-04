@@ -147,9 +147,24 @@ namespace vox_nav_planning
     std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
     std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
 
+    // SuperVoxel Clustering variables
+    // https://pcl.readthedocs.io/en/latest/supervoxel_clustering.html#supervoxel-clustering
+    // boost graph is constructed through supervoxels of elevated surfels
+    // Optimal planning basing in Astar is perfromed on top of this graph
+    // refer to PCL supervoxel_clustering for more details on algorithm
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
       super_voxel_adjacency_marker_pub_;
     SuperVoxelClusters supervoxel_clusters_;
+
+    bool supervoxel_disable_transform_;
+    float supervoxel_resolution_;
+    float supervoxel_seed_resolution_;
+    float supervoxel_color_importance_;
+    float supervoxel_spatial_importance_;
+    float supervoxel_normal_importance_;
+
+    float distance_penalty_weight_;
+    float elevation_penalty_weight_;
   };
 
   // euclidean distance heuristic
