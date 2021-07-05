@@ -48,27 +48,39 @@ namespace vox_nav_planning
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
-    parent->declare_parameter("supervoxel_disable_transform", false);
-    parent->declare_parameter("supervoxel_resolution", 0.8);
-    parent->declare_parameter("supervoxel_seed_resolution", 1.0);
-    parent->declare_parameter("supervoxel_color_importance", 0.0);
-    parent->declare_parameter("supervoxel_spatial_importance", 1.0);
-    parent->declare_parameter("supervoxel_normal_importance", 1.0);
-    parent->declare_parameter("distance_penalty_weight", 1.0);
-    parent->declare_parameter("elevation_penalty_weight", 1.0);
-    parent->declare_parameter("graph_search_method", "astar");
+    parent->declare_parameter(plugin_name + ".supervoxel_disable_transform", false);
+    parent->declare_parameter(plugin_name + ".supervoxel_resolution", 0.8);
+    parent->declare_parameter(plugin_name + ".supervoxel_seed_resolution", 1.0);
+    parent->declare_parameter(plugin_name + ".supervoxel_color_importance", 0.0);
+    parent->declare_parameter(plugin_name + ".supervoxel_spatial_importance", 1.0);
+    parent->declare_parameter(plugin_name + ".supervoxel_normal_importance", 1.0);
+    parent->declare_parameter(plugin_name + ".distance_penalty_weight", 1.0);
+    parent->declare_parameter(plugin_name + ".elevation_penalty_weight", 1.0);
+    parent->declare_parameter(plugin_name + ".graph_search_method", "astar");
 
     parent->get_parameter("interpolation_parameter", interpolation_parameter_);
     parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
-    parent->get_parameter("supervoxel_disable_transform", supervoxel_disable_transform_);
-    parent->get_parameter("supervoxel_resolution", supervoxel_resolution_);
-    parent->get_parameter("supervoxel_seed_resolution", supervoxel_seed_resolution_);
-    parent->get_parameter("supervoxel_color_importance", supervoxel_color_importance_);
-    parent->get_parameter("supervoxel_spatial_importance", supervoxel_spatial_importance_);
-    parent->get_parameter("supervoxel_normal_importance", supervoxel_normal_importance_);
-    parent->get_parameter("distance_penalty_weight", distance_penalty_weight_);
-    parent->get_parameter("elevation_penalty_weight", elevation_penalty_weight_);
-    parent->get_parameter("graph_search_method", graph_search_method_);
+    parent->get_parameter(
+      plugin_name + ".supervoxel_disable_transform",
+      supervoxel_disable_transform_);
+    parent->get_parameter(
+      plugin_name + ".supervoxel_resolution",
+      supervoxel_resolution_);
+    parent->get_parameter(
+      plugin_name + ".supervoxel_seed_resolution",
+      supervoxel_seed_resolution_);
+    parent->get_parameter(
+      plugin_name + ".supervoxel_color_importance",
+      supervoxel_color_importance_);
+    parent->get_parameter(
+      plugin_name + ".supervoxel_spatial_importance",
+      supervoxel_spatial_importance_);
+    parent->get_parameter(
+      plugin_name + ".supervoxel_normal_importance",
+      supervoxel_normal_importance_);
+    parent->get_parameter(plugin_name + ".distance_penalty_weight", distance_penalty_weight_);
+    parent->get_parameter(plugin_name + ".elevation_penalty_weight", elevation_penalty_weight_);
+    parent->get_parameter(plugin_name + ".graph_search_method", graph_search_method_);
 
 
     se2_bounds_->setLow(
@@ -366,10 +378,11 @@ namespace vox_nav_planning
 
       if (graph_search_method_ == "dijkstra") {
         boost::dijkstra_shortest_paths(
-          g, start_vertex, boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+          g, start_vertex,
+          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
       } else { // astar
         boost::astar_search_tree(
-          g, start_vertex, heuristic,
+          g, start_vertex, heuristic /*only difference*/,
           boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
       }
 
