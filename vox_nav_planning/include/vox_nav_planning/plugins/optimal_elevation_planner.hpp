@@ -216,20 +216,23 @@ namespace vox_nav_planning
   class custom_goal_visitor : public boost::default_astar_visitor
   {
   public:
-    custom_goal_visitor(Vertex goal_vertex)
-    : goal_vertex_(goal_vertex)
+    custom_goal_visitor(Vertex goal_vertex, int * num_visits)
+    : goal_vertex_(goal_vertex), num_visits_(num_visits)
     {
     }
     template<class Graph>
     void examine_vertex(Vertex u, Graph & g)
     {
-      if (u == goal_vertex_) {
+      ++(*num_visits_);
+      if (u == goal_vertex_)
+      {
         throw FoundGoal();
       }
     }
 
   private:
     Vertex goal_vertex_;
+    int * num_visits_;
   };
 }  // namespace vox_nav_planning
 

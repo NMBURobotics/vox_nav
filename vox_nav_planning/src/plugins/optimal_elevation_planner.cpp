@@ -363,11 +363,13 @@ namespace vox_nav_planning
       std::make_shared<ompl::geometric::PathSimplifier>(simple_setup_->getSpaceInformation());
     RCLCPP_INFO(
       logger_, "Running %s search on Constructed a Boost Graph", graph_search_method_.c_str());
+
+    int num_visited_nodes = 0;
     try {
       auto heuristic =
         distance_heuristic<GraphT, Cost, SuperVoxelClusters *>(
         &supervoxel_clusters_, goal_vertex, g);
-      auto c_visitor = custom_goal_visitor<vertex_descriptor>(goal_vertex);
+      auto c_visitor = custom_goal_visitor<vertex_descriptor>(goal_vertex, &num_visited_nodes);
 
       if (graph_search_method_ == "dijkstra") {
         boost::dijkstra_shortest_paths(
@@ -433,6 +435,8 @@ namespace vox_nav_planning
         plan_poses.push_back(pose);
       }
     }
+    RCLCPP_INFO(
+      logger_, "A total of %d vertices were visited from a Boost Graph", num_visited_nodes);
     RCLCPP_INFO(
       logger_, "Found path with %s search %d which includes poses,",
       graph_search_method_.c_str(), plan_poses.size());
