@@ -56,6 +56,7 @@ namespace vox_nav_planning
     parent->declare_parameter("supervoxel_normal_importance", 1.0);
     parent->declare_parameter("distance_penalty_weight", 1.0);
     parent->declare_parameter("elevation_penalty_weight", 1.0);
+    parent->declare_parameter("graph_search_method", "astar");
 
     parent->get_parameter("interpolation_parameter", interpolation_parameter_);
     parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
@@ -67,6 +68,8 @@ namespace vox_nav_planning
     parent->get_parameter("supervoxel_normal_importance", supervoxel_normal_importance_);
     parent->get_parameter("distance_penalty_weight", distance_penalty_weight_);
     parent->get_parameter("elevation_penalty_weight", elevation_penalty_weight_);
+    parent->get_parameter("graph_search_method", graph_search_method_);
+
 
     se2_bounds_->setLow(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
@@ -107,7 +110,8 @@ namespace vox_nav_planning
 
     RCLCPP_INFO(
       logger_,
-      "Selected planner is: AStar optimal planner, this dos not bases on OMPL %s");
+      "Selected planner is: %s optimal planner, this dos not bases on OMPL ",
+      graph_search_method_.c_str());
     setupMap();
 
     // WARN elevated_surfel_poses_msg_ needs to be populated by  setupMap();
@@ -352,18 +356,27 @@ namespace vox_nav_planning
       std::make_shared<ompl::geometric::PathGeometric>(simple_setup_->getSpaceInformation());
     ompl::geometric::PathSimplifierPtr path_simlifier =
       std::make_shared<ompl::geometric::PathSimplifier>(simple_setup_->getSpaceInformation());
+    RCLCPP_INFO(
+      logger_, "Running %s search on Constructed a Boost Graph", graph_search_method_.c_str());
     try {
-      auto astar_heuristic =
-        distance_heuristic<GraphT, Cost, SuperVoxelClusters>(supervoxel_clusters_, goal_vertex, g);
-      auto astar_visitor = astar_goal_visitor<vertex_descriptor>(goal_vertex);
-      boost::astar_search_tree(
-        g, start_vertex, astar_heuristic,
-        boost::predecessor_map(&p[0])
-        .distance_map(&d[0]).visitor(astar_visitor));
+      auto heuristic =
+        distance_heuristic<GraphT, Cost, SuperVoxelClusters *>(
+        &supervoxel_clusters_, goal_vertex, g);
+      auto c_visitor = custom_goal_visitor<vertex_descriptor>(goal_vertex);
+
+      if (graph_search_method_ == "dijkstra") {
+        boost::dijkstra_shortest_paths(
+          g, start_vertex, boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+      } else { // astar
+        boost::astar_search_tree(
+          g, start_vertex, heuristic,
+          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+      }
+
       // If a path found exception will be throns and code block here
       // Should not be eecuted. If code executed up until here,
       // A path was NOT found. Warn user about it
-      RCLCPP_WARN(logger_, "AStar failed to find a valid path!");
+      RCLCPP_WARN(logger_, "%s search failed to find a valid path!", graph_search_method_.c_str());
     } catch (FoundGoal found_goal) {
       // Found a path to the goal, catch the exception
       std::list<vertex_descriptor> shortest_path;
@@ -415,12 +428,14 @@ namespace vox_nav_planning
       }
     }
     RCLCPP_INFO(
-      logger_, "Found path with astar %d which includes poses,", plan_poses.size());
+      logger_, "Found path with %s search %d which includes poses,",
+      graph_search_method_.c_str(), plan_poses.size());
 
     auto t2 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> ms_double = t2 - t1;
     RCLCPP_INFO(
-      logger_, "Whole Astar path finding function took %.4f milliseconds.", ms_double.count());
+      logger_, "Whole %s path finding function took %.4f milliseconds.",
+      graph_search_method_.c_str(), ms_double.count());
 
     return plan_poses;
   }

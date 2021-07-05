@@ -19,6 +19,7 @@
 #include <string>
 #include <memory>
 #include <boost/graph/astar_search.hpp>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/random.hpp>
 #include <boost/random.hpp>
@@ -177,15 +178,17 @@ namespace vox_nav_planning
 
     float distance_penalty_weight_;
     float elevation_penalty_weight_;
+
+    std::string graph_search_method_; // astar ? , diskstra ?
   };
 
   // euclidean distance heuristic
-  template<class Graph, class CostType, class SuperVoxelClustersType>
+  template<class Graph, class CostType, class SuperVoxelClustersPtr>
   class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
   {
   public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-    distance_heuristic(SuperVoxelClustersType sc, Vertex goal_vertex, Graph g)
+    distance_heuristic(SuperVoxelClustersPtr sc, Vertex goal_vertex, Graph g)
     : supervoxel_clusters_(sc), goal_vertex_(goal_vertex), g_(g)
     {
     }
@@ -193,8 +196,8 @@ namespace vox_nav_planning
     {
       auto u_vertex_label = g_[u].label;
       auto goal_vertex_label = g_[goal_vertex_].label;
-      auto u_supervoxel_centroid = supervoxel_clusters_.at(u_vertex_label)->centroid_;
-      auto goal_supervoxel_centroid = supervoxel_clusters_.at(goal_vertex_label)->centroid_;
+      auto u_supervoxel_centroid = supervoxel_clusters_->at(u_vertex_label)->centroid_;
+      auto goal_supervoxel_centroid = supervoxel_clusters_->at(goal_vertex_label)->centroid_;
       CostType dx = u_supervoxel_centroid.x - goal_supervoxel_centroid.x;
       CostType dy = u_supervoxel_centroid.y - goal_supervoxel_centroid.y;
       CostType dz = u_supervoxel_centroid.z - goal_supervoxel_centroid.z;
@@ -202,7 +205,7 @@ namespace vox_nav_planning
     }
 
   private:
-    SuperVoxelClustersType supervoxel_clusters_;
+    SuperVoxelClustersPtr supervoxel_clusters_;
     Vertex goal_vertex_;
     Graph g_;
   };
@@ -210,10 +213,10 @@ namespace vox_nav_planning
   // exception for termination
   struct FoundGoal {};
   template<class Vertex>
-  class astar_goal_visitor : public boost::default_astar_visitor
+  class custom_goal_visitor : public boost::default_astar_visitor
   {
   public:
-    astar_goal_visitor(Vertex goal_vertex)
+    custom_goal_visitor(Vertex goal_vertex)
     : goal_vertex_(goal_vertex)
     {
     }
