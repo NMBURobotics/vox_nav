@@ -61,27 +61,20 @@ namespace vox_nav_planning
     parent->get_parameter("interpolation_parameter", interpolation_parameter_);
     parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
     parent->get_parameter(
-      plugin_name + ".supervoxel_disable_transform",
-      supervoxel_disable_transform_);
+      plugin_name + ".supervoxel_disable_transform", supervoxel_disable_transform_);
     parent->get_parameter(
-      plugin_name + ".supervoxel_resolution",
-      supervoxel_resolution_);
+      plugin_name + ".supervoxel_resolution", supervoxel_resolution_);
     parent->get_parameter(
-      plugin_name + ".supervoxel_seed_resolution",
-      supervoxel_seed_resolution_);
+      plugin_name + ".supervoxel_seed_resolution", supervoxel_seed_resolution_);
     parent->get_parameter(
-      plugin_name + ".supervoxel_color_importance",
-      supervoxel_color_importance_);
+      plugin_name + ".supervoxel_color_importance", supervoxel_color_importance_);
     parent->get_parameter(
-      plugin_name + ".supervoxel_spatial_importance",
-      supervoxel_spatial_importance_);
+      plugin_name + ".supervoxel_spatial_importance", supervoxel_spatial_importance_);
     parent->get_parameter(
-      plugin_name + ".supervoxel_normal_importance",
-      supervoxel_normal_importance_);
+      plugin_name + ".supervoxel_normal_importance", supervoxel_normal_importance_);
     parent->get_parameter(plugin_name + ".distance_penalty_weight", distance_penalty_weight_);
     parent->get_parameter(plugin_name + ".elevation_penalty_weight", elevation_penalty_weight_);
     parent->get_parameter(plugin_name + ".graph_search_method", graph_search_method_);
-
 
     se2_bounds_->setLow(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
