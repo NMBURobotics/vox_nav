@@ -450,7 +450,7 @@ namespace vox_nav_planning
       double roll, pitch, yaw;
       yaw = std::atan2(dy, dx);
       pitch = -std::atan2(dz, std::sqrt(dx * dx + dy * dy));
-      roll = 0 /*std::atan2(dz, dy)*/;
+      roll = 0;
       plan_poses[i].pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(roll, pitch, yaw);
     }
 
@@ -511,9 +511,9 @@ namespace vox_nav_planning
     double dz = a.z - b.z;
 
     double roll, pitch, yaw;
-    roll = std::atan2((dz), std::sqrt(dy * dy + dx * dx));
-    pitch = 0;
-    yaw = std::atan2(dx, dy);
+    yaw = std::atan2(dy, dx);
+    pitch = -std::atan2(dz, std::sqrt(dx * dx + dy * dy));
+    roll = 0;
 
     tf2::Quaternion quat;
     quat.setRPY(roll, pitch, yaw);
