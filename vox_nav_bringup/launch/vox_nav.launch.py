@@ -43,7 +43,7 @@ def generate_launch_description():
 
     planner_server_node = Node(
         package='vox_nav_planning',
-        executable='vox_nav_planner_server',
+        executable='planner_server',
         name='vox_nav_planner_server_rclcpp_node',
         namespace='',
         output='screen',

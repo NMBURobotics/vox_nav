@@ -420,12 +420,13 @@ namespace vox_nav_planning
           solution_state->as<ompl::base::ElevationStateSpace::StateType>();
         compound_elevation_state->setSE2(
           solution_state_position.x, solution_state_position.y,
-          0 /*assume a 0 yaw*/);
+          0 /*assume a 0 yaw here*/);
         compound_elevation_state->setZ(solution_state_position.z);
         solution_path->append(compound_elevation_state);
       }
       /*solution_path->interpolate(interpolation_parameter_);*/    /*WARN TAKES A LOT OF TIME*/
       /*path_simlifier->smoothBSpline(*solution_path, 1, 1.0);*/   /*WARN TAKES A LOT OF TIME*/
+
       for (std::size_t path_idx = 0; path_idx < solution_path->getStateCount(); path_idx++) {
         const auto * compound_elevation_state =
           solution_path->getState(path_idx)->as<ompl::base::ElevationStateSpace::StateType>();
@@ -438,10 +439,21 @@ namespace vox_nav_planning
         pose.pose.position.x = se2->getX();
         pose.pose.position.y = se2->getY();
         pose.pose.position.z = z->values[0];
-        pose.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, se2->getYaw());
         plan_poses.push_back(pose);
       }
     }
+
+    for (size_t i = 1; i < plan_poses.size(); i++) {
+      double dx = plan_poses[i - 1].pose.position.x - plan_poses[i].pose.position.x;
+      double dy = plan_poses[i - 1].pose.position.y - plan_poses[i].pose.position.y;
+      double dz = plan_poses[i - 1].pose.position.z - plan_poses[i].pose.position.z;
+      double roll, pitch, yaw;
+      yaw = std::atan2(dy, dx);
+      pitch = -std::atan2(dz, std::sqrt(dx * dx + dy * dy));
+      roll = 0 /*std::atan2(dz, dy)*/;
+      plan_poses[i].pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(roll, pitch, yaw);
+    }
+
     RCLCPP_INFO(
       logger_, "A total of %d vertices were visited from a Boost Graph", num_visited_nodes);
     RCLCPP_INFO(

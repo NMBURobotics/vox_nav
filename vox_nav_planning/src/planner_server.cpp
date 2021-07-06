@@ -257,6 +257,7 @@ namespace vox_nav_planning
       }
       marker.action = visualization_msgs::msg::Marker::ADD;
       marker.lifetime = rclcpp::Duration::from_seconds(0);
+      marker.text = std::to_string(path_idx);
       marker.pose = i.pose;
       marker.scale.x = get_parameter("robot_body_dimens.x").as_double();
       marker.scale.y = get_parameter("robot_body_dimens.y").as_double();
@@ -266,10 +267,29 @@ namespace vox_nav_planning
       marker.color.g = 1.0;
       marker.color.b = 1.0;
       marker_array.markers.push_back(marker);
-      path_idx++;
       start_marker = marker;
       goal_marker = marker;
 
+      visualization_msgs::msg::Marker text;
+      text.header.frame_id = "map";
+      text.header.stamp = rclcpp::Clock().now();
+      text.ns = "path";
+      text.id = path_idx + 1000;
+      text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+      text.action = visualization_msgs::msg::Marker::ADD;
+      text.lifetime = rclcpp::Duration::from_seconds(0);
+      text.text = std::to_string(path_idx);
+      text.pose = i.pose;
+      text.pose.position.z += 0.5;
+      text.scale.x = 0.3;
+      text.scale.y = 0.3;
+      text.scale.z = 0.3;
+      text.color.a = 1.0;
+      text.color.g = 1.0;
+      text.color.r = 1.0;
+      path_idx++;
+
+      marker_array.markers.push_back(text);
     }
     // Publish goal and start states for debuging
     start_marker.pose = start_pose.pose;
