@@ -186,12 +186,20 @@ namespace vox_nav_utilities
     return decomposed_cells;
   }
 
-  pcl::ModelCoefficients fit_plane_to_cloud(
+  bool fit_plane_to_cloud(
+    pcl::ModelCoefficients::Ptr coefficients,
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
     const double dist_thes)
   {
-    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-    if (cloud->points.size() > 2) {
+    if (cloud->points.size() < 3) {
+      coefficients->values.push_back(0.0);
+      coefficients->values.push_back(0.0);
+      coefficients->values.push_back(0.0);
+      coefficients->values.push_back(0.0);
+      return false;
+    }
+
+    try {
       pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
       // Create the segmentation object
       pcl::SACSegmentation<pcl::PointXYZRGB> seg;
@@ -203,16 +211,14 @@ namespace vox_nav_utilities
       seg.setDistanceThreshold(dist_thes);
       seg.setInputCloud(cloud);
       seg.segment(*inliers, *coefficients);
-      if (inliers->indices.size() == 0) {
-        PCL_ERROR("Could not estimate a planar model for the given dataset.");
-      }
-    } else {
+    } catch (...) {
       coefficients->values.push_back(0.0);
       coefficients->values.push_back(0.0);
       coefficients->values.push_back(0.0);
       coefficients->values.push_back(0.0);
+      return false;
     }
-    return *coefficients;
+    return true;
   }
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr set_cloud_color(

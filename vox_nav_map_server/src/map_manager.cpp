@@ -329,17 +329,24 @@ namespace vox_nav_map_server
       auto surfel_cloud = i.second;
 
       // fit a plane to this surfel cloud, in order to et its orientation
-      auto plane_model = vox_nav_utilities::fit_plane_to_cloud(
-        surfel_cloud,
-        cost_params_.plane_fit_threshold);
+      pcl::ModelCoefficients::Ptr plane_model(new pcl::ModelCoefficients);
+      if (!vox_nav_utilities::fit_plane_to_cloud(
+          plane_model,
+          surfel_cloud,
+          cost_params_.plane_fit_threshold))
+      {
+        RCLCPP_ERROR(
+          get_logger(),
+          "Cannot fit a plane to current surfel points, this may occur if cell size is too small");
+      }
 
       // extract rpy from plane equation
-      auto rpy = vox_nav_utilities::rpy_from_plane(plane_model);
+      auto rpy = vox_nav_utilities::rpy_from_plane(*plane_model);
 
       // extract averge point deviation from surfel cloud this determines the roughness of cloud
       double average_point_deviation = vox_nav_utilities::average_point_deviation_from_plane(
         surfel_cloud,
-        plane_model);
+        *plane_model);
 
       // extract max energy grap from surfel cloud, the higher this , the higher cost
       double max_energy_gap = vox_nav_utilities::max_energy_gap_in_cloud(
@@ -374,11 +381,11 @@ namespace vox_nav_map_server
 
         pcl::PointSurfel elevated_surfel;
         elevated_surfel.x = surfel_center_point.x + cost_params_.node_elevation_distance *
-          plane_model.values[0];
+          plane_model->values[0];
         elevated_surfel.y = surfel_center_point.y + cost_params_.node_elevation_distance *
-          plane_model.values[1];
+          plane_model->values[1];
         elevated_surfel.z = surfel_center_point.z + cost_params_.node_elevation_distance *
-          plane_model.values[2];
+          plane_model->values[2];
         elevated_surfel.r = 0.0;
         elevated_surfel.g = cost_params_.max_color_range - total_cost;
         elevated_surfel.b = total_cost;
