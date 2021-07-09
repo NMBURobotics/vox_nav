@@ -338,6 +338,9 @@ namespace vox_nav_map_server
         RCLCPP_ERROR(
           get_logger(),
           "Cannot fit a plane to current surfel points, this may occur if cell size is too small");
+        RCLCPP_ERROR(
+          get_logger(),
+          "Current surfel has %d points", surfel_cloud->points.size());
       }
 
       // extract rpy from plane equation
