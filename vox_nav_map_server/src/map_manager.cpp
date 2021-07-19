@@ -32,6 +32,7 @@ namespace vox_nav_map_server
     elevated_surfel_octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
     elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>();
     octomap_pointcloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    elevated_surfels_pointcloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
     original_octomap_markers_msg_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
     elevated_surfel_octomap_markers_msg_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -150,6 +151,9 @@ namespace vox_nav_map_server
 
     octomap_pointloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
       octomap_point_cloud_publish_topic_, rclcpp::SystemDefaultsQoS());
+
+    elevated_surfel_pcl_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+      "elevated_surfel_pointcloud", rclcpp::SystemDefaultsQoS());
 
     octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       octomap_markers_publish_topic_, rclcpp::SystemDefaultsQoS());
@@ -330,17 +334,20 @@ namespace vox_nav_map_server
 
       // fit a plane to this surfel cloud, in order to et its orientation
       pcl::ModelCoefficients::Ptr plane_model(new pcl::ModelCoefficients);
-      if (!vox_nav_utilities::fit_plane_to_cloud(
+
+      try {
+        vox_nav_utilities::fit_plane_to_cloud(
           plane_model,
           surfel_cloud,
-          cost_params_.plane_fit_threshold))
-      {
+          cost_params_.plane_fit_threshold);
+      } catch (...) {
         RCLCPP_ERROR(
           get_logger(),
           "Cannot fit a plane to current surfel points, this may occur if cell size is too small");
         RCLCPP_ERROR(
           get_logger(),
-          "Current surfel has %d points", surfel_cloud->points.size());
+          "Current surfel has %d points, Jumping to next surfel", surfel_cloud->points.size());
+        continue;
       }
 
       // extract rpy from plane equation
@@ -394,6 +401,29 @@ namespace vox_nav_map_server
         elevated_surfel.b = total_cost;
         elevated_surfels_cloud.points.push_back(elevated_surfel);
 
+        // inflate surfel as a cylinder by appending surfel cloud and their
+        // up and down projections(by using surfel normal)
+        for (auto && sp : surfel_cloud->points) {
+          double step_size = 0.02;
+          for (double step = -0.2; step < 0.2; step += step_size) {
+            pcl::PointSurfel sp_down, sp_up;
+            sp_down.x = sp.x + (cost_params_.node_elevation_distance + step) *
+              plane_model->values[0];
+            sp_down.y = sp.y + (cost_params_.node_elevation_distance + step) *
+              plane_model->values[1];
+            sp_down.z = sp.z + (cost_params_.node_elevation_distance + step) *
+              plane_model->values[2];
+            sp_down.g = cost_params_.max_color_range - total_cost;
+            sp_down.b = total_cost;
+            sp_up.x = sp.x + (cost_params_.node_elevation_distance - step) * plane_model->values[0];
+            sp_up.y = sp.y + (cost_params_.node_elevation_distance - step) * plane_model->values[1];
+            sp_up.z = sp.z + (cost_params_.node_elevation_distance - step) * plane_model->values[2];
+            sp_up.g = cost_params_.max_color_range - total_cost;
+            sp_up.b = total_cost;
+            elevated_surfels_cloud.points.push_back(sp_down);
+            elevated_surfels_cloud.points.push_back(sp_up);
+          }
+        }
         geometry_msgs::msg::Pose elevated_node_pose;
         elevated_node_pose.position.x = elevated_surfel.x;
         elevated_node_pose.position.y = elevated_surfel.y;
@@ -414,6 +444,7 @@ namespace vox_nav_map_server
       vox_nav_utilities::downsampleInputCloud<pcl::PointSurfel>(
       elevated_surfel_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
 
+
     octomap::Pointcloud surfel_octocloud;
     for (auto && i : elevated_surfel_pointcloud_->points) {
       surfel_octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
@@ -422,10 +453,10 @@ namespace vox_nav_map_server
     elevated_surfels_octomap_octree->insertPointCloud(surfel_octocloud, octomap::point3d(0, 0, 0));
 
     for (auto && i : elevated_surfel_pointcloud_->points) {
-      double value =
+      double cost_value =
         static_cast<double>(i.b / 255.0) -
         static_cast<double>(i.g / 255.0);
-      elevated_surfels_octomap_octree->setNodeValue(i.x, i.y, i.z, std::max(0.0, value));
+      elevated_surfels_octomap_octree->setNodeValue(i.x, i.y, i.z, std::max(0.0, cost_value));
     }
 
     auto header = std::make_shared<std_msgs::msg::Header>();
@@ -459,6 +490,8 @@ namespace vox_nav_map_server
   void MapManager::handleOriginalOctomap()
   {
     pcl::toROSMsg(*pcd_map_pointcloud_, *octomap_pointcloud_msg_);
+    pcl::toROSMsg(*elevated_surfel_pointcloud_, *elevated_surfels_pointcloud_msg_);
+
     octomap::Pointcloud octocloud;
     for (auto && i : pcd_map_pointcloud_->points) {
       octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
@@ -500,9 +533,13 @@ namespace vox_nav_map_server
     if (publish_octomap_visuals_) {
       octomap_pointcloud_msg_->header.frame_id = map_frame_id_;
       octomap_pointcloud_msg_->header.stamp = this->now();
+      elevated_surfels_pointcloud_msg_->header.frame_id = map_frame_id_;
+      elevated_surfels_pointcloud_msg_->header.stamp = this->now();
+
       octomap_pointloud_publisher_->publish(*octomap_pointcloud_msg_);
       octomap_markers_publisher_->publish(*original_octomap_markers_msg_);
       elevated_surfel_octomap_markers_publisher_->publish(*elevated_surfel_octomap_markers_msg_);
+      elevated_surfel_pcl_publisher_->publish(*elevated_surfels_pointcloud_msg_);
     }
   }
 
