@@ -199,9 +199,10 @@ namespace vox_nav_map_server
     rclcpp::TimerBase::SharedPtr timer_;
     // Service to provide Octomap, elevated surfel and elevated surfel poses
     rclcpp::Service<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_service_;
-    // publishes octomap in its native format
     // publishes octomap in form of a point cloud message
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr octomap_pointloud_publisher_;
+    // publishes octomap in form of a point cloud message
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr elevated_surfel_pcl_publisher_;
     // publish sampled node poses for planner to use.
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr octomap_markers_publisher_;
     // publish sampled node poses for planner to use.
@@ -214,6 +215,8 @@ namespace vox_nav_map_server
     rclcpp::Node::SharedPtr robot_localization_fromLL_client_node_;
     // reusable octomap point loud message, dont need to recreate each time we publish
     sensor_msgs::msg::PointCloud2::SharedPtr octomap_pointcloud_msg_;
+    // reusable octomap point loud message, dont need to recreate each time we publish
+    sensor_msgs::msg::PointCloud2::SharedPtr elevated_surfels_pointcloud_msg_;
     // reusable octomap marker array message, used to publish occupied nodes onlyu
     visualization_msgs::msg::MarkerArray::SharedPtr original_octomap_markers_msg_;
     // reusable octomap marker array message, used to publish occupied nodes onlyu
@@ -235,6 +238,7 @@ namespace vox_nav_map_server
     std::string pcd_map_filename_;
     // Pointcloud map is stroed here
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcd_map_pointcloud_;
+    //pcl::PointCloud<pcl::PointXYZRGB>::Ptr elevated_surfels_pointcloud_;
     // Pointcloud map is stroed here
     pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_pointcloud_;
     // rclcpp parameters from yaml file: topic name for published octomap
