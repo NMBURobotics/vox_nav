@@ -47,7 +47,8 @@ def generate_launch_description():
         executable='rviz2',
         name='rviz2',
         arguments=['-d', rviz_config_file],
-        output='screen')
+        output={'both': 'log'}, #change it to screen if you wanna see RVIZ output in terminal
+        )
 
     return LaunchDescription([
         declare_use_namespace_cmd,
