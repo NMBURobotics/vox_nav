@@ -32,16 +32,17 @@ import lifecycle_msgs.msg
 import os
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
+
 def generate_launch_description():
 
     share_dir = get_package_share_directory('vox_nav_bringup')
 
     params = LaunchConfiguration('params')
     localization_params = LaunchConfiguration('localization_params')
-    rviz_config = LaunchConfiguration('rviz_config')
     namespace = LaunchConfiguration('namespace')
     use_namespace = LaunchConfiguration('use_namespace')
-    use_sim_time = LaunchConfiguration('use_sim_time')
+    use_rviz = LaunchConfiguration('use_rviz')
+    rviz_config = LaunchConfiguration('rviz_config')
 
     decleare_params = DeclareLaunchArgument(
         'params',
@@ -54,12 +55,6 @@ def generate_launch_description():
             share_dir, 'params', 'localization_params.yaml'),
         description='Path to the localization parameters file.')
 
-    decleare_rviz_config = DeclareLaunchArgument(
-        'rviz_config',
-        default_value=os.path.join(
-            share_dir, 'rviz', 'vox_nav_default_view.yaml'),
-        description='Path to the rviz config file.')
-
     declare_namespace_cmd = DeclareLaunchArgument(
         'namespace',
         default_value='',
@@ -70,19 +65,16 @@ def generate_launch_description():
         default_value='false',
         description='Whether to apply a namespace to the vox_nav')
 
-    declare_use_sim_time_cmd = DeclareLaunchArgument(
-        'use_sim_time',
+    declare_use_rviz_cmd = DeclareLaunchArgument(
+        'use_rviz',
         default_value='false',
-        description='Use simulation (Gazebo) clock if true')
+        description='Whether to use RVIZ')
 
-    planner_server_node = Node(
-        package='vox_nav_planning',
-        executable='vox_nav_planner_server',
-        name='vox_nav_planner_server_rclcpp_node',
-        namespace='',
-        output='screen',
-        parameters=[params],
-    )
+    declare_rviz_config = DeclareLaunchArgument(
+        'rviz_config',
+        default_value=os.path.join(
+            share_dir, 'rviz', 'vox_nav_default_view.yaml'),
+        description='Path to the rviz config file.')
 
     # Specify the actions
     bringup_cmd_group = GroupAction([
@@ -101,6 +93,7 @@ def generate_launch_description():
         IncludeLaunchDescription(PythonLaunchDescriptionSource(
             os.path.join(share_dir, 'launch',
                                  'rviz.launch.py')),
+                                 condition=IfCondition(use_rviz),
                                  launch_arguments={
             'use_namespace': use_namespace,
             'rviz_config': rviz_config
@@ -117,9 +110,9 @@ def generate_launch_description():
     return LaunchDescription([
         decleare_params,
         decleare_localization_params,
-        decleare_rviz_config,
+        declare_use_rviz_cmd,
+        declare_rviz_config,
         declare_namespace_cmd,
         declare_use_namespace_cmd,
-        declare_use_sim_time_cmd,
         bringup_cmd_group
     ])
