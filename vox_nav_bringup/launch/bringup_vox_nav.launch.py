@@ -14,24 +14,12 @@
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (DeclareLaunchArgument, GroupAction,
-                            IncludeLaunchDescription, SetEnvironmentVariable)
-from launch.substitutions import LaunchConfiguration, PythonExpression
-from launch.actions import EmitEvent
-from launch.actions import RegisterEventHandler
-from launch_ros.actions import LifecycleNode
-from launch_ros.actions import Node
-from launch_ros.events.lifecycle import ChangeState
-from launch_ros.events.lifecycle import matches_node_name
-from launch_ros.event_handlers import OnStateTransition
+                            IncludeLaunchDescription)
+from launch.substitutions import LaunchConfiguration,
 from launch_ros.actions import PushRosNamespace
-from launch.actions import LogInfo
-from launch.events import matches_action
-from launch.event_handlers.on_shutdown import OnShutdown
 from launch.conditions import IfCondition
-import lifecycle_msgs.msg
 import os
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-
 
 def generate_launch_description():
 
@@ -85,8 +73,9 @@ def generate_launch_description():
 
         IncludeLaunchDescription(PythonLaunchDescriptionSource(
             os.path.join(share_dir, 'launch',
-                         'dual_ekf_navsat_localization.launch.py')),
+                         'vox_nav_core_nodes.launch.py')),
             launch_arguments={
+            'params': params,
             'localization_params': localization_params
         }.items()),
 
@@ -98,13 +87,6 @@ def generate_launch_description():
             'use_namespace': use_namespace,
             'rviz_config': rviz_config
         }.items()),
-
-        IncludeLaunchDescription(PythonLaunchDescriptionSource(
-            os.path.join(share_dir, 'launch',
-                         'vox_nav.launch.py')),
-            launch_arguments={
-            'params': params,
-        }.items())
     ])
 
     return LaunchDescription([
