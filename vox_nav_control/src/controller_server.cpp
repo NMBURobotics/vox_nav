@@ -88,7 +88,7 @@ namespace vox_nav_control
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
     cmd_vel_publisher_ =
-      this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
+      this->create_publisher<geometry_msgs::msg::Twist>("vox_nav/cmd_vel", 10);
   }
 
   ControllerServer::~ControllerServer()
