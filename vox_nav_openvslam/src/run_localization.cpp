@@ -42,13 +42,13 @@ namespace vox_nav_openvslam
     declare_parameter("enable_mapping_module", true);
     declare_parameter("enable_pangolin_viewer", true);
     declare_parameter("yaw_offset", 1.57);
-    declare_parameter("map_coordinates.latitude", 49.0);
-    declare_parameter("map_coordinates.longitude", 3.0);
-    declare_parameter("map_coordinates.altitude", 0.5);
-    declare_parameter("map_coordinates.quaternion.x", 0.0);
-    declare_parameter("map_coordinates.quaternion.y", 0.0);
-    declare_parameter("map_coordinates.quaternion.z", 0.0);
-    declare_parameter("map_coordinates.quaternion.w", 1.0);
+    declare_parameter("map_datum.latitude", 49.0);
+    declare_parameter("map_datum.longitude", 3.0);
+    declare_parameter("map_datum.altitude", 0.5);
+    declare_parameter("map_datum.quaternion.x", 0.0);
+    declare_parameter("map_datum.quaternion.y", 0.0);
+    declare_parameter("map_datum.quaternion.z", 0.0);
+    declare_parameter("map_datum.quaternion.w", 1.0);
 
     get_parameter("vocab_file_path", vocab_file_path_);
     get_parameter("setting_file_path", setting_file_path_);
@@ -59,13 +59,13 @@ namespace vox_nav_openvslam
     get_parameter("enable_mapping_module", enable_mapping_module_);
     get_parameter("enable_pangolin_viewer", enable_pangolin_viewer_);
     get_parameter("yaw_offset", yaw_offset_);
-    get_parameter("map_coordinates.latitude", static_map_gps_pose_->position.latitude);
-    get_parameter("map_coordinates.longitude", static_map_gps_pose_->position.longitude);
-    get_parameter("map_coordinates.altitude", static_map_gps_pose_->position.altitude);
-    get_parameter("map_coordinates.quaternion.x", static_map_gps_pose_->orientation.x);
-    get_parameter("map_coordinates.quaternion.y", static_map_gps_pose_->orientation.y);
-    get_parameter("map_coordinates.quaternion.z", static_map_gps_pose_->orientation.z);
-    get_parameter("map_coordinates.quaternion.w", static_map_gps_pose_->orientation.w);
+    get_parameter("map_datum.latitude", static_map_gps_pose_->position.latitude);
+    get_parameter("map_datum.longitude", static_map_gps_pose_->position.longitude);
+    get_parameter("map_datum.altitude", static_map_gps_pose_->position.altitude);
+    get_parameter("map_datum.quaternion.x", static_map_gps_pose_->orientation.x);
+    get_parameter("map_datum.quaternion.y", static_map_gps_pose_->orientation.y);
+    get_parameter("map_datum.quaternion.z", static_map_gps_pose_->orientation.z);
+    get_parameter("map_datum.quaternion.w", static_map_gps_pose_->orientation.w);
 
     if (!mask_img_path_.empty()) {
       try {

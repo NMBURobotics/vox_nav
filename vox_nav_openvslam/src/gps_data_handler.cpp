@@ -44,7 +44,7 @@ namespace vox_nav_openvslam
       map_info_yaml << YAML::Value << std::string(
         ctime(
           &current_time));
-      map_info_yaml << YAML::Key << "map_coordinates";
+      map_info_yaml << YAML::Key << "map_datum";
       map_info_yaml << YAML::BeginMap;
       map_info_yaml << YAML::Key << "latitude";
       map_info_yaml << YAML::Value << initial_map_gps_coordinates.first.latitude;

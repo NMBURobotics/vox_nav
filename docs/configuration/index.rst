@@ -118,7 +118,7 @@ parameters for these nodes are more or less as following;
       map_frame_id: "map"
       utm_frame_id: "utm"
       yaw_offset: 1.57                                                         # see navsat_transform_node from robot_localization, this offset is needed to recorrect orientation of static map
-      map_coordinates:
+      map_datum:
         latitude: 49.89999996757017
         longitude: 8.899999997371747
         altitude: 1.6

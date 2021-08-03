@@ -18,7 +18,7 @@ run_localization_rclcpp_node:
     eval_log: true
     enable_mapping_module: false    
     enable_pangolin_viewer: true
-    map_coordinates:
+    map_datum:
       latitude: 49.89998651126992
       longitude: 8.90004175541922
       altitude: 0.6342219080730283
