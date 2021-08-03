@@ -39,72 +39,75 @@ def generate_launch_description():
             share_dir, 'params', 'localization_params.yaml'),
         description='Path to the localization parameters file.')
 
-    vox_nav_nodes_group = GroupAction(
-        planner_server_node=Node(
-            package='vox_nav_planning',
-            executable='planner_server',
-            name='vox_nav_planner_server_rclcpp_node',
-            namespace='',
-            output='screen',
-            #prefix=['xterm -e gdb -ex run --args'],
-            parameters=[params],
-        ),
-        controller_server_node=Node(
-            package='vox_nav_control',
-            executable='vox_nav_controller_server',
-            name='vox_nav_controller_server_rclcpp_node',
-            namespace='',
-            output='screen',
-            parameters=[params],
-        ),
-        map_server_node=Node(
-            package='vox_nav_map_server',
-            executable='map_manager',
-            name='vox_nav_map_server_rclcpp_node',
-            namespace='',
-            output='screen',
-            parameters=[params],
-        ),
-        navigate_to_pose_server_node=Node(
-            package='vox_nav_pose_navigator',
-            executable='navigate_to_pose_server_node',
-            name='navigate_to_pose_server_node',
-            namespace='',
-            output='screen',
-            parameters=[params],
-        )
+    planner_server_node = Node(
+        package='vox_nav_planning',
+        executable='planner_server',
+        name='vox_nav_planner_server_rclcpp_node',
+        namespace='',
+        output='screen',
+        #prefix=['xterm -e gdb -ex run --args'],
+        parameters=[params],
+    )
+    controller_server_node = Node(
+        package='vox_nav_control',
+        executable='vox_nav_controller_server',
+        name='vox_nav_controller_server_rclcpp_node',
+        namespace='',
+        output='screen',
+        parameters=[params],
+    )
+    map_server_node = Node(
+        package='vox_nav_map_server',
+        executable='map_manager',
+        name='vox_nav_map_server_rclcpp_node',
+        namespace='',
+        output='screen',
+        parameters=[params],
+    )
+    navigate_to_pose_server_node = Node(
+        package='vox_nav_pose_navigator',
+        executable='navigate_to_pose_server_node',
+        name='navigate_to_pose_server_node',
+        namespace='',
+        output='screen',
+        parameters=[params],
     )
 
-    robot_localization_nodes_group = GroupAction(
+    ekf_local_filter_node = Node(package='robot_localization',
+                                 executable='ekf_node',
+                                 name='ekf_local_filter_node',
+                                 output='screen',
+                                 parameters=[localization_params],
+                                 remappings=[('odometry/filtered', 'odometry/local')])
 
-        ekf_local_filter_node=Node(package='robot_localization',
-                                   executable='ekf_node',
-                                   name='ekf_local_filter_node',
-                                   output='screen',
-                                   parameters=[localization_params],
-                                   remappings=[('odometry/filtered', 'odometry/local')]),
+    ekf_global_filter_node = Node(package='robot_localization',
+                                  executable='ekf_node',
+                                  name='ekf_global_filter_node',
+                                  output='screen',
+                                  parameters=[localization_params],
+                                  remappings=[('odometry/filtered', 'odometry/global')])
 
-        ekf_global_filter_node=Node(package='robot_localization',
-                                    executable='ekf_node',
-                                    name='ekf_global_filter_node',
-                                    output='screen',
-                                    parameters=[localization_params],
-                                    remappings=[('odometry/filtered', 'odometry/global')]),
-
-        navsat_transform_node=Node(package='robot_localization',
-                                   executable='navsat_transform_node',
-                                   name='navsat_transform_node',
-                                   output='screen',
-                                   parameters=[localization_params],
-                                   remappings=[('imu/data', 'imu/data'),
-                                               ('gps/fix', 'gps/fix'),
-                                               ('gps/filtered', 'gps/filtered'),
-                                               ('odometry/gps', 'odometry/gps'),
-                                               ('odometry/filtered', 'odometry/global')]))
+    navsat_transform_node = Node(package='robot_localization',
+                                 executable='navsat_transform_node',
+                                 name='navsat_transform_node',
+                                 # change it to screen if you wanna see RVIZ output in terminal
+                                 #output={'both': 'log'},
+                                 output='screen',
+                                 parameters=[localization_params],
+                                 remappings=[('imu/data', 'imu/data'),
+                                             ('gps/fix', 'gps/fix'),
+                                             ('gps/filtered', 'gps/filtered'),
+                                             ('odometry/gps', 'odometry/gps'),
+                                             ('odometry/filtered', 'odometry/global')])
 
     return LaunchDescription([
         decleare_params,
         decleare_localization_params,
-        vox_nav_nodes_group,
-        robot_localization_nodes_group
+        ekf_local_filter_node,
+        ekf_global_filter_node,
+        navsat_transform_node,
+        planner_server_node,
+        controller_server_node,
+        map_server_node,
+        navigate_to_pose_server_node
     ])
