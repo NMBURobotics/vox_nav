@@ -25,6 +25,7 @@
 
 #include <openvslam/system.h>
 #include <openvslam/config.h>
+#include <openvslam/util/yaml.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <message_filters/synchronizer.h>

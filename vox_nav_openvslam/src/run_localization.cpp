@@ -28,7 +28,6 @@ namespace vox_nav_openvslam
   RunLocalization::RunLocalization()
   :  Node("run_localization_rclcpp_node")
   {
-
     static_map_gps_pose_ = std::make_shared<vox_nav_msgs::msg::OrientedNavSatFix>();
     mask_ = std::make_shared<cv::Mat>();
     initial_time_stamp_ = std::chrono::steady_clock::now();
@@ -144,7 +143,9 @@ namespace vox_nav_openvslam
 
     if (enable_pangolin_viewer_) {
       pangolin_viewer_ = std::make_shared<pangolin_viewer::viewer>(
-        cfg_, SLAM_.get(), SLAM_->get_frame_publisher(), SLAM_->get_map_publisher());
+        openvslam::util::yaml_optional_ref(
+          cfg_->yaml_node_, "PangolinViewer"), SLAM_.get(),
+        SLAM_->get_frame_publisher(), SLAM_->get_map_publisher());
 
       pangolin_viewer_thread_ =
         std::make_shared<std::thread>(
@@ -191,7 +192,9 @@ namespace vox_nav_openvslam
     const auto timestamp =
       std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - initial_time_stamp_).count();
     // input the current frame and estimate the camera pose
-    Eigen::Matrix4d cam_pose = SLAM_->feed_RGBD_frame(colorcv, depthcv, timestamp, *mask_);
+    Eigen::Matrix<double, 4, 4> cam_pose = *SLAM_->feed_RGBD_frame(
+      colorcv, depthcv, timestamp,
+      *mask_);
 
     poseOdomPublisher(cam_pose);
 
@@ -229,7 +232,7 @@ namespace vox_nav_openvslam
     }
   }
 
-  void RunLocalization::poseOdomPublisher(Eigen::Matrix4d cam_pose)
+  void RunLocalization::poseOdomPublisher(Eigen::Matrix<double, 4, 4> cam_pose)
   {
     Eigen::Matrix3d rotation_matrix = cam_pose.block(0, 0, 3, 3);
     Eigen::Vector3d translation_vector = cam_pose.block(0, 3, 3, 1);

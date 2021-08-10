@@ -70,11 +70,22 @@ namespace vox_nav_openvslam
         ex.what());
       return;
     }
+
+    RCLCPP_INFO(get_logger(), "Config OK... ");
+
     gps_waypoint_collector_node_ = std::make_shared<vox_nav_utilities::GPSWaypointCollector>();
 
     initial_time_stamp_ = std::chrono::steady_clock::now();
     SLAM_ = std::make_shared<openvslam::system>(cfg_, vocab_file_path_.c_str());
     SLAM_->startup();
+
+    RCLCPP_INFO(get_logger(), "Setted up SLAM... ");
+
+    rclcpp::QoS zed_qos(10);
+    zed_qos.keep_last(10);
+    zed_qos.best_effort();
+    zed_qos.durability_volatile();
+
 
     // register correct callback according to seleted camera model type
     if (cfg_->camera_->setup_type_ == openvslam::camera::setup_type_t::Monocular) {
@@ -103,7 +114,8 @@ namespace vox_nav_openvslam
     rclcpp::sleep_for(std::chrono::seconds(2));
 
     pangolin_viewer_ = std::make_shared<pangolin_viewer::viewer>(
-      cfg_, SLAM_.get(),
+      openvslam::util::yaml_optional_ref(
+        cfg_->yaml_node_, "PangolinViewer"), SLAM_.get(),
       SLAM_->get_frame_publisher(), SLAM_->get_map_publisher());
 
     pangolin_viewer_thread_ =

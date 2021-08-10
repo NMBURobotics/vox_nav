@@ -31,10 +31,11 @@ def generate_launch_description():
             package='vox_nav_openvslam',
             executable='run_slam',
             name='run_slam_rclcpp_node',
-            remappings=[('camera/color/image_raw', 'camera/color/image_raw'),
-                        ('camera/depth/image_raw',
-                         'camera/aligned_depth_to_color/image_raw')],
+            remappings=[('camera/color/image_raw', '/zed/zed_node/rgb/image_rect_color'),
+                        ('camera/depth/image_raw', '/zed/zed_node/depth/depth_registered')],
             output='screen',
             parameters=[config_file],
+            #prefix=['xterm -e gdb -ex run --args']
+
         ),
     ])

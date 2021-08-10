@@ -25,6 +25,7 @@
 
 #include <openvslam/system.h>
 #include <openvslam/config.h>
+#include <openvslam/util/yaml.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <message_filters/synchronizer.h>
@@ -106,7 +107,7 @@ namespace vox_nav_openvslam
     void executeViewerPangolinThread();
 
 
-    void  poseOdomPublisher(Eigen::Matrix4d cam_pose);
+    void  poseOdomPublisher(Eigen::Matrix<double, 4, 4> cam_pose);
 
     /**
      * @brief Typedefs for shortnening Approx time Syncer initialization.
