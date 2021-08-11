@@ -1,0 +1,75 @@
+#==============#
+# Camera Model #
+#==============#
+
+Camera:
+  name: "zed stereo"
+  setup: "stereo"
+  model: "perspective"
+
+  fx: 691.5946655273438
+  fy: 691.5946655273438
+  cx: 500.4448547363281
+  cy: 330.7748413085937
+
+  k1: 0.0
+  k2: 0.0
+  p1: 0.0
+  p2: 0.0
+  k3: 0.0
+
+  fps: 10.0
+  cols: 960
+  rows: 540
+  focal_x_baseline: 82.9913598633 # 0.12 * 691.5946655273438
+
+  color_order: "RGB"
+
+#=====================#
+# Tracking Parameters #
+#=====================#
+
+Tracking:
+  max_num_keypoints: 4000
+  ini_max_num_keypoints: 4000
+  depth_threshold: 40
+
+#================#
+# ORB Parameters #
+#================#
+
+Feature:
+  scale_factor: 1.2
+  num_levels: 8
+  ini_fast_threshold: 12
+  min_fast_threshold: 7
+
+#====================#
+# Mapping Parameters #
+#====================#
+
+Mapping:
+  baseline_dist_thr: 0.53716571886
+
+#========================#
+# Initializer Parameters #
+#========================#
+
+Initializer:
+  num_min_triangulated_pts: 100
+
+#===========================#
+# PangolinViewer Parameters #
+#===========================#
+
+PangolinViewer:
+  keyframe_size: 1.2
+  keyframe_line_width: 1
+  graph_line_width: 2
+  point_size: 2
+  camera_size: 0.8
+  camera_line_width: 3
+  viewpoint_x: 0.0
+  viewpoint_y: -300
+  viewpoint_z: -0.1
+  viewpoint_f: 2800

@@ -73,6 +73,16 @@ namespace vox_nav_openvslam
     ~RunSlam();
 
     /**
+ * @brief RGBD callback, subscries to both color and depth image with approx. time syncer, and runs openvslam localization.
+ *
+ * @param color
+ * @param depth
+ */
+    void stereoCallback(
+      const sensor_msgs::msg::Image::ConstSharedPtr & left,
+      const sensor_msgs::msg::Image::ConstSharedPtr & right);
+
+    /**
      * @brief RGBD callback, subscries to both color and depth image with approx. time syncer, and runs openvslam localization.
      *
      * @param color

@@ -32,10 +32,10 @@ def generate_launch_description():
             executable='run_slam',
             name='run_slam_rclcpp_node',
             remappings=[('camera/color/image_raw', '/zed/zed_node/rgb/image_rect_color'),
-                        ('camera/depth/image_raw', '/zed/zed_node/depth/depth_registered')],
+                        ('camera/depth/image_raw', '/zed/zed_node/depth/depth_registered'),
+                        ('camera/left/image_raw', '/zed/zed_node/left/image_rect_color'),
+                        ('camera/right/image_raw', '/zed/zed_node/right/image_rect_color')],
             output='screen',
-            parameters=[config_file],
-            #prefix=['xterm -e gdb -ex run --args']
-
+            parameters=[config_file]
         ),
     ])

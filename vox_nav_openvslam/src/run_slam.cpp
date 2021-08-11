@@ -81,11 +81,6 @@ namespace vox_nav_openvslam
 
     RCLCPP_INFO(get_logger(), "Setted up SLAM... ");
 
-    rclcpp::QoS zed_qos(10);
-    zed_qos.keep_last(10);
-    zed_qos.best_effort();
-    zed_qos.durability_volatile();
-
 
     // register correct callback according to seleted camera model type
     if (cfg_->camera_->setup_type_ == openvslam::camera::setup_type_t::Monocular) {
@@ -101,11 +96,28 @@ namespace vox_nav_openvslam
         rmw_qos_profile_sensor_data);
       rgbd_approx_time_syncher_.reset(
         new RGBDApprxTimeSyncer(
-          RGBDApprxTimeSyncPolicy(10), rgbd_color_image_subscriber_,
+          RGBDApprxTimeSyncPolicy(10),
+          rgbd_color_image_subscriber_,
           rgbd_depth_image_subscriber_));
       rgbd_approx_time_syncher_->registerCallback(
         std::bind(
           &RunSlam::rgbdCallback, this, std::placeholders::_1,
+          std::placeholders::_2));
+    } else if ((cfg_->camera_->setup_type_ == openvslam::camera::setup_type_t::Stereo)) {
+      rgbd_color_image_subscriber_.subscribe(
+        this, "camera/left/image_raw",
+        rmw_qos_profile_sensor_data);
+      rgbd_depth_image_subscriber_.subscribe(
+        this, "camera/right/image_raw",
+        rmw_qos_profile_sensor_data);
+      rgbd_approx_time_syncher_.reset(
+        new RGBDApprxTimeSyncer(
+          RGBDApprxTimeSyncPolicy(10),
+          rgbd_color_image_subscriber_,
+          rgbd_depth_image_subscriber_));
+      rgbd_approx_time_syncher_->registerCallback(
+        std::bind(
+          &RunSlam::stereoCallback, this, std::placeholders::_1,
           std::placeholders::_2));
     } else {
       throw std::runtime_error("Invalid setup type: " + cfg_->camera_->get_setup_type_string());
@@ -148,11 +160,11 @@ namespace vox_nav_openvslam
     RCLCPP_INFO(get_logger(), "Deconstructed an instance of RunSlam node , bye... ");
   }
 
-  void RunSlam::rgbdCallback(
-    const sensor_msgs::msg::Image::ConstSharedPtr & color,
-    const sensor_msgs::msg::Image::ConstSharedPtr & depth)
+  void RunSlam::stereoCallback(
+    const sensor_msgs::msg::Image::ConstSharedPtr & left,
+    const sensor_msgs::msg::Image::ConstSharedPtr & right)
   {
-    if (!gps_waypoint_collector_node_->isOrientedGPSDataReady()) {
+    /*if (!gps_waypoint_collector_node_->isOrientedGPSDataReady()) {
       RCLCPP_WARN(
         get_logger(),
         "Oriented GPS coordinates are not recieved yet, the initial pose of map is unknown!, "
@@ -177,7 +189,54 @@ namespace vox_nav_openvslam
               gps_waypoint_collector_node_);
           }
         });
+    }*/
+    // At this point we do have initial pose of map to be created
+    auto leftcv = cv_bridge::toCvShare(left)->image;
+    auto rightcv = cv_bridge::toCvShare(right)->image;
+    if (leftcv.empty() || rightcv.empty()) {
+      return;
     }
+    const auto tp_1 = std::chrono::steady_clock::now();
+    const auto timestamp =
+      std::chrono::duration_cast<std::chrono::duration<double>>(tp_1 - initial_time_stamp_).count();
+    // input the current frame and estimate the camera pose
+    SLAM_->feed_stereo_frame(leftcv, rightcv, timestamp, *mask_);
+    const auto tp_2 = std::chrono::steady_clock::now();
+    const auto track_time =
+      std::chrono::duration_cast<std::chrono::duration<double>>(tp_2 - tp_1).count();
+    track_times_.push_back(track_time);
+  }
+
+  void RunSlam::rgbdCallback(
+    const sensor_msgs::msg::Image::ConstSharedPtr & color,
+    const sensor_msgs::msg::Image::ConstSharedPtr & depth)
+  {
+    /*if (!gps_waypoint_collector_node_->isOrientedGPSDataReady()) {
+      RCLCPP_WARN(
+        get_logger(),
+        "Oriented GPS coordinates are not recieved yet, the initial pose of map is unknown!, "
+        "spinning gps waypoint collector node and trying again ...");
+      rclcpp::spin_some(gps_waypoint_collector_node_);
+      rclcpp::sleep_for(std::chrono::seconds(1));
+      return;
+    } else {
+      std::call_once(
+        gps_data_recieved_flag_, [this]() {
+          if (write_map_info_) {
+            RCLCPP_WARN(
+              get_logger(),
+              "Recieved a pair of gps and imu data, data will be recieved and dumped "
+              "to yaml file once additional map related information will be dumped yaml file: %s ",
+              map_info_path_.c_str()
+            );
+            vox_nav_openvslam::writeMapInfotoYAML(
+              map_info_path_,
+              map_db_path_,
+              std::string("rgbd"),
+              gps_waypoint_collector_node_);
+          }
+        });
+    }*/
     // At this point we do have initial pose of map to be created
     auto colorcv = cv_bridge::toCvShare(color)->image;
     auto depthcv = cv_bridge::toCvShare(depth)->image;
