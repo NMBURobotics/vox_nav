@@ -36,14 +36,19 @@ namespace vox_nav_utilities
   class GPSWaypointCollector : public rclcpp::Node
   {
   public:
-    /**
-   * @brief Typedefs for shortnening Approx time Syncer initialization.
-   *
-   */
-    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::NavSatFix,
-        sensor_msgs::msg::Imu>
-      SensorDataApprxTimeSyncPolicy;
-    typedef message_filters::Synchronizer<SensorDataApprxTimeSyncPolicy> SensorDataApprxTimeSyncer;
+    // IF ABSOLUTE HEADING COMES FROM IMU
+    typedef message_filters::sync_policies::ApproximateTime<
+        sensor_msgs::msg::NavSatFix,
+        sensor_msgs::msg::Imu> GpsImuDataApprxTimeSyncPolicy;
+    typedef message_filters::Synchronizer<GpsImuDataApprxTimeSyncPolicy>
+      GpsImuDataApprxTimeSyncer;
+
+    // IF ABSOLUTE HEADING COMES FROM NMEA DRIVER
+    typedef message_filters::sync_policies::ApproximateTime<
+        sensor_msgs::msg::NavSatFix,
+        geometry_msgs::msg::QuaternionStamped> GpsQuaternionDataApprxTimeSyncPolicy;
+    typedef message_filters::Synchronizer<GpsQuaternionDataApprxTimeSyncPolicy>
+      GpsQuaternionDataApprxTimeSyncer;
 
     /**
      * @brief Construct a new GPSWaypointCollector object
@@ -69,9 +74,20 @@ namespace vox_nav_utilities
      * @param gps
      * @param imu
      */
-    void sensorDataCallback(
+    void gpsImuDataCallback(
       const sensor_msgs::msg::NavSatFix::ConstSharedPtr & gps,
       const sensor_msgs::msg::Imu::ConstSharedPtr & imu);
+
+
+    /**
+     * @brief subscribe to imu anf gps and update global sensor data vars with latest recieved msgs
+     *
+     * @param gps
+     * @param quat
+     */
+    void gpsQuaternionDataCallback(
+      const sensor_msgs::msg::NavSatFix::ConstSharedPtr & gps,
+      const geometry_msgs::msg::QuaternionStamped::ConstSharedPtr & quat);
 
     /**
      * @brief Get the Latest Oriented GPS Coordinates object
@@ -94,10 +110,13 @@ namespace vox_nav_utilities
     rclcpp::TimerBase::SharedPtr timer_;
     message_filters::Subscriber<sensor_msgs::msg::NavSatFix> navsat_fix_subscriber_;
     message_filters::Subscriber<sensor_msgs::msg::Imu> imu_subscriber_;
-    std::shared_ptr<SensorDataApprxTimeSyncer> sensor_data_approx_time_syncher_;
+    message_filters::Subscriber<geometry_msgs::msg::QuaternionStamped> quaternion_subscriber_;
+    std::shared_ptr<GpsImuDataApprxTimeSyncer> gps_imu_data_approx_time_syncher_;
+    std::shared_ptr<GpsQuaternionDataApprxTimeSyncer> gps_quaternion_data_approx_time_syncher_;
 
     sensor_msgs::msg::NavSatFix reusable_navsat_msg_;
     sensor_msgs::msg::Imu reusable_imu_msg_;
+    geometry_msgs::msg::QuaternionStamped reusable_quaternion_msg_;
 
     // to ensure safety when accessing global
     std::mutex global_mutex_;

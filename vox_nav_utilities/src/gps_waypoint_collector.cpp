@@ -26,17 +26,30 @@ namespace vox_nav_utilities
   {
     navsat_fix_subscriber_.subscribe(this, "/gps/fix", rmw_qos_profile_sensor_data);
     imu_subscriber_.subscribe(this, "/imu/data", rmw_qos_profile_sensor_data);
+    quaternion_subscriber_.subscribe(this, "/heading", rmw_qos_profile_sensor_data);
 
-    sensor_data_approx_time_syncher_.reset(
-      new SensorDataApprxTimeSyncer(
-        SensorDataApprxTimeSyncPolicy(100),
+    gps_imu_data_approx_time_syncher_.reset(
+      new GpsImuDataApprxTimeSyncer(
+        GpsImuDataApprxTimeSyncPolicy(100),
         navsat_fix_subscriber_,
         imu_subscriber_));
 
-    sensor_data_approx_time_syncher_->registerCallback(
+    gps_quaternion_data_approx_time_syncher_.reset(
+      new GpsQuaternionDataApprxTimeSyncer(
+        GpsQuaternionDataApprxTimeSyncPolicy(100),
+        navsat_fix_subscriber_,
+        quaternion_subscriber_));
+
+    gps_imu_data_approx_time_syncher_->registerCallback(
       std::bind(
-        &GPSWaypointCollector::sensorDataCallback, this, std::placeholders::_1,
+        &GPSWaypointCollector::gpsImuDataCallback, this, std::placeholders::_1,
         std::placeholders::_2));
+
+    gps_quaternion_data_approx_time_syncher_->registerCallback(
+      std::bind(
+        &GPSWaypointCollector::gpsQuaternionDataCallback, this, std::placeholders::_1,
+        std::placeholders::_2));
+
     timer_ = this->create_wall_timer(
       std::chrono::milliseconds(500),
       std::bind(&GPSWaypointCollector::timerCallback, this));
@@ -66,13 +79,25 @@ namespace vox_nav_utilities
     }
   }
 
-  void GPSWaypointCollector::sensorDataCallback(
+  void GPSWaypointCollector::gpsImuDataCallback(
     const sensor_msgs::msg::NavSatFix::ConstSharedPtr & gps,
     const sensor_msgs::msg::Imu::ConstSharedPtr & imu)
   {
     std::lock_guard<std::mutex> guard(global_mutex_);
     reusable_navsat_msg_ = *gps;
     reusable_imu_msg_ = *imu;
+    is_first_msg_recieved_ = true;
+  }
+
+  void GPSWaypointCollector::gpsQuaternionDataCallback(
+    const sensor_msgs::msg::NavSatFix::ConstSharedPtr & gps,
+    const geometry_msgs::msg::QuaternionStamped::ConstSharedPtr & quat)
+  {
+    std::lock_guard<std::mutex> guard(global_mutex_);
+    reusable_navsat_msg_ = *gps;
+    reusable_quaternion_msg_ = *quat;
+    reusable_imu_msg_.orientation = reusable_quaternion_msg_.quaternion;
+    reusable_imu_msg_.header = reusable_quaternion_msg_.header;
     is_first_msg_recieved_ = true;
   }
 
