@@ -164,7 +164,7 @@ namespace vox_nav_openvslam
     const sensor_msgs::msg::Image::ConstSharedPtr & left,
     const sensor_msgs::msg::Image::ConstSharedPtr & right)
   {
-    /*if (!gps_waypoint_collector_node_->isOrientedGPSDataReady()) {
+    if (!gps_waypoint_collector_node_->isOrientedGPSDataReady()) {
       RCLCPP_WARN(
         get_logger(),
         "Oriented GPS coordinates are not recieved yet, the initial pose of map is unknown!, "
@@ -189,7 +189,7 @@ namespace vox_nav_openvslam
               gps_waypoint_collector_node_);
           }
         });
-    }*/
+    }
     // At this point we do have initial pose of map to be created
     auto leftcv = cv_bridge::toCvShare(left)->image;
     auto rightcv = cv_bridge::toCvShare(right)->image;
@@ -211,7 +211,7 @@ namespace vox_nav_openvslam
     const sensor_msgs::msg::Image::ConstSharedPtr & color,
     const sensor_msgs::msg::Image::ConstSharedPtr & depth)
   {
-    /*if (!gps_waypoint_collector_node_->isOrientedGPSDataReady()) {
+    if (!gps_waypoint_collector_node_->isOrientedGPSDataReady()) {
       RCLCPP_WARN(
         get_logger(),
         "Oriented GPS coordinates are not recieved yet, the initial pose of map is unknown!, "
@@ -236,7 +236,7 @@ namespace vox_nav_openvslam
               gps_waypoint_collector_node_);
           }
         });
-    }*/
+    }
     // At this point we do have initial pose of map to be created
     auto colorcv = cv_bridge::toCvShare(color)->image;
     auto depthcv = cv_bridge::toCvShare(depth)->image;
