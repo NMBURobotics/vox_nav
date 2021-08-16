@@ -18,7 +18,7 @@ Camera:
   p2: 0.0
   k3: 0.0
 
-  fps: 10.0
+  fps: 30.0
   cols: 960
   rows: 540
   focal_x_baseline: 82.9913598633 # 0.12 * 691.5946655273438
@@ -30,9 +30,9 @@ Camera:
 #=====================#
 
 Tracking:
-  max_num_keypoints: 4000
-  ini_max_num_keypoints: 4000
-  depth_threshold: 40
+  max_num_keypoints: 1000
+  ini_max_num_keypoints: 1000
+  depth_threshold: 8
 
 #================#
 # ORB Parameters #
