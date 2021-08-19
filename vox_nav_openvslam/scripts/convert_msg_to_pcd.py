@@ -23,7 +23,7 @@ if len(sys.argv) < 3:
     exit()
 
 with open(sys.argv[1], "rb") as f:
-    upacked_msg = msgpack.Unpacker(f)
+    upacked_msg = msgpack.Unpacker(f, raw=False)
     packed_msg = upacked_msg.unpack()
 
 landmarks = packed_msg["landmarks"]
