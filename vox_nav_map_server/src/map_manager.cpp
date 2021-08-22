@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2021 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -265,24 +265,28 @@ namespace vox_nav_map_server
 
   void MapManager::preProcessPCDMap()
   {
-    pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
-      pcd_map_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
+    if (preprocess_params_.pcd_map_downsample_voxel_size > 0.0) {
+      pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+        pcd_map_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
+    }
 
     RCLCPP_INFO(
       this->get_logger(), "PCD Map downsampled, it now has %d points"
       " adjust the parameters if the map looks off",
       pcd_map_pointcloud_->points.size());
     if (preprocess_params_.apply_filters) {
+
       pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
         pcd_map_pointcloud_,
         preprocess_params_.remove_outlier_mean_K,
         preprocess_params_.remove_outlier_stddev_threshold,
         vox_nav_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
-      pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
+      /*pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
         pcd_map_pointcloud_,
         preprocess_params_.remove_outlier_min_neighbors_in_radius,
         preprocess_params_.remove_outlier_radius_search,
-        vox_nav_utilities::OutlierRemovalType::RadiusOutlierRemoval);
+        vox_nav_utilities::OutlierRemovalType::RadiusOutlierRemoval);*/
+
     }
     // apply a rigid body transfrom if it was given one
     pcd_map_pointcloud_ = vox_nav_utilities::transformCloud(
@@ -436,10 +440,11 @@ namespace vox_nav_map_server
       pcl::make_shared<pcl::PointCloud<pcl::PointSurfel>>(elevated_surfels_cloud);
 
     // overlapping sufels duplicates some points , get rid of them by downsampling
-    elevated_surfel_pointcloud_ =
-      vox_nav_utilities::downsampleInputCloud<pcl::PointSurfel>(
-      elevated_surfel_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
-
+    if (preprocess_params_.pcd_map_downsample_voxel_size > 0.0) {
+      elevated_surfel_pointcloud_ =
+        vox_nav_utilities::downsampleInputCloud<pcl::PointSurfel>(
+        elevated_surfel_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
+    }
 
     octomap::Pointcloud surfel_octocloud;
     for (auto && i : elevated_surfel_pointcloud_->points) {
@@ -479,8 +484,10 @@ namespace vox_nav_map_server
     *pcd_map_pointcloud_ = cost_regressed_cloud;
 
     // overlapping sufels duplicates some points , get rid of them by downsampling
-    pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
-      pcd_map_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
+    if (preprocess_params_.pcd_map_downsample_voxel_size > 0.0) {
+      pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+        pcd_map_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
+    }
   }
 
   void MapManager::handleOriginalOctomap()
