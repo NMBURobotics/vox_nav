@@ -178,14 +178,14 @@ namespace vox_nav_openvslam
           if (write_map_info_) {
             RCLCPP_WARN(
               get_logger(),
-              "Recieved a pair of gps and imu data, data will be recieved and dumped "
+              "Recieved a pair of gps and quaternion data, data will be recieved and dumped "
               "to yaml file once additional map related information will be dumped yaml file: %s ",
               map_info_path_.c_str()
             );
             vox_nav_openvslam::writeMapInfotoYAML(
               map_info_path_,
               map_db_path_,
-              std::string("rgbd"),
+              std::string("stereo"),
               gps_waypoint_collector_node_);
           }
         });
