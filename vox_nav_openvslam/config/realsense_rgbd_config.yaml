@@ -1,0 +1,77 @@
+#==============#
+# Camera Model #
+#==============#
+
+Camera:
+  name: "Realsense D435i"
+  setup: "RGBD"
+  model: "perspective"
+
+  fx: 610.2249
+  fy: 608.9177
+  cx: 329.2902
+  cy: 242.7666
+
+  k1: 0.262383
+  k2: -0.953104
+  p1: -0.005358
+  p2: 0.002628
+  k3: 1.163314
+
+  fps: 30.0
+  cols: 640
+  rows: 480
+  focal_x_baseline: 40.0 # 0.15 * 608.9177
+
+  color_order: "BGR"
+
+#=====================#
+# Tracking Parameters #
+#=====================#
+
+Tracking:
+  max_num_keypoints: 1000
+  ini_max_num_keypoints: 2000
+  depth_threshold: 10
+  depthmap_factor: 1000.0
+
+#================#
+# ORB Parameters #
+#================#
+
+Feature:
+  max_num_keypoints: 1000
+  scale_factor: 1.2
+  num_levels: 8
+  ini_fast_threshold: 12
+  min_fast_threshold: 7
+
+#====================#
+# Mapping Parameters #
+#====================#
+
+Mapping:
+  baseline_dist_thr: 0.07471049682
+
+#========================#
+# Initializer Parameters #
+#========================#
+
+Initializer:
+  num_min_triangulated_pts: 100
+
+#===========================#
+# PangolinViewer Parameters #
+#===========================#
+
+PangolinViewer:
+  keyframe_size: 0.05
+  keyframe_line_width: 1
+  graph_line_width: 1
+  point_size: 2
+  camera_size: 0.08
+  camera_line_width: 3
+  viewpoint_x: 0
+  viewpoint_y: -0.9
+  viewpoint_z: -1.9
+  viewpoint_f: 400

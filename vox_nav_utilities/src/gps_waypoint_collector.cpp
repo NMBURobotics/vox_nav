@@ -25,8 +25,8 @@ namespace vox_nav_utilities
   : Node("gps_waypoint_collector_rclcpp_node"), is_first_msg_recieved_(false)
   {
     navsat_fix_subscriber_.subscribe(this, "/fix", rmw_qos_profile_sensor_data);
-    imu_subscriber_.subscribe(this, "/imu/data", rmw_qos_profile_sensor_data);
-    quaternion_subscriber_.subscribe(this, "/heading", rmw_qos_profile_sensor_data);
+    imu_subscriber_.subscribe(this, "/heading/imu", rmw_qos_profile_sensor_data);
+    quaternion_subscriber_.subscribe(this, "/heading/imu", rmw_qos_profile_sensor_data);
 
     gps_imu_data_approx_time_syncher_.reset(
       new GpsImuDataApprxTimeSyncer(

@@ -4,10 +4,6 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
-from launch.actions import IncludeLaunchDescription
-from launch.actions import ExecuteProcess
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import ThisLaunchFileDir
 
 
 def generate_launch_description():
@@ -31,8 +27,8 @@ def generate_launch_description():
             package='vox_nav_openvslam',
             executable='run_slam',
             name='run_slam_rclcpp_node',
-            remappings=[('camera/color/image_raw', '/zed/zed_node/rgb/image_rect_color'),
-                        ('camera/depth/image_raw', '/zed/zed_node/depth/depth_registered'),
+            remappings=[('camera/color/image_raw', '/camera/color/image_raw'),
+                        ('camera/depth/image_raw', '/camera/aligned_depth_to_color/image_raw'),
                         ('camera/left/image_raw', '/zed/zed_node/left/image_rect_color'),
                         ('camera/right/image_raw', '/zed/zed_node/right/image_rect_color')],
             output='screen',

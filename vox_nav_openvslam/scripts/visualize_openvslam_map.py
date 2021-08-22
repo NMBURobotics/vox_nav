@@ -7,11 +7,8 @@ python3 visualize_openvslam_map.py path_to.msg
 """
 
 import msgpack
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-from numpy.linalg import inv
-from scipy.spatial.transform import Rotation as R
+from scipy.spatial.transform import Rotation
 import open3d as o3d
 import sys
 
@@ -22,7 +19,7 @@ if len(sys.argv) < 2:
     exit()
 
 with open(sys.argv[1], "rb") as f:
-    upacked_msg = msgpack.Unpacker(f)
+    upacked_msg = msgpack.Unpacker(f, raw=False)
     packed_msg = upacked_msg.unpack()
 
 keyfarmes = packed_msg["keyframes"]
@@ -34,7 +31,7 @@ keyframe_points_color = []
 for keyframe in keyfarmes.values():
     # get conversion from camera to world
     trans_cw = np.matrix(keyframe["trans_cw"]).T
-    rot_cw = R.from_quat(keyframe["rot_cw"]).as_matrix()
+    rot_cw = Rotation.from_quat(keyframe["rot_cw"]).as_dcm()
     # compute conversion from world to camera
     rot_wc = rot_cw.T
     trans_wc = -rot_wc * trans_cw
@@ -51,14 +48,13 @@ landmark_points_color = []
 for lm in landmarks.values():
     landmark_points.append(lm["pos_w"])
     landmark_points_color.append([
-        abs(lm["pos_w"][1]) * 1,
-        abs(lm["pos_w"][1]) * 1,
-        abs(lm["pos_w"][1]) * 3
+        abs(lm["pos_w"][0]) * 1,
+        abs(lm["pos_w"][1]) * 0,
+        abs(lm["pos_w"][1]) * 0
     ])
+    print(lm["pos_w"])
 landmark_points = np.array(landmark_points)
-landmark_points_color = np.repeat(np.array([[1., 0.1, 0.1]]),
-                                  landmark_points.shape[0],
-                                  axis=0)
+ 
 
 # CONSTRUCT KEYFRAME(ODOMETRY) FOR VISUALIZTION
 keyframe_points_pointcloud = o3d.geometry.PointCloud()
