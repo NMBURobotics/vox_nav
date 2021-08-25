@@ -181,6 +181,7 @@ namespace vox_nav_map_server
           RCLCPP_INFO(
             this->get_logger(), "Waiting for %s to %s Transform to be available.",
             utm_frame_id_.c_str(), map_frame_id_.c_str());
+
         }
         RCLCPP_INFO(
           get_logger(), "Configuring pcd map with given parameters,"
@@ -228,35 +229,31 @@ namespace vox_nav_map_server
     auto result = result_future.get();
     response->map_point = result->map_point;
 
-    // "/fromLL" service only accounts for translational transform
-    // we still need to rotate the points according to yaw_offset
-    // yaw_offset determines rotation between utm and map frame
-    // Normally utm and map frmaes are aligned rotationally, but if there is yaw_offset set in
-    // navsat_transfrom_node we have to account for that yaw_offset here as well
-    // use classic rotation formula https://en.wikipedia.org/wiki/Rotation_matrix#In_two_dimensions;
-    // The rotation only happens in x and y since it is round the z axis(yaw)
-    double x = response->map_point.x;
-    double y = response->map_point.y;
-    double x_dot = x * std::cos(yaw_offset_) - y * std::sin(yaw_offset_);
-    double y_dot = x * std::sin(yaw_offset_) + y * std::cos(yaw_offset_);
-
     // The translation from static_map origin to map is basically inverse of this transform
     tf2::Transform static_map_translation;
     static_map_translation.setOrigin(
-      tf2::Vector3(x_dot, y_dot, response->map_point.z));
+      tf2::Vector3(
+        response->map_point.x,
+        response->map_point.y,
+        response->map_point.z));
 
-    // this is identity because map and utm frames are rotationally aligned
-    static_map_translation.setRotation(tf2::Quaternion::getIdentity());
-
-    tf2::Transform static_map_rotation;
     tf2::Quaternion static_map_quaternion;
     tf2::fromMsg(pcd_map_gps_pose_->orientation, static_map_quaternion);
-    // First align the static map origin to map in translation
-    // and then rotate the static map with its correct rotation
-    static_map_rotation.setOrigin(tf2::Vector3(0, 0, 0));
-    static_map_rotation.setRotation(static_map_quaternion);
-    tf2::Transform static_map_to_map_transfrom = static_map_rotation *
-      static_map_translation.inverse();
+    static_map_translation.setRotation(static_map_quaternion);
+
+    auto map_utm_transform = tf_buffer_->lookupTransform(
+      utm_frame_id_,
+      map_frame_id_,
+      tf2::TimePointZero
+    );
+
+    tf2::Transform map_utm_correction;
+    tf2::Quaternion map_to_utm_rotation;
+    map_utm_correction.setOrigin(tf2::Vector3(0, 0, 0));
+    tf2::fromMsg(map_utm_transform.transform.rotation, map_to_utm_rotation);
+    map_utm_correction.setRotation(map_to_utm_rotation);
+
+    tf2::Transform static_map_to_map_transfrom = static_map_translation * map_utm_correction;
 
     pcl_ros::transformPointCloud(
       *pcd_map_pointcloud_, *pcd_map_pointcloud_, static_map_to_map_transfrom

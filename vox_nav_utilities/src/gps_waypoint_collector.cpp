@@ -26,7 +26,7 @@ namespace vox_nav_utilities
   {
     navsat_fix_subscriber_.subscribe(this, "/fix", rmw_qos_profile_sensor_data);
     imu_subscriber_.subscribe(this, "/heading/imu", rmw_qos_profile_sensor_data);
-    quaternion_subscriber_.subscribe(this, "/heading/imu", rmw_qos_profile_sensor_data);
+    quaternion_subscriber_.subscribe(this, "/heading/wrong", rmw_qos_profile_sensor_data);
 
     gps_imu_data_approx_time_syncher_.reset(
       new GpsImuDataApprxTimeSyncer(
