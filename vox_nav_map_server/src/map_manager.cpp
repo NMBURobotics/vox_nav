@@ -230,8 +230,8 @@ namespace vox_nav_map_server
     response->map_point = result->map_point;
 
     // The translation from static_map origin to map is basically inverse of this transform
-    tf2::Transform static_map_translation;
-    static_map_translation.setOrigin(
+    tf2::Transform static_map_to_map_transfrom;
+    static_map_to_map_transfrom.setOrigin(
       tf2::Vector3(
         response->map_point.x,
         response->map_point.y,
@@ -239,21 +239,7 @@ namespace vox_nav_map_server
 
     tf2::Quaternion static_map_quaternion;
     tf2::fromMsg(pcd_map_gps_pose_->orientation, static_map_quaternion);
-    static_map_translation.setRotation(static_map_quaternion);
-
-    auto map_utm_transform = tf_buffer_->lookupTransform(
-      utm_frame_id_,
-      map_frame_id_,
-      tf2::TimePointZero
-    );
-
-    tf2::Transform map_utm_correction;
-    tf2::Quaternion map_to_utm_rotation;
-    map_utm_correction.setOrigin(tf2::Vector3(0, 0, 0));
-    tf2::fromMsg(map_utm_transform.transform.rotation, map_to_utm_rotation);
-    map_utm_correction.setRotation(map_to_utm_rotation);
-
-    tf2::Transform static_map_to_map_transfrom = static_map_translation * map_utm_correction;
+    static_map_to_map_transfrom.setRotation(static_map_quaternion);
 
     pcl_ros::transformPointCloud(
       *pcd_map_pointcloud_, *pcd_map_pointcloud_, static_map_to_map_transfrom

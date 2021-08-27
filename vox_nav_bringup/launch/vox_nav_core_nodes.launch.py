@@ -94,7 +94,7 @@ def generate_launch_description():
                                  #output={'both': 'log'},
                                  output='screen',
                                  parameters=[localization_params],
-                                 remappings=[('imu', 'heading/imu'),
+                                 remappings=[('imu', 'xsens/imu'),
                                              ('gps/fix', 'fix'),
                                              ('gps/filtered', 'gps/filtered'),
                                              ('odometry/gps', 'odometry/gps'),
