@@ -249,9 +249,6 @@ namespace vox_nav_map_server
     std::string utm_frame_id_;
     // rclcpp parameters from yaml file: vxel size for octomap
     double octomap_voxel_size_;
-    // see navsat_transform_node from robot_localization
-    // this offset is needed to recorrect orientation of static map
-    double yaw_offset_;
     // rclcpp parameters from yaml file: publish frequncy to publish map and transfroms
     int octomap_publish_frequency_;
     // rclcpp parameters from yaml file: if true, a cloud will be published which represents octomap

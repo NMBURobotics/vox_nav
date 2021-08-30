@@ -48,7 +48,6 @@ namespace vox_nav_map_server
     declare_parameter("octomap_markers_publish_topic", "octomap_markers");
     declare_parameter("map_frame_id", "map");
     declare_parameter("utm_frame_id", "utm");
-    declare_parameter("yaw_offset", 1.57);
     declare_parameter("map_datum.latitude", 49.0);
     declare_parameter("map_datum.longitude", 3.0);
     declare_parameter("map_datum.altitude", 0.5);
@@ -87,7 +86,6 @@ namespace vox_nav_map_server
     get_parameter("octomap_markers_publish_topic", octomap_markers_publish_topic_);
     get_parameter("map_frame_id", map_frame_id_);
     get_parameter("utm_frame_id", utm_frame_id_);
-    get_parameter("yaw_offset", yaw_offset_);
     get_parameter("map_datum.latitude", pcd_map_gps_pose_->position.latitude);
     get_parameter("map_datum.longitude", pcd_map_gps_pose_->position.longitude);
     get_parameter("map_datum.altitude", pcd_map_gps_pose_->position.altitude);
