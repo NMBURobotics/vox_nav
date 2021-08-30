@@ -261,6 +261,7 @@ namespace vox_nav_map_server
     // tf buffer to get access to transfroms
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+    std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_transform_broadcaster_;
     // Optional rigid body transform to apply to the cloud, if cloud
     // is depth camera frames we need to pull cloud back to conventional ROS frames
     vox_nav_utilities::RigidBodyTransformation pcd_map_transform_matrix_;

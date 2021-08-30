@@ -37,6 +37,7 @@ namespace vox_nav_map_server
     elevated_surfel_octomap_markers_msg_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    static_transform_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
 
     // Declare this node's parameters
     declare_parameter("pcd_map_filename", "/home/ros2-foxy/f.pcd");
@@ -240,6 +241,18 @@ namespace vox_nav_map_server
     tf2::Quaternion static_map_quaternion;
     tf2::fromMsg(pcd_map_gps_pose_->orientation, static_map_quaternion);
     static_map_to_map_transfrom.setRotation(static_map_quaternion);
+
+    geometry_msgs::msg::TransformStamped stamped;
+    stamped.child_frame_id = "static_map";
+    stamped.header.frame_id = "map";
+    stamped.header.stamp = this->get_clock()->now();
+    stamped.transform.rotation = pcd_map_gps_pose_->orientation;
+    geometry_msgs::msg::Vector3 translation;
+    translation.x = response->map_point.x;
+    translation.y = response->map_point.y;
+    translation.z = response->map_point.z;
+    stamped.transform.translation = translation;
+    static_transform_broadcaster_->sendTransform(stamped);
 
     pcl_ros::transformPointCloud(
       *pcd_map_pointcloud_, *pcd_map_pointcloud_, static_map_to_map_transfrom

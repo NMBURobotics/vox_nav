@@ -94,8 +94,8 @@ def generate_launch_description():
                                  #output={'both': 'log'},
                                  output='screen',
                                  parameters=[localization_params],
-                                 remappings=[('imu', 'xsens/imu'),
-                                             ('gps/fix', 'fix'),
+                                 remappings=[('imu', 'imu/data'),
+                                             ('gps/fix', 'gps/fix'),
                                              ('gps/filtered', 'gps/filtered'),
                                              ('odometry/gps', 'odometry/gps'),
                                              ('odometry/filtered', 'odometry/global')])
@@ -109,5 +109,4 @@ def generate_launch_description():
         planner_server_node,
         controller_server_node,
         map_server_node,
-        navigate_to_pose_server_node
-    ])
+        navigate_to_pose_server_node])
