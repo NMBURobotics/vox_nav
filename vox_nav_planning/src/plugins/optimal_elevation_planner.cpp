@@ -362,7 +362,7 @@ namespace vox_nav_planning
     ompl::geometric::PathSimplifierPtr path_simlifier =
       std::make_shared<ompl::geometric::PathSimplifier>(simple_setup_->getSpaceInformation());
     RCLCPP_INFO(
-      logger_, "Running %s search on Constructed a Boost Graph", graph_search_method_.c_str());
+      logger_, "Running %s search on Constructed Boost Graph", graph_search_method_.c_str());
     auto a1 = std::chrono::high_resolution_clock::now();
 
     int num_visited_nodes = 0;
@@ -382,7 +382,7 @@ namespace vox_nav_planning
           boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
       }
 
-      // If a path found exception will be throns and code block here
+      // If a path found exception will be thrown and code block here
       // Should not be eecuted. If code executed up until here,
       // A path was NOT found. Warn user about it
       RCLCPP_WARN(logger_, "%s search failed to find a valid path!", graph_search_method_.c_str());
@@ -424,8 +424,9 @@ namespace vox_nav_planning
         compound_elevation_state->setZ(solution_state_position.z);
         solution_path->append(compound_elevation_state);
       }
-      /*solution_path->interpolate(interpolation_parameter_);*/    /*WARN TAKES A LOT OF TIME*/
-      /*path_simlifier->smoothBSpline(*solution_path, 1, 1.0);*/   /*WARN TAKES A LOT OF TIME*/
+
+      solution_path->interpolate(interpolation_parameter_);    /*WARN TAKES A LOT OF TIME*/
+      path_simlifier->smoothBSpline(*solution_path, 1, 1.0);   /*WARN TAKES A LOT OF TIME*/
 
       for (std::size_t path_idx = 0; path_idx < solution_path->getStateCount(); path_idx++) {
         const auto * compound_elevation_state =

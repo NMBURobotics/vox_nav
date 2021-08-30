@@ -129,7 +129,7 @@ namespace vox_nav_utilities
   }
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliersFromInputCloud(
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int mean_K, double stddev_thres,
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int int_param, double double_param,
     OutlierRemovalType outlier_removal_type)
   {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZRGB>());
@@ -137,14 +137,14 @@ namespace vox_nav_utilities
     if (outlier_removal_type == OutlierRemovalType::StatisticalOutlierRemoval) {
       pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
       sor.setInputCloud(inputCloud);
-      sor.setMeanK(mean_K);
-      sor.setStddevMulThresh(stddev_thres);
+      sor.setMeanK(int_param);
+      sor.setStddevMulThresh(double_param);
       sor.filter(*filteredCloud);
     } else {
       pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> outrem;
       outrem.setInputCloud(inputCloud);
-      outrem.setRadiusSearch(stddev_thres);
-      outrem.setMinNeighborsInRadius(mean_K);
+      outrem.setMinNeighborsInRadius(int_param);
+      outrem.setRadiusSearch(double_param);
       outrem.setKeepOrganized(true);
       outrem.filter(*filteredCloud);
     }

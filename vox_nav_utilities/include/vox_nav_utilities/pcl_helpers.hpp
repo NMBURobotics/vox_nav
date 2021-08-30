@@ -137,7 +137,7 @@ namespace vox_nav_utilities
 * @return Point cloud where outliers have been removed.
 */
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliersFromInputCloud(
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int mean_K, double stddev_thres,
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int int_param, double double_param,
     OutlierRemovalType outlier_removal_type);
 
 /**
@@ -248,6 +248,22 @@ namespace vox_nav_utilities
       }
     }
     return subcloud_within_radius;
+  }
+
+  template<typename P>
+  typename pcl::PointCloud<P>::Ptr  remove_nans(
+    const typename pcl::PointCloud<P>::Ptr cloud)
+  {
+    typename pcl::PointCloud<P>::Ptr nans_removed_cloud(
+      new pcl::PointCloud<P>());
+
+    for (auto && i : cloud->points) {
+      if (pcl::isFinite<P>(i)) {
+        nans_removed_cloud->points.push_back(i);
+      }
+    }
+
+    return nans_removed_cloud;
   }
 
   template<typename P>

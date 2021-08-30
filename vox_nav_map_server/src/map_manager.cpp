@@ -269,18 +269,23 @@ namespace vox_nav_map_server
       " adjust the parameters if the map looks off",
       pcd_map_pointcloud_->points.size());
     if (preprocess_params_.apply_filters) {
-
       pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
         pcd_map_pointcloud_,
         preprocess_params_.remove_outlier_mean_K,
         preprocess_params_.remove_outlier_stddev_threshold,
         vox_nav_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
+      pcd_map_pointcloud_ = vox_nav_utilities::remove_nans<pcl::PointXYZRGB>(pcd_map_pointcloud_);
+
       /*pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
         pcd_map_pointcloud_,
         preprocess_params_.remove_outlier_min_neighbors_in_radius,
         preprocess_params_.remove_outlier_radius_search,
         vox_nav_utilities::OutlierRemovalType::RadiusOutlierRemoval);*/
 
+      RCLCPP_INFO(
+        this->get_logger(), "Applied a series of noise removal functions"
+        " PCD Map downsampled, it now has %d points",
+        pcd_map_pointcloud_->points.size());
     }
     // apply a rigid body transfrom if it was given one
     pcd_map_pointcloud_ = vox_nav_utilities::transformCloud(
