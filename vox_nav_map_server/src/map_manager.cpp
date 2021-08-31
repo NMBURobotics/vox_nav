@@ -379,7 +379,10 @@ namespace vox_nav_map_server
         cost_params_.cost_critic_weights[2] * energy_gap_cost;
 
       // any roll or pitch thats higher than max_tilt will make that surfel NON traversable
-      if (max_tilt > cost_params_.max_allowed_tilt || total_cost > 180) {
+      if (max_tilt > cost_params_.max_allowed_tilt ||
+        max_energy_gap > cost_params_.max_allowed_energy_gap ||
+        average_point_deviation > cost_params_.max_allowed_point_deviation)
+      {
         surfel_cloud = vox_nav_utilities::set_cloud_color(
           surfel_cloud,
           std::vector<double>({255.0, 0, 0}));

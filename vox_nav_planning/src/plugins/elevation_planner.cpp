@@ -354,7 +354,7 @@ namespace vox_nav_planning
     ompl::base::MultiOptimizationObjective * multi_optimization =
       new ompl::base::MultiOptimizationObjective(simple_setup_->getSpaceInformation());
     multi_optimization->addObjective(length_objective, 1.0);
-    multi_optimization->addObjective(octocost_objective, 2.0);
+    multi_optimization->addObjective(octocost_objective, 1.0);
 
     return ompl::base::OptimizationObjectivePtr(multi_optimization);
   }

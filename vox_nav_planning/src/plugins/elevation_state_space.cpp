@@ -36,7 +36,7 @@ OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
 
 ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
 {
-  float cost = 0.0;
+  float cost = 1.0;
   const auto * s_se2 =
     s->as<ElevationStateSpace::StateType>()->as<SE2StateSpace::StateType>(0);
   const auto * s_z =
@@ -47,10 +47,8 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
     s_z->values[0], 0);
   if (node_at_samppled_state) {
     if (elevated_surfels_octree_->isNodeOccupied(node_at_samppled_state)) {
-      cost = 1.0 * static_cast<double>(node_at_samppled_state->getValue());
+      cost = static_cast<double>(node_at_samppled_state->getValue());
     }
-  } else {
-    cost = 5.0;
   }
   return ompl::base::Cost(cost);
 }
@@ -191,7 +189,7 @@ void ompl::base::ElevationStateSpace::interpolate(
     dubins_surfel,
     workspace_surfels_);
   state_z->values[0] = nearest_intermediate_surfel.z;*/
-  
+
   state_z->values[0] = (from_z->values[0] + to_z->values[0]) / 2.0;
 }
 
@@ -264,8 +262,8 @@ void OctoCellValidStateSampler::updateSearchArea(
 
   std::vector<int> weights;
   for (auto && i : search_area_surfels_->points) {
-    //auto max_tilt_angle = std::max(std::abs(i.normal_x), std::abs(i.normal_y)) * 180.0 / M_PI;
-    //weights.push_back(40 / max_tilt_angle);
+    //auto tilt_angle = std::max(std::abs(i.normal_x), std::abs(i.normal_y)) * 180.0 / M_PI;
+    //weights.push_back(200 / tilt_angle);
     weights.push_back(1);
   }
   std::discrete_distribution<> distrubutions(weights.begin(), weights.end());
