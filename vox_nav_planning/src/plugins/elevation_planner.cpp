@@ -90,7 +90,7 @@ namespace vox_nav_planning
     robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
 
     elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-    original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+    original_octomap_octree_ = std::make_shared<octomap::OcTree>(2 * octomap_voxel_size_);
 
     // service hooks for robot localization fromll service
     get_maps_and_surfels_client_node_ = std::make_shared
@@ -105,7 +105,7 @@ namespace vox_nav_planning
 
     setupMap();
 
-    // WARN elevated_surfel_poses_msg_ needs to be populated by  setupMap();
+    // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
     state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
       se2_space_type_,
       elevated_surfel_poses_msg_,
@@ -176,7 +176,7 @@ namespace vox_nav_planning
 
     simple_setup_->setPlanner(planner);
     simple_setup_->setup();
-    simple_setup_->print(std::cout);
+    //simple_setup_->print(std::cout);
 
     // attempt to solve the problem within one second of planning time
     ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
@@ -217,7 +217,7 @@ namespace vox_nav_planning
         logger_, "No solution for requested path planning !");
     }
 
-    //simple_setup_->clear();
+    simple_setup_->clear();
     return plan_poses;
   }
 
@@ -239,9 +239,11 @@ namespace vox_nav_planning
 
     robot_collision_object_->setTransform(rotation, translation);
     fcl::CollisionResult collisionWithSurfelsResult, collisionWithFullMapResult;
+
     fcl::collide(
       robot_collision_object_.get(),
       elevated_surfels_collision_object_.get(), requestType, collisionWithSurfelsResult);
+
     fcl::collide(
       robot_collision_object_.get(),
       original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);

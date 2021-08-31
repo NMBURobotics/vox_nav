@@ -184,13 +184,15 @@ void ompl::base::ElevationStateSpace::interpolate(
   dubins_surfel.y = state_dubins->getY();
   dubins_surfel.z = from_z->values[0];
 
-  nearest_intermediate_surfel = vox_nav_utilities::getNearstPoint<
+  // WARN , This is too expensive
+  /*nearest_intermediate_surfel = vox_nav_utilities::getNearstPoint<
     pcl::PointSurfel,
     pcl::PointCloud<pcl::PointSurfel>::Ptr>(
     dubins_surfel,
     workspace_surfels_);
-
-  state_z->values[0] = nearest_intermediate_surfel.z;
+  state_z->values[0] = nearest_intermediate_surfel.z;*/
+  
+  state_z->values[0] = (from_z->values[0] + to_z->values[0]) / 2.0;
 }
 
 OctoCellValidStateSampler::OctoCellValidStateSampler(
@@ -243,7 +245,7 @@ void OctoCellValidStateSampler::updateSearchArea(
 {
   RCLCPP_INFO(logger_, "Updating search area");
 
-  double radius = vox_nav_utilities::getEuclidianDistBetweenPoses(goal, start) / 2.0;
+  double radius = vox_nav_utilities::getEuclidianDistBetweenPoses(goal, start) / 1.5;
   auto search_point_pose = vox_nav_utilities::getLinearInterpolatedPose(goal, start);
   auto search_point_surfel = vox_nav_utilities::poseMsg2PCLSurfel(search_point_pose);
 
@@ -255,7 +257,7 @@ void OctoCellValidStateSampler::updateSearchArea(
   RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
 
   search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
-    search_area_surfels_, radius / 10);
+    search_area_surfels_, 1.0);
 
   RCLCPP_INFO(
     logger_, "Uniformly sampled %d search area surfels,", search_area_surfels_->points.size());

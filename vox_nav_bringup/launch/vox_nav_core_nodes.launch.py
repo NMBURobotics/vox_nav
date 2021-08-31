@@ -46,6 +46,7 @@ def generate_launch_description():
         namespace='',
         output='screen',
         #prefix=['xterm -e gdb -ex run --args'],
+        #prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no'],
         parameters=[params],
     )
     controller_server_node = Node(

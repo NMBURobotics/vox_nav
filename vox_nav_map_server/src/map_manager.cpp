@@ -379,7 +379,7 @@ namespace vox_nav_map_server
         cost_params_.cost_critic_weights[2] * energy_gap_cost;
 
       // any roll or pitch thats higher than max_tilt will make that surfel NON traversable
-      if (max_tilt > cost_params_.max_allowed_tilt) {
+      if (max_tilt > cost_params_.max_allowed_tilt || total_cost > 180) {
         surfel_cloud = vox_nav_utilities::set_cloud_color(
           surfel_cloud,
           std::vector<double>({255.0, 0, 0}));
@@ -404,7 +404,7 @@ namespace vox_nav_map_server
         // up and down projections(by using surfel normal)
         for (auto && sp : surfel_cloud->points) {
           double step_size = 0.02;
-          for (double step = -0.2; step < 0.2; step += step_size) {
+          for (double step = 0.00; step < 0.00; step += step_size) {
             pcl::PointSurfel sp_down, sp_up;
             sp_down.x = sp.x + (cost_params_.node_elevation_distance + step) *
               plane_model->values[0];
