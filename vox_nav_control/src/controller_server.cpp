@@ -41,6 +41,9 @@ namespace vox_nav_control
     declare_parameter("controller_frequency", 5.0);
     get_parameter("controller_frequency", controller_frequency_);
 
+    declare_parameter("goal_tolerance_distance", 0.5);
+    get_parameter("goal_tolerance_distance", goal_tolerance_distance_);
+
     declare_parameter("controller_plugin", controller_id_);
     get_parameter("controller_plugin", controller_id_);
 
@@ -151,14 +154,13 @@ namespace vox_nav_control
     controller_->setPlan(goal->path);
 
     rclcpp::WallRate rate(controller_frequency_);
-    double goal_tolerance_distance = 0.7;
-    volatile bool is_goal_tolerance_satisfied = false;
 
-    while (rclcpp::ok() && !is_goal_tolerance_satisfied) {
+    volatile bool is_goal_distance_tolerance_satisfied = false;
+    volatile bool is_goal_orientation_tolerance_satisfied = false;
+
+    while (rclcpp::ok() && !is_goal_distance_tolerance_satisfied) {
+
       auto loop_start_time = steady_clock_.now();
-      geometry_msgs::msg::PoseStamped curr_robot_pose;
-      vox_nav_utilities::getCurrentPose(
-        curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1);
       // Check if there is a cancel request
       if (goal_handle->is_canceling()) {
         goal_handle->canceled(result);
@@ -167,16 +169,61 @@ namespace vox_nav_control
         return;
       }
 
+      geometry_msgs::msg::PoseStamped curr_robot_pose;
+      vox_nav_utilities::getCurrentPose(
+        curr_robot_pose, *tf_buffer_, "map", "base_link", 0.01);
+
+      int nearest_traj_pose_index = controller_->nearestStateIndex(goal->path, curr_robot_pose);
+      curr_robot_pose.pose.position.z = goal->path.poses[nearest_traj_pose_index].pose.position.z;
+
+      RCLCPP_WARN(
+        get_logger(),
+        "dist to goal %.4f ",
+        vox_nav_utilities::getEuclidianDistBetweenPoses(
+          curr_robot_pose,
+          goal->path.poses.back()));
+
       // check if we have arrived to goal, note the goal is last pose of path
       if (vox_nav_utilities::getEuclidianDistBetweenPoses(
           curr_robot_pose,
-          goal->path.poses.back()) < goal_tolerance_distance)
+          goal->path.poses.back()) < goal_tolerance_distance_)
       {
         // goal has been reached
-        is_goal_tolerance_satisfied = true;
+        is_goal_distance_tolerance_satisfied = true;
         // reset the velocity
         cmd_vel_publisher_->publish(geometry_msgs::msg::Twist());
-        RCLCPP_INFO(this->get_logger(), "Goal has been reached");
+
+        RCLCPP_INFO(
+          this->get_logger(), "Goal has been reached, Now adjusting correct orientation ...");
+
+        while (rclcpp::ok() && !is_goal_orientation_tolerance_satisfied) {
+
+          computed_velocity_commands =
+            controller_->computeHeadingCorrectionCommands(curr_robot_pose);
+          cmd_vel_publisher_->publish(computed_velocity_commands);
+          goal_handle->publish_feedback(feedback);
+
+          vox_nav_utilities::getCurrentPose(
+            curr_robot_pose, *tf_buffer_, "map", "base_link", 0.01);
+
+          double nan, curr_robot_psi, goal_psi;
+          vox_nav_utilities::getRPYfromMsgQuaternion(
+            curr_robot_pose.pose.orientation, nan, nan, curr_robot_psi);
+
+          vox_nav_utilities::getRPYfromMsgQuaternion(
+            goal->path.poses.back().pose.orientation, nan, nan, goal_psi);
+
+          if (std::abs(curr_robot_psi - goal_psi) < 0.1) {
+            // goal has been reached
+            is_goal_orientation_tolerance_satisfied = true;
+            // reset the velocity
+            cmd_vel_publisher_->publish(geometry_msgs::msg::Twist());
+            RCLCPP_INFO(
+              this->get_logger(),
+              "Adjusted correct orientation finishing the action with success.");
+            break;
+          }
+        }
         break;
       }
 

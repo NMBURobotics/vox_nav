@@ -381,7 +381,8 @@ namespace vox_nav_map_server
       // any roll or pitch thats higher than max_tilt will make that surfel NON traversable
       if (max_tilt > cost_params_.max_allowed_tilt ||
         max_energy_gap > cost_params_.max_allowed_energy_gap ||
-        average_point_deviation > cost_params_.max_allowed_point_deviation)
+        average_point_deviation > cost_params_.max_allowed_point_deviation ||
+        total_cost > 180)
       {
         surfel_cloud = vox_nav_utilities::set_cloud_color(
           surfel_cloud,
@@ -452,7 +453,7 @@ namespace vox_nav_map_server
     for (auto && i : elevated_surfel_pointcloud_->points) {
       surfel_octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
     }
-    auto elevated_surfels_octomap_octree = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+    auto elevated_surfels_octomap_octree = std::make_shared<octomap::OcTree>(octomap_voxel_size_ / 4.0);
     elevated_surfels_octomap_octree->insertPointCloud(surfel_octocloud, octomap::point3d(0, 0, 0));
 
     for (auto && i : elevated_surfel_pointcloud_->points) {
@@ -476,7 +477,7 @@ namespace vox_nav_map_server
         *elevated_surfels_octomap_octree,
         *elevated_surfel_octomap_msg_);
       elevated_surfel_octomap_msg_->binary = false;
-      elevated_surfel_octomap_msg_->resolution = octomap_voxel_size_;
+      elevated_surfel_octomap_msg_->resolution = octomap_voxel_size_ / 4.0;
     } catch (const std::exception & e) {
       RCLCPP_ERROR(
         get_logger(), "Exception while converting binary octomap %s:", e.what());

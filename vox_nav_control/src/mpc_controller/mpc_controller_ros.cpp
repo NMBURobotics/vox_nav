@@ -124,6 +124,40 @@ namespace vox_nav_control
       return computed_velocity_;
     }
 
+    geometry_msgs::msg::Twist MPCControllerROS::computeHeadingCorrectionCommands(
+      geometry_msgs::msg::PoseStamped curr_robot_pose)
+    {
+
+      double dt = mpc_parameters_.DT;
+      double kTARGET_SPEED = 0.0;
+
+      double roll, pitch, psi;
+      vox_nav_utilities::getRPYfromMsgQuaternion(
+        curr_robot_pose.pose.orientation, roll, pitch, psi);
+
+      MPCControllerCore::States curr_states;
+      curr_states.x = curr_robot_pose.pose.position.x;
+      curr_states.y = curr_robot_pose.pose.position.y;
+      curr_states.psi = psi;
+      curr_states.v = kTARGET_SPEED;
+
+      std::vector<MPCControllerCore::States> interpolated_reference_states =
+        getInterpolatedReferenceStates(curr_robot_pose);
+
+      mpc_controller_->updateCurrentStates(curr_states);
+      mpc_controller_->updateReferences(interpolated_reference_states);
+      mpc_controller_->updatePreviousControlInput(previous_control_);
+      MPCControllerCore::SolutionResult res = mpc_controller_->solve();
+
+      //  The control output is acceleration but we need to publish speed
+      computed_velocity_.linear.x = 0;
+      //  The control output is steeering angle but we need to publish angular velocity
+      computed_velocity_.angular.z += res.control_input.df * (dt);
+
+      previous_control_ = res.control_input;
+      return computed_velocity_;
+    }
+
     void MPCControllerROS::setPlan(const nav_msgs::msg::Path & path)
     {
       reference_traj_ = path;
@@ -135,10 +169,13 @@ namespace vox_nav_control
       int closest_state_index = -1;
       int closest_state_distance = 10000.0;
       for (int i = 0; i < reference_traj.poses.size(); i++) {
+
         double curr_distance =
           std::sqrt(
           std::pow(reference_traj.poses[i].pose.position.x - curr_robot_pose.pose.position.x, 2) +
-          std::pow(reference_traj.poses[i].pose.position.y - curr_robot_pose.pose.position.y, 2));
+          std::pow(reference_traj.poses[i].pose.position.y - curr_robot_pose.pose.position.y, 2) +
+          std::pow(reference_traj.poses[i].pose.position.z - curr_robot_pose.pose.position.z, 2));
+
         if (curr_distance < closest_state_distance) {
           closest_state_distance = curr_distance;
           closest_state_index = i;
@@ -176,13 +213,13 @@ namespace vox_nav_control
       std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
         std::make_shared<ompl::base::RealVectorBounds>(2);
       ompl::base::StateSpacePtr state_space =
-        std::make_shared<ompl::base::ReedsSheppStateSpace>();
-      state_space->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds);
+        std::make_shared<ompl::base::SE2StateSpace>();
+      state_space->as<ompl::base::SE2StateSpace>()->setBounds(*state_space_bounds);
       ompl::base::SpaceInformationPtr state_space_information =
         std::make_shared<ompl::base::SpaceInformation>(state_space);
       ompl::geometric::PathGeometric path(state_space_information);
 
-      ompl::base::ScopedState<ompl::base::ReedsSheppStateSpace>
+      ompl::base::ScopedState<ompl::base::SE2StateSpace>
       closest_ref_traj_state(state_space),
       ompl_local_goal_state(state_space);
 

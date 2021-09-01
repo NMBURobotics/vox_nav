@@ -91,6 +91,16 @@ namespace vox_nav_control
       override;
 
       /**
+       * @brief Compute required velocity commands to drive the robot along the reference_trajectory_
+       *
+       * @param curr_robot_pose
+       * @return geometry_msgs::msg::Twist
+       */
+      geometry_msgs::msg::Twist computeHeadingCorrectionCommands(
+        geometry_msgs::msg::PoseStamped curr_robot_pose)
+      override;
+
+      /**
        * @brief get the index of nearest trajectory state to current robot pose
        *
        * @param reference_traj
@@ -99,7 +109,8 @@ namespace vox_nav_control
        */
       int nearestStateIndex(
         nav_msgs::msg::Path reference_traj,
-        geometry_msgs::msg::PoseStamped curr_robot_pose);
+        geometry_msgs::msg::PoseStamped curr_robot_pose)
+      override;
 
       /**
        * @brief Get the Interpolated Reference States, This is determined by the look ahead distance set in the parameters.

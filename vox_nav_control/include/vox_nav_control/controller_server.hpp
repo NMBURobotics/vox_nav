@@ -98,6 +98,7 @@ namespace vox_nav_control
     std::string controller_type_;
     double controller_frequency_;
     double controller_duration_;
+    double goal_tolerance_distance_;
 
     // Clock
     rclcpp::Clock steady_clock_{RCL_STEADY_TIME};

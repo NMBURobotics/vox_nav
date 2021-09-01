@@ -89,8 +89,8 @@ namespace vox_nav_planning
     fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
     robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
 
-    elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-    original_octomap_octree_ = std::make_shared<octomap::OcTree>(2 * octomap_voxel_size_);
+    elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_ / 4.0);
+    original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
 
     // service hooks for robot localization fromll service
     get_maps_and_surfels_client_node_ = std::make_shared
@@ -147,6 +147,9 @@ namespace vox_nav_planning
       start,
       goal,
       elevated_surfel_cloud_);
+
+    nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
+    nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
 
     se3_start->setSE2(
       nearest_elevated_surfel_to_start_.pose.position.x,
