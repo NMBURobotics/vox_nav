@@ -35,6 +35,8 @@ namespace vox_nav_control
       rclcpp::Node * parent,
       const std::string & plugin_name)
     {
+      parent->declare_parameter("global_plan_look_ahead_distance", 2.5);
+      parent->declare_parameter("local_trajectory_interpolation", 10);
       parent->declare_parameter(plugin_name + ".N", 10);
       parent->declare_parameter(plugin_name + ".DT", 0.1);
       parent->declare_parameter(plugin_name + ".L_F", 0.66);
@@ -54,6 +56,8 @@ namespace vox_nav_control
       parent->declare_parameter(plugin_name + ".debug_mode", false);
       parent->declare_parameter(plugin_name + ".params_configured", false);
 
+      parent->get_parameter("global_plan_look_ahead_distance", global_plan_look_ahead_distance_);
+      parent->get_parameter("local_trajectory_interpolation", local_trajectory_interpolation_);
       parent->get_parameter(plugin_name + ".N", mpc_parameters_.N);
       parent->get_parameter(plugin_name + ".DT", mpc_parameters_.DT);
       parent->get_parameter(plugin_name + ".L_F", mpc_parameters_.L_F);
@@ -81,6 +85,7 @@ namespace vox_nav_control
     geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
+
       auto regulate_max_speed = [this]() {
           if (computed_velocity_.linear.x > mpc_parameters_.V_MAX) {
             computed_velocity_.linear.x = mpc_parameters_.V_MAX;
@@ -104,10 +109,10 @@ namespace vox_nav_control
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
-      std::vector<MPCControllerCore::States> interpolated_reference_states =
+      std::vector<MPCControllerCore::States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
       mpc_controller_->updateCurrentStates(curr_states);
-      mpc_controller_->updateReferences(interpolated_reference_states);
+      mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
       MPCControllerCore::SolutionResult res = mpc_controller_->solve();
 
@@ -118,7 +123,7 @@ namespace vox_nav_control
         rear_axle_tofront_dist;
 
       regulate_max_speed();
-      publishLocalInterpolatedRefernceStates(interpolated_reference_states);
+      publishLocalInterpolatedRefernceStates(local_interpolated_reference_states);
       previous_control_ = res.control_input;
       return computed_velocity_;
     }
@@ -130,9 +135,10 @@ namespace vox_nav_control
       double dt = mpc_parameters_.DT;
       double kTARGET_SPEED = 0.0;
 
-      double roll, pitch, psi;
+      // we dont really need roll and pitch here
+      double nan, psi;
       vox_nav_utilities::getRPYfromMsgQuaternion(
-        curr_robot_pose.pose.orientation, roll, pitch, psi);
+        curr_robot_pose.pose.orientation, nan, nan, psi);
 
       MPCControllerCore::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
@@ -140,20 +146,18 @@ namespace vox_nav_control
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
-      std::vector<MPCControllerCore::States> interpolated_reference_states =
+      std::vector<MPCControllerCore::States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
 
       mpc_controller_->updateCurrentStates(curr_states);
-      mpc_controller_->updateReferences(interpolated_reference_states);
+      mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
       MPCControllerCore::SolutionResult res = mpc_controller_->solve();
 
-      //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x = 0;
-      //  The control output is steeering angle but we need to publish angular velocity
       computed_velocity_.angular.z += res.control_input.df * (dt);
-
       previous_control_ = res.control_input;
+
       return computed_velocity_;
     }
 
@@ -183,10 +187,7 @@ namespace vox_nav_control
     std::vector<MPCControllerCore::States> MPCControllerROS::getLocalInterpolatedReferenceStates(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
-      double kGlobalPlanLookAheadDst = 3.5;
-      int kInterpolation = mpc_parameters_.N;
       double kTARGETSPEED = 0.0;
-
       // Now lets find nearest trajectory point to robot base
       int nearsest_traj_state_index = nearestStateIndex(reference_traj_, curr_robot_pose);
 
@@ -198,10 +199,9 @@ namespace vox_nav_control
       }
 
       double interpolation_step_size = path_euclidian_length / reference_traj_.poses.size();
-      int states_to_see_horizon = kGlobalPlanLookAheadDst / interpolation_step_size;
+      int states_to_see_horizon = global_plan_look_ahead_distance_ / interpolation_step_size;
       int local_goal_state_index = nearsest_traj_state_index + states_to_see_horizon;
       if (local_goal_state_index >= reference_traj_.poses.size() - 1) {
-        std::cout << "MPC Controller: approaching to goal state..." << std::endl;
         local_goal_state_index = reference_traj_.poses.size() - 1;
       }
       // Define a state space, we basically need this only because we want to use OMPL's
@@ -231,7 +231,7 @@ namespace vox_nav_control
       path.append(static_cast<ompl::base::State *>(closest_ref_traj_state.get()));
 
       // Feed the final state, which the local goal for the current control effort.
-      // This is basically the state in the ref trajectory, which is closest to kGlobalPlanLookAheadDst
+      // This is basically the state in the ref trajectory, which is closest to global_plan_look_ahead_distance_
       vox_nav_utilities::getRPYfromMsgQuaternion(
         reference_traj_.poses[local_goal_state_index].pose.orientation, void_var, void_var, yaw);
       ompl_local_goal_state[0] = reference_traj_.poses[local_goal_state_index].pose.position.x;
@@ -242,7 +242,7 @@ namespace vox_nav_control
       // The local ref traj now contains only 3 states, we will interpolate this states with OMPL
       // The count of states after interpolation must be same as horizon defined for the control problem , hence
       // it should be mpc_parameters_.N
-      path.interpolate(kInterpolation);
+      path.interpolate(local_trajectory_interpolation_);
 
       // Now the local ref traj is interpolated from current robot state up to state at global look ahead distance
       // Lets fill the native MPC type ref states and return to caller

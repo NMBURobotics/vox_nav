@@ -91,7 +91,8 @@ namespace vox_nav_control
       override;
 
       /**
-       * @brief Compute required velocity commands to drive the robot along the reference_trajectory_
+       * @brief Compute required velocity commands recorrect heading. This function is used when robot already satisfies
+       * goal_tolerance_distance
        *
        * @param curr_robot_pose
        * @return geometry_msgs::msg::Twist
@@ -146,6 +147,9 @@ namespace vox_nav_control
       // Publish local trajecory currently being fed to controller
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
         interpolated_local_reference_traj_publisher_;
+      // while following global plan whats the max look ahead distance ?, thats global_plan_look_ahead_distance_
+      double global_plan_look_ahead_distance_;
+      int local_trajectory_interpolation_;
     };
 
   } // namespace mpc_controller

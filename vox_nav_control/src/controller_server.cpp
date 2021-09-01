@@ -44,6 +44,12 @@ namespace vox_nav_control
     declare_parameter("goal_tolerance_distance", 0.5);
     get_parameter("goal_tolerance_distance", goal_tolerance_distance_);
 
+    declare_parameter("goal_tolerance_orientation", 0.1);
+    get_parameter("goal_tolerance_orientation", goal_tolerance_orientation_);
+
+    declare_parameter("transform_timeout", 0.1);
+    get_parameter("transform_timeout", transform_timeout_);
+
     declare_parameter("controller_plugin", controller_id_);
     get_parameter("controller_plugin", controller_id_);
 
@@ -171,14 +177,15 @@ namespace vox_nav_control
 
       geometry_msgs::msg::PoseStamped curr_robot_pose;
       vox_nav_utilities::getCurrentPose(
-        curr_robot_pose, *tf_buffer_, "map", "base_link", 0.01);
+        curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
 
       int nearest_traj_pose_index = controller_->nearestStateIndex(goal->path, curr_robot_pose);
       curr_robot_pose.pose.position.z = goal->path.poses[nearest_traj_pose_index].pose.position.z;
 
-      RCLCPP_WARN(
+      auto & clock = *this->get_clock();
+      RCLCPP_INFO_THROTTLE(
         get_logger(),
-        "dist to goal %.4f ",
+        clock, 500, "Remaining Distance to goal %.4f ...",
         vox_nav_utilities::getEuclidianDistBetweenPoses(
           curr_robot_pose,
           goal->path.poses.back()));
@@ -204,7 +211,7 @@ namespace vox_nav_control
           goal_handle->publish_feedback(feedback);
 
           vox_nav_utilities::getCurrentPose(
-            curr_robot_pose, *tf_buffer_, "map", "base_link", 0.01);
+            curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
 
           double nan, curr_robot_psi, goal_psi;
           vox_nav_utilities::getRPYfromMsgQuaternion(
@@ -213,7 +220,7 @@ namespace vox_nav_control
           vox_nav_utilities::getRPYfromMsgQuaternion(
             goal->path.poses.back().pose.orientation, nan, nan, goal_psi);
 
-          if (std::abs(curr_robot_psi - goal_psi) < 0.1) {
+          if (std::abs(curr_robot_psi - goal_psi) < goal_tolerance_orientation_) {
             // goal has been reached
             is_goal_orientation_tolerance_satisfied = true;
             // reset the velocity
