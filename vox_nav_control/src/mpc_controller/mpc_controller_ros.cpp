@@ -105,8 +105,7 @@ namespace vox_nav_control
       curr_states.v = kTARGET_SPEED;
 
       std::vector<MPCControllerCore::States> interpolated_reference_states =
-        getInterpolatedReferenceStates(curr_robot_pose);
-
+        getLocalInterpolatedReferenceStates(curr_robot_pose);
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
@@ -119,7 +118,7 @@ namespace vox_nav_control
         rear_axle_tofront_dist;
 
       regulate_max_speed();
-      publishInterpolatedRefernceStates(interpolated_reference_states);
+      publishLocalInterpolatedRefernceStates(interpolated_reference_states);
       previous_control_ = res.control_input;
       return computed_velocity_;
     }
@@ -142,7 +141,7 @@ namespace vox_nav_control
       curr_states.v = kTARGET_SPEED;
 
       std::vector<MPCControllerCore::States> interpolated_reference_states =
-        getInterpolatedReferenceStates(curr_robot_pose);
+        getLocalInterpolatedReferenceStates(curr_robot_pose);
 
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(interpolated_reference_states);
@@ -171,10 +170,7 @@ namespace vox_nav_control
       for (int i = 0; i < reference_traj.poses.size(); i++) {
 
         double curr_distance =
-          std::sqrt(
-          std::pow(reference_traj.poses[i].pose.position.x - curr_robot_pose.pose.position.x, 2) +
-          std::pow(reference_traj.poses[i].pose.position.y - curr_robot_pose.pose.position.y, 2) +
-          std::pow(reference_traj.poses[i].pose.position.z - curr_robot_pose.pose.position.z, 2));
+          vox_nav_utilities::getEuclidianDistBetweenPoses(reference_traj.poses[i], curr_robot_pose);
 
         if (curr_distance < closest_state_distance) {
           closest_state_distance = curr_distance;
@@ -184,7 +180,7 @@ namespace vox_nav_control
       return closest_state_index;
     }
 
-    std::vector<MPCControllerCore::States> MPCControllerROS::getInterpolatedReferenceStates(
+    std::vector<MPCControllerCore::States> MPCControllerROS::getLocalInterpolatedReferenceStates(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
       double kGlobalPlanLookAheadDst = 3.5;
@@ -266,7 +262,7 @@ namespace vox_nav_control
     }
 
     void
-    MPCControllerROS::publishInterpolatedRefernceStates(
+    MPCControllerROS::publishLocalInterpolatedRefernceStates(
       std::vector<MPCControllerCore::States> interpolated_reference_states)
     {
       visualization_msgs::msg::MarkerArray marker_array;
@@ -288,6 +284,7 @@ namespace vox_nav_control
         marker.scale.y = 0.1;
         marker.scale.z = 0.1;
         marker.color.a = 1.0;
+        // Make it colorful
         marker.color.r = 1.0 * static_cast<double>(rclcpp::Clock().now().nanoseconds() % 10);
         marker.color.g = 0.5 * static_cast<double>(rclcpp::Clock().now().nanoseconds() % 10);
         marker.color.b = 0.2 * static_cast<double>(rclcpp::Clock().now().nanoseconds() % 10);

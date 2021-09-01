@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2021 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ namespace vox_nav_control
   {
 /**
  * @brief A ROS wrapper around the Core MPC controller class.
- *        This class interfaces MPC controller with Controller Core.
+ *        This class interfaces MPC controller with ControllerCore which is base class for plugins.
  *        Derivatives of ControllerCore class are used to expose Controller server for use
  *        The controller server is an ROS2 action named follow_path
  *
@@ -119,16 +119,16 @@ namespace vox_nav_control
        * @param curr_robot_pose
        * @return std::vector<MPCControllerCore::States>
        */
-      std::vector<MPCControllerCore::States> getInterpolatedReferenceStates(
+      std::vector<MPCControllerCore::States> getLocalInterpolatedReferenceStates(
         geometry_msgs::msg::PoseStamped curr_robot_pose);
 
       /**
-       * @brief return cloest reference trajectory to be feed into conrol sceheme
+       * @brief return closest reference trajectory to be feed into conrol sceheme
        *        The number of returned states will be determined according to time horizon(N)
        *
        * @param interpolated_ref_traj
        */
-      void publishInterpolatedRefernceStates(
+      void publishLocalInterpolatedRefernceStates(
         std::vector<MPCControllerCore::States> interpolated_ref_traj);
 
     private:
