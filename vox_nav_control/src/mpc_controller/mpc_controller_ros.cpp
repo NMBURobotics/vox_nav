@@ -36,7 +36,6 @@ namespace vox_nav_control
       const std::string & plugin_name)
     {
       parent->declare_parameter("global_plan_look_ahead_distance", 2.5);
-      parent->declare_parameter("local_trajectory_interpolation", 10);
       parent->declare_parameter(plugin_name + ".N", 10);
       parent->declare_parameter(plugin_name + ".DT", 0.1);
       parent->declare_parameter(plugin_name + ".L_F", 0.66);
@@ -57,7 +56,6 @@ namespace vox_nav_control
       parent->declare_parameter(plugin_name + ".params_configured", false);
 
       parent->get_parameter("global_plan_look_ahead_distance", global_plan_look_ahead_distance_);
-      parent->get_parameter("local_trajectory_interpolation", local_trajectory_interpolation_);
       parent->get_parameter(plugin_name + ".N", mpc_parameters_.N);
       parent->get_parameter(plugin_name + ".DT", mpc_parameters_.DT);
       parent->get_parameter(plugin_name + ".L_F", mpc_parameters_.L_F);
@@ -242,7 +240,7 @@ namespace vox_nav_control
       // The local ref traj now contains only 3 states, we will interpolate this states with OMPL
       // The count of states after interpolation must be same as horizon defined for the control problem , hence
       // it should be mpc_parameters_.N
-      path.interpolate(local_trajectory_interpolation_);
+      path.interpolate(mpc_parameters_.N);
 
       // Now the local ref traj is interpolated from current robot state up to state at global look ahead distance
       // Lets fill the native MPC type ref states and return to caller

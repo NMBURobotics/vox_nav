@@ -161,6 +161,7 @@ namespace vox_nav_planning
     std::shared_ptr<octomap::OcTree> original_octomap_octree_;
     std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
     std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
+    std::shared_ptr<fcl::CollisionObject> robot_collision_object_minimal_;
     ompl::geometric::SimpleSetupPtr simple_setup_;
     // to ensure safety when accessing global var curr_frame_
     std::mutex global_mutex_;

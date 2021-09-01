@@ -149,7 +149,6 @@ namespace vox_nav_control
         interpolated_local_reference_traj_publisher_;
       // while following global plan whats the max look ahead distance ?, thats global_plan_look_ahead_distance_
       double global_plan_look_ahead_distance_;
-      int local_trajectory_interpolation_;
     };
 
   } // namespace mpc_controller

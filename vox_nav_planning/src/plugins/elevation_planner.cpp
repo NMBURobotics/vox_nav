@@ -86,8 +86,17 @@ namespace vox_nav_planning
         parent->get_parameter("robot_body_dimens.y").as_double(),
         parent->get_parameter("robot_body_dimens.z").as_double()));
 
+    CollisionGeometryPtr_t robot_body_box_minimal(new fcl::Box(
+        parent->get_parameter("robot_body_dimens.x").as_double() / 2.0,
+        parent->get_parameter("robot_body_dimens.y").as_double() / 2.0,
+        parent->get_parameter("robot_body_dimens.z").as_double()));
+
     fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
+    fcl::CollisionObject robot_body_box_minimal_object(robot_body_box_minimal, fcl::Transform3f());
+
     robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
+    robot_collision_object_minimal_ = std::make_shared<fcl::CollisionObject>(
+      robot_body_box_minimal_object);
 
     elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_ / 4.0);
     original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
@@ -241,10 +250,12 @@ namespace vox_nav_planning
       myQuaternion.getZ(), myQuaternion.getW());
 
     robot_collision_object_->setTransform(rotation, translation);
+    robot_collision_object_minimal_->setTransform(rotation, translation);
+
     fcl::CollisionResult collisionWithSurfelsResult, collisionWithFullMapResult;
 
     fcl::collide(
-      robot_collision_object_.get(),
+      robot_collision_object_minimal_.get(),
       elevated_surfels_collision_object_.get(), requestType, collisionWithSurfelsResult);
 
     fcl::collide(
