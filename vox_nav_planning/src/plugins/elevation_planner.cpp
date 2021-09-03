@@ -87,8 +87,8 @@ namespace vox_nav_planning
         parent->get_parameter("robot_body_dimens.z").as_double()));
 
     CollisionGeometryPtr_t robot_body_box_minimal(new fcl::Box(
-        parent->get_parameter("robot_body_dimens.x").as_double() / 2.0,
-        parent->get_parameter("robot_body_dimens.y").as_double() / 2.0,
+        parent->get_parameter("robot_body_dimens.x").as_double() / 4.0,
+        parent->get_parameter("robot_body_dimens.y").as_double() / 4.0,
         parent->get_parameter("robot_body_dimens.z").as_double()));
 
     fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
