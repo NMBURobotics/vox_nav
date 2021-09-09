@@ -79,7 +79,7 @@ ament_target_dependencies(pcl2octomap_converter_node ${dependencies})
 
 add_executable(planner_benchmarking_node src/planner_benchmarking_node.cpp)
 ament_target_dependencies(planner_benchmarking_node ${dependencies})
-target_link_libraries(planner_benchmarking_node ${LIBFCL_LIBRARIES} tf_helpers elevation_state_space ompl)
+target_link_libraries(planner_benchmarking_node ${LIBFCL_LIBRARIES} tf_helpers elevation_state_space planner_helpers ompl)
 
 
 install(TARGETS tf_helpers 

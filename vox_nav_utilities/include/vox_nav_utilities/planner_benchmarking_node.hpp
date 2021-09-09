@@ -136,10 +136,8 @@ namespace vox_nav_utilities
     ompl::base::StateSpacePtr state_space_;
 
     std::vector<std::string> selected_planners_;
-    std::string octomap_topic_;
     std::string results_output_dir_;
     std::string results_file_regex_;
-
     double octomap_voxel_size_;
     double planner_timeout_;
     // Only used for REEDS or DUBINS
@@ -153,22 +151,15 @@ namespace vox_nav_utilities
     bool publish_a_sample_bencmark_;
     std::string sample_bencmark_plans_topic_;
 
-    // We only need to creae a FLC cotomap collision from
-    // octomap once, because this is static map
-    std::once_flag fcl_tree_from_octomap_once_;
-    // global mutex to guard octomap
-    std::mutex octomap_mutex_;
 
     GroundRobotPose start_;
     GroundRobotPose goal_;
     geometry_msgs::msg::Vector3 robot_body_dimensions_;
 
+    std::shared_ptr<octomap::OcTree> original_octomap_octree_;
+    std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
     std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-    std::shared_ptr<fcl::OcTree> fcl_octree_;
-    std::shared_ptr<fcl::CollisionObject> fcl_octree_collision_object_;
-
-    rclcpp::Subscription<octomap_msgs::msg::Octomap>::SharedPtr octomap_subscriber_;
-    octomap_msgs::msg::Octomap::ConstSharedPtr octomap_msg_;
+    std::shared_ptr<fcl::CollisionObject> robot_collision_object_minimal_;
     // Publishers for the path
 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
@@ -187,6 +178,12 @@ namespace vox_nav_utilities
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
     std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
     ompl::base::OptimizationObjectivePtr octocost_optimization_;
+
+    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+    rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
+
+    std::mutex octomap_mutex_;
+    volatile bool is_map_ready_;
 
   public:
     double is_octomap_ready_;
@@ -213,7 +210,7 @@ namespace vox_nav_utilities
     *
     * @param octomap
     */
-    void octomapCallback(const octomap_msgs::msg::Octomap::ConstSharedPtr msg);
+    void setupMap();
 
     /**
     * @brief
@@ -232,6 +229,16 @@ namespace vox_nav_utilities
       * @return false
       */
     bool isStateValidSE3(const ompl::base::State * state);
+    
+    /**
+     * @brief 
+     * 
+     * @param state 
+     * @return true 
+     * @return false 
+     */
+    bool isStateValidElevation(const ompl::base::State * state);
+
 
     /**
      * @brief  make a plan with specified simple setup and planner

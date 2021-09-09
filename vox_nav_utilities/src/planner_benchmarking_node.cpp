@@ -8,12 +8,10 @@ namespace vox_nav_utilities
     RCLCPP_INFO(this->get_logger(), "Creating:");
 
     is_octomap_ready_ = false;
-    octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
 
     this->declare_parameter("selected_planners", std::vector<std::string>({"RRTstar", "PRMstar"}));
     this->declare_parameter("planner_timeout", 5.0);
     this->declare_parameter("interpolation_parameter", 50);
-    this->declare_parameter("octomap_topic", "octomap");
     this->declare_parameter("octomap_voxel_size", 0.2);
     this->declare_parameter("selected_state_space", "REEDS");
     this->declare_parameter("min_turning_radius", 2.5);
@@ -43,7 +41,6 @@ namespace vox_nav_utilities
     this->get_parameter("selected_planners", selected_planners_);
     this->get_parameter("planner_timeout", planner_timeout_);
     this->get_parameter("interpolation_parameter", interpolation_parameter_);
-    this->get_parameter("octomap_topic", octomap_topic_);
     this->get_parameter("octomap_voxel_size", octomap_voxel_size_);
     this->get_parameter("selected_state_space", selected_state_space_);
     this->get_parameter("min_turning_radius", min_turning_radius_);
@@ -69,6 +66,47 @@ namespace vox_nav_utilities
     this->get_parameter("results_file_regex", results_file_regex_);
     this->get_parameter("publish_a_sample_bencmark", publish_a_sample_bencmark_);
     this->get_parameter("sample_bencmark_plans_topic", sample_bencmark_plans_topic_);
+
+    typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
+    CollisionGeometryPtr_t robot_body_box(
+      new fcl::Box(
+        robot_body_dimensions_.x,
+        robot_body_dimensions_.y,
+        robot_body_dimensions_.z));
+
+    CollisionGeometryPtr_t robot_body_box_minimal(new fcl::Box(
+        robot_body_dimensions_.x / 4.0,
+        robot_body_dimensions_.y / 4.0,
+        robot_body_dimensions_.z));
+
+    fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
+    fcl::CollisionObject robot_body_box_minimal_object(robot_body_box_minimal, fcl::Transform3f());
+
+    robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
+    robot_collision_object_minimal_ = std::make_shared<fcl::CollisionObject>(
+      robot_body_box_minimal_object);
+
+    elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_ / 4.0);
+    original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+
+    // service hooks for robot localization fromll service
+    get_maps_and_surfels_client_node_ = std::make_shared
+      <rclcpp::Node>("get_maps_and_surfels_client_node");
+
+    get_maps_and_surfels_client_ =
+      get_maps_and_surfels_client_node_->create_client
+      <vox_nav_msgs::srv::GetMapsAndSurfels>(
+      "get_maps_and_surfels");
+
+    // Initialize pubs & subs
+    plan_publisher_ =
+      this->create_publisher<visualization_msgs::msg::MarkerArray>(
+      sample_bencmark_plans_topic_.c_str(), rclcpp::SystemDefaultsQoS());
+
+    start_goal_poses_publisher_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
+      "start_goal_poses", rclcpp::SystemDefaultsQoS());
+
+    setupMap();
 
     if (selected_state_space_ == "REEDS") {
       ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
@@ -115,6 +153,17 @@ namespace vox_nav_utilities
 
       state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
       state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*ompl_se_bounds_);
+
+      // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
+      state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
+        ompl::base::ElevationStateSpace::SE2StateType::SE2,
+        elevated_surfel_poses_msg_,
+        min_turning_radius_ /*only valid for duins or reeds*/,
+        false /*only valid for dubins*/);
+
+      state_space_->as<ompl::base::ElevationStateSpace>()->setBounds(
+        *ompl_se_bounds_,
+        *z_bounds);
     } else {
       ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(3);
       ompl_se_bounds_->setLow(0, se_bounds_.minx);
@@ -126,27 +175,6 @@ namespace vox_nav_utilities
       state_space_ = std::make_shared<ompl::base::SE3StateSpace>();
       state_space_->as<ompl::base::SE3StateSpace>()->setBounds(*ompl_se_bounds_);
     }
-
-    typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
-    CollisionGeometryPtr_t robot_body_box(
-      new fcl::Box(
-        robot_body_dimensions_.x,
-        robot_body_dimensions_.y,
-        robot_body_dimensions_.z));
-    fcl::Transform3f tf2;
-    fcl::CollisionObject robot_body_box_object(robot_body_box, tf2);
-    robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
-    octomap_subscriber_ = this->create_subscription<octomap_msgs::msg::Octomap>(
-      octomap_topic_, rclcpp::SystemDefaultsQoS(),
-      std::bind(&PlannerBenchMarking::octomapCallback, this, std::placeholders::_1));
-
-    // Initialize pubs & subs
-    plan_publisher_ =
-      this->create_publisher<visualization_msgs::msg::MarkerArray>(
-      sample_bencmark_plans_topic_.c_str(), rclcpp::SystemDefaultsQoS());
-
-    start_goal_poses_publisher_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
-      "start_goal_poses", rclcpp::SystemDefaultsQoS());
 
     RCLCPP_INFO(this->get_logger(), "Selected planners for benchmarking:");
     for (auto && i : selected_planners_) {
@@ -163,8 +191,13 @@ namespace vox_nav_utilities
   {
     ompl::geometric::SimpleSetup ss(state_space_);
     ompl::base::SpaceInformationPtr si = ss.getSpaceInformation();
-    ompl::base::ScopedState<ompl::base::SE2StateSpace> random_start(state_space_),
+
+    ompl::base::ScopedState<ompl::base::ElevationStateSpace>
+    random_start(state_space_),
     random_goal(state_space_);
+
+    geometry_msgs::msg::PoseStamped start, goal;
+
     std::map<int, ompl::geometric::PathGeometric> paths_map;
 
     for (int i = 0; i < epochs_; i++) {
@@ -173,56 +206,53 @@ namespace vox_nav_utilities
       // make sure that a soluion exists for generated states
       volatile bool found_valid_random_start_goal = false;
 
-      while (!found_valid_random_start_goal) {
-        random_start->setX(getRangedRandom(se_bounds_.minx, se_bounds_.maxx));
-        random_start->setY(getRangedRandom(se_bounds_.miny, se_bounds_.maxy));
-        random_start->setYaw(getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw));
+      double start_yaw, goal_yaw, nan;
 
-        random_goal->setX(getRangedRandom(se_bounds_.minx, se_bounds_.maxx));
-        random_goal->setY(getRangedRandom(se_bounds_.miny, se_bounds_.maxy));
-        random_goal->setYaw(getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw));
+
+      while (!found_valid_random_start_goal) {
+
+        start_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
+        goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
+
+
+        start.pose.position.x = getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+        start.pose.position.y = getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+        start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
+          nan, nan, start_yaw);
+
+        goal.pose.position.x = getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+        goal.pose.position.y = getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+        goal.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
+          nan, nan, goal_yaw);
+
+        vox_nav_utilities::determineValidNearestGoalStart(
+          nearest_elevated_surfel_to_start_,
+          nearest_elevated_surfel_to_goal_,
+          start,
+          goal,
+          elevated_surfel_cloud_);
+
+        nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
+        nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
+
+        random_start->setSE2(
+          nearest_elevated_surfel_to_start_.pose.position.x,
+          nearest_elevated_surfel_to_start_.pose.position.y, start_yaw);
+        random_start->setZ(nearest_elevated_surfel_to_start_.pose.position.z);
+
+        random_start->setSE2(
+          nearest_elevated_surfel_to_goal_.pose.position.x,
+          nearest_elevated_surfel_to_goal_.pose.position.y, goal_yaw);
+        random_start->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
 
         // the distance should be above a certain threshold
         double distance =
           std::sqrt(
-          std::pow(random_goal->getX() - random_start->getX(), 2) +
-          std::pow(random_goal->getY() - random_start->getY(), 2));
-
-        // define start & goal states
-        if ((selected_state_space_ == "REEDS") || (selected_state_space_ == "DUBINS") ||
-          (selected_state_space_ == "SE2"))
-        {
-          ompl::base::ScopedState<ompl::base::SE2StateSpace> start(state_space_),
-          goal(state_space_);
-          start->setXY(random_start->getX(), random_start->getY());
-          start->setYaw(random_start->getYaw());
-          goal->setXY(random_goal->getX(), random_goal->getY());
-          goal->setYaw(random_goal->getYaw());
-          ss.setStartAndGoalStates(start, goal, goal_tolerance_);
-          ss.setStateValidityChecker(
-            [this](const ompl::base::State * state)
-            {
-              return isStateValidSE2(state);
-            });
-        } else {
-          ompl::base::ScopedState<ompl::base::SE3StateSpace> start(state_space_),
-          goal(state_space_);
-          start->setXYZ(random_start->getX(), random_start->getY(), start_.z);
-          start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-            0, 0, 1, random_start->getYaw());
-          goal->setXYZ(random_goal->getX(), random_goal->getY(), goal_.z);
-          goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-            0, 0, 1, random_goal->getYaw());
-          ss.setStartAndGoalStates(start, goal, goal_tolerance_);
-          ss.setStateValidityChecker(
-            [this](const ompl::base::State * state)
-            {
-              return isStateValidSE3(state);
-            });
-        }
+          std::pow(random_goal->getSE2()->getX() - random_start->getSE2()->getX(), 2) +
+          std::pow(random_goal->getSE2()->getY() - random_start->getSE2()->getY(), 2));
 
         found_valid_random_start_goal =
-          (isStateValidSE2(random_start.get()) && isStateValidSE2(random_goal.get()) &&
+          (isStateValidElevation(random_start.get()) && isStateValidElevation(random_goal.get()) &&
           distance > min_euclidean_dist_start_to_goal_);
 
         if (!found_valid_random_start_goal) {
@@ -233,6 +263,57 @@ namespace vox_nav_utilities
 
         RCLCPP_INFO(
           this->get_logger(), "A valid random start and goal states has been found.");
+
+        // define start & goal states
+        if ((selected_state_space_ == "REEDS") || (selected_state_space_ == "DUBINS") ||
+          (selected_state_space_ == "SE2"))
+        {
+          ompl::base::ScopedState<ompl::base::SE2StateSpace>
+          se2_start(state_space_),
+          se2_goal(state_space_);
+          se2_start->setXY(random_start->getSE2()->getX(), random_start->getSE2()->getY());
+          se2_start->setYaw(random_start->getSE2()->getYaw());
+          se2_goal->setXY(random_goal->getSE2()->getX(), random_goal->getSE2()->getY());
+          se2_goal->setYaw(random_goal->getSE2()->getYaw());
+          ss.setStartAndGoalStates(se2_start, se2_goal, goal_tolerance_);
+          ss.setStateValidityChecker(
+            [this](const ompl::base::State * state)
+            {
+              return isStateValidSE2(state);
+            });
+        } else if ((selected_state_space_ == "ELEVATION")) {
+          ss.setStartAndGoalStates(random_start, random_goal, goal_tolerance_);
+          ss.setStateValidityChecker(
+            [this](const ompl::base::State * state)
+            {
+              return isStateValidElevation(state);
+            });
+        } else {
+          ompl::base::ScopedState<ompl::base::SE3StateSpace>
+          se3_start(state_space_),
+          se3_goal(state_space_);
+
+          se3_start->setXYZ(
+            random_start->getSE2()->getX(),
+            random_start->getSE2()->getY(),
+            random_start->getZ()->values[0]);
+          se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
+            0, 0, 1, random_start->getSE2()->getYaw());
+
+          se3_goal->setXYZ(
+            random_goal->getSE2()->getX(),
+            random_goal->getSE2()->getY(),
+            random_goal->getZ()->values[0]);
+          se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
+            0, 0, 1, random_goal->getSE2()->getYaw());
+
+          ss.setStartAndGoalStates(se3_start, se3_goal, goal_tolerance_);
+          ss.setStateValidityChecker(
+            [this](const ompl::base::State * state)
+            {
+              return isStateValidSE3(state);
+            });
+        }
 
         ss.setOptimizationObjective(
           std::make_shared<ompl::base::PathLengthOptimizationObjective>(
@@ -266,12 +347,14 @@ namespace vox_nav_utilities
       ss.clear();
       RCLCPP_INFO(this->get_logger(), "Created valid random start and goal states");
 
-      start_.x = random_start->getX();
-      start_.y = random_start->getY();
-      start_.yaw = random_start->getYaw();
-      goal_.x = random_goal->getX();
-      goal_.y = random_goal->getY();
-      goal_.yaw = random_goal->getYaw();
+      start_.x = random_start->getSE2()->getX();
+      start_.y = random_start->getSE2()->getY();
+      start_.z = random_start->getZ()->values[0];
+      start_.yaw = random_start->getSE2()->getYaw();
+      goal_.x = random_goal->getSE2()->getX();
+      goal_.y = random_goal->getSE2()->getY();
+      goal_.z = random_goal->getZ()->values[0];
+      goal_.yaw = random_goal->getSE2()->getYaw();
 
       // create a planner for the defined space
       ompl::base::PlannerPtr rrtstar_planner;
@@ -348,27 +431,6 @@ namespace vox_nav_utilities
 
   bool PlannerBenchMarking::isStateValidSE2(const ompl::base::State * state)
   {
-    if (is_octomap_ready_) {
-      std::call_once(
-        fcl_tree_from_octomap_once_, [this]() {
-          std::shared_ptr<octomap::OcTree> octomap_octree =
-          std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-          octomap_msgs::readTree<octomap::OcTree>(octomap_octree.get(), *octomap_msg_);
-          fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
-          fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
-            std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
-          RCLCPP_INFO(
-            this->get_logger(),
-            "Recieved a valid Octomap, A FCL collision tree will be created from this "
-            "octomap for state validity(aka collision check)");
-        });
-    } else {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "The Octomap has not been recieved correctly, Collision check "
-        "cannot be processed without a valid Octomap!");
-      return false;
-    }
     // cast the abstract state type to the type we expect
     const ompl::base::SE2StateSpace::StateType * se2_state =
       state->as<ompl::base::SE2StateSpace::StateType>();
@@ -385,35 +447,12 @@ namespace vox_nav_utilities
     fcl::CollisionResult collisionResult;
     fcl::collide(
       robot_collision_object_.get(),
-      fcl_octree_collision_object_.get(), requestType, collisionResult);
+      original_octomap_collision_object_.get(), requestType, collisionResult);
     return !collisionResult.isCollision();
   }
 
   bool PlannerBenchMarking::isStateValidSE3(const ompl::base::State * state)
   {
-    if (is_octomap_ready_) {
-      std::call_once(
-        fcl_tree_from_octomap_once_, [this]() {
-          std::shared_ptr<octomap::OcTree> octomap_octree =
-          std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-          octomap_msgs::readTree<octomap::OcTree>(octomap_octree.get(), *octomap_msg_);
-
-
-          fcl_octree_ = std::make_shared<fcl::OcTree>(octomap_octree);
-          fcl_octree_collision_object_ = std::make_shared<fcl::CollisionObject>(
-            std::shared_ptr<fcl::CollisionGeometry>(fcl_octree_));
-          RCLCPP_INFO(
-            this->get_logger(),
-            "Recieved a valid Octomap, A FCL collision tree will be created from this "
-            "octomap for state validity(aka collision check)");
-        });
-    } else {
-      RCLCPP_ERROR(
-        this->get_logger(),
-        "The Octomap has not been recieved correctly, Collision check "
-        "cannot be processed without a valid Octomap!");
-      return false;
-    }
     // cast the abstract state type to the type we expect
     const ompl::base::SE3StateSpace::StateType * se3state =
       state->as<ompl::base::SE3StateSpace::StateType>();
@@ -431,18 +470,40 @@ namespace vox_nav_utilities
     fcl::CollisionResult collisionResult;
     fcl::collide(
       robot_collision_object_.get(),
-      fcl_octree_collision_object_.get(), requestType, collisionResult);
+      original_octomap_collision_object_.get(), requestType, collisionResult);
     return !collisionResult.isCollision();
   }
 
-  void PlannerBenchMarking::octomapCallback(
-    const octomap_msgs::msg::Octomap::ConstSharedPtr msg)
+  bool PlannerBenchMarking::isStateValidElevation(const ompl::base::State * state)
   {
-    const std::lock_guard<std::mutex> lock(octomap_mutex_);
-    if (!is_octomap_ready_) {
-      is_octomap_ready_ = true;
-      octomap_msg_ = msg;
-    }
+    const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
+    // cast the abstract state type to the type we expect
+    const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+    // extract the second component of the state and cast it to what we expect
+    const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    fcl::CollisionRequest requestType(1, false, 1, false);
+    // check validity of state Fdefined by pos & rot
+    fcl::Vec3f translation(se2->getX(), se2->getY(), z->values[0]);
+    tf2::Quaternion myQuaternion;
+    myQuaternion.setRPY(0, 0, se2->getYaw());
+    fcl::Quaternion3f rotation(
+      myQuaternion.getX(), myQuaternion.getY(),
+      myQuaternion.getZ(), myQuaternion.getW());
+
+    robot_collision_object_->setTransform(rotation, translation);
+    robot_collision_object_minimal_->setTransform(rotation, translation);
+
+    fcl::CollisionResult collisionWithSurfelsResult, collisionWithFullMapResult;
+
+    fcl::collide(
+      robot_collision_object_minimal_.get(),
+      elevated_surfels_collision_object_.get(), requestType, collisionWithSurfelsResult);
+
+    fcl::collide(
+      robot_collision_object_.get(),
+      original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
+
+    return collisionWithSurfelsResult.isCollision() && !collisionWithFullMapResult.isCollision();
   }
 
   ompl::geometric::PathGeometric PlannerBenchMarking::makeAPlan(
@@ -537,6 +598,97 @@ namespace vox_nav_utilities
     start_and_goal.poses.push_back(start);
     start_and_goal.poses.push_back(goal);
     start_goal_poses_publisher_->publish(start_and_goal);
+  }
+
+  void PlannerBenchMarking::setupMap()
+  {
+    const std::lock_guard<std::mutex> lock(octomap_mutex_);
+
+    while (!is_map_ready_ && rclcpp::ok()) {
+
+      auto request = std::make_shared<vox_nav_msgs::srv::GetMapsAndSurfels::Request>();
+
+      while (!get_maps_and_surfels_client_->wait_for_service(std::chrono::seconds(1))) {
+        if (!rclcpp::ok()) {
+          RCLCPP_ERROR(
+            this->get_logger(),
+            "Interrupted while waiting for the get_maps_and_surfels service. Exiting");
+          return;
+        }
+        RCLCPP_INFO(
+          this->get_logger(),
+          "get_maps_and_surfels service not available, waiting and trying again");
+      }
+
+      auto result_future = get_maps_and_surfels_client_->async_send_request(request);
+      if (rclcpp::spin_until_future_complete(
+          get_maps_and_surfels_client_node_,
+          result_future) !=
+        rclcpp::FutureReturnCode::SUCCESS)
+      {
+        RCLCPP_ERROR(this->get_logger(), "/get_maps_and_surfels service call failed");
+      }
+      auto response = result_future.get();
+
+      if (response->is_valid) {
+        is_map_ready_ = true;
+      } else {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        RCLCPP_INFO(
+          this->get_logger(), "Waiting for GetMapsAndSurfels service to provide correct maps.");
+        continue;
+      }
+
+      auto original_octomap_octree =
+        dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(response->original_octomap));
+      original_octomap_octree_ = std::make_shared<octomap::OcTree>(*original_octomap_octree);
+
+      auto elevated_surfel_octomap_octree =
+        dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(
+          response->elevated_surfel_octomap));
+      elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(
+        *elevated_surfel_octomap_octree);
+
+      delete original_octomap_octree;
+      delete elevated_surfel_octomap_octree;
+
+      auto elevated_surfels_fcl_octree =
+        std::make_shared<fcl::OcTree>(elevated_surfel_octomap_octree_);
+      elevated_surfels_collision_object_ = std::make_shared<fcl::CollisionObject>(
+        std::shared_ptr<fcl::CollisionGeometry>(elevated_surfels_fcl_octree));
+
+      auto original_octomap_fcl_octree = std::make_shared<fcl::OcTree>(original_octomap_octree_);
+      original_octomap_collision_object_ = std::make_shared<fcl::CollisionObject>(
+        std::shared_ptr<fcl::CollisionGeometry>(original_octomap_fcl_octree));
+
+      elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>(
+        response->elevated_surfel_poses);
+      for (auto && i : elevated_surfel_poses_msg_->poses) {
+        pcl::PointSurfel surfel;
+        surfel.x = i.position.x;
+        surfel.y = i.position.y;
+        surfel.z = i.position.z;
+        double r, p, y;
+        vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
+        surfel.normal_x = r;
+        surfel.normal_y = p;
+        surfel.normal_z = y;
+        elevated_surfel_cloud_->points.push_back(surfel);
+      }
+
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
+        "octomap for state validity (aka collision check)", original_octomap_octree_->size());
+
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Recieved a valid Octomap which represents Elevated surfels with %d nodes,"
+        " A FCL collision tree will be created from this "
+        "octomap for state validity (aka collision check)",
+        elevated_surfel_octomap_octree_->size());
+
+    }
   }
 
   std_msgs::msg::ColorRGBA PlannerBenchMarking::getColorByIndex(int index)
