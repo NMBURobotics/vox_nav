@@ -21,7 +21,7 @@
 
 #include "vox_nav_planning/planner_core.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
-#include "vox_nav_planning/plugins/elevation_state_space.hpp"
+#include "vox_nav_utilities/elevation_state_space.hpp"
 
 
 namespace vox_nav_planning

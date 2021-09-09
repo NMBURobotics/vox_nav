@@ -100,6 +100,21 @@ namespace vox_nav_utilities
       ompl_se_bounds_->setHigh(2, se_bounds_.maxyaw);
       state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
       state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*ompl_se_bounds_);
+    } else if (selected_state_space_ == "ELEVATION") {
+      ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
+      ompl_se_bounds_->setLow(0, se_bounds_.minx);
+      ompl_se_bounds_->setHigh(0, se_bounds_.maxx);
+      ompl_se_bounds_->setLow(1, se_bounds_.miny);
+      ompl_se_bounds_->setHigh(1, se_bounds_.maxy);
+      ompl_se_bounds_->setLow(2, se_bounds_.minyaw);
+      ompl_se_bounds_->setHigh(2, se_bounds_.maxyaw);
+
+      auto z_bounds = std::make_shared<ompl::base::RealVectorBounds>(1);
+      z_bounds->setLow(0, se_bounds_.minz);
+      z_bounds->setHigh(0, se_bounds_.maxz);
+
+      state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
+      state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*ompl_se_bounds_);
     } else {
       ompl_se_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(3);
       ompl_se_bounds_->setLow(0, se_bounds_.minx);

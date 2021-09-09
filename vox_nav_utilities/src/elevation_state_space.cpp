@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "vox_nav_planning/plugins/elevation_state_space.hpp"
+#include "vox_nav_utilities/elevation_state_space.hpp"
 #include "ompl/tools/config/MagicConstants.h"
 using namespace ompl::base;
 

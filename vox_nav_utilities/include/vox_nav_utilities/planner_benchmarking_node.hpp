@@ -27,6 +27,7 @@
 #include <nav_msgs/msg/path.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
+#include <vox_nav_utilities/elevation_state_space.hpp>
 // PCL
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
@@ -171,8 +172,21 @@ namespace vox_nav_utilities
     // Publishers for the path
 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
-
     rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr start_goal_poses_publisher_;
+
+    // Surfels centers are elevated by node_elevation_distance_, and are stored in this
+    // octomap, this maps is used by planner to sample states that are
+    // strictly laying on ground but not touching. So it constrains the path to be on ground
+    // while it can elevate thorogh ramps or slopes
+    std::shared_ptr<octomap::OcTree> elevated_surfel_octomap_octree_;
+    // it is also required to have orientation information of surfels, they are kept in
+    // elevated_surfel_poses_msg_
+    geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
+    pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
+    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
+    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
+    std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
+    ompl::base::OptimizationObjectivePtr octocost_optimization_;
 
   public:
     double is_octomap_ready_;

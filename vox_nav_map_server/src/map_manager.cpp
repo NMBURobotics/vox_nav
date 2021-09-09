@@ -379,11 +379,10 @@ namespace vox_nav_map_server
         cost_params_.cost_critic_weights[2] * energy_gap_cost;
 
       // any roll or pitch thats higher than max_tilt will make that surfel NON traversable
-      if (max_tilt > cost_params_.max_allowed_tilt ||
+      if (max_tilt > cost_params_.max_allowed_tilt /*||
         max_energy_gap > cost_params_.max_allowed_energy_gap ||
         average_point_deviation > cost_params_.max_allowed_point_deviation ||
-        total_cost > 180)
-      {
+        total_cost > 180*/) {
         surfel_cloud = vox_nav_utilities::set_cloud_color(
           surfel_cloud,
           std::vector<double>({255.0, 0, 0}));
@@ -453,7 +452,8 @@ namespace vox_nav_map_server
     for (auto && i : elevated_surfel_pointcloud_->points) {
       surfel_octocloud.push_back(octomap::point3d(i.x, i.y, i.z));
     }
-    auto elevated_surfels_octomap_octree = std::make_shared<octomap::OcTree>(octomap_voxel_size_ / 4.0);
+    auto elevated_surfels_octomap_octree = std::make_shared<octomap::OcTree>(
+      octomap_voxel_size_ / 4.0);
     elevated_surfels_octomap_octree->insertPointCloud(surfel_octocloud, octomap::point3d(0, 0, 0));
 
     for (auto && i : elevated_surfel_pointcloud_->points) {

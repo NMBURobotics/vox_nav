@@ -30,6 +30,7 @@ find_package(OCTOMAP REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(PCL REQUIRED)
+find_package(vox_nav_msgs REQUIRED)
 
 include_directories(include
                    ${OMPL_INCLUDE_DIRS}
@@ -49,6 +50,7 @@ set(dependencies
   OCTOMAP
   octomap_msgs
   visualization_msgs
+  vox_nav_msgs
 )
 
 add_library(tf_helpers SHARED src/tf_helpers.cpp src/pcl_helpers.cpp)
@@ -65,6 +67,9 @@ ament_target_dependencies(map_manager_helpers ${dependencies})
 add_library(gps_waypoint_collector SHARED src/gps_waypoint_collector.cpp)
 ament_target_dependencies(gps_waypoint_collector ${dependencies})
 
+add_library(elevation_state_space SHARED src/elevation_state_space.cpp)
+ament_target_dependencies(elevation_state_space ${dependencies})
+
 add_executable(gps_waypoint_collector_node src/gps_waypoint_collector_node.cpp)
 target_link_libraries(gps_waypoint_collector_node gps_waypoint_collector)
 ament_target_dependencies(gps_waypoint_collector_node ${dependencies})
@@ -74,13 +79,14 @@ ament_target_dependencies(pcl2octomap_converter_node ${dependencies})
 
 add_executable(planner_benchmarking_node src/planner_benchmarking_node.cpp)
 ament_target_dependencies(planner_benchmarking_node ${dependencies})
-target_link_libraries(planner_benchmarking_node ${LIBFCL_LIBRARIES} tf_helpers ompl)
+target_link_libraries(planner_benchmarking_node ${LIBFCL_LIBRARIES} tf_helpers elevation_state_space ompl)
 
 
 install(TARGETS tf_helpers 
                 planner_helpers 
                 map_manager_helpers
                 gps_waypoint_collector 
+                elevation_state_space
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
@@ -99,7 +105,8 @@ install(DIRECTORY config launch
 ament_export_libraries(tf_helpers 
                         planner_helpers 
                         map_manager_helpers
-                        gps_waypoint_collector)
+                        gps_waypoint_collector
+                        elevation_state_space)
 ament_export_dependencies(${dependencies})
 ament_export_include_directories(include)
 

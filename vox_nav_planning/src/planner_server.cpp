@@ -262,7 +262,7 @@ namespace vox_nav_planning
       marker.scale.x = get_parameter("robot_body_dimens.x").as_double();
       marker.scale.y = get_parameter("robot_body_dimens.y").as_double();
       marker.scale.z = get_parameter("robot_body_dimens.z").as_double();
-      marker.color.a = 0.4;
+      marker.color.a = 0.7;
       marker.color.r = 0.0;
       marker.color.g = 1.0;
       marker.color.b = 1.0;
