@@ -7,7 +7,10 @@ namespace vox_nav_utilities
   {
     RCLCPP_INFO(this->get_logger(), "Creating:");
 
-    is_octomap_ready_ = false;
+    is_map_ready_ = false;
+
+    elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
+      new pcl::PointCloud<pcl::PointSurfel>);
 
     this->declare_parameter("selected_planners", std::vector<std::string>({"RRTstar", "PRMstar"}));
     this->declare_parameter("planner_timeout", 5.0);
@@ -75,8 +78,8 @@ namespace vox_nav_utilities
         robot_body_dimensions_.z));
 
     CollisionGeometryPtr_t robot_body_box_minimal(new fcl::Box(
-        robot_body_dimensions_.x / 4.0,
-        robot_body_dimensions_.y / 4.0,
+        robot_body_dimensions_.x / 1.0,
+        robot_body_dimensions_.y / 1.0,
         robot_body_dimensions_.z));
 
     fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
@@ -150,10 +153,6 @@ namespace vox_nav_utilities
       auto z_bounds = std::make_shared<ompl::base::RealVectorBounds>(1);
       z_bounds->setLow(0, se_bounds_.minz);
       z_bounds->setHigh(0, se_bounds_.maxz);
-
-      state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
-      state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*ompl_se_bounds_);
-
       // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
       state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
         ompl::base::ElevationStateSpace::SE2StateType::SE2,
@@ -190,14 +189,12 @@ namespace vox_nav_utilities
   std::map<int, ompl::geometric::PathGeometric> PlannerBenchMarking::doBenchMarking()
   {
     ompl::geometric::SimpleSetup ss(state_space_);
-    ompl::base::SpaceInformationPtr si = ss.getSpaceInformation();
-
+    si = ss.getSpaceInformation();
     ompl::base::ScopedState<ompl::base::ElevationStateSpace>
     random_start(state_space_),
     random_goal(state_space_);
 
     geometry_msgs::msg::PoseStamped start, goal;
-
     std::map<int, ompl::geometric::PathGeometric> paths_map;
 
     for (int i = 0; i < epochs_; i++) {
@@ -208,12 +205,10 @@ namespace vox_nav_utilities
 
       double start_yaw, goal_yaw, nan;
 
-
       while (!found_valid_random_start_goal) {
 
         start_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
         goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
-
 
         start.pose.position.x = getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
         start.pose.position.y = getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
@@ -232,6 +227,10 @@ namespace vox_nav_utilities
           goal,
           elevated_surfel_cloud_);
 
+        RCLCPP_INFO(
+          this->get_logger(), "elevated_surfel_cloud_ has %d points ... ",
+          elevated_surfel_cloud_->points.size());
+
         nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
         nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
 
@@ -240,16 +239,19 @@ namespace vox_nav_utilities
           nearest_elevated_surfel_to_start_.pose.position.y, start_yaw);
         random_start->setZ(nearest_elevated_surfel_to_start_.pose.position.z);
 
-        random_start->setSE2(
+        random_goal->setSE2(
           nearest_elevated_surfel_to_goal_.pose.position.x,
           nearest_elevated_surfel_to_goal_.pose.position.y, goal_yaw);
-        random_start->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
+        random_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
 
         // the distance should be above a certain threshold
         double distance =
           std::sqrt(
           std::pow(random_goal->getSE2()->getX() - random_start->getSE2()->getX(), 2) +
           std::pow(random_goal->getSE2()->getY() - random_start->getSE2()->getY(), 2));
+
+        RCLCPP_INFO(
+          this->get_logger(), "Checking whether random generated goal start pair are valid ... ");
 
         found_valid_random_start_goal =
           (isStateValidElevation(random_start.get()) && isStateValidElevation(random_goal.get()) &&
@@ -281,6 +283,9 @@ namespace vox_nav_utilities
             {
               return isStateValidSE2(state);
             });
+          ss.setOptimizationObjective(
+            std::make_shared<ompl::base::PathLengthOptimizationObjective>(
+              si));
         } else if ((selected_state_space_ == "ELEVATION")) {
           ss.setStartAndGoalStates(random_start, random_goal, goal_tolerance_);
           ss.setStateValidityChecker(
@@ -288,6 +293,9 @@ namespace vox_nav_utilities
             {
               return isStateValidElevation(state);
             });
+
+          ss.setOptimizationObjective(getOptimizationObjective());
+
         } else {
           ompl::base::ScopedState<ompl::base::SE3StateSpace>
           se3_start(state_space_),
@@ -313,23 +321,24 @@ namespace vox_nav_utilities
             {
               return isStateValidSE3(state);
             });
+
+          ss.setOptimizationObjective(
+            std::make_shared<ompl::base::PathLengthOptimizationObjective>(
+              si));
         }
 
-        ss.setOptimizationObjective(
-          std::make_shared<ompl::base::PathLengthOptimizationObjective>(
-            si));
         si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
         si->setup();
 
         // create a planner for the defined space
         ss.clear();
         ompl::base::PlannerPtr rrtstar_planner;
-        rrtstar_planner = ompl::base::PlannerPtr(new ompl::geometric::RRTstar(si));
+        rrtstar_planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
         ss.setPlanner(rrtstar_planner);
         RCLCPP_INFO(
           this->get_logger(),
           "Checking whether a solution exists for random start and goal states .");
-        ompl::base::PlannerStatus has_solution = ss.solve(10.0);
+        ompl::base::PlannerStatus has_solution = ss.solve(20.0);
         ss.clear();
 
         // if it gets to this point , that menas our random states are valid and already meets min dist requiremnets
@@ -362,10 +371,17 @@ namespace vox_nav_utilities
       ss.setPlanner(rrtstar_planner);
 
       RCLCPP_INFO(this->get_logger(), "Creating Ground truth plan wih RRTstar");
+
       ss.setOptimizationObjective(std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
       si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
-      si->setup();
 
+      // ENABLE DISABLE VALID STATE SAMPLING
+      /*si->setValidStateSamplerAllocator(
+        std::bind(
+          &PlannerBenchMarking::
+          allocValidStateSampler, this, std::placeholders::_1));*/
+
+      si->setup();
       /*ompl::base::PlannerStatus gt_plan_solved = ss.solve(180.0);
       ompl::geometric::PathGeometric gt_plan = ss.getSolutionPath();
       // Path smoothing using bspline
@@ -375,23 +391,15 @@ namespace vox_nav_utilities
       gt_plan.interpolate(interpolation_parameter_);
       path_simlifier.freeStates(true);
       */
-
       ss.clear();
-
-      ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, batch_size_);
-      request.displayProgress = false;
-      ompl::tools::Benchmark b(ss, "outdoor_plan_benchmarking");
-      //b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
-      //b.addExperimentParameter("gt_path_smoothness", "REAL", std::to_string(gt_plan.smoothness()));
-
-      std::mutex plan_mutex;
-
+      ompl::tools::Benchmark benchmark(ss, "benchmark");
       // this section is to visualize a sample benchmark into RVIZ
+      std::mutex plan_mutex;
       int index(0);
       for (auto && planner_name : selected_planners_) {
         ompl::base::PlannerPtr planner_ptr;
         allocatePlannerbyName(planner_ptr, planner_name, si);
-        b.addPlanner(planner_ptr);
+        benchmark.addPlanner(planner_ptr);
 
         if (publish_a_sample_bencmark_) {
           try {
@@ -413,15 +421,23 @@ namespace vox_nav_utilities
         index++;
       }
 
+      ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, batch_size_);
+      request.displayProgress = false;
+
       RCLCPP_INFO(
         this->get_logger(),
         "Created sample plans from each planner, "
         "Now performing actual benchmark, This might take some time.");
 
-      b.benchmark(request);
-      b.saveResultsToFile(
+      benchmark.benchmark(request);
+      benchmark.saveResultsToFile(
         (results_output_dir_ + results_file_regex_ + "_" +
         std::to_string(i) + ".log").c_str());
+      ss.clear();
+
+      //b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
+      //b.addExperimentParameter("gt_path_smoothness", "REAL", std::to_string(gt_plan.smoothness()));
+
       RCLCPP_INFO(
         this->get_logger(),
         "Bencmarking results saved to given directory: %s.", results_output_dir_.c_str());
@@ -567,6 +583,21 @@ namespace vox_nav_utilities
           marker.pose.orientation.y = se3_state->rotation().y;
           marker.pose.orientation.z = se3_state->rotation().z;
           marker.pose.orientation.w = se3_state->rotation().w;
+        } else if (selected_state_space_ == "ELEVATION") {
+          auto cstate =
+            it->second.getState(curr_path_state)->as<ompl::base::ElevationStateSpace::StateType>();
+          // cast the abstract state type to the type we expect
+          const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+          // extract the second component of the state and cast it to what we expect
+          const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+          geometry_msgs::msg::Point p;
+          p.x = se2->getX();
+          p.y = se2->getY();
+          p.z = z->values[0];
+          marker.pose.position = p;
+          marker.pose.orientation =
+            vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, se2->getYaw());
         } else {
           auto se2_state =
             it->second.getState(curr_path_state)->as<ompl::base::SE2StateSpace::StateType>();
@@ -593,7 +624,7 @@ namespace vox_nav_utilities
     start.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, start_.yaw);
     goal.position.x = goal_.x;
     goal.position.y = goal_.y;
-    goal.position.z = start_.z;
+    goal.position.z = goal_.z;
     goal.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, goal_.yaw);
     start_and_goal.poses.push_back(start);
     start_and_goal.poses.push_back(goal);
@@ -856,13 +887,41 @@ namespace vox_nav_utilities
     return distr(eng);
   }
 
+  ompl::base::OptimizationObjectivePtr PlannerBenchMarking::getOptimizationObjective()
+  {
+    // select a optimizatio objective
+    ompl::base::OptimizationObjectivePtr length_objective(
+      new ompl::base::PathLengthOptimizationObjective(si));
+    ompl::base::OptimizationObjectivePtr octocost_objective(
+      new ompl::base::OctoCostOptimizationObjective(
+        si, elevated_surfel_octomap_octree_));
+
+    ompl::base::MultiOptimizationObjective * multi_optimization =
+      new ompl::base::MultiOptimizationObjective(si);
+    multi_optimization->addObjective(length_objective, 1.0);
+    multi_optimization->addObjective(octocost_objective, 1.0);
+
+    return ompl::base::OptimizationObjectivePtr(multi_optimization);
+  }
+
+  ompl::base::ValidStateSamplerPtr PlannerBenchMarking::allocValidStateSampler(
+    const ompl::base::SpaceInformation * notused)
+  {
+    auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
+      si,
+      nearest_elevated_surfel_to_start_,
+      nearest_elevated_surfel_to_goal_,
+      elevated_surfel_poses_msg_);
+    return valid_sampler;
+  }
+
 }  // namespace vox_nav_utilities
 
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<vox_nav_utilities::PlannerBenchMarking>();
-  while (rclcpp::ok() && !node->is_octomap_ready_) {
+  while (rclcpp::ok() && !node->is_map_ready_) {
     rclcpp::spin_some(node->get_node_base_interface());
     RCLCPP_INFO(
       node->get_logger(),

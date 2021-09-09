@@ -22,7 +22,7 @@ def generate_launch_description():
     # Declare node actions
     planner_benchmarking_rclcpp_node = Node(
         package='vox_nav_utilities',
-        executable='planner_benchmarking',
+        executable='planner_benchmarking_node',
         name='planner_benchmarking_rclcpp_node',
         output='screen',
         #prefix=['xterm -e gdb -ex run --args'],

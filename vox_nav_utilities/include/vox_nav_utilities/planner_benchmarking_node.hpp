@@ -135,6 +135,8 @@ namespace vox_nav_utilities
     std::shared_ptr<ompl::base::RealVectorBounds> ompl_se_bounds_;
     ompl::base::StateSpacePtr state_space_;
 
+    ompl::base::SpaceInformationPtr si;
+
     std::vector<std::string> selected_planners_;
     std::string results_output_dir_;
     std::string results_file_regex_;
@@ -183,10 +185,9 @@ namespace vox_nav_utilities
     rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
 
     std::mutex octomap_mutex_;
-    volatile bool is_map_ready_;
 
   public:
-    double is_octomap_ready_;
+    volatile bool is_map_ready_;
     /**
     * @brief Construct a new Planner Bench Marking object
     *
@@ -229,13 +230,13 @@ namespace vox_nav_utilities
       * @return false
       */
     bool isStateValidSE3(const ompl::base::State * state);
-    
+
     /**
-     * @brief 
-     * 
-     * @param state 
-     * @return true 
-     * @return false 
+     * @brief
+     *
+     * @param state
+     * @return true
+     * @return false
      */
     bool isStateValidElevation(const ompl::base::State * state);
 
@@ -285,6 +286,22 @@ namespace vox_nav_utilities
      * @return double
      */
     double getRangedRandom(double min, double max);
+    
+    /**
+     * @brief Get the Optimization Objective object
+     * 
+     * @return ompl::base::OptimizationObjectivePtr 
+     */
+    ompl::base::OptimizationObjectivePtr  getOptimizationObjective();
+    
+    /**
+     * @brief 
+     * 
+     * @param si 
+     * @return ompl::base::ValidStateSamplerPtr 
+     */
+    ompl::base::ValidStateSamplerPtr  allocValidStateSampler(
+      const ompl::base::SpaceInformation * notused);
 
   };
 }  // namespace vox_nav_utilities
