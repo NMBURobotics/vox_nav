@@ -36,7 +36,7 @@ OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
 
 ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
 {
-  float cost = 1.0;
+  float cost = 5.0;
   const auto * s_se2 =
     s->as<ElevationStateSpace::StateType>()->as<SE2StateSpace::StateType>(0);
   const auto * s_z =

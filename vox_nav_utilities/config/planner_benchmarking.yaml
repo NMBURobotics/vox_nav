@@ -1,10 +1,10 @@
 planner_benchmarking_rclcpp_node:
   ros__parameters:
-    planner_timeout: 10.0
-    interpolation_parameter: 50
+    planner_timeout: 15.0
+    interpolation_parameter: 20
     octomap_voxel_size: 0.2
     selected_state_space: "ELEVATION" # "DUBINS","REEDS", "SE2", "SE3" ### PS. Use DUBINS OR REEDS for Ackermann
-    selected_planners: ["PRMstar", RRTstar]
+    selected_planners: ["PRMstar","PRMstar"]
                         #"InformedRRTstar", "BITstar", "ABITstar","AITstar", "LBTRRT",
                         #"SST", "SPARS", "SPARStwo","FMT", "CForest","AnytimePathShortening"]
     min_turning_radius: 1.5
@@ -26,8 +26,8 @@ planner_benchmarking_rclcpp_node:
     goal:
       z: 3.5 #3.5
     goal_tolerance: 0.8
-    min_euclidean_dist_start_to_goal: 55.0
-    batch_size: 10
+    min_euclidean_dist_start_to_goal: 100.0
+    batch_size: 2
     epochs: 1
     max_memory: 4096
     results_output_dir: "/home/atas/test/"   

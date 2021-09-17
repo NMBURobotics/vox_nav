@@ -373,13 +373,13 @@ namespace vox_nav_utilities
       RCLCPP_INFO(this->get_logger(), "Creating Ground truth plan wih RRTstar");
 
       ss.setOptimizationObjective(std::make_shared<ompl::base::PathLengthOptimizationObjective>(si));
-      si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
 
+      si->setStateValidityCheckingResolution(1.0 / state_space_->getMaximumExtent());
       // ENABLE DISABLE VALID STATE SAMPLING
-      /*si->setValidStateSamplerAllocator(
+      si->setValidStateSamplerAllocator(
         std::bind(
           &PlannerBenchMarking::
-          allocValidStateSampler, this, std::placeholders::_1));*/
+          allocValidStateSampler, this, std::placeholders::_1));
 
       si->setup();
       /*ompl::base::PlannerStatus gt_plan_solved = ss.solve(180.0);
@@ -401,6 +401,10 @@ namespace vox_nav_utilities
         allocatePlannerbyName(planner_ptr, planner_name, si);
         benchmark.addPlanner(planner_ptr);
 
+        if (index > 0) {
+          ss.setOptimizationObjective(getOptimizationObjective());
+        }
+
         if (publish_a_sample_bencmark_) {
           try {
             std::lock_guard<std::mutex> guard(plan_mutex);
@@ -421,7 +425,7 @@ namespace vox_nav_utilities
         index++;
       }
 
-      ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, batch_size_);
+      /*ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_, batch_size_);
       request.displayProgress = false;
 
       RCLCPP_INFO(
@@ -433,7 +437,7 @@ namespace vox_nav_utilities
       benchmark.saveResultsToFile(
         (results_output_dir_ + results_file_regex_ + "_" +
         std::to_string(i) + ".log").c_str());
-      ss.clear();
+      ss.clear();*/
 
       //b.addExperimentParameter("gt_path_length", "REAL", std::to_string(gt_plan.length()));
       //b.addExperimentParameter("gt_path_smoothness", "REAL", std::to_string(gt_plan.smoothness()));
