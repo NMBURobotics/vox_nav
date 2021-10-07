@@ -83,7 +83,7 @@ target_link_libraries(planner_benchmarking_node ${LIBFCL_LIBRARIES} tf_helpers e
 
 add_executable(dynamic_points_node src/dynamic_points_node.cpp)
 ament_target_dependencies(dynamic_points_node ${dependencies})
-target_link_libraries(dynamic_points_node tf_helpers)
+target_link_libraries(dynamic_points_node tf_helpers map_manager_helpers)
 
 
 install(TARGETS tf_helpers 

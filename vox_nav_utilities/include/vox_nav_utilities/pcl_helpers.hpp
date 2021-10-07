@@ -278,6 +278,35 @@ namespace vox_nav_utilities
     return distance;
   }
 
+  template<typename P>
+  typename pcl::PointCloud<P>::Ptr segmentSurfacePlane(
+    const typename pcl::PointCloud<P>::Ptr cloud, double dist)
+  {
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+    // Create the segmentation object
+    typename pcl::SACSegmentation<P> seg;
+    typename pcl::ExtractIndices<P> extract;
+    typename pcl::PointCloud<P>::Ptr filtered(new pcl::PointCloud<P>());
+
+    // Optional
+    seg.setOptimizeCoefficients(true);
+    // Mandatory
+    seg.setModelType(pcl::SACMODEL_PLANE);
+    seg.setMethodType(pcl::SAC_RANSAC);
+    seg.setDistanceThreshold(dist);
+
+    seg.setInputCloud(cloud);
+    seg.segment(*inliers, *coefficients);
+
+    extract.setInputCloud(cloud);
+    extract.setIndices(inliers);
+    extract.setNegative(false);
+    extract.filter(*filtered);
+
+    return filtered;
+  }
+
 }  // namespace vox_nav_utilities
 
 #endif  // VOX_NAV_UTILITIES__PCL_HELPERS_HPP_
