@@ -280,7 +280,7 @@ namespace vox_nav_utilities
 
   template<typename P>
   typename pcl::PointCloud<P>::Ptr segmentSurfacePlane(
-    const typename pcl::PointCloud<P>::Ptr cloud, double dist)
+    const typename pcl::PointCloud<P>::Ptr cloud, double dist, bool set_negative)
   {
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
@@ -295,13 +295,12 @@ namespace vox_nav_utilities
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMethodType(pcl::SAC_RANSAC);
     seg.setDistanceThreshold(dist);
-
     seg.setInputCloud(cloud);
     seg.segment(*inliers, *coefficients);
 
     extract.setInputCloud(cloud);
     extract.setIndices(inliers);
-    extract.setNegative(false);
+    extract.setNegative(set_negative);
     extract.filter(*filtered);
 
     return filtered;

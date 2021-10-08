@@ -25,6 +25,8 @@
 #include "vox_nav_utilities/map_manager_helpers.hpp"
 #include <pcl/common/common.h>
 #include <pcl_ros/transforms.hpp>
+#include <pcl/kdtree/kdtree_flann.h>
+
 #include <tf2_eigen/tf2_eigen.h>
 
 
@@ -52,6 +54,10 @@ namespace vox_nav_utilities
       const nav_msgs::msg::Odometry::ConstSharedPtr & odom,
       const sensor_msgs::msg::Imu::ConstSharedPtr & imu);
 
+    void shoot(
+      std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> & cloud_vector
+    );
+
   private:
     rclcpp::TimerBase::SharedPtr timer_;
     message_filters::Subscriber<sensor_msgs::msg::PointCloud2> cloud_subscriber_;
@@ -76,14 +82,14 @@ namespace vox_nav_utilities
   DynamicPoints::DynamicPoints()
   : Node("dynamic_points_node")
   {
-    cloud_subscriber_.subscribe(this, "/ouster/points", rmw_qos_profile_sensor_data);
-    odom_subscriber_.subscribe(this, "/odometry/gps", rmw_qos_profile_sensor_data);
-    imu_subscriber_.subscribe(this, "/xsens/imu", rmw_qos_profile_sensor_data);
+    cloud_subscriber_.subscribe(this, "points", rmw_qos_profile_sensor_data);
+    odom_subscriber_.subscribe(this, "odom", rmw_qos_profile_sensor_data);
+    imu_subscriber_.subscribe(this, "imu", rmw_qos_profile_sensor_data);
 
-    declare_parameter("sequence_horizon", 5);
+    declare_parameter("sequence_horizon", 0);
     get_parameter("sequence_horizon", sequence_horizon_);
 
-    declare_parameter("dt", 1.4);
+    declare_parameter("dt", 0.0);
     get_parameter("dt", dt_);
 
     cloud_odom_data_approx_time_syncher_.reset(
@@ -115,9 +121,9 @@ namespace vox_nav_utilities
   {
     last_recieved_msg_stamp_ = cloud->header.stamp;
 
+
     if (cloud_odom_vector_.size() == 0) {
       auto curr_cloud_odom_pair = std::make_tuple<>(*cloud, *odom, *imu);
-
       cloud_odom_vector_.push_back(curr_cloud_odom_pair);
       stamp_ = std::get<0>(cloud_odom_vector_.back()).header.stamp;
     }
@@ -130,31 +136,19 @@ namespace vox_nav_utilities
       stamp_ = std::get<0>(cloud_odom_vector_.back()).header.stamp;
     }
 
-    if (cloud_odom_vector_.size() > sequence_horizon_) {
-      cloud_odom_vector_.erase(cloud_odom_vector_.begin());
-    }
-
     if (cloud_odom_vector_.size() == sequence_horizon_) {
-      cloud_odom_vector_.erase(cloud_odom_vector_.begin());
-      std::vector<pcl::PointCloud<pcl::PointXYZRGB>> pcl_type;
-      pcl::PointCloud<pcl::PointXYZRGB> merged;
+      std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> transformed_pcl_sequences;
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr merged(new pcl::PointCloud<pcl::PointXYZRGB>());
 
       for (int i = 0; i < cloud_odom_vector_.size() - 1; i++) {
-
         tf2::Transform T;
-
         auto dist = tf2::Vector3(
           std::get<1>(cloud_odom_vector_.back()).pose.pose.position.x -
           std::get<1>(cloud_odom_vector_[i]).pose.pose.position.x,
           std::get<1>(cloud_odom_vector_.back()).pose.pose.position.y -
           std::get<1>(cloud_odom_vector_[i]).pose.pose.position.y,
           std::get<1>(cloud_odom_vector_.back()).pose.pose.position.z -
-          std::get<1>(cloud_odom_vector_[i]).pose.pose.position.z)
-          .length();
-
-        T.setOrigin(
-          tf2::Vector3(dist, 0, 0).absolute());
-
+          std::get<1>(cloud_odom_vector_[i]).pose.pose.position.z).length();
         double yaw_latest, pitch_latest, roll_latest;
         double yaw, pitch, roll;
 
@@ -163,7 +157,6 @@ namespace vox_nav_utilities
           roll_latest,
           pitch_latest,
           yaw_latest);
-
         vox_nav_utilities::getRPYfromMsgQuaternion(
           std::get<2>(cloud_odom_vector_[i]).orientation,
           roll,
@@ -177,6 +170,11 @@ namespace vox_nav_utilities
           yaw_latest - yaw);
 
         T.setRotation(quat);
+        T.setOrigin(
+          tf2::Vector3(
+            dist * cos(yaw_latest - yaw),
+            dist * sin(yaw_latest - yaw),
+            0));
 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr curr_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
         pcl::fromROSMsg(std::get<0>(cloud_odom_vector_[i]), *curr_pcl);
@@ -188,16 +186,78 @@ namespace vox_nav_utilities
           curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {0, 200, 0});
         } else if (i == 2) {
           curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {0, 0, 200});
+        } else if (i == 3) {
+          curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {200, 0, 200});
         }
 
-        merged += *curr_pcl;
+        transformed_pcl_sequences.push_back(curr_pcl);
       }
-      merged.height = 1;
-      merged.width = merged.points.size();
+
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr latest_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
+      pcl::fromROSMsg(std::get<0>(cloud_odom_vector_.back()), *latest_pcl);
+      latest_pcl = vox_nav_utilities::set_cloud_color(latest_pcl, {255, 255, 255});
+      transformed_pcl_sequences.push_back(latest_pcl);
+
+      shoot(transformed_pcl_sequences);
+
+      for (auto && i : transformed_pcl_sequences) {
+        *merged += *i;
+      }
+
       sensor_msgs::msg::PointCloud2 pcl_msg;
-      pcl::toROSMsg(merged, pcl_msg);
+      pcl::toROSMsg(*merged, pcl_msg);
       pcl_msg.header = std::get<0>(cloud_odom_vector_.back()).header;
       pub_->publish(pcl_msg);
+
+      cloud_odom_vector_.erase(cloud_odom_vector_.begin());
+    }
+  }
+
+
+  void DynamicPoints::shoot(
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> & cloud_vector)
+  {
+
+    RCLCPP_INFO(
+      get_logger(), "CLASHIN %d POINT CLOUDS", cloud_vector.size());
+
+    for (size_t f = 0; f < cloud_vector.size() - 1; f++) {
+
+      pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree;
+      kdtree.setInputCloud(cloud_vector[f + 1]);
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr static_points(new pcl::PointCloud<pcl::PointXYZRGB>);
+      pcl::PointIndices::Ptr static_point_indices(new pcl::PointIndices());
+      pcl::ExtractIndices<pcl::PointXYZRGB> extract;
+      extract.setInputCloud(cloud_vector[f + 1]);
+
+      std::unordered_set<int> unique_indices;
+
+      RCLCPP_INFO(
+        get_logger(), "GONNA PROCESS A CLOUD WITH %d POINTS", cloud_vector[f + 1]->points.size());
+
+      for (auto && k : cloud_vector[f]->points) {
+        pcl::PointXYZRGB search_point = k;
+        std::vector<int> pointIdxRadiusSearch;
+        std::vector<float> pointRadiusSquaredDistance;
+        float radius = 0.05;
+
+        if (kdtree.radiusSearch(
+            search_point, radius, pointIdxRadiusSearch,
+            pointRadiusSquaredDistance) > 0)
+        {
+          for (std::size_t j = 0; j < pointIdxRadiusSearch.size(); ++j) {
+            unique_indices.insert(pointIdxRadiusSearch[j]);
+          }
+        }
+      }
+
+      for (auto && t : unique_indices) {
+        static_point_indices->indices.push_back(t);
+      }
+
+      extract.setIndices(static_point_indices);
+      extract.setNegative(false);
+      extract.filter(*cloud_vector[f + 1]);
     }
   }
 
