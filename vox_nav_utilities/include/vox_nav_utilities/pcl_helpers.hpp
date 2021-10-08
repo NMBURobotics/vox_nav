@@ -32,15 +32,15 @@
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/conditional_removal.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/extract_indices.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_types.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/segmentation/supervoxel_clustering.h>
+#include <pcl/segmentation/sac_segmentation.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/uniform_sampling.h>
-
-
 #include <memory>
 #include <string>
 #include <vector>
