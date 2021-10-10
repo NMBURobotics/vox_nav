@@ -92,7 +92,8 @@ add_executable(planner_benchmarking_node src/planner_benchmarking_node.cpp)
 ament_target_dependencies(planner_benchmarking_node ${dependencies})
 target_link_libraries(planner_benchmarking_node ${LIBFCL_LIBRARIES} tf_helpers elevation_state_space planner_helpers ompl)
 
-add_executable(dynamic_points_node src/dynamic_points_node.cpp)
+add_executable(dynamic_points_node      src/pointnet2_utils.cpp
+                                        src/dynamic_points_node.cpp)
 ament_target_dependencies(dynamic_points_node ${dependencies})
 target_link_libraries(dynamic_points_node tf_helpers map_manager_helpers ${TORCH_LIBRARIES} ${PCL_LIBRARIES})
 

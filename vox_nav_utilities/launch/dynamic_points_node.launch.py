@@ -15,10 +15,10 @@ def generate_launch_description():
                                 executable='dynamic_points_node',
                                 name='dynamic_points_node',
                                 output='screen',
-                                prefix=['xterm -e gdb -ex run --args'],
+                                #prefix=['xterm -e gdb -ex run --args'],
                                 remappings=[('points', '/ouster/points'),
                                             ('odom', '/odometry/global'),
                                             ('imu', '/xsens/imu')],
-                                parameters=[{'sequence_horizon': 4},
-                                            {'dt': 0.6}])
+                                parameters=[{'sequence_horizon': 2},
+                                            {'dt': 0.1}])
     ])

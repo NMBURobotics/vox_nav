@@ -26,6 +26,7 @@
 #include <pcl/common/common.h>
 #include <pcl_ros/transforms.hpp>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/filters/crop_box.h>
 #include <vox_nav_utilities/pointnet2_utils.hpp>
 #include <tf2_eigen/tf2_eigen.h>
 
@@ -120,6 +121,7 @@ namespace vox_nav_utilities
   {
     last_recieved_msg_stamp_ = cloud->header.stamp;
 
+    RCLCPP_INFO(get_logger(), "Recieved a msg");
 
     if (cloud_odom_vector_.size() == 0) {
       auto curr_cloud_odom_pair = std::make_tuple<>(*cloud, *odom, *imu);
@@ -139,7 +141,7 @@ namespace vox_nav_utilities
       std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> transformed_pcl_sequences;
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr merged(new pcl::PointCloud<pcl::PointXYZRGB>());
 
-      for (int i = 0; i < cloud_odom_vector_.size() - 1; i++) {
+      for (int i = 0; i < cloud_odom_vector_.size(); i++) {
         tf2::Transform T;
         auto dist = tf2::Vector3(
           std::get<1>(cloud_odom_vector_.back()).pose.pose.position.x -
@@ -148,6 +150,7 @@ namespace vox_nav_utilities
           std::get<1>(cloud_odom_vector_[i]).pose.pose.position.y,
           std::get<1>(cloud_odom_vector_.back()).pose.pose.position.z -
           std::get<1>(cloud_odom_vector_[i]).pose.pose.position.z).length();
+
         double yaw_latest, pitch_latest, roll_latest;
         double yaw, pitch, roll;
 
@@ -176,26 +179,47 @@ namespace vox_nav_utilities
             0));
 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr curr_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
+
+        std::get<0>(cloud_odom_vector_[i]).is_dense = false;
+        //remove NaN points from the clou
         pcl::fromROSMsg(std::get<0>(cloud_odom_vector_[i]), *curr_pcl);
+
+        // Define cropBox limit
+        Eigen::Vector4f min_pt(-40.0f, -40.0f, -5.0f, 1.0f);
+        Eigen::Vector4f max_pt(40.0f, 40.0f, 5.0f, 1.0f);
+
+        // Test the PointCloud<PointT> method
+        pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter(false);
+        cropBoxFilter.setInputCloud(curr_pcl);
+        // Cropbox slightly bigger then bounding box of points
+        cropBoxFilter.setNegative(false);
+        cropBoxFilter.setMin(min_pt);
+        cropBoxFilter.setMax(max_pt);
+        cropBoxFilter.filter(*curr_pcl);
+
+        curr_pcl->is_dense = false;
+
+        boost::shared_ptr<std::vector<int>> indices(new std::vector<int>);
+        pcl::removeNaNFromPointCloud(*curr_pcl, *indices);
+        pcl::ExtractIndices<pcl::PointXYZRGB> extract;
+        extract.setInputCloud(curr_pcl);
+        extract.setIndices(indices);
+        extract.setNegative(false);
+        extract.filter(*curr_pcl);
+
+        curr_pcl = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(curr_pcl, 0.2);
+        RCLCPP_INFO(get_logger(), "Points %d a msg", curr_pcl->points.size());
+
         pcl_ros::transformPointCloud(*curr_pcl, *curr_pcl, T.inverse());
 
         if (i == 0) {
           curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {200, 0, 0});
         } else if (i == 1) {
           curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {0, 200, 0});
-        } else if (i == 2) {
-          curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {0, 0, 200});
-        } else if (i == 3) {
-          curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {200, 0, 200});
         }
 
         transformed_pcl_sequences.push_back(curr_pcl);
       }
-
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr latest_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
-      pcl::fromROSMsg(std::get<0>(cloud_odom_vector_.back()), *latest_pcl);
-      latest_pcl = vox_nav_utilities::set_cloud_color(latest_pcl, {255, 255, 255});
-      transformed_pcl_sequences.push_back(latest_pcl);
 
       shoot(transformed_pcl_sequences);
 
@@ -212,51 +236,42 @@ namespace vox_nav_utilities
     }
   }
 
-
   void DynamicPoints::shoot(
     std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> & cloud_vector)
   {
 
+    int kFPS = 128;
+    int kMAX_N_POINTS_IN_RADIUS = 8;
+    double kRADIUS = 0.3;
+
     RCLCPP_INFO(
       get_logger(), "CLASHIN %d POINT CLOUDS", cloud_vector.size());
 
-    for (size_t f = 0; f < cloud_vector.size() - 1; f++) {
+    torch::Device cuda_device = torch::kCUDA;
 
-      pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree;
-      kdtree.setInputCloud(cloud_vector[f + 1]);
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr static_points(new pcl::PointCloud<pcl::PointXYZRGB>);
-      pcl::PointIndices::Ptr static_point_indices(new pcl::PointIndices());
-      pcl::ExtractIndices<pcl::PointXYZRGB> extract;
-      extract.setInputCloud(cloud_vector[f + 1]);
+    for (size_t f = 0; f < cloud_vector.size(); f++) {
 
-      std::unordered_set<int> unique_indices;
+      auto this_scan_as_tensor = pointnet2_utils::load_pcl_as_torch_tensor(
+        cloud_vector[f], cloud_vector[f]->points.size(),
+        cuda_device);
 
-      RCLCPP_INFO(
-        get_logger(), "GONNA PROCESS A CLOUD WITH %d POINTS", cloud_vector[f + 1]->points.size());
+      // to test FPS(Furthest-point-sampleing algorithm) =============================
+      at::Tensor fps_sampled_tensor_indices = pointnet2_utils::farthest_point_sample(
+        this_scan_as_tensor,
+        kFPS);
 
-      for (auto && k : cloud_vector[f]->points) {
-        pcl::PointXYZRGB search_point = k;
-        std::vector<int> pointIdxRadiusSearch;
-        std::vector<float> pointRadiusSquaredDistance;
-        float radius = 0.60;
+      /*at::Tensor fps_sampled_tensor = pointnet2_utils::index_points(
+        ctest_tensor,
+        fps_sampled_tensor_indices
+      );*/
 
-        if (kdtree.radiusSearch(
-            search_point, radius, pointIdxRadiusSearch,
-            pointRadiusSquaredDistance) > 0)
-        {
-          for (std::size_t j = 0; j < pointIdxRadiusSearch.size(); ++j) {
-            unique_indices.insert(pointIdxRadiusSearch[j]);
-          }
-        }
-      }
+      /*at::Tensor group_idx = pointnet2_utils::query_ball_point(
+        kRADIUS, kMAX_N_POINTS_IN_RADIUS, this_scan_as_tensor,
+        fps_sampled_tensor);
+      auto grouped_xyz = pointnet2_utils::index_points(this_scan_as_tensor, group_idx);
 
-      for (auto && t : unique_indices) {
-        static_point_indices->indices.push_back(t);
-      }
+      std::cout << grouped_xyz.sizes();*/
 
-      extract.setIndices(static_point_indices);
-      extract.setNegative(true);
-      extract.filter(*cloud_vector[f + 1]);
     }
   }
 
