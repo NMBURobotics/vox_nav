@@ -26,9 +26,8 @@
 #include <pcl/common/common.h>
 #include <pcl_ros/transforms.hpp>
 #include <pcl/kdtree/kdtree_flann.h>
-
+#include <vox_nav_utilities/pointnet2_utils.hpp>
 #include <tf2_eigen/tf2_eigen.h>
-
 
 #include <queue>
 
@@ -239,7 +238,7 @@ namespace vox_nav_utilities
         pcl::PointXYZRGB search_point = k;
         std::vector<int> pointIdxRadiusSearch;
         std::vector<float> pointRadiusSquaredDistance;
-        float radius = 0.05;
+        float radius = 0.60;
 
         if (kdtree.radiusSearch(
             search_point, radius, pointIdxRadiusSearch,
@@ -256,7 +255,7 @@ namespace vox_nav_utilities
       }
 
       extract.setIndices(static_point_indices);
-      extract.setNegative(false);
+      extract.setNegative(true);
       extract.filter(*cloud_vector[f + 1]);
     }
   }
