@@ -185,8 +185,8 @@ namespace vox_nav_utilities
         pcl::fromROSMsg(std::get<0>(cloud_odom_vector_[i]), *curr_pcl);
 
         // Define cropBox limit
-        Eigen::Vector4f min_pt(-40.0f, -40.0f, -5.0f, 1.0f);
-        Eigen::Vector4f max_pt(40.0f, 40.0f, 5.0f, 1.0f);
+        Eigen::Vector4f min_pt(-40.0f, -40.0f, -4.0f, 1.0f);
+        Eigen::Vector4f max_pt(40.0f, 40.0f, 4.0f, 1.0f);
 
         // Test the PointCloud<PointT> method
         pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter(false);
@@ -260,17 +260,17 @@ namespace vox_nav_utilities
         this_scan_as_tensor,
         kFPS);
 
-      /*at::Tensor fps_sampled_tensor = pointnet2_utils::index_points(
-        ctest_tensor,
+      at::Tensor fps_sampled_tensor = pointnet2_utils::index_points(
+        this_scan_as_tensor,
         fps_sampled_tensor_indices
-      );*/
+      );
 
-      /*at::Tensor group_idx = pointnet2_utils::query_ball_point(
+      at::Tensor group_idx = pointnet2_utils::query_ball_point(
         kRADIUS, kMAX_N_POINTS_IN_RADIUS, this_scan_as_tensor,
         fps_sampled_tensor);
       auto grouped_xyz = pointnet2_utils::index_points(this_scan_as_tensor, group_idx);
 
-      std::cout << grouped_xyz.sizes();*/
+      /*std::cout << grouped_xyz.sizes();*/
 
     }
   }
