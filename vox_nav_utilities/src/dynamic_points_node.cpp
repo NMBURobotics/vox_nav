@@ -67,6 +67,7 @@ namespace vox_nav_utilities
 
     int sequence_horizon_;
     double dt_;
+    double sensor_height_;
 
     std::vector<std::tuple<sensor_msgs::msg::PointCloud2,
       nav_msgs::msg::Odometry, sensor_msgs::msg::Imu>> cloud_odom_vector_;
@@ -91,6 +92,9 @@ namespace vox_nav_utilities
 
     declare_parameter("dt", 0.0);
     get_parameter("dt", dt_);
+
+    declare_parameter("sensor_height", 0.0);
+    get_parameter("sensor_height", sensor_height_);
 
     cloud_odom_data_approx_time_syncher_.reset(
       new CloudOdomApprxTimeSyncer(
@@ -176,7 +180,7 @@ namespace vox_nav_utilities
           tf2::Vector3(
             dist * cos(yaw_latest - yaw),
             dist * sin(yaw_latest - yaw),
-            0));
+            sensor_height_));
 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr curr_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
 
@@ -185,8 +189,8 @@ namespace vox_nav_utilities
         pcl::fromROSMsg(std::get<0>(cloud_odom_vector_[i]), *curr_pcl);
 
         // Define cropBox limit
-        Eigen::Vector4f min_pt(-40.0f, -40.0f, -4.0f, 1.0f);
-        Eigen::Vector4f max_pt(40.0f, 40.0f, 4.0f, 1.0f);
+        Eigen::Vector4f min_pt(-20.0f, -15.0f, -4.0f, 1.0f);
+        Eigen::Vector4f max_pt(20.0f, 15.0f, 4.0f, 1.0f);
 
         // Test the PointCloud<PointT> method
         pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter(false);
@@ -208,15 +212,15 @@ namespace vox_nav_utilities
         extract.filter(*curr_pcl);
 
         curr_pcl = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(curr_pcl, 0.2);
-        RCLCPP_INFO(get_logger(), "Points %d a msg", curr_pcl->points.size());
-
-        pcl_ros::transformPointCloud(*curr_pcl, *curr_pcl, T.inverse());
-
         if (i == 0) {
           curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {200, 0, 0});
         } else if (i == 1) {
-          curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {0, 200, 0});
+          curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {200, 200, 200});
         }
+        //pcl::io::savePCDFile("/home/atas/seq" + std::to_string(i) + ".pcd", *curr_pcl);
+        pcl_ros::transformPointCloud(*curr_pcl, *curr_pcl, T.inverse());
+        curr_pcl = vox_nav_utilities::segmentSurfacePlane<pcl::PointXYZRGB>(curr_pcl, 0.3, true);
+
 
         transformed_pcl_sequences.push_back(curr_pcl);
       }
@@ -240,37 +244,59 @@ namespace vox_nav_utilities
     std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> & cloud_vector)
   {
 
-    int kFPS = 128;
-    int kMAX_N_POINTS_IN_RADIUS = 8;
-    double kRADIUS = 0.3;
+    int kFPS = 512;
+    int kMAX_N_POINTS_IN_RADIUS = 20;
+    double kRADIUS = 0.8;
 
     RCLCPP_INFO(
-      get_logger(), "CLASHIN %d POINT CLOUDS", cloud_vector.size());
+      get_logger(), "CLASHING %d POINT CLOUDS", cloud_vector.size());
 
-    torch::Device cuda_device = torch::kCUDA;
+    torch::Device cuda_device = torch::kCPU;
+    //torch::Device cuda_device = torch::kGPU;
+
+    Eigen::MatrixXf latest_cloud_matrix =
+      cloud_vector.back()->getMatrixXfMap(
+      3,
+      sizeof(pcl::PointXYZRGB) / sizeof(float),
+      offsetof(pcl::PointXYZRGB, x) / sizeof(float));
+
+    Eigen::MatrixXf first_cloud_matrix =
+      cloud_vector.front()->getMatrixXfMap(
+      3,
+      sizeof(pcl::PointXYZRGB) / sizeof(float),
+      offsetof(pcl::PointXYZRGB, x) / sizeof(float));
+
+    auto latest_scan_as_tensor =
+      torch::from_blob(latest_cloud_matrix.data(), {1, latest_cloud_matrix.cols(), 3});
+    auto first_scan_as_tensor =
+      torch::from_blob(first_cloud_matrix.data(), {1, first_cloud_matrix.cols(), 3});
+
+    auto concat = torch::cat({first_scan_as_tensor, latest_scan_as_tensor}, 1);
+
+    std::cout << concat.sizes();
+
+    at::Tensor fps_sampled_tensor_indices = pointnet2_utils::farthest_point_sample(
+      concat,
+      kFPS);
+
+    at::Tensor fps_sampled_tensor = pointnet2_utils::index_points(
+      concat,
+      fps_sampled_tensor_indices
+    );
 
     for (size_t f = 0; f < cloud_vector.size(); f++) {
 
-      auto this_scan_as_tensor = pointnet2_utils::load_pcl_as_torch_tensor(
-        cloud_vector[f], cloud_vector[f]->points.size(),
-        cuda_device);
-
-      // to test FPS(Furthest-point-sampleing algorithm) =============================
-      at::Tensor fps_sampled_tensor_indices = pointnet2_utils::farthest_point_sample(
-        this_scan_as_tensor,
-        kFPS);
-
-      at::Tensor fps_sampled_tensor = pointnet2_utils::index_points(
-        this_scan_as_tensor,
-        fps_sampled_tensor_indices
-      );
-
       at::Tensor group_idx = pointnet2_utils::query_ball_point(
-        kRADIUS, kMAX_N_POINTS_IN_RADIUS, this_scan_as_tensor,
+        kRADIUS, kMAX_N_POINTS_IN_RADIUS, first_scan_as_tensor,
         fps_sampled_tensor);
-      auto grouped_xyz = pointnet2_utils::index_points(this_scan_as_tensor, group_idx);
 
-      /*std::cout << grouped_xyz.sizes();*/
+      auto grouped_xyz = pointnet2_utils::index_points(concat, group_idx);
+
+      if (f == 0) {
+        pointnet2_utils::torch_tensor_to_pcl_cloud(
+          &grouped_xyz, cloud_vector[f],
+          std::vector<double>({0.0, 0, 255.0}));
+      }
 
     }
   }

@@ -20,5 +20,6 @@ def generate_launch_description():
                                             ('odom', '/odometry/global'),
                                             ('imu', '/xsens/imu')],
                                 parameters=[{'sequence_horizon': 2},
-                                            {'dt': 0.1}])
+                                            {'dt': 5.5},
+                                            {'sensor_height': -1.9}])
     ])

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <vox_nav_utilities/pointnet2_utils.hpp>
+#include <random>
 
 namespace pointnet2_utils
 {
@@ -94,15 +95,12 @@ namespace pointnet2_utils
       .device(device);
 
     at::Tensor centroids = at::zeros({input_shape.front(), num_samples}, options);
-
     at::Tensor distance =
       at::ones(
       {input_shape[0], input_shape[1]},
       torch::dtype(torch::kFloat32).device(device)).multiply(1e10);
-
     at::Tensor farthest =
       at::randint(0, input_shape[1], {input_shape.front(), }, options);
-
 
     at::Tensor batch_indices = at::arange(0, input_shape.front(), options);
 
@@ -213,6 +211,12 @@ namespace pointnet2_utils
     const at::Tensor * input_tensor,
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::vector<double> point_color)
   {
+
+    std::random_device rd;     // obtain a random number from hardware
+    std::mt19937 gen(rd()); // seed the generator
+    std::uniform_int_distribution<> distr(0, 255); // define the range
+
+    cloud->points.clear();
     c10::IntArrayRef input_shape = input_tensor->sizes();
     if (input_shape.size() == 3) {
       for (int i = 0; i < input_shape[0]; i++) {
@@ -230,14 +234,18 @@ namespace pointnet2_utils
     } else {
       for (int i = 0; i < input_shape[0]; i++) {
         for (int j = 0; j < input_shape[1]; j++) {
+          int r, g, b;
+          r = distr(gen);
+          g = distr(gen);
+          b = distr(gen);
           for (int k = 0; k < input_shape[2]; k++) {
             pcl::PointXYZRGB crr_point;
             crr_point.x = input_tensor->index({i, j, k, 0}).item<float>();
             crr_point.y = input_tensor->index({i, j, k, 1}).item<float>();
             crr_point.z = input_tensor->index({i, j, k, 2}).item<float>();
-            crr_point.r = point_color.at(0);
-            crr_point.g = point_color.at(1);
-            crr_point.b = point_color.at(2);
+            crr_point.r = r;
+            crr_point.g = g;
+            crr_point.b = b;
             cloud->points.push_back(crr_point);
           }
         }
