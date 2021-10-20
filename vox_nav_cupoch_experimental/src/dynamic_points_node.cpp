@@ -20,17 +20,17 @@
 #include "message_filters/subscriber.h"
 #include "message_filters/sync_policies/approximate_time.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-#include "vox_nav_utilities/pcl_helpers.hpp"
-#include "vox_nav_utilities/tf_helpers.hpp"
-#include "vox_nav_utilities/map_manager_helpers.hpp"
 #include <pcl/common/common.h>
 #include <pcl_ros/transforms.hpp>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/filters/crop_box.h>
-#include <vox_nav_utilities/pointnet2_utils.hpp>
 #include <tf2_eigen/tf2_eigen.h>
 
 #include <queue>
+
+#include "cupoch_conversions/cupoch_conversions.hpp"
+#include "cupoch/cupoch.h"
+#include "vox_nav_cupoch_experimental/visibility_control.h"
 
 namespace vox_nav_utilities
 {
@@ -158,71 +158,12 @@ namespace vox_nav_utilities
         double yaw_latest, pitch_latest, roll_latest;
         double yaw, pitch, roll;
 
-        vox_nav_utilities::getRPYfromMsgQuaternion(
-          std::get<2>(cloud_odom_vector_.back()).orientation,
-          roll_latest,
-          pitch_latest,
-          yaw_latest);
-        vox_nav_utilities::getRPYfromMsgQuaternion(
-          std::get<2>(cloud_odom_vector_[i]).orientation,
-          roll,
-          pitch,
-          yaw);
-
-        tf2::Quaternion quat;
-        quat = vox_nav_utilities::getTFQuaternionfromRPY(
-          roll_latest - roll,
-          pitch_latest - pitch,
-          yaw_latest - yaw);
-
-        T.setRotation(quat);
-        T.setOrigin(
-          tf2::Vector3(
-            dist * cos(yaw_latest - yaw),
-            dist * sin(yaw_latest - yaw),
-            sensor_height_));
-
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr curr_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
-
-        std::get<0>(cloud_odom_vector_[i]).is_dense = false;
-        //remove NaN points from the clou
-        pcl::fromROSMsg(std::get<0>(cloud_odom_vector_[i]), *curr_pcl);
 
         // Define cropBox limit
         Eigen::Vector4f min_pt(-20.0f, -15.0f, -4.0f, 1.0f);
         Eigen::Vector4f max_pt(20.0f, 15.0f, 4.0f, 1.0f);
 
-        // Test the PointCloud<PointT> method
-        pcl::CropBox<pcl::PointXYZRGB> cropBoxFilter(false);
-        cropBoxFilter.setInputCloud(curr_pcl);
-        // Cropbox slightly bigger then bounding box of points
-        cropBoxFilter.setNegative(false);
-        cropBoxFilter.setMin(min_pt);
-        cropBoxFilter.setMax(max_pt);
-        cropBoxFilter.filter(*curr_pcl);
 
-        curr_pcl->is_dense = false;
-
-        boost::shared_ptr<std::vector<int>> indices(new std::vector<int>);
-        pcl::removeNaNFromPointCloud(*curr_pcl, *indices);
-        pcl::ExtractIndices<pcl::PointXYZRGB> extract;
-        extract.setInputCloud(curr_pcl);
-        extract.setIndices(indices);
-        extract.setNegative(false);
-        extract.filter(*curr_pcl);
-
-        curr_pcl = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(curr_pcl, 0.2);
-        if (i == 0) {
-          curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {200, 0, 0});
-        } else if (i == 1) {
-          curr_pcl = vox_nav_utilities::set_cloud_color(curr_pcl, {200, 200, 200});
-        }
-        //pcl::io::savePCDFile("/home/atas/seq" + std::to_string(i) + ".pcd", *curr_pcl);
-        pcl_ros::transformPointCloud(*curr_pcl, *curr_pcl, T.inverse());
-        curr_pcl = vox_nav_utilities::segmentSurfacePlane<pcl::PointXYZRGB>(curr_pcl, 0.3, true);
-
-
-        transformed_pcl_sequences.push_back(curr_pcl);
       }
 
       shoot(transformed_pcl_sequences);
@@ -232,7 +173,7 @@ namespace vox_nav_utilities
       }
 
       sensor_msgs::msg::PointCloud2 pcl_msg;
-      pcl::toROSMsg(*merged, pcl_msg);
+      //pcl::toROSMsg(*merged, pcl_msg);
       pcl_msg.header = std::get<0>(cloud_odom_vector_.back()).header;
       pub_->publish(pcl_msg);
 
@@ -251,54 +192,7 @@ namespace vox_nav_utilities
     RCLCPP_INFO(
       get_logger(), "CLASHING %d POINT CLOUDS", cloud_vector.size());
 
-    torch::Device cuda_device = torch::kCPU;
-    //torch::Device cuda_device = torch::kGPU;
 
-    Eigen::MatrixXf latest_cloud_matrix =
-      cloud_vector.back()->getMatrixXfMap(
-      3,
-      sizeof(pcl::PointXYZRGB) / sizeof(float),
-      offsetof(pcl::PointXYZRGB, x) / sizeof(float));
-
-    Eigen::MatrixXf first_cloud_matrix =
-      cloud_vector.front()->getMatrixXfMap(
-      3,
-      sizeof(pcl::PointXYZRGB) / sizeof(float),
-      offsetof(pcl::PointXYZRGB, x) / sizeof(float));
-
-    auto latest_scan_as_tensor =
-      torch::from_blob(latest_cloud_matrix.data(), {1, latest_cloud_matrix.cols(), 3});
-    auto first_scan_as_tensor =
-      torch::from_blob(first_cloud_matrix.data(), {1, first_cloud_matrix.cols(), 3});
-
-    auto concat = torch::cat({first_scan_as_tensor, latest_scan_as_tensor}, 1);
-
-    std::cout << concat.sizes();
-
-    at::Tensor fps_sampled_tensor_indices = pointnet2_utils::farthest_point_sample(
-      concat,
-      kFPS);
-
-    at::Tensor fps_sampled_tensor = pointnet2_utils::index_points(
-      concat,
-      fps_sampled_tensor_indices
-    );
-
-    for (size_t f = 0; f < cloud_vector.size(); f++) {
-
-      at::Tensor group_idx = pointnet2_utils::query_ball_point(
-        kRADIUS, kMAX_N_POINTS_IN_RADIUS, first_scan_as_tensor,
-        fps_sampled_tensor);
-
-      auto grouped_xyz = pointnet2_utils::index_points(concat, group_idx);
-
-      if (f == 0) {
-        pointnet2_utils::torch_tensor_to_pcl_cloud(
-          &grouped_xyz, cloud_vector[f],
-          std::vector<double>({0.0, 0, 255.0}));
-      }
-
-    }
   }
 
 }  // namespace

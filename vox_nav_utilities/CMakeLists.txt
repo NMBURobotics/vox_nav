@@ -92,10 +92,6 @@ add_executable(planner_benchmarking_node src/planner_benchmarking_node.cpp)
 ament_target_dependencies(planner_benchmarking_node ${dependencies})
 target_link_libraries(planner_benchmarking_node ${LIBFCL_LIBRARIES} tf_helpers elevation_state_space planner_helpers ompl)
 
-add_executable(dynamic_points_node      src/pointnet2_utils.cpp
-                                        src/dynamic_points_node.cpp)
-ament_target_dependencies(dynamic_points_node ${dependencies})
-target_link_libraries(dynamic_points_node tf_helpers map_manager_helpers ${TORCH_LIBRARIES} ${PCL_LIBRARIES})
 
 install(TARGETS tf_helpers 
                 planner_helpers 
@@ -109,13 +105,12 @@ install(TARGETS tf_helpers
 install(TARGETS gps_waypoint_collector_node 
                 pcl2octomap_converter_node 
                 planner_benchmarking_node 
-                dynamic_points_node
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
         DESTINATION include/)
 
-install(DIRECTORY config launch 
+install(DIRECTORY config launch
         DESTINATION share/${PROJECT_NAME})
 
 ament_export_libraries(tf_helpers 
