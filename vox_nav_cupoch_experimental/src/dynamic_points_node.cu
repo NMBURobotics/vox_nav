@@ -266,17 +266,11 @@ namespace vox_nav_utilities
         RCLCPP_INFO(get_logger(), "voxel_target  %d POINT", voxel_target->voxels_values_.size());
         RCLCPP_INFO(get_logger(), "uniq_target  %d POINT", uniq_target.size());
 
-        size_t max_dist =
-            *(thrust::max_element(uniq_target.begin(), uniq_target.end()));
-
-        RCLCPP_INFO(get_logger(), "max_dist  %d POINT", max_dist);
-
-        // remove duplicates
-        /* cupoch::utility::device_vector<size_t>::iterator it_target;
-         it_target = thrust::unique(thrust::device, uniq_target.begin(), uniq_target.end());
-         uniq_target.resize(thrust::distance(uniq_target.begin(), it_target));*/
-
-        RCLCPP_INFO(get_logger(), "uniq_target  %d POINT", uniq_target.size());
+        if (!uniq_target.size())
+        {
+            RCLCPP_WARN(get_logger(), "Empty collision-free voxel vector, doing nothing");
+            return;
+        }
 
         voxel_target->SelectByIndexImpl(
             *voxel_target, *voxel_target_collision_free, uniq_target, true);
