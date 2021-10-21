@@ -83,15 +83,19 @@ set(CUPOCH_LIBRARIES
     ${PNG_LIBRARIES}
     ${JSONCPP_LIBRARIES}
 )
+
+find_package(CUDA REQUIRED  QUIET)
+find_package(Eigen3 REQUIRED  QUIET)
+set(CMAKE_CUDA_COMPILE_FEATURES cuda_std_14)
 set(CUPOCH_NVCC_FLAGS
+    -arch=sm_50
     --expt-relaxed-constexpr
     --expt-extended-lambda
     --default-stream per-thread
     --use_fast_math
     -Xcudafe "--diag_suppress=integer_sign_change"
     -Xcudafe "--diag_suppress=partial_override"
-    -Xcudafe "--diag_suppress=virtual_function_decl_hidden"
-)
+    -Xcudafe "--diag_suppress=virtual_function_decl_hidden")
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" )
     list(APPEND CUPOCH_NVCC_FLAGS
         -G;-g
@@ -181,18 +185,6 @@ execute_process(COMMAND ${LSB_RELEASE_EXEC} -cs
     OUTPUT_VARIABLE LSB_CODE_SHORT
     OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-if (${LSB_CODE_SHORT} STREQUAL "bionic")
-    set(GA_ROS_VERSION "dashing")
-else()
-    set(GA_ROS_VERSION "foxy")
-endif()
-
-set(ROS_DISTRO $ENV{ROS_DISTRO})
-if(${ROS_DISTRO} STREQUAL "dashing")
-    add_definitions(-DROS_DISTRO_DASHING)
-elseif(${ROS_DISTRO} STREQUAL "foxy")
-    add_definitions(-DROS_DISTRO_FOXY)
-endif()
 
 # Packaging support
 # ament
@@ -228,116 +220,6 @@ set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
 set(CPACK_COMPONENTS_GROUPING "ONE_PER_GROUP")
 set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGING_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-# include(CPack)
-# cpack_add_component(
-#     runtime
-#     DISPLAY_NAME
-#         Runtime
-#     DESCRIPTION
-#         "Dynamic Libraries for GA Runtime"
-#     REQUIRED
-# )
-# cpack_add_component(
-#     development
-#     DISPLAY_NAME
-#         Development
-#     DESCRIPTION
-#         "Headers and cmake files needed for GA Development"
-#     REQUIRED
-#     DEPENDS
-#         runtime
-# )
-# cpack_add_component(
-#     tools
-#     DISPLAY_NAME
-#         Tools
-#     DESCRIPTION
-#         "Tools for GA Development"
-#     REQUIRED
-#     DEPENDS
-#         runtime
-# )
-
-message(STATUS "CUDA compilation status: $ENV{GPUAC_COMPILE_WITH_CUDA}.")
-
-macro(GA_CHECK_CUDA)
-  if ($ENV{GPUAC_COMPILE_WITH_CUDA})
-    find_package(CUDA REQUIRED  QUIET)
-    find_package(Eigen3 REQUIRED  QUIET)
-
-    # if(NOT ${CUDA_VERSION} VERSION_LESS "10.0"
-    #         AND NOT ${CUDA_VERSION} VERSION_EQUAL "10.0" )
-    #   message(FATAL_ERROR "GPU support on Melodic requires CUDA<=10.0")
-    # endif()
-    if(${CUDA_VERSION} VERSION_GREATER "9.1"
-          AND ${CMAKE_VERSION} VERSION_LESS "3.12.3")
-      unset(CUDA_cublas_device_LIBRARY CACHE)
-      set(CUDA_cublas_device_LIBRARY ${CUDA_cublas_LIBRARY})
-      set(CUDA_CUBLAS_LIBRARIES ${CUDA_cublas_LIBRARY})
-    endif()
-    # if ("$ENV{ROS_DISTRO}" STREQUAL "melodic" AND ${EIGEN3_VERSION_STRING} VERSION_LESS "3.3.7")
-    #   message(FATAL_ERROR "GPU support on Melodic requires Eigen version>= 3.3.7")
-    # endif()
-    if(NOT DEFINED CMAKE_CUDA_STANDARD)
-        set(CMAKE_CUDA_STANDARD 14)
-        set(CMAKE_CUDA_STANDARD_REQUIRED ON)
-    endif()
-    set(USE_CUDA ON)
-  else()
-    message(WARNING "CUDA support is disabled. Set the GPUAC_COMPILE_WITH_CUDA environment variable and recompile to enable it")
-    set(USE_CUDA OFF)
-  endif()
-endmacro()
-
-# Try to adhere to strict ISO C++ as much as possible:
-#    from https://lefticus.gitbooks.io/cpp-best-practices/content/02-Use_the_Tools_Available.html
-function(autoware_set_compile_options target)
-if(WIN32)
-    # Causes the visibility macros to use dllexport rather than dllimport,
-    # which is appropriate when building the dll but not consuming it.
-    string(TOUPPER ${target} PROJECT_NAME_UPPER)
-    target_compile_definitions(${target} PRIVATE ${PROJECT_NAME_UPPER}_BUILDING_DLL)
-    target_compile_options(${target} PRIVATE "/bigobj")
-    add_definitions(-D_CRT_NONSTDC_NO_WARNINGS)
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-    add_definitions(-D_WINSOCK_DEPRECATED_NO_WARNINGS)
-else()
-    target_compile_options(${target} PRIVATE
-        -Wall
-        -Werror
-        -Wextra
-        #-Wshadow             # causes issues with ROS 2 headers
-        #-Wnon-virtual-dtor   # causes issues with ROS 2 headers
-        -pedantic
-        -Wcast-align
-        -Wunused
-        -Wconversion
-        -Wsign-conversion
-        -Wdouble-promotion
-        #-Wnull-dereference    # gcc6
-        #-Wduplicated-branches # gcc7
-        #-Wduplicated-cond     # gcc6
-        #-Wrestrict            # gcc7
-        -fvisibility=hidden)
-    # C++-only options
-    target_compile_options(${target}
-        PRIVATE $<$<COMPILE_LANGUAGE:CXX>: -Woverloaded-virtual -Wold-style-cast>)
-
-    if(NOT APPLE)
-        # GCC/G++ Only, not CLang
-        target_compile_options(${target}
-            PUBLIC $<$<COMPILE_LANGUAGE:CXX>: -Wuseless-cast>)
-        target_compile_options(${target} PRIVATE -Wlogical-op -frecord-gcc-switches)
-    endif()
-
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set_target_properties(${target} PROPERTIES COMPILE_FLAGS "-Og")
-    else()
-        set_target_properties(${target} PROPERTIES COMPILE_FLAGS "-O3 -ftree-vectorize")
-    endif()
-endif()
-endfunction()
-
 
 function(ga_install target)
     install(TARGETS ${target}

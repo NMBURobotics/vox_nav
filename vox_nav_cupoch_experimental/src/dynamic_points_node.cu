@@ -115,8 +115,6 @@ namespace vox_nav_utilities
 
         pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
             "merged", rclcpp::SystemDefaultsQoS());
-
-        cupoch::utility::InitializeAllocator();
     }
 
     DynamicPoints::~DynamicPoints()
@@ -199,7 +197,7 @@ namespace vox_nav_utilities
                 cupoch_conversions::rosToCupoch(std::get<0>(cloud_odom_vector_[i]), cupoch_pc);
 
                 cupoch_pc->Transform(odom_T.inverse());
-                cupoch_pc->PaintUniformColor(Eigen::Vector3f(1, i % 2, 0));
+                cupoch_pc->PaintUniformColor(Eigen::Vector3f(1, 0, 0));
 
                 cupoch::geometry::AxisAlignedBoundingBox<3> bbx(Eigen::Vector3f(-20, -20, -4),
                                                                 Eigen::Vector3f(20, 20, 4));
@@ -210,15 +208,14 @@ namespace vox_nav_utilities
             }
 
             shoot(transformed_pcl_sequences);
+
+            cloud_odom_vector_.erase(cloud_odom_vector_.begin());
         }
     }
 
     void DynamicPoints::shoot(
         std::vector<std::shared_ptr<cupoch::geometry::PointCloud>> &cloud_vector)
     {
-
-        RCLCPP_INFO(get_logger(), "CLASHING %d POINT CLOUDS", cloud_vector.size());
-
         auto source = cloud_vector[0];
         auto target = cloud_vector[1];
 
@@ -228,7 +225,7 @@ namespace vox_nav_utilities
             cupoch::registration::TransformationEstimationPointToPoint();
         cupoch::registration::ICPConvergenceCriteria criteria;
         criteria.max_iteration_ = 1000;
-        auto res = cupoch::registration::RegistrationICP(*source, *target, 3.0, eye,
+        auto res = cupoch::registration::RegistrationICP(*source, *target, 5.0, eye,
                                                          point_to_point, criteria);
         source->Transform(res.transformation_);
 
@@ -258,41 +255,39 @@ namespace vox_nav_utilities
             *target, voxel_size);
 
         // COMPUTE COLLISIONS
-        auto collision_result_st = cupoch::collision::ComputeIntersection(
-            *voxel_target, *voxel_source, 0.0);
+        auto uniq_target = cupoch::collision::ComputeIntersection(
+                               *voxel_source, *voxel_target, 0.0)
+                               ->GetSecondCollisionIndices();
 
         // EXTRACT ONLY VOXELS THAT ARE COLLISION FREE
         auto voxel_target_collision_free =
             std::make_shared<cupoch::geometry::VoxelGrid>();
-        auto voxel_source_collision_free =
-            std::make_shared<cupoch::geometry::VoxelGrid>();
 
         RCLCPP_INFO(get_logger(), "voxel_target  %d POINT", voxel_target->voxels_values_.size());
-        RCLCPP_INFO(get_logger(), "voxel_source  %d POINT", voxel_source->voxels_values_.size());
+        RCLCPP_INFO(get_logger(), "uniq_target  %d POINT", uniq_target.size());
 
-        RCLCPP_INFO(get_logger(), "collision_result_st->GetFirstCollisionIndices()  %d POINT", collision_result_st->GetFirstCollisionIndices().size());
-        RCLCPP_INFO(get_logger(), "collision_result_st->GetSecondCollisionIndices()  %d POINT", collision_result_st->GetSecondCollisionIndices().size());
+        size_t max_dist =
+            *(thrust::max_element(uniq_target.begin(), uniq_target.end()));
+
+        RCLCPP_INFO(get_logger(), "max_dist  %d POINT", max_dist);
+
+        // remove duplicates
+        /* cupoch::utility::device_vector<size_t>::iterator it_target;
+         it_target = thrust::unique(thrust::device, uniq_target.begin(), uniq_target.end());
+         uniq_target.resize(thrust::distance(uniq_target.begin(), it_target));*/
+
+        RCLCPP_INFO(get_logger(), "uniq_target  %d POINT", uniq_target.size());
 
         voxel_target->SelectByIndexImpl(
-            *voxel_target, *voxel_target_collision_free,
-            collision_result_st->GetFirstCollisionIndices(), true);
+            *voxel_target, *voxel_target_collision_free, uniq_target, true);
+
         RCLCPP_INFO(get_logger(), "voxel_target_collision_free  %d POINT", voxel_target_collision_free->voxels_values_.size());
-
-        voxel_source->SelectByIndexImpl(
-            *voxel_source, *voxel_source_collision_free,
-            collision_result_st->GetSecondCollisionIndices(), true);
-
-        RCLCPP_INFO(get_logger(), "voxel_source_collision_free  %d POINT", voxel_source_collision_free->voxels_values_.size());
+        RCLCPP_INFO(get_logger(), "voxel_target_collision_free  %d POINT", voxel_target_collision_free->voxels_keys_.size());
 
         // EXTRACT POINTS OF COLLISION FREE VOXELS
         auto included_points_target =
             voxel_target_collision_free->CheckIfIncluded(target->points_);
-        auto included_points_source =
-            voxel_source_collision_free->CheckIfIncluded(source->points_);
-
-        cupoch::utility::device_vector<size_t>
-            included_points_target_indices,
-            included_points_source_indices;
+        cupoch::utility::device_vector<size_t> included_points_target_indices;
 
         for (size_t i = 0; i < target->points_.size(); i++)
         {
@@ -301,28 +296,13 @@ namespace vox_nav_utilities
                 included_points_target_indices.push_back(i);
             }
         }
-        for (size_t i = 0; i < source->points_.size(); i++)
-        {
-            if (included_points_source[i])
-            {
-                included_points_source_indices.push_back(i);
-            }
-        }
 
         auto target_collision_free_cloud = target->SelectByIndex(included_points_target_indices);
-        auto source_collision_free_cloud = source->SelectByIndex(included_points_source_indices);
-
         auto merged = std::make_shared<cupoch::geometry::PointCloud>(*target_collision_free_cloud);
-        *merged += *source_collision_free_cloud;
-
         sensor_msgs::msg::PointCloud2 pcl_msg;
         cupoch_conversions::cupochToRos(merged, pcl_msg);
         pcl_msg.header = std::get<0>(cloud_odom_vector_.back())->header;
         pub_->publish(pcl_msg);
-        cloud_odom_vector_.erase(cloud_odom_vector_.begin());
-
-        RCLCPP_INFO(get_logger(), "merged  %d POINT", merged->points_.size());
-
         cloud_vector.clear();
     }
 
@@ -341,6 +321,7 @@ namespace vox_nav_utilities
 int main(int argc, char const *argv[])
 {
     rclcpp::init(argc, argv);
+    cupoch::utility::InitializeAllocator();
     auto node = std::make_shared<vox_nav_utilities::DynamicPoints>();
     rclcpp::spin(node);
     rclcpp::shutdown();
