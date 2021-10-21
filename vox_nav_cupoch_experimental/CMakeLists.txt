@@ -71,7 +71,7 @@ add_definitions(${CUPOCH_DEFINITIONS})
 message("zs: ${CMAKE_PROJECT_NAME} CUDA_NVCC_FLAGS = " ${CUDA_NVCC_FLAGS})
 include(GATest)
 
-cuda_add_executable(dynamic_points_node  src/dynamic_points_node.cpp)
+cuda_add_executable(dynamic_points_node  src/dynamic_points_node.cu)
 ament_target_dependencies(dynamic_points_node ${dependencies})
 
 target_include_directories(dynamic_points_node PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS})

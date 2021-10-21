@@ -11,7 +11,7 @@ from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
     return LaunchDescription([
-        launch_ros.actions.Node(package='vox_nav_utilities',
+        launch_ros.actions.Node(package='vox_nav_cupoch_experimental',
                                 executable='dynamic_points_node',
                                 name='dynamic_points_node',
                                 output='screen',
@@ -19,7 +19,7 @@ def generate_launch_description():
                                 remappings=[('points', '/ouster/points'),
                                             ('odom', '/odometry/global'),
                                             ('imu', '/xsens/imu')],
-                                parameters=[{'sequence_horizon': 3},
-                                            {'dt': 1.5},
-                                            {'sensor_height': -1.9}])
+                                parameters=[{'sequence_horizon': 2},
+                                            {'dt': 0.4},
+                                            {'sensor_height': 0.0}])
     ])
