@@ -36,11 +36,14 @@ list(INSERT CMAKE_PREFIX_PATH 0 /opt/eigen/eigen)
 # 增加对cupoch支持
 find_package(PkgConfig QUIET)
 find_package(pybind11  QUIET)
+find_package(OpenGL    QUIET)
+
 include(GenerateExportHeader)
 if (PKGCONFIG_FOUND)
     pkg_search_module(EIGEN3          eigen3>=3.2.7   QUIET)
     pkg_search_module(GLFW            glfw3           QUIET)
     pkg_search_module(GLEW            glew            QUIET)
+    pkg_search_module(imgui           imgui           QUIET)
     pkg_search_module(JSONCPP         jsoncpp>=1.7.0  QUIET)
     pkg_search_module(PNG             libpng>=1.6.0   QUIET)
     pkg_search_module(JPEG_TURBO      libturbojpeg    QUIET)
@@ -55,6 +58,10 @@ set(CUPOCH_INCLUDE_DIRS ${CUPOCH_ROOT}/include
     ${CUPOCH_ROOT}/third_party/spdlog/include
     ${PNG_INCLUDE_DIRS}
     ${JSONCPP_INCLUDE_DIRS}
+    ${GLEW_INCLUDE_DIRS}
+    ${GLFW_INCLUDE_DIRS}
+    ${OPENGL_INCLUDE_DIR}
+    ${imgui_INCLUDE_DIRS}
 )
 set(CUPOCH_LIBRARY_DIRS ${CUPOCH_ROOT}/lib)
 set(CUPOCH_LIBRARIES
@@ -76,12 +83,17 @@ set(CUPOCH_LIBRARIES
     liblzf
     rply
     spdlog
+    imgui
     ${spdlog_LIBRARIES}
     ${CUDA_LIBRARIES}
     ${CUDA_CUBLAS_LIBRARIES}
     ${CUDA_curand_LIBRARY}
     ${PNG_LIBRARIES}
     ${JSONCPP_LIBRARIES}
+    ${GLEW_LIBRARIES}
+    ${GLFW_LIBRARIES}
+    ${OPENGL_gl_LIBRARY}
+    ${imgui_LIBRARIES}
 )
 
 find_package(CUDA REQUIRED  QUIET)

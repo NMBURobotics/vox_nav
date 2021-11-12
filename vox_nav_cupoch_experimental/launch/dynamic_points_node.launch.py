@@ -17,9 +17,9 @@ def generate_launch_description():
                                 output='screen',
                                 #prefix=['xterm -e gdb -ex run --args'],
                                 remappings=[('points', '/ouster/points'),
-                                            ('odom', '/odometry/global'),
+                                            ('odom', '/lio_sam/mapping/odometry'),
                                             ('imu', '/xsens/imu')],
                                 parameters=[{'sequence_horizon': 2},
                                             {'dt': 0.5},
-                                            {'sensor_height': 0.0}])
+                                            {'sensor_height':0.0}])
     ])

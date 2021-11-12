@@ -24,6 +24,7 @@ find_package(octomap_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(PCL REQUIRED)
 find_package(vox_nav_msgs REQUIRED)
+find_package(vox_nav_utilities REQUIRED)
 find_package(thrust REQUIRED)
 find_package(cupoch_conversions REQUIRED)
 
@@ -53,8 +54,11 @@ set(dependencies
   octomap_msgs
   visualization_msgs
   vox_nav_msgs
+  vox_nav_utilities
   cupoch_conversions
 )
+
+add_definitions(${PCL_DEFINITIONS})
 
 set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "")
 APPEND_TARGET_ARCH_FLAGS()
@@ -65,14 +69,14 @@ add_definitions(${CUPOCH_DEFINITIONS})
 message("zs: ${CMAKE_PROJECT_NAME} CUDA_NVCC_FLAGS = " ${CUDA_NVCC_FLAGS})
 include(GATest)
 
-cuda_add_executable(dynamic_points_node  src/dynamic_points_node.cu)
-ament_target_dependencies(dynamic_points_node ${dependencies})
+cuda_add_executable(ros2bag_kitti_bin  src/ros2bag_kitti_bin.cu)
+ament_target_dependencies(ros2bag_kitti_bin ${dependencies})
 
-target_include_directories(dynamic_points_node PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS})
-target_link_directories(dynamic_points_node PUBLIC ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(dynamic_points_node  ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES})
+target_include_directories(ros2bag_kitti_bin PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(ros2bag_kitti_bin PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(ros2bag_kitti_bin  ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES})
 
-install(TARGETS dynamic_points_node
+install(TARGETS ros2bag_kitti_bin
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

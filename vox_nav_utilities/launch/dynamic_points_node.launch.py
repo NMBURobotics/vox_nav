@@ -19,7 +19,7 @@ def generate_launch_description():
                                 remappings=[('points', '/ouster/points'),
                                             ('odom', '/odometry/global'),
                                             ('imu', '/xsens/imu')],
-                                parameters=[{'sequence_horizon': 3},
+                                parameters=[{'sequence_horizon': 2},
                                             {'dt': 1.5},
                                             {'sensor_height': -1.9}])
     ])
