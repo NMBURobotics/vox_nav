@@ -71,12 +71,18 @@ include(GATest)
 
 cuda_add_executable(ros2bag_kitti_bin  src/ros2bag_kitti_bin.cu)
 ament_target_dependencies(ros2bag_kitti_bin ${dependencies})
-
 target_include_directories(ros2bag_kitti_bin PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_directories(ros2bag_kitti_bin PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(ros2bag_kitti_bin  ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES})
 
+cuda_add_executable(cloud_segmentation  src/cloud_segmentation.cpp)
+ament_target_dependencies(cloud_segmentation ${dependencies})
+target_include_directories(cloud_segmentation PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(cloud_segmentation PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(cloud_segmentation  ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES})
+
 install(TARGETS ros2bag_kitti_bin
+                cloud_segmentation
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
