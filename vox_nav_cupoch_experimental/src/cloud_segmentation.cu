@@ -45,11 +45,16 @@
 #include "vox_nav_cupoch_experimental/visibility_control.h"
 #include "vox_nav_utilities/pcl_helpers.hpp"
 #include "vox_nav_utilities/tf_helpers.hpp"
+#include "vox_nav_utilities/map_manager_helpers.hpp"
 
 class CloudSegmentation : public rclcpp::Node
 {
 
 public:
+  typedef std::tuple<sensor_msgs::msg::PointCloud2::SharedPtr,
+      nav_msgs::msg::Odometry::SharedPtr,
+      sensor_msgs::msg::Imu::SharedPtr> data_captute_t;
+
   CloudSegmentation();
   ~CloudSegmentation();
 
@@ -70,15 +75,7 @@ public:
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double radius,
     double tolerated_divergence_rate, int min_num_neighbours);
 
-  template<typename KeyType, typename ValueType>
-  std::pair<KeyType, ValueType> get_max(const std::map<KeyType, ValueType> & x)
-  {
-    using pairtype = std::pair<KeyType, ValueType>;
-    return *std::max_element(
-      x.begin(), x.end(), [](const pairtype & p1, const pairtype & p2) {
-        return p1.second < p2.second;
-      });
-  }
+  void shoot(std::vector<data_captute_t> & cloud_vector);
 
 private:
   rclcpp::TimerBase::SharedPtr timer_;
@@ -90,12 +87,15 @@ private:
   double dt_;
   double sensor_height_;
 
+  std::vector<data_captute_t> cloud_odom_vector_;
+
   bool recieved_first_;
 
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr dyn_point_pub_;
+
   rclcpp::Time last_recieved_msg_stamp_;
   rclcpp::Time stamp_;
-
 };
 
 CloudSegmentation::CloudSegmentation()
@@ -129,7 +129,17 @@ CloudSegmentation::CloudSegmentation()
   pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "merged", rclcpp::SystemDefaultsQoS());
 
+  dyn_point_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+    "dyn_point_pub", rclcpp::SystemDefaultsQoS());
+
   last_recieved_msg_stamp_ = now();
+
+  auto captured_data = std::make_tuple<>(
+    std::make_shared<sensor_msgs::msg::PointCloud2>(sensor_msgs::msg::PointCloud2()),
+    std::make_shared<nav_msgs::msg::Odometry>(nav_msgs::msg::Odometry()),
+    std::make_shared<sensor_msgs::msg::Imu>(sensor_msgs::msg::Imu()));
+
+  cloud_odom_vector_ = std::vector<data_captute_t>(2, captured_data);
 
 }
 
@@ -142,105 +152,71 @@ void CloudSegmentation::cloudOdomCallback(
   const nav_msgs::msg::Odometry::ConstSharedPtr & odom,
   const sensor_msgs::msg::Imu::ConstSharedPtr & imu)
 {
-
-  stamp_ = cloud->header.stamp;
-
+  last_recieved_msg_stamp_ = cloud->header.stamp;
+  // convert to pcl type
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr curr_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
-
   pcl::PCLPointCloud2 pcl_pc;
   pcl_conversions::toPCL(*cloud, pcl_pc);
   pcl::fromPCLPointCloud2(pcl_pc, *curr_pcl);
 
-  RCLCPP_INFO(get_logger(), " Writing a cloud with %d points", curr_pcl->points.size());
-
-
-  curr_pcl = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(curr_pcl, 0.1);
-
-  auto denois = denoise_segmented_cloud(curr_pcl, 2.0, 0.2, 120);
-
-  sensor_msgs::msg::PointCloud2 pcl_msg;
-  pcl::toROSMsg(*denois, pcl_msg);
-  pcl_msg.header = cloud->header;
-  pub_->publish(pcl_msg);
-}
-
-pcl::PointCloud<pcl::PointXYZRGB>::Ptr CloudSegmentation::denoise_segmented_cloud(
-  const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, double radius,
-  double tolerated_divergence_rate, int min_num_neighbours)
-{
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr denoised_cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
-
-
-  pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree;
-  kdtree.setInputCloud(cloud);
-
-  for (size_t i = 0; i < cloud->points.size(); i++) {
-
-    pcl::PointXYZRGB searchPoint = cloud->points[i];
-    std::vector<int> pointIdxRadiusSearch;
-    std::vector<float> pointRadiusSquaredDistance;
-
-    if (kdtree.nearestKSearch(
-        searchPoint, min_num_neighbours, pointIdxRadiusSearch,
-        pointRadiusSquaredDistance) > 0)
-    {
-      int serach_point_key =
-        ((int)searchPoint.r) << 16 | ((int)searchPoint.g) << 8 | ((int)searchPoint.b);
-
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr neighbours(new pcl::PointCloud<pcl::PointXYZRGB>);
-      for (std::size_t j = 0; j < pointIdxRadiusSearch.size(); ++j) {
-        neighbours->points.push_back(cloud->points[pointIdxRadiusSearch[j]]);
-      }
-
-      std::vector<int> neighbour_labels;
-      for (std::size_t j = 0; j < neighbours->points.size(); ++j) {
-        int r = neighbours->points[j].r;
-        int g = neighbours->points[j].g;
-        int b = neighbours->points[j].b;
-        int rgb = ((int)r) << 16 | ((int)g) << 8 | ((int)b);
-        neighbour_labels.push_back(rgb);
-      }
-
-      if (neighbour_labels.size() > 200) {
-        continue;
-      }
-
-      std::map<int, int> M;
-      for (int k = 0; k < neighbour_labels.size(); k++) {
-        if (M.find(neighbour_labels[k]) == M.end()) {
-          M[neighbour_labels[k]] = 1;
-        } else {
-          M[neighbour_labels[k]]++;
-        }
-      }
-
-      auto max = get_max<int, int>(M);
-      int num_search_point_neigbours_same_class;
-      auto search_point_neigbours_same_class = M.find(serach_point_key);
-      if (search_point_neigbours_same_class == M.end()) {
-        RCLCPP_ERROR(get_logger(), "Not suitable search point");
-        continue;
-      } else {
-        num_search_point_neigbours_same_class = search_point_neigbours_same_class->second;
-      }
-
-      if (max.second > num_search_point_neigbours_same_class) {
-        std::uint8_t r = (max.first >> 16) & 0x0000ff;
-        std::uint8_t g = (max.first >> 8) & 0x0000ff;
-        std::uint8_t b = (max.first) & 0x0000ff;
-        searchPoint.r = r;
-        searchPoint.g = g;
-        searchPoint.b = b;
-      }
+  // remove ground points
+  sensor_msgs::PointCloud2ConstIterator<float> iter_label(*cloud, "x");
+  std::vector<u_int8_t> labels;
+  pcl::IndicesPtr ground_points_indices(new std::vector<int>);
+  int couter = 0;
+  for (; (iter_label != iter_label.end()); ++iter_label) {
+    labels.push_back(iter_label[3]);
+    if (iter_label[3] == 40) { // ground point label
+      ground_points_indices->push_back(couter);
     }
-    searchPoint.a = 255;
-    denoised_cloud->points.push_back(searchPoint);
+    couter++;
   }
+  pcl::ExtractIndices<pcl::PointXYZRGB> extract;
+  extract.setInputCloud(curr_pcl);
+  extract.setIndices(ground_points_indices);
+  extract.setNegative(true);
+  extract.filter(*curr_pcl);
 
-  denoised_cloud->height = 1;
-  denoised_cloud->width = denoised_cloud->points.size();
-  return denoised_cloud;
+  auto denoised_cloud = vox_nav_utilities::removeOutliersFromInputCloud(
+    curr_pcl, 4, 0.3,
+    vox_nav_utilities::OutlierRemovalType::RadiusOutlierRemoval);
+
+  sensor_msgs::msg::PointCloud2 denoised_cloud_msg;
+  pcl::toROSMsg(*denoised_cloud, denoised_cloud_msg);
+  denoised_cloud_msg.header = cloud->header;
+  RCLCPP_INFO(get_logger(), " Writing a cloud with %d points", denoised_cloud->points.size());
+
+  auto curr_cloud_odom_pair =
+    std::make_tuple<>(
+    std::make_shared<sensor_msgs::msg::PointCloud2>(denoised_cloud_msg),
+    std::make_shared<nav_msgs::msg::Odometry>(*odom),
+    std::make_shared<sensor_msgs::msg::Imu>(*imu));
+
+  auto source = std::make_shared<cupoch::geometry::PointCloud>();
+  cupoch_conversions::rosToCupoch(
+    std::make_shared<sensor_msgs::msg::PointCloud2>(denoised_cloud_msg),
+    source);
+
+  // START VOXEL STUFF
+  double voxel_size = 0.2;
+  auto voxel_source = cupoch::geometry::VoxelGrid::CreateFromPointCloud(
+    *source, voxel_size);
+
+  auto cupoch_processed = std::make_shared<cupoch::geometry::PointCloud>(*source);
+
+  sensor_msgs::msg::PointCloud2 cupoch_processed_msg;
+  cupoch_conversions::cupochToRos(cupoch_processed, cupoch_processed_msg);
+  cupoch_processed_msg.header = denoised_cloud_msg.header;
+
+
+  dyn_point_pub_->publish(cupoch_processed_msg);
+  pub_->publish(denoised_cloud_msg);
 }
+
+void CloudSegmentation::shoot(std::vector<data_captute_t> & cloud_vector)
+{
+}
+
 
 int main(int argc, char const * argv[])
 {
