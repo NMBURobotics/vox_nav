@@ -200,4 +200,107 @@ namespace vox_nav_utilities
     }
   }
 
+  Eigen::Vector3f getColorByIndexEig(int index)
+  {
+    Eigen::Vector3f result;
+    switch (index) {
+      case -2:  // BLACK:
+        result[0] = 0.0;
+        result[1] = 0.0;
+        result[2] = 0.0;
+        break;
+      case -1:  // BLACK:
+        result[0] = 0.0;
+        result[1] = 0.0;
+        result[2] = 0.0;
+        break;
+      case 0:    // RED:
+        result[0] = 0.8;
+        result[1] = 0.1;
+        result[2] = 0.1;
+        break;
+      case 1:    // GREEN:
+        result[0] = 0.1;
+        result[1] = 0.8;
+        result[2] = 0.1;
+        break;
+      case 2:    // GREY:
+        result[0] = 0.9;
+        result[1] = 0.9;
+        result[2] = 0.9;
+        break;
+      case 3:    // DARK_GREY:
+        result[0] = 0.6;
+        result[1] = 0.6;
+        result[2] = 0.6;
+        break;
+      case 4:    // WHITE:
+        result[0] = 1.0;
+        result[1] = 1.0;
+        result[2] = 1.0;
+        break;
+      case 5:    // ORANGE:
+        result[0] = 1.0;
+        result[1] = 0.5;
+        result[2] = 0.0;
+        break;
+      case 6:    // Maroon:
+        result[0] = 0.5;
+        result[1] = 0.0;
+        result[2] = 0.0;
+        break;
+      case 7:    // Olive:
+        result[0] = 0.5;
+        result[1] = 0.5;
+        result[2] = 0.0;
+        break;
+      case 8:    // Navy:
+        result[0] = 0.0;
+        result[1] = 0.0;
+        result[2] = 0.5;
+        break;
+      case 9:    // BLACK:
+        result[0] = 0.0;
+        result[1] = 0.0;
+        result[2] = 0.0;
+        break;
+      case 10:    // YELLOW:
+        result[0] = 1.0;
+        result[1] = 1.0;
+        result[2] = 0.0;
+        break;
+      case 11:    // BROWN:
+        result[0] = 0.597;
+        result[1] = 0.296;
+        result[2] = 0.0;
+        break;
+      case 12:    // PINK:
+        result[0] = 1.0;
+        result[1] = 0.4;
+        result[2] = 1;
+        break;
+      case 13:    // LIME_GREEN:
+        result[0] = 0.6;
+        result[1] = 1.0;
+        result[2] = 0.2;
+        break;
+      case 14:    // PURPLE:
+        result[0] = 0.597;
+        result[1] = 0.0;
+        result[2] = 0.597;
+        break;
+      case 15:    // CYAN:
+        result[0] = 0.0;
+        result[1] = 1.0;
+        result[2] = 1.0;
+        break;
+      case 16:    // MAGENTA:
+        result[0] = 1.0;
+        result[1] = 0.0;
+        result[2] = 1.0;
+    }
+    return result;
+  }
+
+
 }  // namespace vox_nav_utilities

@@ -42,6 +42,7 @@ find_package(CUDA REQUIRED)
 find_package(CUDNN REQUIRED)
 
 include_directories(include
+                   ${ApproxMVBB_INCLUDE_DIRS}
                    ${OMPL_INCLUDE_DIRS}
                    ${PCL_INCLUDE_DIRS}
                    ${Torch_INCLUDE_DIRS}
@@ -79,6 +80,7 @@ add_library(gps_waypoint_collector SHARED src/gps_waypoint_collector.cpp)
 ament_target_dependencies(gps_waypoint_collector ${dependencies})
 
 add_library(elevation_state_space SHARED src/elevation_state_space.cpp)
+target_link_libraries(elevation_state_space ${PCL_LIBRARIES})
 ament_target_dependencies(elevation_state_space ${dependencies})
 
 add_executable(gps_waypoint_collector_node src/gps_waypoint_collector_node.cpp)
@@ -86,6 +88,7 @@ target_link_libraries(gps_waypoint_collector_node gps_waypoint_collector)
 ament_target_dependencies(gps_waypoint_collector_node ${dependencies})
 
 add_executable(pcl2octomap_converter_node  src/pcl_helpers.cpp src/pcl2octomap_converter_node.cpp)
+target_link_libraries(pcl2octomap_converter_node ${PCL_LIBRARIES})
 ament_target_dependencies(pcl2octomap_converter_node ${dependencies})
 
 add_executable(planner_benchmarking_node src/planner_benchmarking_node.cpp)

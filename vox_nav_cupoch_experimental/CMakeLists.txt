@@ -28,11 +28,14 @@ find_package(vox_nav_utilities REQUIRED)
 find_package(thrust REQUIRED)
 find_package(cupoch_conversions REQUIRED)
 
+set(ApproxMVBB_DIR "../../../install/ApproxMVBB/share/ApproxMVBB//cmake")
+message(ApproxMVBB_DIR)
+find_package(ApproxMVBB REQUIRED COMPONENTS XML_SUPPORT KDTREE_SUPPORT)
+
 message("zs: CUPOCH_INCLUDE_DIRS = " ${CUPOCH_INCLUDE_DIRS})
 message("zs: CUPOCH_LIBRARIES = " ${CUPOCH_LIBRARIES})
 message("zs: EIGEN3_INCLUDE_DIRS = " ${EIGEN3_INCLUDE_DIRS})
 
- 
 include_directories(include
                    ${PCL_INCLUDE_DIRS}
                    ${THRUST_INCLUDE_DIR}
@@ -73,13 +76,13 @@ cuda_add_executable(ros2bag_kitti_bin  src/ros2bag_kitti_bin.cu)
 ament_target_dependencies(ros2bag_kitti_bin ${dependencies})
 target_include_directories(ros2bag_kitti_bin PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_directories(ros2bag_kitti_bin PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(ros2bag_kitti_bin  ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES})
+target_link_libraries(ros2bag_kitti_bin  ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core)
 
-cuda_add_executable(cloud_segmentation  src/cloud_segmentation.cu)
+cuda_add_executable(cloud_segmentation  src/cloud_segmentation.cpp)
 ament_target_dependencies(cloud_segmentation ${dependencies})
 target_include_directories(cloud_segmentation PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_directories(cloud_segmentation PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(cloud_segmentation  ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES})
+target_link_libraries(cloud_segmentation  ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core)
 
 install(TARGETS ros2bag_kitti_bin
                 cloud_segmentation

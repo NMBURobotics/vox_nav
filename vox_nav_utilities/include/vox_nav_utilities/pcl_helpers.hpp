@@ -48,6 +48,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
+#include "geometry_msgs/msg/point.hpp"
 
 namespace vox_nav_utilities
 {
@@ -475,6 +476,10 @@ namespace vox_nav_utilities
 
     return reg.getColoredCloud();
   }
+
+  Eigen::Vector3f getColorByIndexEig(int index);
+
+
 }   // namespace vox_nav_utilities
 
 #endif  // VOX_NAV_UTILITIES__PCL_HELPERS_HPP_
