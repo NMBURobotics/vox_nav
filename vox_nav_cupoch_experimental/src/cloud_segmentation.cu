@@ -113,8 +113,10 @@ private:
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr dyn_point_pub_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr vis_pub_;
 
-  rclcpp::Time last_recieved_msg_stamp_;
-  rclcpp::Time stamp_;
+  builtin_interfaces::msg::Time last_recieved_msg_stamp_;
+
+  std::shared_ptr<cupoch::geometry::PointCloud> last_pointcloud_cupoch_;
+  nav_msgs::msg::Odometry::SharedPtr last_odom_msg_;
 };
 
 CloudSegmentation::CloudSegmentation()
@@ -146,8 +148,6 @@ CloudSegmentation::CloudSegmentation()
   vis_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "markers", rclcpp::SystemDefaultsQoS());
 
-  last_recieved_msg_stamp_ = now();
-
   auto captured_data = std::make_tuple<>(
       std::make_shared<sensor_msgs::msg::PointCloud2>(
           sensor_msgs::msg::PointCloud2()),
@@ -155,6 +155,11 @@ CloudSegmentation::CloudSegmentation()
       std::make_shared<sensor_msgs::msg::Imu>(sensor_msgs::msg::Imu()));
 
   cloud_odom_vector_ = std::vector<data_captute_t>(2, captured_data);
+
+  last_odom_msg_ = std::make_shared<nav_msgs::msg::Odometry>();
+  last_pointcloud_cupoch_ = std::make_shared<cupoch::geometry::PointCloud>();
+
+  last_recieved_msg_stamp_ = now();
 }
 
 CloudSegmentation::~CloudSegmentation() {}
@@ -164,7 +169,6 @@ void CloudSegmentation::cloudOdomCallback(
     const nav_msgs::msg::Odometry::ConstSharedPtr &odom,
     const sensor_msgs::msg::Imu::ConstSharedPtr &imu) {
 
-  last_recieved_msg_stamp_ = cloud->header.stamp;
   // convert to pcl type
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr curr_pcl(
       new pcl::PointCloud<pcl::PointXYZRGB>());
@@ -172,165 +176,115 @@ void CloudSegmentation::cloudOdomCallback(
   pcl_conversions::toPCL(*cloud, pcl_pc);
   pcl::fromPCLPointCloud2(pcl_pc, *curr_pcl);
 
-  auto denoised_cloud = vox_nav_utilities::removeOutliersFromInputCloud(
-      curr_pcl, 4, 0.3,
-      vox_nav_utilities::OutlierRemovalType::RadiusOutlierRemoval);
-
-  denoised_cloud = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
-      denoised_cloud, 0.05);
-
   // remove ground points
   sensor_msgs::PointCloud2ConstIterator<float> iter_label(*cloud, "x");
   std::vector<u_int8_t> labels;
 
-  pcl::IndicesPtr ground_points_indices(new std::vector<int>);
-  pcl::IndicesPtr dynamic_points_indices(new std::vector<int>);
-  pcl::IndicesPtr static_points_indices(new std::vector<int>);
+  cupoch::utility::device_vector<size_t> ground_points_indices;
+  cupoch::utility::device_vector<size_t> dynamic_points_indices;
+  cupoch::utility::device_vector<size_t> static_points_indices;
 
-  int label_counter = 0;
+  size_t label_counter = 0;
   for (; (iter_label != iter_label.end()); ++iter_label) {
     labels.push_back(iter_label[3]);
     if (iter_label[3] == 40) { // ground point label
-      ground_points_indices->push_back(label_counter);
-    }
-    if (iter_label[3] == 30 && iter_label[3] == 10) { // person/car point label
-      dynamic_points_indices->push_back(label_counter);
+      ground_points_indices.push_back(label_counter);
+    } else if (iter_label[3] == 30 ||
+               iter_label[3] == 10) { // person/car point label
+      dynamic_points_indices.push_back(label_counter);
     } else { // static obstacle point label
-      static_points_indices->push_back(label_counter);
+      static_points_indices.push_back(label_counter);
     }
     label_counter++;
   }
-  pcl::ExtractIndices<pcl::PointXYZRGB> extract;
-  extract.setInputCloud(curr_pcl);
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr ground_pcl(
-      new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr dynamic_pcl(
-      new pcl::PointCloud<pcl::PointXYZRGB>());
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr static_pcl(
-      new pcl::PointCloud<pcl::PointXYZRGB>());
+  /*curr_pcl = vox_nav_utilities::removeOutliersFromInputCloud(
+    curr_pcl, 4, 0.5,
+    vox_nav_utilities::OutlierRemovalType::RadiusOutlierRemoval);
+  curr_pcl =
+      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(curr_pcl,
+  0.05);*/
 
-  extract.setIndices(ground_points_indices);
-  extract.filter(*ground_pcl);
-  extract.setIndices(static_points_indices);
-  extract.filter(*static_pcl);
-  extract.setIndices(dynamic_points_indices);
-  extract.filter(*dynamic_pcl);
+  cupoch::geometry::PointCloud obstacle_cloud_cupoch;
+  thrust::host_vector<Eigen::Vector3f> points;
+  thrust::host_vector<Eigen::Vector3f> colors;
 
-  pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(
-      new pcl::search::KdTree<pcl::PointXYZRGB>);
-  tree->setInputCloud(denoised_cloud);
+  for (int i = 0; i < curr_pcl->points.size(); ++i) {
+    auto p = curr_pcl->points[i];
+    points.push_back(Eigen::Vector3f(p.x, p.y, p.z));
+    auto c = vox_nav_utilities::getColorByIndexEig(5);
+    colors.push_back(Eigen::Vector3f(c.x(), c.y(), c.z()));
+  }
+  obstacle_cloud_cupoch.SetPoints(points);
+  obstacle_cloud_cupoch.SetColors(colors);
 
-  // create the extraction object for the clusters
-  std::vector<pcl::PointIndices> cluster_indices;
-  pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-  // specify euclidean cluster parameters
-  ec.setClusterTolerance(0.4); // 2cm
-  ec.setMinClusterSize(30);
-  ec.setMaxClusterSize(25000);
-  ec.setSearchMethod(tree);
-  ec.setInputCloud(denoised_cloud);
-  ec.extract(cluster_indices);
+  auto obstacle_cloud_cupoch_copy = obstacle_cloud_cupoch;
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr merged_clusters(
-      new pcl::PointCloud<pcl::PointXYZRGB>());
+  auto dynamic_points_cupoch =
+      obstacle_cloud_cupoch.SelectByIndex(dynamic_points_indices, false);
+  auto static_points_cupoch =
+      obstacle_cloud_cupoch_copy.SelectByIndex(static_points_indices, false);
 
-  visualization_msgs::msg::MarkerArray marker_array;
+  dynamic_points_cupoch->PaintUniformColor(
+      vox_nav_utilities::getColorByIndexEig(2));
+  static_points_cupoch->PaintUniformColor(
+      vox_nav_utilities::getColorByIndexEig(1));
 
-  int cluster_counter = 0;
-  cupoch::geometry::PointCloud mergedClustersCupoch;
+  if ((cloud->header.stamp.sec - last_recieved_msg_stamp_.sec) > dt_) {
+    auto travel_dist =
+        Eigen::Vector3f(
+            odom->pose.pose.position.x - last_odom_msg_->pose.pose.position.x,
+            odom->pose.pose.position.y - last_odom_msg_->pose.pose.position.y,
+            odom->pose.pose.position.z - last_odom_msg_->pose.pose.position.z)
+            .norm();
 
-  for (std::vector<pcl::PointIndices>::const_iterator it =
-           cluster_indices.begin();
-       it != cluster_indices.end(); ++it) {
-    // create a pcl object to hold the extracted cluster
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr clusterPtr(
-        new pcl::PointCloud<pcl::PointXYZRGB>());
-    // now we are in a vector of indices pertaining to a single cluster.
-    // Assign each point corresponding to this cluster in
-    // xyzCloudPtrPassthroughFiltered a specific color for identification
-    // purposes
+    double yaw_latest, pitch_latest, roll_latest;
+    double yaw, pitch, roll;
 
-    auto cluster_color = vox_nav_utilities::getColorByIndexEig(cluster_counter);
-    for (std::vector<int>::const_iterator pit = it->indices.begin();
-         pit != it->indices.end(); ++pit) {
-      denoised_cloud->points[*pit].r = cluster_color.x() * 255;
-      denoised_cloud->points[*pit].g = cluster_color.y() * 255;
-      denoised_cloud->points[*pit].b = cluster_color.z() * 255;
-      clusterPtr->points.push_back(denoised_cloud->points[*pit]);
-    }
+    vox_nav_utilities::getRPYfromMsgQuaternion(
+        odom->pose.pose.orientation, roll_latest, pitch_latest, yaw_latest);
+    vox_nav_utilities::getRPYfromMsgQuaternion(
+        last_odom_msg_->pose.pose.orientation, roll, pitch, yaw);
 
-    *merged_clusters += *clusterPtr;
-    cluster_counter++;
+    auto rot = cupoch::geometry::GetRotationMatrixFromXYZ(Eigen::Vector3f(
+        roll_latest - roll, pitch_latest - pitch, yaw_latest - yaw));
 
-    if (clusterPtr->points.size() < 10) {
-      RCLCPP_WARN(this->get_logger(),
-                  "THIS OBJECT HAVE TOO FEW POINTS NOT GONNA BUILD A BOX !!");
-      continue;
-    }
+    auto trans =
+        Eigen::Vector3f(travel_dist * cos(yaw_latest - yaw),
+                        travel_dist * sin(yaw_latest - yaw), sensor_height_);
+    Eigen::Matrix4f odom_T = Eigen::Matrix4f::Identity();
 
-    cupoch::geometry::PointCloud currentCluster;
-    thrust::host_vector<Eigen::Vector3f> points;
-    thrust::host_vector<Eigen::Vector3f> colors;
+    odom_T.block<3, 3>(0, 0) = rot;
+    odom_T.block<3, 1>(0, 3) = trans;
 
-    for (int i = 0; i < clusterPtr->points.size(); ++i) {
-      auto p = clusterPtr->points[i];
-      points.push_back(Eigen::Vector3f(p.x, p.y, p.z));
-      colors.push_back(Eigen::Vector3f(p.r / 255.0, p.g / 255.0, p.b / 255.0));
-    }
+    last_pointcloud_cupoch_->Transform(odom_T);
+    last_pointcloud_cupoch_->PaintUniformColor(
+        vox_nav_utilities::getColorByIndexEig(4));
 
-    currentCluster.SetPoints(points);
-    currentCluster.SetColors(colors);
-    mergedClustersCupoch += currentCluster;
+    last_recieved_msg_stamp_ = cloud->header.stamp;
+    last_pointcloud_cupoch_ =
+        std::make_shared<cupoch::geometry::PointCloud>(obstacle_cloud_cupoch);
+    last_odom_msg_ = std::make_shared<nav_msgs::msg::Odometry>(*odom);
 
-    auto orientedBoundingBox = currentCluster.GetAxisAlignedBoundingBox();
-    auto orientedBoundingBoxPoints = orientedBoundingBox.GetBoxPoints();
-    auto mvbb_corners_geometry_msgs =
-        Eigen2GeometryMsgs(orientedBoundingBoxPoints);
+    last_pointcloud_cupoch_ =
+        std::make_shared<cupoch::geometry::PointCloud>(*dynamic_points_cupoch);
 
-    if (orientedBoundingBox.GetMaxBound().z() -
-            orientedBoundingBox.GetMinBound().z() <
-        0.3) {
-      continue;
-    }
+    *dynamic_points_cupoch += *static_points_cupoch + *last_pointcloud_cupoch_;
 
-    visualization_msgs::msg::Marker marker;
-    marker.header = cloud->header;
-    marker.ns = "my_namespace";
-    marker.id = cluster_counter;
-    marker.lifetime = rclcpp::Duration::from_seconds(1.0);
-    marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
-    marker.action = visualization_msgs::msg::Marker::ADD;
-    marker.scale.x = 0.1;
-    marker.scale.y = 0.1;
-    marker.scale.z = 0.1;
-    marker.color.a = 1.0;
-    marker.color.r = 1.0;
-    marker.color.g = 1.0;
-    marker.color.b = 0.0;
-    marker.points.push_back(mvbb_corners_geometry_msgs[0]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[1]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[2]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[3]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[0]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[4]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[5]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[6]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[7]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[4]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[0]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[4]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[1]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[5]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[2]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[6]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[3]);
-    marker.points.push_back(mvbb_corners_geometry_msgs[7]);
-    marker_array.markers.push_back(marker);
+    auto voxel_grid = cupoch::geometry::VoxelGrid::CreateFromPointCloud(
+        *dynamic_points_cupoch, 0.2);
+
+    cupoch::visualization::DrawGeometries({voxel_grid}, "Copoch", 640, 480, 50,
+                                          50, true, true, false);
   }
 
+  *dynamic_points_cupoch += *static_points_cupoch;
+
   auto voxel_grid = cupoch::geometry::VoxelGrid::CreateFromPointCloud(
-      mergedClustersCupoch, 0.4);
+      *dynamic_points_cupoch, 0.2);
+
+  cupoch::visualization::DrawGeometries({voxel_grid}, "Copoch", 640, 480, 50,
+                                        50, true, true, false);
 
   /*
     auto occupancy_grid =
@@ -339,17 +293,12 @@ void CloudSegmentation::cloudOdomCallback(
       cupoch::geometry::DistanceTransform::CreateFromOccupancyGrid(
           *occupancy_grid);*/
 
-  // cupoch::visualization::DrawGeometries({voxel_grid}, "Copoch", 640, 480, 50,
-  //                                       50, true, true, false);
-
-  sensor_msgs::msg::PointCloud2 denoised_cloud_msg;
+  /*sensor_msgs::msg::PointCloud2 denoised_cloud_msg;
   pcl::toROSMsg(*merged_clusters, denoised_cloud_msg);
   denoised_cloud_msg.header = cloud->header;
   RCLCPP_INFO(get_logger(), " Writing a cloud with %d points",
               merged_clusters->points.size());
-
-  pub_->publish(denoised_cloud_msg);
-  vis_pub_->publish(marker_array);
+  pub_->publish(denoised_cloud_msg);*/
 }
 
 void CloudSegmentation::shoot(std::vector<data_captute_t> &cloud_vector) {}
