@@ -1,0 +1,2 @@
+/usr/bin/ar qc /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-debug/lib/libgtestd.a CMakeFiles/gtest.dir/src/gtest-all.cc.o
+/usr/bin/ranlib /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-debug/lib/libgtestd.a

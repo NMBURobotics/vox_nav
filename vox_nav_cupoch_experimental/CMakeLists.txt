@@ -37,55 +37,55 @@ message("zs: CUPOCH_LIBRARIES = " ${CUPOCH_LIBRARIES})
 message("zs: EIGEN3_INCLUDE_DIRS = " ${EIGEN3_INCLUDE_DIRS})
 
 include_directories(include
-                   ${PCL_INCLUDE_DIRS}
-                   ${THRUST_INCLUDE_DIR}
-                   ${CUPOCH_INCLUDE_DIRS}
-                   ${CUDA_INCLUDE_DIRS})
+        ${PCL_INCLUDE_DIRS}
+        ${THRUST_INCLUDE_DIR}
+        ${CUPOCH_INCLUDE_DIRS}
+        ${CUDA_INCLUDE_DIRS})
 
 set(dependencies
-  rclcpp
-  sensor_msgs
-  geometry_msgs
-  nav_msgs
-  rclcpp
-  tf2
-  tf2_ros
-  tf2_geometry_msgs
-  pcl_ros
-  Eigen3
-  OCTOMAP
-  octomap_msgs
-  visualization_msgs
-  vox_nav_msgs
-  vox_nav_utilities
-  cupoch_conversions
-)
+        rclcpp
+        sensor_msgs
+        geometry_msgs
+        nav_msgs
+        rclcpp
+        tf2
+        tf2_ros
+        tf2_geometry_msgs
+        pcl_ros
+        Eigen3
+        OCTOMAP
+        octomap_msgs
+        visualization_msgs
+        vox_nav_msgs
+        vox_nav_utilities
+        cupoch_conversions
+        )
 
 add_definitions(${PCL_DEFINITIONS})
 
 set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "")
 APPEND_TARGET_ARCH_FLAGS()
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
-    ${CUPOCH_NVCC_FLAGS}
-)
+        ${CUPOCH_NVCC_FLAGS}
+        )
 add_definitions(${CUPOCH_DEFINITIONS})
 message("zs: ${CMAKE_PROJECT_NAME} CUDA_NVCC_FLAGS = " ${CUDA_NVCC_FLAGS})
 include(GATest)
 
-cuda_add_executable(ros2bag_kitti_bin  src/ros2bag_kitti_bin.cu)
+cuda_add_executable(ros2bag_kitti_bin src/ros2bag_kitti_bin.cu)
 ament_target_dependencies(ros2bag_kitti_bin ${dependencies})
 target_include_directories(ros2bag_kitti_bin PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_directories(ros2bag_kitti_bin PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(ros2bag_kitti_bin  ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core)
+target_link_libraries(ros2bag_kitti_bin ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core)
 
-cuda_add_executable(cloud_segmentation  src/cloud_segmentation.cpp)
+cuda_add_executable(cloud_segmentation src/cloud_segmentation.cu)
 ament_target_dependencies(cloud_segmentation ${dependencies})
 target_include_directories(cloud_segmentation PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_directories(cloud_segmentation PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(cloud_segmentation  ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core)
+target_link_libraries(cloud_segmentation ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core)
 
 install(TARGETS ros2bag_kitti_bin
-                cloud_segmentation
+        cloud_segmentation
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

@@ -1,0 +1,4 @@
+source;share/vox_nav_cupoch_experimental/local_setup.bash
+source;share/vox_nav_cupoch_experimental/local_setup.dsv
+source;share/vox_nav_cupoch_experimental/local_setup.sh
+source;share/vox_nav_cupoch_experimental/local_setup.zsh
