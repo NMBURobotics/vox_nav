@@ -15,382 +15,386 @@
 #include "vox_nav_planning/plugins/elevation_planner.hpp"
 #include <pluginlib/class_list_macros.hpp>
 
-#include <string>
 #include <memory>
-#include <vector>
 #include <random>
+#include <string>
+#include <vector>
 
-namespace vox_nav_planning
-{
+namespace vox_nav_planning {
 
-  ElevationPlanner::ElevationPlanner()
-  {
-  }
+ElevationPlanner::ElevationPlanner() {}
 
-  ElevationPlanner::~ElevationPlanner()
-  {
-  }
+ElevationPlanner::~ElevationPlanner() {}
 
-  void ElevationPlanner::initialize(
-    rclcpp::Node * parent,
-    const std::string & plugin_name)
-  {
-    is_map_ready_ = false;
-    se2_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
-    z_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
-    elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
+void ElevationPlanner::initialize(rclcpp::Node *parent,
+                                  const std::string &plugin_name) {
+  is_map_ready_ = false;
+  se2_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
+  z_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
+  elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
       new pcl::PointCloud<pcl::PointSurfel>);
 
-    // declare only planner specific parameters here
-    // common parameters are declared in server
-    parent->declare_parameter(plugin_name + ".se2_space", "REEDS");
-    parent->declare_parameter(plugin_name + ".rho", 1.5);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
+  // declare only planner specific parameters here
+  // common parameters are declared in server
+  parent->declare_parameter(plugin_name + ".se2_space", "REEDS");
+  parent->declare_parameter(plugin_name + ".rho", 1.5);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
+  parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
 
-    parent->get_parameter("planner_name", planner_name_);
-    parent->get_parameter("planner_timeout", planner_timeout_);
-    parent->get_parameter("interpolation_parameter", interpolation_parameter_);
-    parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
-    parent->get_parameter(plugin_name + ".se2_space", selected_se2_space_name_);
-    parent->get_parameter(plugin_name + ".rho", rho_);
+  parent->get_parameter("planner_name", planner_name_);
+  parent->get_parameter("planner_timeout", planner_timeout_);
+  parent->get_parameter("interpolation_parameter", interpolation_parameter_);
+  parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
+  parent->get_parameter(plugin_name + ".se2_space", selected_se2_space_name_);
+  parent->get_parameter(plugin_name + ".rho", rho_);
 
-    se2_bounds_->setLow(
-      0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
-    se2_bounds_->setHigh(
-      0, parent->get_parameter(plugin_name + ".state_space_boundries.maxx").as_double());
-    se2_bounds_->setLow(
-      1, parent->get_parameter(plugin_name + ".state_space_boundries.miny").as_double());
-    se2_bounds_->setHigh(
-      1, parent->get_parameter(plugin_name + ".state_space_boundries.maxy").as_double());
-    z_bounds_->setLow(
-      0, parent->get_parameter(plugin_name + ".state_space_boundries.minz").as_double());
-    z_bounds_->setHigh(
-      0, parent->get_parameter(plugin_name + ".state_space_boundries.maxz").as_double());
+  se2_bounds_->setLow(
+      0, parent->get_parameter(plugin_name + ".state_space_boundries.minx")
+             .as_double());
+  se2_bounds_->setHigh(
+      0, parent->get_parameter(plugin_name + ".state_space_boundries.maxx")
+             .as_double());
+  se2_bounds_->setLow(
+      1, parent->get_parameter(plugin_name + ".state_space_boundries.miny")
+             .as_double());
+  se2_bounds_->setHigh(
+      1, parent->get_parameter(plugin_name + ".state_space_boundries.maxy")
+             .as_double());
+  z_bounds_->setLow(
+      0, parent->get_parameter(plugin_name + ".state_space_boundries.minz")
+             .as_double());
+  z_bounds_->setHigh(
+      0, parent->get_parameter(plugin_name + ".state_space_boundries.maxz")
+             .as_double());
 
-    if (selected_se2_space_name_ == "SE2") {
-      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::SE2;
-    } else if (selected_se2_space_name_ == "DUBINS") {
-      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::DUBINS;
-    } else {
-      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::REDDSSHEEP;
-    }
+  if (selected_se2_space_name_ == "SE2") {
+    se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::SE2;
+  } else if (selected_se2_space_name_ == "DUBINS") {
+    se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::DUBINS;
+  } else {
+    se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::REDDSSHEEP;
+  }
 
-    typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
-    CollisionGeometryPtr_t robot_body_box(new fcl::Box(
-        parent->get_parameter("robot_body_dimens.x").as_double(),
-        parent->get_parameter("robot_body_dimens.y").as_double(),
-        parent->get_parameter("robot_body_dimens.z").as_double()));
+  typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
+  CollisionGeometryPtr_t robot_body_box(
+      new fcl::Box(parent->get_parameter("robot_body_dimens.x").as_double(),
+                   parent->get_parameter("robot_body_dimens.y").as_double(),
+                   parent->get_parameter("robot_body_dimens.z").as_double()));
 
-    CollisionGeometryPtr_t robot_body_box_minimal(new fcl::Box(
-        parent->get_parameter("robot_body_dimens.x").as_double() / 4.0,
-        parent->get_parameter("robot_body_dimens.y").as_double() / 4.0,
-        parent->get_parameter("robot_body_dimens.z").as_double()));
+  CollisionGeometryPtr_t robot_body_box_minimal(new fcl::Box(
+      parent->get_parameter("robot_body_dimens.x").as_double() / 4.0,
+      parent->get_parameter("robot_body_dimens.y").as_double() / 4.0,
+      parent->get_parameter("robot_body_dimens.z").as_double()));
 
-    fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
-    fcl::CollisionObject robot_body_box_minimal_object(robot_body_box_minimal, fcl::Transform3f());
+  fcl::CollisionObject robot_body_box_object(robot_body_box,
+                                             fcl::Transform3f());
+  fcl::CollisionObject robot_body_box_minimal_object(robot_body_box_minimal,
+                                                     fcl::Transform3f());
 
-    robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
-    robot_collision_object_minimal_ = std::make_shared<fcl::CollisionObject>(
-      robot_body_box_minimal_object);
+  robot_collision_object_ =
+      std::make_shared<fcl::CollisionObject>(robot_body_box_object);
+  robot_collision_object_minimal_ =
+      std::make_shared<fcl::CollisionObject>(robot_body_box_minimal_object);
 
-    elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_ / 4.0);
-    original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+  elevated_surfel_octomap_octree_ =
+      std::make_shared<octomap::OcTree>(octomap_voxel_size_ / 4.0);
+  original_octomap_octree_ =
+      std::make_shared<octomap::OcTree>(octomap_voxel_size_);
 
-    // service hooks for robot localization fromll service
-    get_maps_and_surfels_client_node_ = std::make_shared
-      <rclcpp::Node>("get_maps_and_surfels_client_node");
+  // service hooks for robot localization fromll service
+  get_maps_and_surfels_client_node_ =
+      std::make_shared<rclcpp::Node>("get_maps_and_surfels_client_node");
 
-    get_maps_and_surfels_client_ =
-      get_maps_and_surfels_client_node_->create_client
-      <vox_nav_msgs::srv::GetMapsAndSurfels>(
-      "get_maps_and_surfels");
+  get_maps_and_surfels_client_ =
+      get_maps_and_surfels_client_node_
+          ->create_client<vox_nav_msgs::srv::GetMapsAndSurfels>(
+              "get_maps_and_surfels");
 
-    RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
+  RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
 
-    setupMap();
+  setupMap();
 
-    // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
-    state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
-      se2_space_type_,
-      elevated_surfel_poses_msg_,
-      rho_ /*only valid for duins or reeds*/,
-      false /*only valid for dubins*/);
+  // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
+  state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
+      se2_space_type_, elevated_surfel_poses_msg_,
+      rho_ /*only valid for duins or reeds*/, false /*only valid for dubins*/);
 
-    state_space_->as<ompl::base::ElevationStateSpace>()->setBounds(
-      *se2_bounds_,
-      *z_bounds_);
+  state_space_->as<ompl::base::ElevationStateSpace>()->setBounds(*se2_bounds_,
+                                                                 *z_bounds_);
 
-    simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
-    simple_setup_->setOptimizationObjective(getOptimizationObjective());
-    simple_setup_->setStateValidityChecker(
+  simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
+
+  ompl::base::OptimizationObjectivePtr length_objective(
+      new ompl::base::PathLengthOptimizationObjective(
+          simple_setup_->getSpaceInformation()));
+
+  // simple_setup_->setOptimizationObjective(getOptimizationObjective());
+  // simple_setup_->setOptimizationObjective(length_objective);
+
+  simple_setup_->setStateValidityChecker(
       std::bind(&ElevationPlanner::isStateValid, this, std::placeholders::_1));
+}
+
+std::vector<geometry_msgs::msg::PoseStamped>
+ElevationPlanner::createPlan(const geometry_msgs::msg::PoseStamped &start,
+                             const geometry_msgs::msg::PoseStamped &goal) {
+  if (!is_map_ready_) {
+    RCLCPP_WARN(logger_,
+                "A valid Octomap has not been receievd yet, Try later again.");
+    return std::vector<geometry_msgs::msg::PoseStamped>();
+  }
+  // set the start and goal states
+  double start_yaw, goal_yaw, nan;
+  vox_nav_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan,
+                                             start_yaw);
+  vox_nav_utilities::getRPYfromMsgQuaternion(goal.pose.orientation, nan, nan,
+                                             goal_yaw);
+
+  ompl::base::ScopedState<ompl::base::ElevationStateSpace> se3_start(
+      state_space_),
+      se3_goal(state_space_);
+
+  vox_nav_utilities::determineValidNearestGoalStart(
+      nearest_elevated_surfel_to_start_, nearest_elevated_surfel_to_goal_,
+      start, goal, elevated_surfel_cloud_);
+
+  nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
+  nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
+
+  se3_start->setSE2(nearest_elevated_surfel_to_start_.pose.position.x,
+                    nearest_elevated_surfel_to_start_.pose.position.y,
+                    start_yaw);
+  se3_start->setZ(nearest_elevated_surfel_to_start_.pose.position.z);
+
+  se3_goal->setSE2(nearest_elevated_surfel_to_goal_.pose.position.x,
+                   nearest_elevated_surfel_to_goal_.pose.position.y, goal_yaw);
+  se3_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
+
+  simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
+
+  auto si = simple_setup_->getSpaceInformation();
+  // create a planner for the defined space
+  ompl::base::PlannerPtr planner;
+  vox_nav_utilities::initializeSelectedPlanner(planner, planner_name_, si,
+                                               logger_);
+
+  // si->setValidStateSamplerAllocator(std::bind(
+  //     &ElevationPlanner::allocValidStateSampler, this,
+  //     std::placeholders::_1));
+
+  simple_setup_->setPlanner(planner);
+  simple_setup_->setup();
+  // simple_setup_->print(std::cout);
+
+  // attempt to solve the problem within one second of planning time
+  ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
+  std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
+
+  if (solved) {
+    ompl::geometric::PathGeometric solution_path =
+        simple_setup_->getSolutionPath();
+    ompl::geometric::PathSimplifier *path_simlifier =
+        new ompl::geometric::PathSimplifier(si);
+    solution_path.interpolate(interpolation_parameter_);
+    path_simlifier->smoothBSpline(solution_path, 1, 0.1);
+
+    for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount();
+         path_idx++) {
+      const auto *cstate =
+          solution_path.getState(path_idx)
+              ->as<ompl::base::ElevationStateSpace::StateType>();
+      // cast the abstract state type to the type we expect
+      const auto *se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+      // extract the second component of the state and cast it to what we expect
+      const auto *z =
+          cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      tf2::Quaternion this_pose_quat;
+      this_pose_quat.setRPY(0, 0, se2->getYaw());
+      geometry_msgs::msg::PoseStamped pose;
+      pose.header.frame_id = start.header.frame_id;
+      pose.header.stamp = rclcpp::Clock().now();
+      pose.pose.position.x = se2->getX();
+      pose.pose.position.y = se2->getY();
+      pose.pose.position.z = z->values[0];
+      pose.pose.orientation.x = this_pose_quat.getX();
+      pose.pose.orientation.y = this_pose_quat.getY();
+      pose.pose.orientation.z = this_pose_quat.getZ();
+      pose.pose.orientation.w = this_pose_quat.getW();
+      plan_poses.push_back(pose);
+    }
+
+    RCLCPP_INFO(logger_, "Found A plan with %i poses", plan_poses.size());
+  } else {
+    RCLCPP_WARN(logger_, "No solution for requested path planning !");
   }
 
-  std::vector<geometry_msgs::msg::PoseStamped> ElevationPlanner::createPlan(
-    const geometry_msgs::msg::PoseStamped & start,
-    const geometry_msgs::msg::PoseStamped & goal)
-  {
-    if (!is_map_ready_) {
-      RCLCPP_WARN(
-        logger_, "A valid Octomap has not been receievd yet, Try later again."
-      );
-      return std::vector<geometry_msgs::msg::PoseStamped>();
-    }
-    // set the start and goal states
-    double start_yaw, goal_yaw, nan;
-    vox_nav_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan, start_yaw);
-    vox_nav_utilities::getRPYfromMsgQuaternion(goal.pose.orientation, nan, nan, goal_yaw);
+  simple_setup_->clear();
+  return plan_poses;
+}
 
-    ompl::base::ScopedState<ompl::base::ElevationStateSpace>
-    se3_start(state_space_),
-    se3_goal(state_space_);
+bool ElevationPlanner::isStateValid(const ompl::base::State *state) {
+  const auto *cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
+  // cast the abstract state type to the type we expect
+  const auto *se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+  // extract the second component of the state and cast it to what we expect
+  const auto *z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+  fcl::CollisionRequest requestType(1, false, 1, false);
+  // check validity of state Fdefined by pos & rot
+  fcl::Vec3f translation(se2->getX(), se2->getY(), z->values[0]);
+  tf2::Quaternion myQuaternion;
+  myQuaternion.setRPY(0, 0, se2->getYaw());
+  fcl::Quaternion3f rotation(myQuaternion.getX(), myQuaternion.getY(),
+                             myQuaternion.getZ(), myQuaternion.getW());
 
-    vox_nav_utilities::determineValidNearestGoalStart(
-      nearest_elevated_surfel_to_start_,
-      nearest_elevated_surfel_to_goal_,
-      start,
-      goal,
-      elevated_surfel_cloud_);
+  robot_collision_object_->setTransform(rotation, translation);
+  robot_collision_object_minimal_->setTransform(rotation, translation);
 
-    nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
-    nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
+  fcl::CollisionResult collisionWithSurfelsResult, collisionWithFullMapResult;
 
-    se3_start->setSE2(
-      nearest_elevated_surfel_to_start_.pose.position.x,
-      nearest_elevated_surfel_to_start_.pose.position.y, start_yaw);
-    se3_start->setZ(nearest_elevated_surfel_to_start_.pose.position.z);
+  fcl::collide(robot_collision_object_minimal_.get(),
+               elevated_surfels_collision_object_.get(), requestType,
+               collisionWithSurfelsResult);
 
-    se3_goal->setSE2(
-      nearest_elevated_surfel_to_goal_.pose.position.x,
-      nearest_elevated_surfel_to_goal_.pose.position.y, goal_yaw);
-    se3_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
+  fcl::collide(robot_collision_object_.get(),
+               original_octomap_collision_object_.get(), requestType,
+               collisionWithFullMapResult);
 
-    simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
+  return collisionWithSurfelsResult.isCollision() &&
+         !collisionWithFullMapResult.isCollision();
+}
 
-    auto si = simple_setup_->getSpaceInformation();
-    // create a planner for the defined space
-    ompl::base::PlannerPtr planner;
-    vox_nav_utilities::initializeSelectedPlanner(
-      planner,
-      planner_name_,
-      si,
-      logger_);
+void ElevationPlanner::setupMap() {
+  const std::lock_guard<std::mutex> lock(octomap_mutex_);
 
-    si->setValidStateSamplerAllocator(
-      std::bind(
-        &ElevationPlanner::
-        allocValidStateSampler, this, std::placeholders::_1));
+  while (!is_map_ready_ && rclcpp::ok()) {
 
-    simple_setup_->setPlanner(planner);
-    simple_setup_->setup();
-    //simple_setup_->print(std::cout);
+    auto request =
+        std::make_shared<vox_nav_msgs::srv::GetMapsAndSurfels::Request>();
 
-    // attempt to solve the problem within one second of planning time
-    ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
-    std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
-
-    if (solved) {
-      ompl::geometric::PathGeometric solution_path = simple_setup_->getSolutionPath();
-      ompl::geometric::PathSimplifier * path_simlifier = new ompl::geometric::PathSimplifier(si);
-      solution_path.interpolate(interpolation_parameter_);
-      path_simlifier->smoothBSpline(solution_path, 1, 0.1);
-
-      for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount(); path_idx++) {
-        const auto * cstate =
-          solution_path.getState(path_idx)->as<ompl::base::ElevationStateSpace::StateType>();
-        // cast the abstract state type to the type we expect
-        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        // extract the second component of the state and cast it to what we expect
-        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-        tf2::Quaternion this_pose_quat;
-        this_pose_quat.setRPY(0, 0, se2->getYaw());
-        geometry_msgs::msg::PoseStamped pose;
-        pose.header.frame_id = start.header.frame_id;
-        pose.header.stamp = rclcpp::Clock().now();
-        pose.pose.position.x = se2->getX();
-        pose.pose.position.y = se2->getY();
-        pose.pose.position.z = z->values[0];
-        pose.pose.orientation.x = this_pose_quat.getX();
-        pose.pose.orientation.y = this_pose_quat.getY();
-        pose.pose.orientation.z = this_pose_quat.getZ();
-        pose.pose.orientation.w = this_pose_quat.getW();
-        plan_poses.push_back(pose);
+    while (!get_maps_and_surfels_client_->wait_for_service(
+        std::chrono::seconds(1))) {
+      if (!rclcpp::ok()) {
+        RCLCPP_ERROR(logger_, "Interrupted while waiting for the "
+                              "get_maps_and_surfels service. Exiting");
+        return;
       }
+      RCLCPP_INFO(logger_, "get_maps_and_surfels service not available, "
+                           "waiting and trying again");
+    }
 
-      RCLCPP_INFO(
-        logger_, "Found A plan with %i poses", plan_poses.size());
+    auto result_future =
+        get_maps_and_surfels_client_->async_send_request(request);
+    if (rclcpp::spin_until_future_complete(get_maps_and_surfels_client_node_,
+                                           result_future) !=
+        rclcpp::FutureReturnCode::SUCCESS) {
+      RCLCPP_ERROR(logger_, "/get_maps_and_surfels service call failed");
+    }
+    auto response = result_future.get();
+
+    if (response->is_valid) {
+      is_map_ready_ = true;
     } else {
-      RCLCPP_WARN(
-        logger_, "No solution for requested path planning !");
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+      RCLCPP_INFO(
+          logger_,
+          "Waiting for GetMapsAndSurfels service to provide correct maps.");
+      continue;
     }
 
-    simple_setup_->clear();
-    return plan_poses;
-  }
+    auto original_octomap_octree = dynamic_cast<octomap::OcTree *>(
+        octomap_msgs::fullMsgToMap(response->original_octomap));
+    original_octomap_octree_ =
+        std::make_shared<octomap::OcTree>(*original_octomap_octree);
 
-  bool ElevationPlanner::isStateValid(const ompl::base::State * state)
-  {
-    const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
-    // cast the abstract state type to the type we expect
-    const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-    // extract the second component of the state and cast it to what we expect
-    const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    fcl::CollisionRequest requestType(1, false, 1, false);
-    // check validity of state Fdefined by pos & rot
-    fcl::Vec3f translation(se2->getX(), se2->getY(), z->values[0]);
-    tf2::Quaternion myQuaternion;
-    myQuaternion.setRPY(0, 0, se2->getYaw());
-    fcl::Quaternion3f rotation(
-      myQuaternion.getX(), myQuaternion.getY(),
-      myQuaternion.getZ(), myQuaternion.getW());
+    auto elevated_surfel_octomap_octree = dynamic_cast<octomap::OcTree *>(
+        octomap_msgs::fullMsgToMap(response->elevated_surfel_octomap));
+    elevated_surfel_octomap_octree_ =
+        std::make_shared<octomap::OcTree>(*elevated_surfel_octomap_octree);
 
-    robot_collision_object_->setTransform(rotation, translation);
-    robot_collision_object_minimal_->setTransform(rotation, translation);
+    delete original_octomap_octree;
+    delete elevated_surfel_octomap_octree;
 
-    fcl::CollisionResult collisionWithSurfelsResult, collisionWithFullMapResult;
-
-    fcl::collide(
-      robot_collision_object_minimal_.get(),
-      elevated_surfels_collision_object_.get(), requestType, collisionWithSurfelsResult);
-
-    fcl::collide(
-      robot_collision_object_.get(),
-      original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
-
-    return collisionWithSurfelsResult.isCollision() && !collisionWithFullMapResult.isCollision();
-  }
-
-  void ElevationPlanner::setupMap()
-  {
-    const std::lock_guard<std::mutex> lock(octomap_mutex_);
-
-    while (!is_map_ready_ && rclcpp::ok()) {
-
-      auto request = std::make_shared<vox_nav_msgs::srv::GetMapsAndSurfels::Request>();
-
-      while (!get_maps_and_surfels_client_->wait_for_service(std::chrono::seconds(1))) {
-        if (!rclcpp::ok()) {
-          RCLCPP_ERROR(
-            logger_,
-            "Interrupted while waiting for the get_maps_and_surfels service. Exiting");
-          return;
-        }
-        RCLCPP_INFO(
-          logger_,
-          "get_maps_and_surfels service not available, waiting and trying again");
-      }
-
-      auto result_future = get_maps_and_surfels_client_->async_send_request(request);
-      if (rclcpp::spin_until_future_complete(
-          get_maps_and_surfels_client_node_,
-          result_future) !=
-        rclcpp::FutureReturnCode::SUCCESS)
-      {
-        RCLCPP_ERROR(logger_, "/get_maps_and_surfels service call failed");
-      }
-      auto response = result_future.get();
-
-      if (response->is_valid) {
-        is_map_ready_ = true;
-      } else {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        RCLCPP_INFO(
-          logger_, "Waiting for GetMapsAndSurfels service to provide correct maps.");
-        continue;
-      }
-
-      auto original_octomap_octree =
-        dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(response->original_octomap));
-      original_octomap_octree_ = std::make_shared<octomap::OcTree>(*original_octomap_octree);
-
-      auto elevated_surfel_octomap_octree =
-        dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(
-          response->elevated_surfel_octomap));
-      elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(
-        *elevated_surfel_octomap_octree);
-
-      delete original_octomap_octree;
-      delete elevated_surfel_octomap_octree;
-
-      auto elevated_surfels_fcl_octree =
+    auto elevated_surfels_fcl_octree =
         std::make_shared<fcl::OcTree>(elevated_surfel_octomap_octree_);
-      elevated_surfels_collision_object_ = std::make_shared<fcl::CollisionObject>(
+    elevated_surfels_collision_object_ = std::make_shared<fcl::CollisionObject>(
         std::shared_ptr<fcl::CollisionGeometry>(elevated_surfels_fcl_octree));
 
-      auto original_octomap_fcl_octree = std::make_shared<fcl::OcTree>(original_octomap_octree_);
-      original_octomap_collision_object_ = std::make_shared<fcl::CollisionObject>(
+    auto original_octomap_fcl_octree =
+        std::make_shared<fcl::OcTree>(original_octomap_octree_);
+    original_octomap_collision_object_ = std::make_shared<fcl::CollisionObject>(
         std::shared_ptr<fcl::CollisionGeometry>(original_octomap_fcl_octree));
 
-      elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>(
-        response->elevated_surfel_poses);
-      for (auto && i : elevated_surfel_poses_msg_->poses) {
-        pcl::PointSurfel surfel;
-        surfel.x = i.position.x;
-        surfel.y = i.position.y;
-        surfel.z = i.position.z;
-        double r, p, y;
-        vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
-        surfel.normal_x = r;
-        surfel.normal_y = p;
-        surfel.normal_z = y;
-        elevated_surfel_cloud_->points.push_back(surfel);
-      }
-
-      RCLCPP_INFO(
-        logger_,
-        "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
-        "octomap for state validity (aka collision check)", original_octomap_octree_->size());
-
-      RCLCPP_INFO(
-        logger_,
-        "Recieved a valid Octomap which represents Elevated surfels with %d nodes,"
-        " A FCL collision tree will be created from this "
-        "octomap for state validity (aka collision check)",
-        elevated_surfel_octomap_octree_->size());
-
+    elevated_surfel_poses_msg_ =
+        std::make_shared<geometry_msgs::msg::PoseArray>(
+            response->elevated_surfel_poses);
+    for (auto &&i : elevated_surfel_poses_msg_->poses) {
+      pcl::PointSurfel surfel;
+      surfel.x = i.position.x;
+      surfel.y = i.position.y;
+      surfel.z = i.position.z;
+      double r, p, y;
+      vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
+      surfel.normal_x = r;
+      surfel.normal_y = p;
+      surfel.normal_z = y;
+      elevated_surfel_cloud_->points.push_back(surfel);
     }
-  }
 
-  ompl::base::OptimizationObjectivePtr ElevationPlanner::getOptimizationObjective()
-  {
-    // select a optimizatio objective
-    ompl::base::OptimizationObjectivePtr length_objective(
-      new ompl::base::PathLengthOptimizationObjective(simple_setup_->getSpaceInformation()));
-    ompl::base::OptimizationObjectivePtr octocost_objective(
+    RCLCPP_INFO(logger_,
+                "Recieved a valid Octomap with %d nodes, A FCL collision tree "
+                "will be created from this "
+                "octomap for state validity (aka collision check)",
+                original_octomap_octree_->size());
+
+    RCLCPP_INFO(logger_,
+                "Recieved a valid Octomap which represents Elevated surfels "
+                "with %d nodes,"
+                " A FCL collision tree will be created from this "
+                "octomap for state validity (aka collision check)",
+                elevated_surfel_octomap_octree_->size());
+  }
+}
+
+ompl::base::OptimizationObjectivePtr
+ElevationPlanner::getOptimizationObjective() {
+  // select a optimizatio objective
+  ompl::base::OptimizationObjectivePtr length_objective(
+      new ompl::base::PathLengthOptimizationObjective(
+          simple_setup_->getSpaceInformation()));
+  ompl::base::OptimizationObjectivePtr octocost_objective(
       new ompl::base::OctoCostOptimizationObjective(
-        simple_setup_->getSpaceInformation(), elevated_surfel_octomap_octree_));
+          simple_setup_->getSpaceInformation(),
+          elevated_surfel_octomap_octree_));
 
-    ompl::base::MultiOptimizationObjective * multi_optimization =
-      new ompl::base::MultiOptimizationObjective(simple_setup_->getSpaceInformation());
-    multi_optimization->addObjective(length_objective, 1.0);
-    multi_optimization->addObjective(octocost_objective, 1.0);
+  ompl::base::MultiOptimizationObjective *multi_optimization =
+      new ompl::base::MultiOptimizationObjective(
+          simple_setup_->getSpaceInformation());
+  multi_optimization->addObjective(length_objective, 1.0);
+  multi_optimization->addObjective(octocost_objective, 1.0);
 
-    return ompl::base::OptimizationObjectivePtr(multi_optimization);
-  }
+  return ompl::base::OptimizationObjectivePtr(multi_optimization);
+}
 
-  ompl::base::ValidStateSamplerPtr ElevationPlanner::allocValidStateSampler(
-    const ompl::base::SpaceInformation * si)
-  {
-    auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
-      simple_setup_->getSpaceInformation(),
-      nearest_elevated_surfel_to_start_,
-      nearest_elevated_surfel_to_goal_,
-      elevated_surfel_poses_msg_);
-    return valid_sampler;
-  }
+ompl::base::ValidStateSamplerPtr ElevationPlanner::allocValidStateSampler(
+    const ompl::base::SpaceInformation *si) {
+  auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
+      simple_setup_->getSpaceInformation(), nearest_elevated_surfel_to_start_,
+      nearest_elevated_surfel_to_goal_, elevated_surfel_poses_msg_);
+  return valid_sampler;
+}
 
-  std::vector<geometry_msgs::msg::PoseStamped> ElevationPlanner::getOverlayedStartandGoal()
-  {
-    std::vector<geometry_msgs::msg::PoseStamped> start_pose_vector;
-    start_pose_vector.push_back(nearest_elevated_surfel_to_start_);
-    start_pose_vector.push_back(nearest_elevated_surfel_to_goal_);
-    return start_pose_vector;
-  }
-}  // namespace vox_nav_planning
+std::vector<geometry_msgs::msg::PoseStamped>
+ElevationPlanner::getOverlayedStartandGoal() {
+  std::vector<geometry_msgs::msg::PoseStamped> start_pose_vector;
+  start_pose_vector.push_back(nearest_elevated_surfel_to_start_);
+  start_pose_vector.push_back(nearest_elevated_surfel_to_goal_);
+  return start_pose_vector;
+}
+} // namespace vox_nav_planning
 
-PLUGINLIB_EXPORT_CLASS(vox_nav_planning::ElevationPlanner, vox_nav_planning::PlannerCore)
+PLUGINLIB_EXPORT_CLASS(vox_nav_planning::ElevationPlanner,
+                       vox_nav_planning::PlannerCore)

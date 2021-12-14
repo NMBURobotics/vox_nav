@@ -20,6 +20,6 @@ def generate_launch_description():
                                             ('odom', '/odometry/global'),
                                             ('imu', '/ouster/points/segmented')],
                                 parameters=[{'sequence_horizon': 2},
-                                            {'dt': 0.5},
+                                            {'dt': 0.1},
                                             {'sensor_height': 0.0}])
     ])

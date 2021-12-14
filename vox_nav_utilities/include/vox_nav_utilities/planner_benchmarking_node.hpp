@@ -17,17 +17,17 @@
 #pragma once
 
 // ROS
-#include <rclcpp/rclcpp.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <visualization_msgs/msg/marker_array.hpp>
 #include <nav_msgs/msg/path.hpp>
-#include <vox_nav_utilities/tf_helpers.hpp>
-#include <vox_nav_utilities/pcl_helpers.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <visualization_msgs/msg/marker_array.hpp>
 #include <vox_nav_utilities/elevation_state_space.hpp>
+#include <vox_nav_utilities/pcl_helpers.hpp>
+#include <vox_nav_utilities/tf_helpers.hpp>
 // PCL
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
@@ -37,273 +37,219 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 // OMPL GEOMETRIC
-#include <ompl/geometric/planners/fmt/BFMT.h>
-#include <ompl/geometric/planners/rrt/RRTstar.h>
-#include <ompl/geometric/planners/rrt/RRTsharp.h>
-#include <ompl/geometric/planners/rrt/InformedRRTstar.h>
-#include <ompl/geometric/planners/rrt/LBTRRT.h>
-#include <ompl/geometric/planners/rrt/TRRT.h>
-#include <ompl/geometric/planners/sst/SST.h>
-#include <ompl/geometric/planners/fmt/FMT.h>
-#include <ompl/geometric/planners/prm/SPARS.h>
-#include <ompl/geometric/planners/prm/SPARStwo.h>
-#include <ompl/geometric/planners/prm/PRMstar.h>
-#include <ompl/geometric/planners/prm/LazyPRMstar.h>
+#include <ompl/base/OptimizationObjective.h>
+#include <ompl/geometric/SimpleSetup.h>
 #include <ompl/geometric/planners/AnytimePathShortening.h>
 #include <ompl/geometric/planners/cforest/CForest.h>
-#include <ompl/geometric/planners/informedtrees/BITstar.h>
+#include <ompl/geometric/planners/fmt/BFMT.h>
+#include <ompl/geometric/planners/fmt/FMT.h>
 #include <ompl/geometric/planners/informedtrees/ABITstar.h>
 #include <ompl/geometric/planners/informedtrees/AITstar.h>
-#include <ompl/geometric/SimpleSetup.h>
-#include <ompl/base/OptimizationObjective.h>
+#include <ompl/geometric/planners/informedtrees/BITstar.h>
+#include <ompl/geometric/planners/prm/LazyPRMstar.h>
+#include <ompl/geometric/planners/prm/PRMstar.h>
+#include <ompl/geometric/planners/prm/SPARS.h>
+#include <ompl/geometric/planners/prm/SPARStwo.h>
+#include <ompl/geometric/planners/rrt/InformedRRTstar.h>
+#include <ompl/geometric/planners/rrt/LBTRRT.h>
+#include <ompl/geometric/planners/rrt/RRTsharp.h>
+#include <ompl/geometric/planners/rrt/RRTstar.h>
+#include <ompl/geometric/planners/rrt/TRRT.h>
+#include <ompl/geometric/planners/sst/SST.h>
 // OMPL BASE
-#include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
 #include <ompl/base/OptimizationObjective.h>
-#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/base/objectives/MaximizeMinClearanceObjective.h>
-#include <ompl/base/samplers/MaximizeClearanceValidStateSampler.h>
+#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/base/objectives/StateCostIntegralObjective.h>
-#include <ompl/base/spaces/SE2StateSpace.h>
+#include <ompl/base/samplers/MaximizeClearanceValidStateSampler.h>
+#include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
 #include <ompl/base/spaces/DubinsStateSpace.h>
 #include <ompl/base/spaces/ReedsSheppStateSpace.h>
+#include <ompl/base/spaces/SE2StateSpace.h>
 #include <ompl/base/spaces/SE3StateSpace.h>
 #include <ompl/tools/benchmark/Benchmark.h>
 // OCTOMAP
-#include <octomap_msgs/msg/octomap.hpp>
-#include <octomap_msgs/conversions.h>
 #include <octomap/octomap.h>
 #include <octomap/octomap_utils.h>
+#include <octomap_msgs/conversions.h>
+#include <octomap_msgs/msg/octomap.hpp>
 // FCL
+#include <fcl/broadphase/broadphase.h>
+#include <fcl/collision.h>
 #include <fcl/config.h>
+#include <fcl/math/transform.h>
 #include <fcl/octree.h>
 #include <fcl/traversal/traversal_node_octree.h>
-#include <fcl/collision.h>
-#include <fcl/broadphase/broadphase.h>
-#include <fcl/math/transform.h>
 // STL
-#include <string>
 #include <iostream>
-#include <memory>
-#include <vector>
-#include <random>
 #include <map>
+#include <memory>
+#include <random>
+#include <string>
+#include <vector>
 
-namespace vox_nav_utilities
-{
+namespace vox_nav_utilities {
 
-  struct GroundRobotPose
-  {
-    double x;
-    double y;
-    double z;
-    double yaw;
-    GroundRobotPose()
-    : x(0.0),
-      y(0.0),
-      z(0.0),
-      yaw(0.0)
-    {}
-  };
+struct GroundRobotPose {
+  double x;
+  double y;
+  double z;
+  double yaw;
+  GroundRobotPose() : x(0.0), y(0.0), z(0.0), yaw(0.0) {}
+};
 
-  struct SEBounds
-  {
-    double minx;
-    double maxx;
-    double miny;
-    double maxy;
-    double minz;
-    double maxz;
-    double minyaw;
-    double maxyaw;
-    SEBounds()
-    : minx(0.0),
-      maxx(0.0),
-      miny(0.0),
-      maxy(0.0),
-      minz(0.0),
-      maxz(0.0),
-      minyaw(0.0),
-      maxyaw(0.0)
-    {}
-  };
+struct SEBounds {
+  double minx;
+  double maxx;
+  double miny;
+  double maxy;
+  double minz;
+  double maxz;
+  double minyaw;
+  double maxyaw;
+  SEBounds()
+      : minx(0.0), maxx(0.0), miny(0.0), maxy(0.0), minz(0.0), maxz(0.0),
+        minyaw(0.0), maxyaw(0.0) {}
+};
 
-  class PlannerBenchMarking : public rclcpp::Node
-  {
-  private:
-    std::string selected_state_space_; // se2 ? se3
-    SEBounds se_bounds_; // struct for keeping things clean
-    std::shared_ptr<ompl::base::RealVectorBounds> ompl_se_bounds_;
-    ompl::base::StateSpacePtr state_space_;
+class PlannerBenchMarking : public rclcpp::Node {
+private:
+  std::string selected_state_space_; // se2 ? se3
+  SEBounds se_bounds_;               // struct for keeping things clean
+  std::shared_ptr<ompl::base::RealVectorBounds> ompl_se_bounds_;
+  ompl::base::StateSpacePtr state_space_;
 
-    ompl::base::SpaceInformationPtr si;
+  ompl::base::SpaceInformationPtr si;
 
-    std::vector<std::string> selected_planners_;
-    std::string results_output_dir_;
-    std::string results_file_regex_;
-    double octomap_voxel_size_;
-    double planner_timeout_;
-    // Only used for REEDS or DUBINS
-    double min_turning_radius_;
-    double goal_tolerance_;
-    double min_euclidean_dist_start_to_goal_;
-    int interpolation_parameter_;
-    int batch_size_;
-    int epochs_;
-    int max_memory_;
-    bool publish_a_sample_bencmark_;
-    std::string sample_bencmark_plans_topic_;
+  std::vector<std::string> selected_planners_;
+  std::string results_output_dir_;
+  std::string results_file_regex_;
+  double octomap_voxel_size_;
+  double planner_timeout_;
+  // Only used for REEDS or DUBINS
+  double min_turning_radius_;
+  double goal_tolerance_;
+  double min_euclidean_dist_start_to_goal_;
+  int interpolation_parameter_;
+  int batch_size_;
+  int epochs_;
+  int max_memory_;
+  bool publish_a_sample_bencmark_;
+  std::string sample_bencmark_plans_topic_;
 
+  GroundRobotPose start_;
+  GroundRobotPose goal_;
+  geometry_msgs::msg::Vector3 robot_body_dimensions_;
 
-    GroundRobotPose start_;
-    GroundRobotPose goal_;
-    geometry_msgs::msg::Vector3 robot_body_dimensions_;
+  std::shared_ptr<octomap::OcTree> original_octomap_octree_;
+  std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
+  std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
+  // Publishers for the path
 
-    std::shared_ptr<octomap::OcTree> original_octomap_octree_;
-    std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
-    std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-    std::shared_ptr<fcl::CollisionObject> robot_collision_object_minimal_;
-    // Publishers for the path
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+      plan_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr
+      start_goal_poses_publisher_;
 
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr start_goal_poses_publisher_;
+  rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr
+      get_maps_and_surfels_client_;
+  rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
 
-    // Surfels centers are elevated by node_elevation_distance_, and are stored in this
-    // octomap, this maps is used by planner to sample states that are
-    // strictly laying on ground but not touching. So it constrains the path to be on ground
-    // while it can elevate thorogh ramps or slopes
-    std::shared_ptr<octomap::OcTree> elevated_surfel_octomap_octree_;
-    // it is also required to have orientation information of surfels, they are kept in
-    // elevated_surfel_poses_msg_
-    geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
-    pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
-    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
-    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
-    std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
-    ompl::base::OptimizationObjectivePtr octocost_optimization_;
+  std::mutex octomap_mutex_;
 
-    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
-    rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
+public:
+  volatile bool is_map_ready_;
+  /**
+   * @brief Construct a new Planner Bench Marking object
+   *
+   */
+  PlannerBenchMarking();
 
-    std::mutex octomap_mutex_;
+  /**
+   * @brief Destroy the Planner Bench Marking object
+   *
+   */
+  ~PlannerBenchMarking();
 
-  public:
-    volatile bool is_map_ready_;
-    /**
-    * @brief Construct a new Planner Bench Marking object
-    *
-    */
-    PlannerBenchMarking();
+  /**
+   * @brief perfrom actual benchmark and return a sample run
+   *
+   */
+  std::map<int, ompl::geometric::PathGeometric> doBenchMarking();
 
-    /**
-     * @brief Destroy the Planner Bench Marking object
-     *
-     */
-    ~PlannerBenchMarking();
+  /**
+   * @brief Callback to subscribe ang get octomap
+   *
+   * @param octomap
+   */
+  void setupMap();
 
-    /**
-     * @brief perfrom actual benchmark and return a sample run
-     *
-     */
-    std::map<int, ompl::geometric::PathGeometric> doBenchMarking();
+  /**
+   * @brief
+   *
+   * @param state
+   * @return true
+   * @return false
+   */
+  bool isStateValidSE2(const ompl::base::State *state);
 
-    /**
-    * @brief Callback to subscribe ang get octomap
-    *
-    * @param octomap
-    */
-    void setupMap();
+  /**
+   * @brief
+   *
+   * @param state
+   * @return true
+   * @return false
+   */
+  bool isStateValidSE3(const ompl::base::State *state);
 
-    /**
-    * @brief
-    *
-    * @param state
-    * @return true
-    * @return false
-    */
-    bool isStateValidSE2(const ompl::base::State * state);
+  /**
+   * @brief  make a plan with specified simple setup and planner
+   *
+   * @param planner
+   * @param si
+   * @return ompl::geometric::PathGeometric
+   */
+  ompl::geometric::PathGeometric
+  makeAPlan(const ompl::base::PlannerPtr &planner,
+            ompl::geometric::SimpleSetup &ss);
 
-    /**
-      * @brief
-      *
-      * @param state
-      * @return true
-      * @return false
-      */
-    bool isStateValidSE3(const ompl::base::State * state);
+  /**
+   * @brief publish sample plan from bencmarking as marker array into RVIZ
+   *
+   */
+  void publishSamplePlans(
+      std::map<int, ompl::geometric::PathGeometric> sample_paths);
 
-    /**
-     * @brief
-     *
-     * @param state
-     * @return true
-     * @return false
-     */
-    bool isStateValidElevation(const ompl::base::State * state);
+  /**
+   * @brief Get the Color By Index object
+   *
+   * @param index
+   * @return std_msgs::msg::ColorRGBA
+   */
+  std_msgs::msg::ColorRGBA getColorByIndex(int index);
 
+  /**
+   * @brief
+   *
+   * @param planner
+   * @param selected_planner_name
+   * @param si
+   */
+  void allocatePlannerbyName(ompl::base::PlannerPtr &planner,
+                             const std::string &selected_planner_name,
+                             const ompl::base::SpaceInformationPtr &si);
 
-    /**
-     * @brief  make a plan with specified simple setup and planner
-     *
-     * @param planner
-     * @param si
-     * @return ompl::geometric::PathGeometric
-     */
-    ompl::geometric::PathGeometric makeAPlan(
-      const ompl::base::PlannerPtr & planner,
-      ompl::geometric::SimpleSetup & ss);
+  /**
+   * @brief Get the Ranged Random object, return a random double in min max
+   * range
+   *
+   * @param min
+   * @param max
+   * @return double
+   */
+  double getRangedRandom(double min, double max);
 
-    /**
-     * @brief publish sample plan from bencmarking as marker array into RVIZ
-     *
-     */
-    void publishSamplePlans(std::map<int, ompl::geometric::PathGeometric> sample_paths);
+};
+} // namespace vox_nav_utilities
 
-    /**
-     * @brief Get the Color By Index object
-     *
-     * @param index
-     * @return std_msgs::msg::ColorRGBA
-     */
-    std_msgs::msg::ColorRGBA getColorByIndex(int index);
-
-    /**
-     * @brief
-     *
-     * @param planner
-     * @param selected_planner_name
-     * @param si
-     */
-    void allocatePlannerbyName(
-      ompl::base::PlannerPtr & planner,
-      const std::string & selected_planner_name,
-      const ompl::base::SpaceInformationPtr & si);
-
-    /**
-     * @brief Get the Ranged Random object, return a random double in min max range
-     *
-     * @param min
-     * @param max
-     * @return double
-     */
-    double getRangedRandom(double min, double max);
-    
-    /**
-     * @brief Get the Optimization Objective object
-     * 
-     * @return ompl::base::OptimizationObjectivePtr 
-     */
-    ompl::base::OptimizationObjectivePtr  getOptimizationObjective();
-    
-    /**
-     * @brief 
-     * 
-     * @param si 
-     * @return ompl::base::ValidStateSamplerPtr 
-     */
-    ompl::base::ValidStateSamplerPtr  allocValidStateSampler(
-      const ompl::base::SpaceInformation * notused);
-
-  };
-}  // namespace vox_nav_utilities
-
-#endif  // VOX_NAV_UTILITIES__PLANNER_BENCHMARKING_HPP_
+#endif // VOX_NAV_UTILITIES__PLANNER_BENCHMARKING_HPP_

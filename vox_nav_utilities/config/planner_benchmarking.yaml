@@ -1,20 +1,20 @@
 planner_benchmarking_rclcpp_node:
   ros__parameters:
-    planner_timeout: 15.0
-    interpolation_parameter: 20
+    planner_timeout: 5.0
+    interpolation_parameter: 50
     octomap_voxel_size: 0.2
-    selected_state_space: "ELEVATION" # "DUBINS","REEDS", "SE2", "SE3" ### PS. Use DUBINS OR REEDS for Ackermann
-    selected_planners: ["PRMstar","PRMstar"]
-                        #"InformedRRTstar", "BITstar", "ABITstar","AITstar", "LBTRRT",
-                        #"SST", "SPARS", "SPARStwo","FMT", "CForest","AnytimePathShortening"]
+    selected_state_space: "DUBINS" # "DUBINS","REEDS", "SE2", "SE3" ### PS. Use DUBINS OR REEDS for Ackermann
+    selected_planners: [ "PRMstar","LazyPRMstar", "RRTstar", "RRTsharp", "RRTXstatic",
+                         "InformedRRTstar", "BITstar", "ABITstar","AITstar", "LBTRRT",
+                         "SST", "SPARS", "SPARStwo","FMT", "CForest","AnytimePathShortening" ]
     min_turning_radius: 1.5
     state_space_boundries:
-      minx: -100.0
-      maxx: 100.0
-      miny: -100.0
-      maxy: 100.0
-      minz: -15.0
-      maxz: 15.0
+      minx: -40.0
+      maxx: 40.0
+      miny: -40.0
+      maxy: 40.0
+      minz: -5.0
+      maxz: 5.0
       minyaw: -3.14
       maxyaw: 3.14
     robot_body_dimens:
@@ -22,15 +22,15 @@ planner_benchmarking_rclcpp_node:
       y: 0.9
       z: 0.8
     start:
-      z: 3.5  #3.5
+      z: 1.5
     goal:
-      z: 3.5 #3.5
-    goal_tolerance: 0.8
-    min_euclidean_dist_start_to_goal: 100.0
-    batch_size: 2
+      z: 1.5
+    goal_tolerance: 0.2
+    min_euclidean_dist_start_to_goal: 25.0
+    batch_size: 1
     epochs: 1
     max_memory: 4096
-    results_output_dir: "/home/atas/test/"   
+    results_output_dir: "/home/atas/test/"
     results_file_regex: "non"
     publish_a_sample_bencmark: true
     sample_bencmark_plans_topic: "benchmark_plan"
