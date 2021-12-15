@@ -83,6 +83,10 @@ public:
     cupoch::utility::device_vector<Eigen::Vector3f>
     Vector3List2Eigen(ApproxMVBB::TypeDefsPoints::Vector3List corners);
 
+    void determineObjectMovements(std::shared_ptr<cupoch::geometry::PointCloud> a,
+                                  std::shared_ptr<cupoch::geometry::PointCloud> b,
+                                  std_msgs::msg::Header header);
+
 private:
     message_filters::Subscriber<sensor_msgs::msg::PointCloud2> cloud_subscriber_;
     message_filters::Subscriber<nav_msgs::msg::Odometry> odom_subscriber_;
@@ -94,7 +98,9 @@ private:
     double sensor_height_;
     bool recieved_first_;
 
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
+
     rclcpp::Time last_recieved_msg_stamp_;
 
     std::shared_ptr<cupoch::geometry::PointCloud> last_dynamic_pointcloud_cupoch_;

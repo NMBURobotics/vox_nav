@@ -36,8 +36,12 @@ CloudSegmentation::CloudSegmentation()
             &CloudSegmentation::cloudOdomCallback, this, std::placeholders::_1,
             std::placeholders::_2, std::placeholders::_3));
 
-    pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+    cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
             "merged", rclcpp::SystemDefaultsQoS());
+
+    marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+            "correspondings", rclcpp::SystemDefaultsQoS());
+
     last_odom_msg_ = std::make_shared<nav_msgs::msg::Odometry>();
     last_dynamic_pointcloud_cupoch_ = std::make_shared<cupoch::geometry::PointCloud>();
 
@@ -127,12 +131,13 @@ void CloudSegmentation::cloudOdomCallback(
     dynamic_points_cupoch->SetColors(colors);
 
     dynamic_points_cupoch->PaintUniformColor(
-            vox_nav_utilities::getColorByIndexEig(2));
+            vox_nav_utilities::getColorByIndexEig(10));
     static_points_cupoch->PaintUniformColor(
             vox_nav_utilities::getColorByIndexEig(1));
 
     rclcpp::Time crr_stamp = cloud->header.stamp;
     if ((crr_stamp - last_recieved_msg_stamp_).seconds() > dt_) {
+
         auto travel_dist =
                 Eigen::Vector3f(
                         odom->pose.pose.position.x - last_odom_msg_->pose.pose.position.x,
@@ -159,26 +164,102 @@ void CloudSegmentation::cloudOdomCallback(
         odom_T.block<3, 3>(0, 0) = rot;
         odom_T.block<3, 1>(0, 3) = trans;
 
-        auto last_pointcloud_cupoch =
-                last_dynamic_pointcloud_cupoch_->Transform(odom_T.inverse());
-        last_pointcloud_cupoch = last_dynamic_pointcloud_cupoch_->PaintUniformColor(
-                vox_nav_utilities::getColorByIndexEig(5));
+        last_dynamic_pointcloud_cupoch_->Transform(odom_T.inverse());
+        last_dynamic_pointcloud_cupoch_->PaintUniformColor(vox_nav_utilities::getColorByIndexEig(5));
 
         auto k =
-                *dynamic_points_cupoch + *static_points_cupoch + last_pointcloud_cupoch;
+                *dynamic_points_cupoch + *static_points_cupoch + *last_dynamic_pointcloud_cupoch_;
         auto k_ptr = std::make_shared<cupoch::geometry::PointCloud>(k);
         auto voxel_grid = cupoch::geometry::VoxelGrid::CreateFromPointCloud(k, 0.2);
+
+
+        determineObjectMovements(dynamic_points_cupoch, last_dynamic_pointcloud_cupoch_, cloud->header);
 
         sensor_msgs::msg::PointCloud2 denoised_cloud_msg;
         cupoch_conversions::cupochToRos(k_ptr, denoised_cloud_msg,
                                         cloud->header.frame_id);
         denoised_cloud_msg.header = cloud->header;
-        pub_->publish(denoised_cloud_msg);
+        cloud_pub_->publish(denoised_cloud_msg);
         last_recieved_msg_stamp_ = cloud->header.stamp;
         last_odom_msg_ = std::make_shared<nav_msgs::msg::Odometry>(*odom);
         last_dynamic_pointcloud_cupoch_ =
                 std::make_shared<cupoch::geometry::PointCloud>(*dynamic_points_cupoch);
     }
+}
+
+void CloudSegmentation::determineObjectMovements(std::shared_ptr<cupoch::geometry::PointCloud> a,
+                                                 std::shared_ptr<cupoch::geometry::PointCloud> b,
+                                                 std_msgs::msg::Header header) {
+
+    if (!a->points_.size() || !b->points_.size()) {
+        RCLCPP_INFO(get_logger(),
+                    "Passing this cycle of object movemnet as one of the cloud is empty, clouds have a: %d b: %d points",
+                    a->points_.size(), b->points_.size());
+        return;
+    }
+
+    // REMOVE THE NOISE
+    auto denoised_a = a->RemoveStatisticalOutliers(10, 0.1);
+    auto denoised_b = b->RemoveStatisticalOutliers(10, 0.1);
+    denoised_a = std::get<0>(denoised_a)->RemoveRadiusOutliers(2, 0.2);
+    denoised_b = std::get<0>(denoised_b)->RemoveRadiusOutliers(2, 0.2);
+    a = std::get<0>(denoised_a);
+    b = std::get<0>(denoised_b);
+
+    auto knn_search = cupoch::geometry::KDTreeSearchParamKNN(10);
+    a->EstimateNormals(knn_search);
+    b->EstimateNormals(knn_search);
+
+    auto a_feature = cupoch::registration::ComputeFPFHFeature(*a, knn_search);
+    auto b_feature = cupoch::registration::ComputeFPFHFeature(*b, knn_search);
+
+    cupoch::registration::FastGlobalRegistrationOption regist_option;
+    regist_option.maximum_correspondence_distance_ = 0.8;
+
+    cupoch::registration::RegistrationResult regist_result = cupoch::registration::FastGlobalRegistration(*a, *b,
+                                                                                                          *a_feature,
+                                                                                                          *b_feature,
+                                                                                                          regist_option);
+    thrust::host_vector<Eigen::Matrix<int, 2, 1>> corresponding_set = regist_result.GetCorrespondenceSet();
+
+    visualization_msgs::msg::MarkerArray marker_array;
+    visualization_msgs::msg::Marker marker;
+    marker.header = header;
+    marker.type = visualization_msgs::msg::Marker::LINE_LIST;
+    marker.action = visualization_msgs::msg::Marker::ADD;
+    marker.lifetime = rclcpp::Duration::from_seconds(0);
+    marker.scale.x = 0.8;
+    marker.scale.y = 0.2;
+    marker.scale.z = 0.2;
+    auto a_points = a->GetPoints();
+    auto b_points = b->GetPoints();
+
+    for (size_t i = 0; i < corresponding_set.size(); ++i) {
+        auto curr_set = corresponding_set[i];
+
+        geometry_msgs::msg::Point first_point, second_point;
+        first_point.x = a_points[curr_set(0, 0)].x();
+        first_point.y = a_points[curr_set(0, 0)].y();
+        first_point.z = a_points[curr_set(0, 0)].z();
+        second_point.x = b_points[curr_set(1, 0)].x();
+        second_point.y = b_points[curr_set(1, 0)].y();
+        second_point.z = b_points[curr_set(1, 0)].z();
+
+        marker.points.push_back(first_point);
+        marker.points.push_back(second_point);
+
+        std_msgs::msg::ColorRGBA color;
+        color.r = 1.0;
+        color.a = 1.0;
+
+        marker.colors.push_back(color);
+        marker.colors.push_back(color);
+    }
+
+    marker_array.markers.push_back(marker);
+
+    marker_pub_->publish(marker_array);
+
 }
 
 std::vector<geometry_msgs::msg::Point>
