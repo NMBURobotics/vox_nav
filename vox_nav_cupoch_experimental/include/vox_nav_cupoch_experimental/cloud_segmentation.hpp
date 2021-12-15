@@ -53,11 +53,6 @@ namespace bg = boost::geometry;
 class CloudSegmentation : public rclcpp::Node {
 
 public:
-    typedef std::tuple<sensor_msgs::msg::PointCloud2::SharedPtr,
-            nav_msgs::msg::Odometry::SharedPtr,
-            sensor_msgs::msg::PointCloud2::SharedPtr>
-            data_captute_t;
-
     CloudSegmentation();
 
     ~CloudSegmentation();
@@ -72,7 +67,7 @@ public:
     void
     cloudOdomCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud,
                       const nav_msgs::msg::Odometry::ConstSharedPtr &odom,
-                      const sensor_msgs::msg::PointCloud2::ConstSharedPtr &imu);
+                      const sensor_msgs::msg::PointCloud2::ConstSharedPtr &labels);
 
     std::vector<geometry_msgs::msg::Point>
     Vector3List2GeometryMsgs(ApproxMVBB::TypeDefsPoints::Vector3List corners);
