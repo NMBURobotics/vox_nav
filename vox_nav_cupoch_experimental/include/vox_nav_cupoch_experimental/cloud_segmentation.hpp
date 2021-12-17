@@ -85,6 +85,15 @@ public:
     const nav_msgs::msg::Odometry::SharedPtr b
   );
 
+  void clusterIndices2ClusterSet(
+    const cupoch::utility::device_vector<int> & clusters,
+    const thrust::host_vector<Eigen::Vector3f> & points,
+    std::map<int, thrust::host_vector<Eigen::Vector3f>> & cluster_set);
+
+  void clusterSet2CloudVector(
+    const std::map<int, thrust::host_vector<Eigen::Vector3f>> & cluster_set,
+    std::vector<std::shared_ptr<cupoch::geometry::PointCloud>> & cluster_vector);
+
 private:
   message_filters::Subscriber<sensor_msgs::msg::PointCloud2> cloud_subscriber_;
   message_filters::Subscriber<nav_msgs::msg::Odometry> odom_subscriber_;

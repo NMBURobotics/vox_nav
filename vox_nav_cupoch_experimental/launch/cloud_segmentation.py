@@ -15,11 +15,12 @@ def generate_launch_description():
                                 executable='cloud_segmentation',
                                 name='cloud_segmentation',
                                 output='screen',
-                                # prefix=['xterm -e gdb -ex run --args'],
+                                 prefix=['xterm -e gdb -ex run --args'],
+                                #prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no'],
                                 remappings=[('points', '/ouster/points/segmented'),
                                             ('odom', '/odometry/global'),
                                             ('imu', '/ouster/imu')],
                                 parameters=[{'sequence_horizon': 2},
-                                            {'dt': 0.1},
+                                            {'dt': 0.01},
                                             {'sensor_height': 0.0}])
     ])

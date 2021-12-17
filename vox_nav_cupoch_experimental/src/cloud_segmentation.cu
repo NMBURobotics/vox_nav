@@ -63,14 +63,26 @@ void CloudSegmentation::cloudOdomCallback(
     last_recieved_msg_stamp_ = cloud->header.stamp;
   }
 
-  cupoch::utility::device_vector<size_t> ground_points_indices, dynamic_points_indices, static_points_indices;
+  using std::chrono::duration;
+  using std::chrono::duration_cast;
+  using std::chrono::high_resolution_clock;
+  using std::chrono::milliseconds;
+  auto t1 = high_resolution_clock::now();
+
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr ground_points_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr dynamic_points_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr static_points_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
+  auto static_points_cupoch = std::make_shared<cupoch::geometry::PointCloud>();
+  auto dynamic_points_cupoch = std::make_shared<cupoch::geometry::PointCloud>();
+  thrust::host_vector<Eigen::Vector3f> static_points, static_colors;
+  thrust::host_vector<Eigen::Vector3f> dynamic_points, dynamic_colors;
 
-  thrust::host_vector<Eigen::Vector3f> points, colors;
   size_t label_counter = 0;
-  auto color = vox_nav_utilities::getColorByIndexEig(5);
+
+  auto green_color = vox_nav_utilities::getColorByIndexEig(1);
+  auto orange_color = vox_nav_utilities::getColorByIndexEig(5);
+  auto yellow_color = vox_nav_utilities::getColorByIndexEig(10);
+
   sensor_msgs::PointCloud2ConstIterator<float> iter_label(*cloud, "x");
   for (; (iter_label != iter_label.end()); ++iter_label)
   {
@@ -78,64 +90,45 @@ void CloudSegmentation::cloudOdomCallback(
     point.x = iter_label[0];
     point.y = iter_label[1];
     point.z = iter_label[2];
-    point.r = color.x();
-    point.g = color.y();
-    point.b = color.z();
 
-    points.push_back(Eigen::Vector3f(point.x, point.y, point.z));
-    colors.push_back(Eigen::Vector3f(point.r, point.g, point.b));
+    Eigen::Vector3f point_eig(point.x, point.y, point.z);
 
     int this_point_label = iter_label[3];
     if (this_point_label == 40) // ground point label
     {
-      ground_points_indices.push_back(label_counter);
       ground_points_pcl->points.push_back(point);
     }
     else if (this_point_label == 30 ||
              this_point_label == 10) // person/car point label
     {
-      dynamic_points_indices.push_back(label_counter);
       dynamic_points_pcl->points.push_back(point);
     }
     else // static obstacle point label
     {
-      static_points_indices.push_back(label_counter);
+      static_points.push_back(point_eig);
+      static_colors.push_back(green_color);
       static_points_pcl->points.push_back(point);
     }
 
     label_counter++;
   }
 
-  cupoch::geometry::PointCloud obstacle_cloud_cupoch;
-  obstacle_cloud_cupoch.SetPoints(points);
-  obstacle_cloud_cupoch.SetColors(colors);
-  auto static_points_cupoch =
-      obstacle_cloud_cupoch.SelectByIndex(static_points_indices, false);
-  auto ground_points_cupoch =
-      obstacle_cloud_cupoch.SelectByIndex(ground_points_indices, false);
-
   dynamic_points_pcl =
       vox_nav_utilities::remove_points_within_ground_plane_of_other_cloud<pcl::PointXYZRGB>(
           dynamic_points_pcl, ground_points_pcl, 0.4);
 
-  points.clear();
-  colors.clear();
   for (int i = 0; i < dynamic_points_pcl->points.size(); ++i)
   {
     auto p = dynamic_points_pcl->points[i];
-    points.push_back(Eigen::Vector3f(p.x, p.y, p.z));
-    auto c = vox_nav_utilities::getColorByIndexEig(5);
-    colors.push_back(Eigen::Vector3f(c.x(), c.y(), c.z()));
+    Eigen::Vector3f point_eig(p.x, p.y, p.z);
+    dynamic_points.push_back(point_eig);
+    dynamic_colors.push_back(yellow_color);
   }
 
-  auto dynamic_points_cupoch = std::make_shared<cupoch::geometry::PointCloud>();
-  dynamic_points_cupoch->SetPoints(points);
-  dynamic_points_cupoch->SetColors(colors);
-
-  dynamic_points_cupoch->PaintUniformColor(
-      vox_nav_utilities::getColorByIndexEig(10));
-  static_points_cupoch->PaintUniformColor(
-      vox_nav_utilities::getColorByIndexEig(1));
+  dynamic_points_cupoch->SetPoints(dynamic_points);
+  dynamic_points_cupoch->SetColors(dynamic_colors);
+  static_points_cupoch->SetPoints(static_points);
+  static_points_cupoch->SetColors(static_colors);
 
   Eigen::Matrix<float, 3, 1> min(-20, -20, -2);
   Eigen::Matrix<float, 3, 1> max(20, 20, 2);
@@ -143,19 +136,22 @@ void CloudSegmentation::cloudOdomCallback(
 
   dynamic_points_cupoch = dynamic_points_cupoch->Crop(bbx);
   static_points_cupoch = static_points_cupoch->Crop(bbx);
-
   dynamic_points_cupoch = dynamic_points_cupoch->VoxelDownSample(0.05);
   static_points_cupoch = static_points_cupoch->VoxelDownSample(0.05);
+
+  auto t2 = high_resolution_clock::now();
+  auto ms_int = duration_cast<milliseconds>(t2 - t1);
+  RCLCPP_INFO(get_logger(), "fuct take ms %d", ms_int.count());
 
   dynamic_points_cupoch = denoiseCupochCloud(dynamic_points_cupoch, static_points_cupoch, 0.5, 4);
 
   rclcpp::Time crr_stamp = cloud->header.stamp;
+
   if ((crr_stamp - last_recieved_msg_stamp_).seconds() > dt_)
   {
-
     auto odom_T = getTransfromfromConsecutiveOdoms(std::make_shared<nav_msgs::msg::Odometry>(*odom), last_odom_msg_);
     last_dynamic_pointcloud_cupoch_->Transform(odom_T.inverse());
-    last_dynamic_pointcloud_cupoch_->PaintUniformColor(vox_nav_utilities::getColorByIndexEig(5));
+    last_dynamic_pointcloud_cupoch_->PaintUniformColor(orange_color);
 
     auto static_and_dynamic_obstacle_cloud =
         *dynamic_points_cupoch + *static_points_cupoch + *last_dynamic_pointcloud_cupoch_;
@@ -185,12 +181,12 @@ void CloudSegmentation::determineObjectMovements(
 
   if (!a->points_.size() || !b->points_.size())
   {
-    RCLCPP_WARN(
-        get_logger(),
-        "One of the cloud is empty, clouds have a: %d b: %d points",
-        a->points_.size(), b->points_.size());
     return;
   }
+  RCLCPP_INFO(
+      get_logger(),
+      "Clouds have a: %d b: %d points",
+      a->points_.size(), b->points_.size());
 
   // REMOVE THE NOISE
   auto denoised_a = a->RemoveStatisticalOutliers(10, 0.1);
@@ -208,84 +204,14 @@ void CloudSegmentation::determineObjectMovements(
 
   std::map<int, thrust::host_vector<Eigen::Vector3f>> a_cluster_set, b_cluster_set;
 
-  for (int i = 0; i < a_clusters.size(); ++i)
-  {
-    if (a_clusters[i] < 0)
-    {
-      continue;
-    }
-    auto it = a_cluster_set.find(a_clusters[i]);
-    if (it != a_cluster_set.end())
-    {
-      it->second.push_back(a_points[i]);
-    }
-    else
-    {
-      a_cluster_set.insert(
-          std::pair<int, thrust::host_vector<Eigen::Vector3f>>(
-              a_clusters[i],
-              thrust::host_vector<Eigen::Vector3f>()));
-    }
-  }
-
-  for (int i = 0; i < b_clusters.size(); ++i)
-  {
-    if (b_clusters[i] < 0)
-    {
-      continue;
-    }
-    auto it = b_cluster_set.find(b_clusters[i]);
-    if (it != b_cluster_set.end())
-    {
-      it->second.push_back(b_points[i]);
-    }
-    else
-    {
-      b_cluster_set.insert(
-          std::pair<int, thrust::host_vector<Eigen::Vector3f>>(
-              b_clusters[i],
-              thrust::host_vector<Eigen::Vector3f>()));
-    }
-  }
+  clusterIndices2ClusterSet(a_clusters, a_points, a_cluster_set);
+  clusterIndices2ClusterSet(b_clusters, b_points, b_cluster_set);
 
   std::vector<std::shared_ptr<cupoch::geometry::PointCloud>> a_cluster_vector;
   std::vector<std::shared_ptr<cupoch::geometry::PointCloud>> b_cluster_vector;
 
-  for (auto it = a_cluster_set.begin(); it != a_cluster_set.end(); ++it)
-  {
-    if (!it->second.size())
-    {
-      continue;
-    }
-    RCLCPP_INFO(
-        get_logger(),
-        "A cluster label %d have : %d points",
-        it->first, it->second.size());
-
-    auto this_cluster = std::make_shared<cupoch::geometry::PointCloud>();
-    this_cluster->SetPoints(it->second);
-    a_cluster_vector.push_back(this_cluster);
-  }
-
-  for (auto it = b_cluster_set.begin(); it != b_cluster_set.end(); ++it)
-  {
-    if (!it->second.size())
-    {
-      continue;
-    }
-    RCLCPP_INFO(
-        get_logger(),
-        "B cluster label %d have : %d points",
-        it->first, it->second.size());
-    auto this_cluster = std::make_shared<cupoch::geometry::PointCloud>();
-    this_cluster->SetPoints(it->second);
-    b_cluster_vector.push_back(this_cluster);
-  }
-
-  RCLCPP_INFO(
-      get_logger(),
-      "Clouds have a: %d b: %d points",
-      a->points_.size(), b->points_.size());
+  clusterSet2CloudVector(a_cluster_set, a_cluster_vector);
+  clusterSet2CloudVector(b_cluster_set, b_cluster_vector);
 
   visualization_msgs::msg::MarkerArray marker_array;
   visualization_msgs::msg::Marker marker;
@@ -325,6 +251,52 @@ void CloudSegmentation::determineObjectMovements(
   }
   marker_array.markers.push_back(marker);
   marker_pub_->publish(marker_array);
+}
+
+void CloudSegmentation::clusterSet2CloudVector(
+    const std::map<int, thrust::host_vector<Eigen::Vector3f>> &cluster_set,
+    std::vector<std::shared_ptr<cupoch::geometry::PointCloud>> &cluster_vector)
+{
+  for (auto it = cluster_set.begin(); it != cluster_set.end(); ++it)
+  {
+    if (!it->second.size())
+    {
+      continue;
+    }
+    RCLCPP_INFO(
+        get_logger(),
+        "B cluster label %d have : %d points",
+        it->first, it->second.size());
+    auto this_cluster = std::make_shared<cupoch::geometry::PointCloud>();
+    this_cluster->SetPoints(it->second);
+    cluster_vector.push_back(this_cluster);
+  }
+}
+
+void CloudSegmentation::clusterIndices2ClusterSet(
+    const cupoch::utility::device_vector<int> &clusters,
+    const thrust::host_vector<Eigen::Vector3f> &points,
+    std::map<int, thrust::host_vector<Eigen::Vector3f>> &cluster_set)
+{
+  for (int i = 0; i < clusters.size(); ++i)
+  {
+    if (clusters[i] < 0)
+    {
+      continue;
+    }
+    auto it = cluster_set.find(clusters[i]);
+    if (it != cluster_set.end())
+    {
+      it->second.push_back(points[i]);
+    }
+    else
+    {
+      cluster_set.insert(
+          std::pair<int, thrust::host_vector<Eigen::Vector3f>>(
+              clusters[i],
+              thrust::host_vector<Eigen::Vector3f>()));
+    }
+  }
 }
 
 std::shared_ptr<cupoch::geometry::PointCloud> CloudSegmentation::denoiseCupochCloud(
