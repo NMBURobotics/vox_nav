@@ -50,54 +50,57 @@
 
 namespace bg = boost::geometry;
 
-class CloudSegmentation : public rclcpp::Node {
+class CloudSegmentation : public rclcpp::Node
+{
 
 public:
-    CloudSegmentation();
+  CloudSegmentation();
 
-    ~CloudSegmentation();
+  ~CloudSegmentation();
 
-    typedef message_filters::sync_policies::ApproximateTime<
-            sensor_msgs::msg::PointCloud2, nav_msgs::msg::Odometry,
-            sensor_msgs::msg::PointCloud2>
-            CloudOdomApprxTimeSyncPolicy;
-    typedef message_filters::Synchronizer<CloudOdomApprxTimeSyncPolicy>
-            CloudOdomApprxTimeSyncer;
+  typedef message_filters::sync_policies::ApproximateTime<
+      sensor_msgs::msg::PointCloud2,
+      nav_msgs::msg::Odometry> CloudOdomApprxTimeSyncPolicy;
+  typedef message_filters::Synchronizer<CloudOdomApprxTimeSyncPolicy> CloudOdomApprxTimeSyncer;
 
-    void
-    cloudOdomCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud,
-                      const nav_msgs::msg::Odometry::ConstSharedPtr &odom,
-                      const sensor_msgs::msg::PointCloud2::ConstSharedPtr &labels);
+  void
+  cloudOdomCallback(
+    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud,
+    const nav_msgs::msg::Odometry::ConstSharedPtr & odom);
 
-    std::vector<geometry_msgs::msg::Point>
-    Vector3List2GeometryMsgs(ApproxMVBB::TypeDefsPoints::Vector3List corners);
+  void determineObjectMovements(
+    std::shared_ptr<cupoch::geometry::PointCloud> a,
+    std::shared_ptr<cupoch::geometry::PointCloud> b,
+    std_msgs::msg::Header header);
 
-    std::vector<geometry_msgs::msg::Point>
-    Eigen2GeometryMsgs(std::array<Eigen::Matrix<float, 3, 1>, 8> obbx_corners);
+  std::shared_ptr<cupoch::geometry::PointCloud> denoiseCupochCloud(
+    std::shared_ptr<cupoch::geometry::PointCloud> a,
+    const std::shared_ptr<cupoch::geometry::PointCloud> b,
+    double radius,
+    int max_nn
+  );
 
-    cupoch::utility::device_vector<Eigen::Vector3f>
-    Vector3List2Eigen(ApproxMVBB::TypeDefsPoints::Vector3List corners);
-
-    void determineObjectMovements(std::shared_ptr<cupoch::geometry::PointCloud> a,
-                                  std::shared_ptr<cupoch::geometry::PointCloud> b,
-                                  std_msgs::msg::Header header);
+  Eigen::Matrix4f getTransfromfromConsecutiveOdoms(
+    const nav_msgs::msg::Odometry::SharedPtr a,
+    const nav_msgs::msg::Odometry::SharedPtr b
+  );
 
 private:
-    message_filters::Subscriber<sensor_msgs::msg::PointCloud2> cloud_subscriber_;
-    message_filters::Subscriber<nav_msgs::msg::Odometry> odom_subscriber_;
-    message_filters::Subscriber<sensor_msgs::msg::PointCloud2> imu_subscriber_;
-    std::shared_ptr<CloudOdomApprxTimeSyncer>
-            cloud_odom_data_approx_time_syncher_;
+  message_filters::Subscriber<sensor_msgs::msg::PointCloud2> cloud_subscriber_;
+  message_filters::Subscriber<nav_msgs::msg::Odometry> odom_subscriber_;
+  message_filters::Subscriber<sensor_msgs::msg::PointCloud2> imu_subscriber_;
+  std::shared_ptr<CloudOdomApprxTimeSyncer>
+  cloud_odom_data_approx_time_syncher_;
 
-    double dt_;
-    double sensor_height_;
-    bool recieved_first_;
+  double dt_;
+  double sensor_height_;
+  bool recieved_first_;
 
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
 
-    rclcpp::Time last_recieved_msg_stamp_;
+  rclcpp::Time last_recieved_msg_stamp_;
 
-    std::shared_ptr<cupoch::geometry::PointCloud> last_dynamic_pointcloud_cupoch_;
-    nav_msgs::msg::Odometry::SharedPtr last_odom_msg_;
+  std::shared_ptr<cupoch::geometry::PointCloud> last_dynamic_pointcloud_cupoch_;
+  nav_msgs::msg::Odometry::SharedPtr last_odom_msg_;
 };

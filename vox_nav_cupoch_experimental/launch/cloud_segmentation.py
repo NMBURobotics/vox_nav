@@ -16,9 +16,9 @@ def generate_launch_description():
                                 name='cloud_segmentation',
                                 output='screen',
                                 # prefix=['xterm -e gdb -ex run --args'],
-                                remappings=[('points', '/ouster/points'),
+                                remappings=[('points', '/ouster/points/segmented'),
                                             ('odom', '/odometry/global'),
-                                            ('imu', '/ouster/points/segmented')],
+                                            ('imu', '/ouster/imu')],
                                 parameters=[{'sequence_horizon': 2},
                                             {'dt': 0.1},
                                             {'sensor_height': 0.0}])
