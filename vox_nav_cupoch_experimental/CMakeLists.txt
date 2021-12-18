@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.15)
 project(vox_nav_cupoch_experimental)
 
 # Add this repository's cmake modules to CMAKE_MODULE_PATH
@@ -27,11 +27,13 @@ find_package(vox_nav_msgs REQUIRED)
 find_package(vox_nav_utilities REQUIRED)
 find_package(thrust REQUIRED)
 find_package(cupoch_conversions REQUIRED)
+find_package(OpenMP REQUIRED)
 
 set(ApproxMVBB_DIR "../../../install/ApproxMVBB/share/ApproxMVBB//cmake")
 message(ApproxMVBB_DIR)
 find_package(ApproxMVBB REQUIRED COMPONENTS XML_SUPPORT KDTREE_SUPPORT)
 
+  
 message("zs: CUPOCH_INCLUDE_DIRS = " ${CUPOCH_INCLUDE_DIRS})
 message("zs: CUPOCH_LIBRARIES = " ${CUPOCH_LIBRARIES})
 message("zs: EIGEN3_INCLUDE_DIRS = " ${EIGEN3_INCLUDE_DIRS})
@@ -82,7 +84,7 @@ cuda_add_executable(cloud_segmentation src/cloud_segmentation.cu)
 ament_target_dependencies(cloud_segmentation ${dependencies})
 target_include_directories(cloud_segmentation PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_directories(cloud_segmentation PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(cloud_segmentation ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core)
+target_link_libraries(cloud_segmentation ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core OpenMP::OpenMP_CXX)
 
 install(TARGETS ros2bag_kitti_bin
         cloud_segmentation
