@@ -105,6 +105,17 @@ void CloudSegmentation::cloudOdomCallback(
     last_recieved_msg_stamp_ = cloud->header.stamp;
   }
 
+  pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZI>());
+  pcl::fromROSMsg(*cloud, *pcl_curr);
+
+  pcl_curr = vox_nav_utilities::crop_box<pcl::PointXYZI>(
+    pcl_curr,
+    Eigen::Vector4f(-15, -15, -2, 1),
+    Eigen::Vector4f(15, 15, 2, 1));
+
+  pcl_curr = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZI>(
+    pcl_curr, 0.05);
+
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr ground_points_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr dynamic_points_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr static_points_pcl(new pcl::PointCloud<pcl::PointXYZRGB>());
@@ -113,22 +124,17 @@ void CloudSegmentation::cloudOdomCallback(
   thrust::host_vector<Eigen::Vector3f> static_points, static_colors;
   thrust::host_vector<Eigen::Vector3f> dynamic_points, dynamic_colors;
 
-  size_t label_counter = 0;
-
   auto green_color = vox_nav_utilities::getColorByIndexEig(1);
   auto orange_color = vox_nav_utilities::getColorByIndexEig(5);
   auto yellow_color = vox_nav_utilities::getColorByIndexEig(10);
 
-  sensor_msgs::PointCloud2ConstIterator<float> iter_label(*cloud, "x");
-  for (; (iter_label != iter_label.end()); ++iter_label) {
+  for (auto && h : pcl_curr->points) {
+    int this_point_label = static_cast<int>( h.intensity * 255.0);  // labels are burried into intensity
     pcl::PointXYZRGB point;
-    point.x = iter_label[0];
-    point.y = iter_label[1];
-    point.z = iter_label[2];
-
+    point.x = h.x;
+    point.y = h.y;
+    point.z = h.z;
     Eigen::Vector3f point_eig(point.x, point.y, point.z);
-
-    int this_point_label = iter_label[3];
     if (this_point_label == 40) { // ground point label
       ground_points_pcl->points.push_back(point);
     } else if (this_point_label == 30 ||
@@ -140,13 +146,16 @@ void CloudSegmentation::cloudOdomCallback(
       static_colors.push_back(green_color);
       static_points_pcl->points.push_back(point);
     }
-
-    label_counter++;
   }
 
   dynamic_points_pcl =
     vox_nav_utilities::remove_points_within_ground_plane_of_other_cloud<pcl::PointXYZRGB>(
     dynamic_points_pcl, ground_points_pcl, 0.4);
+
+
+  dynamic_points_pcl = vox_nav_utilities::denoise_segmented_cloud<pcl::PointXYZRGB>(
+    dynamic_points_pcl,
+    static_points_pcl, 0.2, 2);
 
   for (int i = 0; i < dynamic_points_pcl->points.size(); ++i) {
     auto p = dynamic_points_pcl->points[i];
@@ -160,31 +169,12 @@ void CloudSegmentation::cloudOdomCallback(
   static_points_cupoch->SetPoints(static_points);
   static_points_cupoch->SetColors(static_colors);
 
-  Eigen::Matrix<float, 3, 1> min(-20, -20, -2);
-  Eigen::Matrix<float, 3, 1> max(20, 20, 2);
-  cupoch::geometry::AxisAlignedBoundingBox<3> bbx(min, max);
-
-  dynamic_points_cupoch = dynamic_points_cupoch->Crop(bbx);
-  static_points_cupoch = static_points_cupoch->Crop(bbx);
-  dynamic_points_cupoch = dynamic_points_cupoch->VoxelDownSample(0.05);
-  static_points_cupoch = static_points_cupoch->VoxelDownSample(0.05);
-
-  using std::chrono::duration;
-  using std::chrono::duration_cast;
-  using std::chrono::high_resolution_clock;
-  using std::chrono::milliseconds;
-  auto t1 = high_resolution_clock::now();
-  dynamic_points_cupoch = denoiseCupochCloud(dynamic_points_cupoch, static_points_cupoch, 0.5, 4);
-  auto t2 = high_resolution_clock::now();
-  auto ms_int = duration_cast<milliseconds>(t2 - t1);
-  RCLCPP_INFO(get_logger(), "fuct take ms %d", ms_int.count());
-
   rclcpp::Time crr_stamp = cloud->header.stamp;
 
   if ((crr_stamp - last_recieved_msg_stamp_).seconds() > dt_) {
+
     auto odom_T = getTransfromfromConsecutiveOdoms(
-      std::make_shared<nav_msgs::msg::Odometry>(
-        *odom), last_odom_msg_);
+      std::make_shared<nav_msgs::msg::Odometry>(*odom), last_odom_msg_);
     last_dynamic_pointcloud_cupoch_->Transform(odom_T.inverse());
     last_dynamic_pointcloud_cupoch_->PaintUniformColor(orange_color);
 
@@ -192,8 +182,17 @@ void CloudSegmentation::cloudOdomCallback(
       *dynamic_points_cupoch + *static_points_cupoch + *last_dynamic_pointcloud_cupoch_;
     auto static_and_dynamic_obstacle_cloud_ptr = std::make_shared<cupoch::geometry::PointCloud>(
       static_and_dynamic_obstacle_cloud);
+    using std::chrono::duration;
+    using std::chrono::duration_cast;
+    using std::chrono::high_resolution_clock;
+    using std::chrono::milliseconds;
 
+    auto t1 = high_resolution_clock::now();
     determineObjectMovements(dynamic_points_cupoch, last_dynamic_pointcloud_cupoch_, cloud->header);
+
+    auto t2 = high_resolution_clock::now();
+    auto ms_int = duration_cast<milliseconds>(t2 - t1);
+    RCLCPP_INFO(get_logger(), "determineObjectMovements take ms %d", ms_int.count());
 
     sensor_msgs::msg::PointCloud2 denoised_cloud_msg;
     cupoch_conversions::cupochToRos(
@@ -206,6 +205,8 @@ void CloudSegmentation::cloudOdomCallback(
     last_odom_msg_ = std::make_shared<nav_msgs::msg::Odometry>(*odom);
     last_dynamic_pointcloud_cupoch_ =
       std::make_shared<cupoch::geometry::PointCloud>(*dynamic_points_cupoch);
+
+
   }
 }
 
@@ -215,20 +216,16 @@ void CloudSegmentation::determineObjectMovements(
   std_msgs::msg::Header header)
 {
   if (!a->points_.size() || !b->points_.size()) {
+    RCLCPP_INFO(
+      get_logger(),
+      "Oneof the cloud is empty Clouds have a: %d b: %d points, object movement cannot be determined",
+      a->points_.size(), b->points_.size());
     return;
   }
   RCLCPP_INFO(
     get_logger(),
     "Clouds have a: %d b: %d points",
     a->points_.size(), b->points_.size());
-
-  // REMOVE THE NOISE
-  auto denoised_a = a->RemoveStatisticalOutliers(10, 0.1);
-  auto denoised_b = b->RemoveStatisticalOutliers(10, 0.1);
-  denoised_a = std::get<0>(denoised_a)->RemoveRadiusOutliers(8, 0.2);
-  denoised_b = std::get<0>(denoised_b)->RemoveRadiusOutliers(8, 0.2);
-  a = std::get<0>(denoised_a);
-  b = std::get<0>(denoised_b);
 
   auto a_points = a->GetPoints();
   auto b_points = b->GetPoints();

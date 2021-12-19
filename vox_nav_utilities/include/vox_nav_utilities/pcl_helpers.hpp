@@ -460,7 +460,7 @@ namespace vox_nav_utilities
     typename pcl::ExtractIndices<P> extract;
     extract.setInputCloud(cloud);
     extract.setIndices(inliers_crop);
-    extract.setNegative(true);
+    extract.setNegative(false);
     extract.filter(*crop_cloud);
     crop_cloud->height = 1;
     crop_cloud->width = crop_cloud->points.size();
