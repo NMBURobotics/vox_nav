@@ -549,6 +549,48 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
+  std::vector<typename pcl::PointCloud<P>::Ptr> euclidean_clustering(
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    int min_cluster_size = 50,
+    int max_cluster_size = 1000000,
+    double tolerancce = 0.2
+  )
+  {
+    typename pcl::search::Search<P>::Ptr tree(new pcl::search::KdTree<P>);
+    typename pcl::EuclideanClusterExtraction<P> ec;
+    std::vector<typename pcl::PointCloud<P>::Ptr> clusters;
+
+    pcl::IndicesPtr indices(new std::vector<int>);
+    std::vector<pcl::PointIndices> cluster_indices;
+
+    ec.setClusterTolerance(tolerancce);
+    ec.setMinClusterSize(min_cluster_size);
+    ec.setMaxClusterSize(max_cluster_size);
+    ec.setSearchMethod(tree);
+    ec.setInputCloud(cloud);
+    ec.extract(cluster_indices);
+
+
+    int j = 0;
+    for (auto it = cluster_indices.begin(); it != cluster_indices.end(); ++it) {
+      typename pcl::PointCloud<P>::Ptr cloud_cluster(new pcl::PointCloud<P>);
+
+      for (const auto & idx : it->indices) {
+        cloud_cluster->push_back((*cloud)[idx]); //*
+      }
+      cloud_cluster->width = cloud_cluster->size();
+      cloud_cluster->height = 1;
+      cloud_cluster->is_dense = true;
+      j++;
+
+      clusters.push_back(cloud_cluster);
+
+    }
+
+    return clusters;
+  }
+
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr remove_points_within_ground_plane_of_other_cloud(
     typename pcl::PointCloud<P>::Ptr cloud,
     const typename pcl::PointCloud<P>::Ptr ground_cloud,

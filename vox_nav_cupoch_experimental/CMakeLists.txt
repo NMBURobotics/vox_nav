@@ -86,8 +86,15 @@ target_include_directories(cloud_segmentation PUBLIC ${CUPOCH_INCLUDE_DIRS} ${TH
 target_link_directories(cloud_segmentation PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(cloud_segmentation ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core OpenMP::OpenMP_CXX)
 
+add_executable(cloud_clustering src/clustering.cpp)
+ament_target_dependencies(cloud_clustering ${dependencies})
+target_include_directories(cloud_clustering PUBLIC ${PCL_INCLUDE_DIRS})
+target_link_directories(cloud_clustering PUBLIC ${PCL_LIBRARY_DIRS})
+target_link_libraries(cloud_clustering ${PCL_LIBRARIES} OpenMP::OpenMP_CXX)
+
 install(TARGETS ros2bag_kitti_bin
         cloud_segmentation
+        cloud_clustering
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

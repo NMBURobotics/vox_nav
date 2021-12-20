@@ -183,12 +183,14 @@ namespace vox_nav_utilities
       }
       for (size_t idx = 0u; idx < clusters_array[cluster_idx]->points.size(); ++idx) {
         pcl::PointXYZRGB point;
+        auto color = getColorByIndexEig(static_cast<int>(cluster_idx));
         point.x = clusters_array[cluster_idx]->points[idx].x;
         point.y = clusters_array[cluster_idx]->points[idx].y;
         point.z = clusters_array[cluster_idx]->points[idx].z;
-        point.r = clusters_array[cluster_idx]->points[idx].r;
-        point.g = clusters_array[cluster_idx]->points[idx].g;
-        point.b = clusters_array[cluster_idx]->points[idx].b;
+        point.r = color.x() * 255.0;
+        point.g = color.y() * 255.0;
+        point.b = color.z() * 255.0;
+        point.a = 255;
         cloud->points.push_back(point);
       }
     }
