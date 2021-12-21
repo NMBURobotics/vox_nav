@@ -41,6 +41,12 @@
 #include "vox_nav_utilities/map_manager_helpers.hpp"
 #include "vox_nav_utilities/pcl_helpers.hpp"
 #include "vox_nav_utilities/tf_helpers.hpp"
+#include "ApproxMVBB/AABB.hpp"
+#include "ApproxMVBB/ComputeApproxMVBB.hpp"
+#include "cupoch/collision/collision.h"
+#include "cupoch/cupoch.h"
+#include "cupoch/geometry/occupancygrid.h"
+#include "cupoch_conversions/cupoch_conversions.hpp"
 
 class Clustering : public rclcpp::Node
 {
@@ -59,9 +65,8 @@ public:
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud,
     const nav_msgs::msg::Odometry::ConstSharedPtr & odom);
 
-  Eigen::Matrix4f getTransfromfromConsecutiveOdoms(
-    const nav_msgs::msg::Odometry::SharedPtr a,
-    const nav_msgs::msg::Odometry::SharedPtr b);
+  std::vector<geometry_msgs::msg::Point> Vector3List2GeometryMsgs(
+    ApproxMVBB::TypeDefsPoints::Vector3List corners);
 
 private:
   message_filters::Subscriber<sensor_msgs::msg::PointCloud2> cloud_subscriber_;

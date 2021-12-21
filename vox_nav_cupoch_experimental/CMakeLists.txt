@@ -33,7 +33,7 @@ set(ApproxMVBB_DIR "../../../install/ApproxMVBB/share/ApproxMVBB//cmake")
 message(ApproxMVBB_DIR)
 find_package(ApproxMVBB REQUIRED COMPONENTS XML_SUPPORT KDTREE_SUPPORT)
 
-  
+
 message("zs: CUPOCH_INCLUDE_DIRS = " ${CUPOCH_INCLUDE_DIRS})
 message("zs: CUPOCH_LIBRARIES = " ${CUPOCH_LIBRARIES})
 message("zs: EIGEN3_INCLUDE_DIRS = " ${EIGEN3_INCLUDE_DIRS})
@@ -86,11 +86,11 @@ target_include_directories(cloud_segmentation PUBLIC ${CUPOCH_INCLUDE_DIRS} ${TH
 target_link_directories(cloud_segmentation PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(cloud_segmentation ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core OpenMP::OpenMP_CXX)
 
-add_executable(cloud_clustering src/clustering.cpp)
+cuda_add_executable(cloud_clustering src/clustering.cu)
 ament_target_dependencies(cloud_clustering ${dependencies})
-target_include_directories(cloud_clustering PUBLIC ${PCL_INCLUDE_DIRS})
-target_link_directories(cloud_clustering PUBLIC ${PCL_LIBRARY_DIRS})
-target_link_libraries(cloud_clustering ${PCL_LIBRARIES} OpenMP::OpenMP_CXX)
+target_include_directories(cloud_clustering PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(cloud_clustering PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(cloud_clustering ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core OpenMP::OpenMP_CXX)
 
 install(TARGETS ros2bag_kitti_bin
         cloud_segmentation
