@@ -1,5 +1,6 @@
 # Visual Studio Code files
 *.pyc
 */cmake-build-debug/*
+*/cmake-build-default/*
 */googletest/*
 
