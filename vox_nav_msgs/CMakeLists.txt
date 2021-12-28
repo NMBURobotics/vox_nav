@@ -16,6 +16,8 @@ find_package(nav_msgs REQUIRED)
 find_package(octomap_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/Object.msg"
+  "msg/ObjectArray.msg"
   "msg/OrientedNavSatFix.msg"
   "srv/GetOctomap.srv"
   "srv/GetPointCloud.srv"

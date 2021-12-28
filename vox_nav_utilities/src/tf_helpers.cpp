@@ -134,6 +134,17 @@ namespace vox_nav_utilities
     return distance;
   }
 
+  double getEuclidianDistBetweenPoses(
+    const geometry_msgs::msg::Pose a,
+    const geometry_msgs::msg::Pose b)
+  {
+    double distance = std::sqrt(
+      std::pow(a.position.x - b.position.x, 2) +
+      std::pow(a.position.y - b.position.y, 2) +
+      std::pow(a.position.z - b.position.z, 2));
+    return distance;
+  }
+
   void getRPYfromTFQuaternion(const tf2::Quaternion q, double & roll, double & pitch, double & yaw)
   {
     tf2::Matrix3x3 m(q);

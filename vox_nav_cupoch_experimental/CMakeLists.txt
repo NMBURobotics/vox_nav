@@ -33,7 +33,6 @@ set(ApproxMVBB_DIR "../../../install/ApproxMVBB/share/ApproxMVBB//cmake")
 message(ApproxMVBB_DIR)
 find_package(ApproxMVBB REQUIRED COMPONENTS XML_SUPPORT KDTREE_SUPPORT)
 
-
 message("zs: CUPOCH_INCLUDE_DIRS = " ${CUPOCH_INCLUDE_DIRS})
 message("zs: CUPOCH_LIBRARIES = " ${CUPOCH_LIBRARIES})
 message("zs: EIGEN3_INCLUDE_DIRS = " ${EIGEN3_INCLUDE_DIRS})
@@ -100,7 +99,7 @@ install(TARGETS ros2bag_kitti_bin
 install(DIRECTORY include/
         DESTINATION include/)
 
-install(DIRECTORY launch cmake
+install(DIRECTORY launch cmake config
         DESTINATION share/${PROJECT_NAME})
 
 ament_export_dependencies(${dependencies})

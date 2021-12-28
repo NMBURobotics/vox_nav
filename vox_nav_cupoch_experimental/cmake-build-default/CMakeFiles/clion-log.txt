@@ -1,0 +1,471 @@
+/opt/clion-2021.2.3/bin/cmake/linux/bin/cmake -DCMAKE_DEPENDS_USE_COMPILER=FALSE -G "CodeBlocks - Unix Makefiles" /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental
+-- Found OpenMP_C: -fopenmp (found version "4.5") 
+-- Found OpenMP_CXX: -fopenmp (found version "4.5") 
+-- Found ament_cmake: 0.9.9 (/opt/ros/foxy/share/ament_cmake/cmake)
+-- Found PythonInterp: /usr/bin/python3 (found suitable version "3.8.10", minimum required is "3") 
+-- Using PYTHON_EXECUTABLE: /usr/bin/python3
+-- Found rclcpp: 2.4.0 (/opt/ros/foxy/share/rclcpp/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Found rosidl_adapter: 1.2.1 (/opt/ros/foxy/share/rosidl_adapter/cmake)
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found rmw_implementation_cmake: 1.0.3 (/opt/ros/foxy/share/rmw_implementation_cmake/cmake)
+-- Using RMW implementation 'rmw_fastrtps_cpp' as default
+-- Found geometry_msgs: 2.0.4 (/opt/ros/foxy/share/geometry_msgs/cmake)
+-- Found sensor_msgs: 2.0.4 (/opt/ros/foxy/share/sensor_msgs/cmake)
+-- Found nav_msgs: 2.0.4 (/opt/ros/foxy/share/nav_msgs/cmake)
+-- Found tf2: 0.13.12 (/opt/ros/foxy/share/tf2/cmake)
+-- Found tf2_ros: 0.13.12 (/opt/ros/foxy/share/tf2_ros/cmake)
+-- Found tf2_geometry_msgs: 0.13.12 (/opt/ros/foxy/share/tf2_geometry_msgs/cmake)
+-- Found eigen3_cmake_module: 0.1.1 (/opt/ros/foxy/share/eigen3_cmake_module/cmake)
+-- Found pcl_ros: 2.2.0 (/home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake)
+-- Eigen found (include: /usr/include/eigen3, version: 3.3.7)
+-- The imported target "vtkParseOGLExt" references the file
+   "/usr/bin/vtkParseOGLExt-7.1"
+but this file does not exist.  Possible reasons include:
+* The file was deleted, renamed, or moved to another location.
+* An install or uninstall procedure did not complete successfully.
+* The installation package was faulty and contained
+   "/usr/lib/cmake/vtk-7.1/VTKTargets.cmake"
+but not all the files it references.
+
+-- The imported target "vtkRenderingPythonTkWidgets" references the file
+   "/usr/lib/x86_64-linux-gnu/libvtkRenderingPythonTkWidgets.so"
+but this file does not exist.  Possible reasons include:
+* The file was deleted, renamed, or moved to another location.
+* An install or uninstall procedure did not complete successfully.
+* The installation package was faulty and contained
+   "/usr/lib/cmake/vtk-7.1/VTKTargets.cmake"
+but not all the files it references.
+
+-- The imported target "vtk" references the file
+   "/usr/bin/vtk"
+but this file does not exist.  Possible reasons include:
+* The file was deleted, renamed, or moved to another location.
+* An install or uninstall procedure did not complete successfully.
+* The installation package was faulty and contained
+   "/usr/lib/cmake/vtk-7.1/VTKTargets.cmake"
+but not all the files it references.
+
+-- The imported target "pvtk" references the file
+   "/usr/bin/pvtk"
+but this file does not exist.  Possible reasons include:
+* The file was deleted, renamed, or moved to another location.
+* An install or uninstall procedure did not complete successfully.
+* The installation package was faulty and contained
+   "/usr/lib/cmake/vtk-7.1/VTKTargets.cmake"
+but not all the files it references.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (USB_10)
+  does not match the name of the calling package (OpenNI).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/Modules/FindOpenNI.cmake:28 (find_package_handle_standard_args)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:179 (find_package)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:322 (find_openni)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:548 (find_external_library)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- OpenNI found (include: /usr/include/ni, lib: /usr/lib/libOpenNI.so)
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (USB_10)
+  does not match the name of the calling package (OpenNI2).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/Modules/FindOpenNI2.cmake:28 (find_package_handle_standard_args)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:193 (find_package)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:324 (find_openni2)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:548 (find_external_library)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- OpenNI2 found (include: /usr/include/openni2, lib: /usr/lib/libOpenNI2.so)
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (libusb-1.0)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:291 (find_package_handle_standard_args)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:338 (find_libusb)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:548 (find_external_library)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (USB_10)
+  does not match the name of the calling package (OpenNI).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/Modules/FindOpenNI.cmake:28 (find_package_handle_standard_args)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:179 (find_package)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:322 (find_openni)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:548 (find_external_library)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- OpenNI found (include: /usr/include/ni, lib: /usr/lib/libOpenNI.so)
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (USB_10)
+  does not match the name of the calling package (OpenNI2).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/Modules/FindOpenNI2.cmake:28 (find_package_handle_standard_args)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:193 (find_package)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:324 (find_openni2)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:548 (find_external_library)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- OpenNI2 found (include: /usr/include/openni2, lib: /usr/lib/libOpenNI2.so)
+-- QHULL found (include: /usr/include, lib: optimized;/usr/lib/x86_64-linux-gnu/libqhull.so;debug;/usr/lib/x86_64-linux-gnu/libqhull.so)
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (USB_10)
+  does not match the name of the calling package (OpenNI).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/Modules/FindOpenNI.cmake:28 (find_package_handle_standard_args)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:179 (find_package)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:322 (find_openni)
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:548 (find_external_library)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- OpenNI found (include: /usr/include/ni, lib: /usr/lib/libOpenNI.so)
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (PCL_COMMON)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (PCL_KDTREE)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (PCL_OCTREE)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (PCL_SEARCH)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_SAMPLE_CONSENSUS) does not match the name of the calling package
+  (PCL).  This can lead to problems in calling code that expects
+  `find_package` result variables (e.g., `_FOUND`) to follow a certain
+  pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_FILTERS) does not match the name of the calling package (PCL).  This
+  can lead to problems in calling code that expects `find_package` result
+  variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (PCL_2D)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:619 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_GEOMETRY) does not match the name of the calling package (PCL).  This
+  can lead to problems in calling code that expects `find_package` result
+  variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:619 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (PCL_IO)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_FEATURES) does not match the name of the calling package (PCL).  This
+  can lead to problems in calling code that expects `find_package` result
+  variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (PCL_ML)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_SEGMENTATION) does not match the name of the calling package (PCL).
+  This can lead to problems in calling code that expects `find_package`
+  result variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_VISUALIZATION) does not match the name of the calling package (PCL).
+  This can lead to problems in calling code that expects `find_package`
+  result variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_SURFACE) does not match the name of the calling package (PCL).  This
+  can lead to problems in calling code that expects `find_package` result
+  variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_REGISTRATION) does not match the name of the calling package (PCL).
+  This can lead to problems in calling code that expects `find_package`
+  result variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_KEYPOINTS) does not match the name of the calling package (PCL).  This
+  can lead to problems in calling code that expects `find_package` result
+  variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_TRACKING) does not match the name of the calling package (PCL).  This
+  can lead to problems in calling code that expects `find_package` result
+  variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_RECOGNITION) does not match the name of the calling package (PCL).
+  This can lead to problems in calling code that expects `find_package`
+  result variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (PCL_STEREO)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (PCL_APPS)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_IN_HAND_SCANNER) does not match the name of the calling package (PCL).
+  This can lead to problems in calling code that expects `find_package`
+  result variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:619 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_POINT_CLOUD_EDITOR) does not match the name of the calling package
+  (PCL).  This can lead to problems in calling code that expects
+  `find_package` result variables (e.g., `_FOUND`) to follow a certain
+  pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:619 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args`
+  (PCL_OUTOFCORE) does not match the name of the calling package (PCL).  This
+  can lead to problems in calling code that expects `find_package` result
+  variables (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at /opt/clion-2021.2.3/bin/cmake/linux/share/cmake-3.20/Modules/FindPackageHandleStandardArgs.cmake:438 (message):
+  The package name passed to `find_package_handle_standard_args` (PCL_PEOPLE)
+  does not match the name of the calling package (PCL).  This can lead to
+  problems in calling code that expects `find_package` result variables
+  (e.g., `_FOUND`) to follow a certain pattern.
+Call Stack (most recent call first):
+  /usr/lib/x86_64-linux-gnu/cmake/pcl/PCLConfig.cmake:616 (find_package_handle_standard_args)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/ament_cmake_export_dependencies-extras.cmake:21 (find_package)
+  /home/atas/colcon_ws/install/pcl_ros/share/pcl_ros/cmake/pcl_rosConfig.cmake:41 (include)
+  CMakeLists.txt:18 (find_package)
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Found octomap_msgs: 2.0.0 (/opt/ros/foxy/share/octomap_msgs/cmake)
+-- Found visualization_msgs: 2.0.4 (/opt/ros/foxy/share/visualization_msgs/cmake)
+-- Found vox_nav_msgs: 0.0.0 (/home/atas/colcon_ws/install/vox_nav_msgs/share/vox_nav_msgs/cmake)
+-- Found vox_nav_utilities: 0.0.0 (/home/atas/colcon_ws/install/vox_nav_utilities/share/vox_nav_utilities/cmake)
+-- Found cupoch_conversions: 0.1.0 (/home/atas/colcon_ws/install/cupoch_conversions/share/cupoch_conversions/cmake)
+-- Found OpenMP_C: -fopenmp (found version "4.5") 
+-- Found OpenMP_CXX: -fopenmp (found version "4.5") 
+ApproxMVBB_DIR
+zs: CUPOCH_INCLUDE_DIRS = /home/atas/colcon_ws/install/cupoch/include/home/atas/colcon_ws/install/cupoch/third_party/home/atas/colcon_ws/install/cupoch/third_party/rmm/include/home/atas/colcon_ws/install/cupoch/third_party/cnmem/include/home/atas/colcon_ws/install/cupoch/third_party/fmt/include/home/atas/colcon_ws/install/cupoch/third_party/liblzf/include/home/atas/colcon_ws/install/cupoch/third_party/eigen//home/atas/colcon_ws/install/cupoch/third_party/spdlog/include/usr/include/libpng16/usr/include/jsoncpp/usr/include
+zs: CUPOCH_LIBRARIES = cupoch_cameracupoch_collisioncupoch_geometrycupoch_integrationcupoch_iocupoch_odometrycupoch_planningcupoch_registrationcupoch_utilitycupoch_visualizationtinyobjloaderturbojpegstdgpuflann_cuda_sliblzfrplyspdlogimgui/usr/local/cuda-11.4/lib64/libcurand.sopng16zjsoncppGLEWGLUGLglfw
+zs: EIGEN3_INCLUDE_DIRS = /usr/include/eigen3
+zs: vox_nav_cupoch_experimental CUDA_NVCC_FLAGS = -arch=sm_50--expt-relaxed-constexpr--expt-extended-lambda--default-streamper-thread--use_fast_math-Xcudafe--diag_suppress=integer_sign_change-Xcudafe--diag_suppress=partial_override-Xcudafe--diag_suppress=virtual_function_decl_hidden
+CMake Warning at /usr/src/googletest/googletest/CMakeLists.txt:54 (project):
+  VERSION keyword not followed by a value or was followed by a value that
+  expanded to nothing.
+
+
+CMake Deprecation Warning at /usr/src/googletest/googletest/CMakeLists.txt:56 (cmake_minimum_required):
+  Compatibility with CMake < 2.8.12 will be removed from a future version of
+  CMake.
+
+  Update the VERSION argument <min> value or use a ...<max> suffix to tell
+  CMake that the project does not need compatibility with older versions.
+
+
+-- Found PythonInterp: /usr/bin/python3 (found version "3.8.10") 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default

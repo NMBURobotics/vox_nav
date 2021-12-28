@@ -1,17 +1,17 @@
 #include "vox_nav_cupoch_experimental/clustering.hpp"
 
 Clustering::Clustering()
-        : Node("clustering_node") {
+        : Node("cloud_clustering_rclcpp_node") {
     cloud_subscriber_.subscribe(this, "points", rmw_qos_profile_sensor_data);
-    odom_subscriber_.subscribe(this, "odom", rmw_qos_profile_sensor_data);
+    poses_subscriber_.subscribe(this, "poses", rmw_qos_profile_sensor_data);
 
-    cloud_odom_data_approx_time_syncher_.reset(
+    cloud_poses_data_approx_time_syncher_.reset(
             new CloudOdomApprxTimeSyncer(
                     CloudOdomApprxTimeSyncPolicy(500),
                     cloud_subscriber_,
-                    odom_subscriber_));
+                    poses_subscriber_));
 
-    cloud_odom_data_approx_time_syncher_->registerCallback(
+    cloud_poses_data_approx_time_syncher_->registerCallback(
             std::bind(
                     &Clustering::cloudOdomCallback, this,
                     std::placeholders::_1,
@@ -23,7 +23,102 @@ Clustering::Clustering()
     marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
             "correspondings", rclcpp::SystemDefaultsQoS());
 
-    last_recieved_msg_stamp_ = now();
+    // Define parameters
+    declare_parameter("data_association.ped.dist.position", params_.da_ped_dist_pos);
+    declare_parameter("data_association.ped.dist.form", params_.da_ped_dist_form);
+    declare_parameter("data_association.car.dist.position", params_.da_car_dist_pos);
+    declare_parameter("data_association.car.dist.form", params_.da_car_dist_form);
+    declare_parameter("tracking.dim.z", params_.tra_dim_z);
+    declare_parameter("tracking.dim.x", params_.tra_dim_x);
+    declare_parameter("tracking.dim.x_aug", params_.tra_dim_x_aug);
+    declare_parameter("tracking.std.lidar.x", params_.tra_std_lidar_x);
+    declare_parameter("tracking.std.lidar.y", params_.tra_std_lidar_y);
+    declare_parameter("tracking.std.acc", params_.tra_std_acc);
+    declare_parameter("tracking.std.yaw_rate", params_.tra_std_yaw_rate);
+    declare_parameter("tracking.lambda", params_.tra_lambda);
+    declare_parameter("tracking.aging.bad", params_.tra_aging_bad);
+    declare_parameter("tracking.occlusion_factor", params_.tra_occ_factor);
+    declare_parameter("tracking.min_dist_between_tracks", params_.tra_min_dist_between_tracks);
+    declare_parameter("track.P_init.x", params_.p_init_x);
+    declare_parameter("track.P_init.y", params_.p_init_y);
+    declare_parameter("track.P_init.v", params_.p_init_v);
+    declare_parameter("track.P_init.yaw", params_.p_init_yaw);
+    declare_parameter("track.P_init.yaw_rate", params_.p_init_yaw_rate);
+
+    get_parameter("data_association.ped.dist.position", params_.da_ped_dist_pos);
+    get_parameter("data_association.ped.dist.form", params_.da_ped_dist_form);
+    get_parameter("data_association.car.dist.position", params_.da_car_dist_pos);
+    get_parameter("data_association.car.dist.form", params_.da_car_dist_form);
+    get_parameter("tracking.dim.z", params_.tra_dim_z);
+    get_parameter("tracking.dim.x", params_.tra_dim_x);
+    get_parameter("tracking.dim.x_aug", params_.tra_dim_x_aug);
+    get_parameter("tracking.std.lidar.x", params_.tra_std_lidar_x);
+    get_parameter("tracking.std.lidar.y", params_.tra_std_lidar_y);
+    get_parameter("tracking.std.acc", params_.tra_std_acc);
+    get_parameter("tracking.std.yaw_rate", params_.tra_std_yaw_rate);
+    get_parameter("tracking.lambda", params_.tra_lambda);
+    get_parameter("tracking.aging.bad", params_.tra_aging_bad);
+    get_parameter("tracking.occlusion_factor", params_.tra_occ_factor);
+    get_parameter("tracking.min_dist_between_tracks", params_.tra_min_dist_between_tracks);
+    get_parameter("track.P_init.x", params_.p_init_x);
+    get_parameter("track.P_init.y", params_.p_init_y);
+    get_parameter("track.P_init.v", params_.p_init_v);
+    get_parameter("track.P_init.yaw", params_.p_init_yaw);
+    get_parameter("track.P_init.yaw_rate", params_.p_init_yaw_rate);
+
+    // Print parameters
+    RCLCPP_INFO_STREAM(get_logger(), "da_ped_dist_pos " << params_.da_ped_dist_pos);
+    RCLCPP_INFO_STREAM(get_logger(), "da_ped_dist_form " << params_.da_ped_dist_form);
+    RCLCPP_INFO_STREAM(get_logger(), "da_car_dist_pos " << params_.da_car_dist_pos);
+    RCLCPP_INFO_STREAM(get_logger(), "da_car_dist_form " << params_.da_car_dist_form);
+    RCLCPP_INFO_STREAM(get_logger(), "tra_dim_z " << params_.tra_dim_z);
+    RCLCPP_INFO_STREAM(get_logger(), "tra_dim_x " << params_.tra_dim_x);
+    RCLCPP_INFO_STREAM(get_logger(), "tra_dim_x_aug " << params_.tra_dim_x_aug);
+    RCLCPP_INFO_STREAM(get_logger(), "tra_std_lidar_x " << params_.tra_std_lidar_x);
+    RCLCPP_INFO_STREAM(get_logger(), "tra_std_lidar_y " << params_.tra_std_lidar_y);
+    RCLCPP_INFO_STREAM(get_logger(), "tra_std_acc " << params_.tra_std_acc);
+    RCLCPP_INFO_STREAM(get_logger(), "tra_std_yaw_rate " << params_.tra_std_yaw_rate);
+    RCLCPP_INFO_STREAM(get_logger(), "tra_lambda " << params_.tra_lambda);
+    RCLCPP_INFO_STREAM(get_logger(), "tra_aging_bad " << params_.tra_aging_bad);
+    RCLCPP_INFO_STREAM(get_logger(), "tra_occ_factor " << params_.tra_occ_factor);
+    RCLCPP_INFO_STREAM(
+            get_logger(), "tra_min_dist_between_tracks " << params_.tra_min_dist_between_tracks);
+    RCLCPP_INFO_STREAM(get_logger(), "p_init_x " << params_.p_init_x);
+    RCLCPP_INFO_STREAM(get_logger(), "p_init_y " << params_.p_init_y);
+    RCLCPP_INFO_STREAM(get_logger(), "p_init_v " << params_.p_init_v);
+    RCLCPP_INFO_STREAM(get_logger(), "p_init_yaw " << params_.p_init_yaw);
+    RCLCPP_INFO_STREAM(get_logger(), "p_init_yaw_rate " << params_.p_init_yaw_rate);
+
+
+    buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
+    transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
+
+    is_initialized_ = false;
+
+    // Measurement covariance
+    R_laser_ = Eigen::MatrixXd(params_.tra_dim_z, params_.tra_dim_z);
+    R_laser_ << params_.tra_std_lidar_x * params_.tra_std_lidar_x, 0,
+            0, params_.tra_std_lidar_y * params_.tra_std_lidar_y;
+
+    // Define weights for UKF
+    weights_ = Eigen::VectorXd(2 * params_.tra_dim_x_aug + 1);
+    weights_(0) = params_.tra_lambda /
+                  (params_.tra_lambda + params_.tra_dim_x_aug);
+    for (int i = 1; i < 2 * params_.tra_dim_x_aug + 1; i++) {
+        weights_(i) = 0.5 / (params_.tra_dim_x_aug + params_.tra_lambda);
+    }
+
+    // Start ids for track with 0
+    track_id_counter_ = 0;
+
+    // Define Publisher
+    list_tracked_objects_pub_ =
+            this->create_publisher<vox_nav_msgs::msg::ObjectArray>(
+                    "/tracking/objects",
+                    rclcpp::SystemDefaultsQoS());
+
+    // Init counter for publishing
+    time_frame_ = 0;
 
 }
 
@@ -32,7 +127,10 @@ Clustering::~Clustering() {
 
 void Clustering::cloudOdomCallback(
         const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud,
-        const nav_msgs::msg::Odometry::ConstSharedPtr &odom) {
+        const geometry_msgs::msg::PoseArray::ConstSharedPtr &poses) {
+
+    RCLCPP_INFO(get_logger(), "Got %d dynamic objects poses", poses->poses.size());
+
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
 
@@ -58,57 +156,80 @@ void Clustering::cloudOdomCallback(
         cupoch_cloud->SetPoints(points);
         auto oobb = cupoch_cloud->GetAxisAlignedBoundingBox();
         boxes_vector.push_back(std::make_pair(oobb.GetMinBound(), oobb.GetMaxBound()));
-
     }
+
+    vox_nav_msgs::msg::ObjectArray object_array;
+
+    for (size_t i = 0; i < boxes_vector.size(); i++) {
+        vox_nav_msgs::msg::Object object;
+
+        auto mvbb_corners_geometry_msgs = boxes_vector[i];
+        geometry_msgs::msg::PoseStamped in_pose, out_pose;
+        in_pose.header = cloud->header;
+        in_pose.pose.position.x =
+                (mvbb_corners_geometry_msgs.second.x() + mvbb_corners_geometry_msgs.first.x()) / 2.0;
+        in_pose.pose.position.y =
+                (mvbb_corners_geometry_msgs.second.y() + mvbb_corners_geometry_msgs.first.y()) / 2.0;
+        in_pose.pose.position.z =
+                (mvbb_corners_geometry_msgs.second.z() + mvbb_corners_geometry_msgs.first.z()) / 2.0;
+
+        rclcpp::Duration transform_tolerance(0, 500);
+        bool result;
+        vox_nav_utilities::transformPose(buffer_, "map", in_pose, out_pose, transform_tolerance);
+
+        double r, p, y;
+        vox_nav_utilities::getRPYfromMsgQuaternion(out_pose.pose.orientation, r, p, y);
+        object.orientation = y;
+        object.world_pose.header = out_pose.header;
+        object.world_pose.point = out_pose.pose.position;
+        object.velo_pose.header = in_pose.header;
+        object.velo_pose.point = in_pose.pose.position;
+        double scale = 1.50;
+        object.height = scale *
+                        std::abs(mvbb_corners_geometry_msgs.second.z() - mvbb_corners_geometry_msgs.first.z());
+        object.width = scale *
+                       std::abs(mvbb_corners_geometry_msgs.second.y() - mvbb_corners_geometry_msgs.first.y());
+        object.length = scale *
+                        std::abs(mvbb_corners_geometry_msgs.second.x() - mvbb_corners_geometry_msgs.first.x());
+        object.id = i;
+        object.semantic_id = 0; // assume that we dont know
+        object.is_new_track = true;
+        object_array.header = out_pose.header;
+        object_array.objects.push_back(object);
+    }
+
+
+    auto time_stamp = get_clock()->now();
+
+    // All other frames
+    if (is_initialized_) {
+        double dt = (time_stamp - last_time_stamp_).seconds();
+        Prediction(dt);
+        GlobalNearestNeighbor(object_array);
+        Update(object_array);
+        TrackManagement(object_array);
+    }
+        // First frame
+    else {
+
+        // Initialize tracks
+        for (int i = 0; i < object_array.objects.size(); ++i) {
+            initTrack(object_array.objects[i]);
+        }
+
+        // Set initialized to true
+        is_initialized_ = true;
+    }
+
+    last_time_stamp_ = time_stamp;
+    // Increment time frame
+    time_frame_++;
+
+    publishTracks(cloud->header);
 
     visualization_msgs::msg::MarkerArray marker_array;
     for (size_t i = 0; i < boxes_vector.size(); i++) {
         auto mvbb_corners_geometry_msgs = boxes_vector[i];
-        visualization_msgs::msg::Marker marker;
-        marker.header = cloud->header;
-        marker.ns = "my_namespace";
-        marker.id = i;
-        marker.lifetime = rclcpp::Duration::from_seconds(1.0);
-        marker.type = visualization_msgs::msg::Marker::LINE_LIST;
-        marker.action = visualization_msgs::msg::Marker::ADD;
-        marker.scale.x = 0.1;
-        marker.scale.y = 0.1;
-        marker.scale.z = 0.1;
-        marker.color.a = 1.0;
-        marker.color.r = 1.0;
-        marker.color.g = 1.0;
-        marker.color.b = 0.0;
-
-        geometry_msgs::msg::Point p1;
-        p1.x = mvbb_corners_geometry_msgs.first.x();
-        p1.y = mvbb_corners_geometry_msgs.first.y();
-        p1.z = mvbb_corners_geometry_msgs.first.z();
-
-        marker.points.push_back(p1);
-        /*marker.points.push_back(mvbb_corners_geometry_msgs[1]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[2]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[3]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[0]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[4]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[5]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[6]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[7]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[4]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[0]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[4]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[1]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[5]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[2]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[3]);
-        marker.points.push_back(mvbb_corners_geometry_msgs[6]);*/
-
-        geometry_msgs::msg::Point p2;
-        p2.x = mvbb_corners_geometry_msgs.second.x();
-        p2.y = mvbb_corners_geometry_msgs.second.y();
-        p2.z = mvbb_corners_geometry_msgs.second.z();
-        marker.points.push_back(p2);
-        marker_array.markers.push_back(marker);
-
         visualization_msgs::msg::Marker cy_marker;
         cy_marker.header = cloud->header;
         cy_marker.ns = "my_namespace";
@@ -116,23 +237,21 @@ void Clustering::cloudOdomCallback(
         cy_marker.lifetime = rclcpp::Duration::from_seconds(1.0);
         cy_marker.type = visualization_msgs::msg::Marker::CYLINDER;
         cy_marker.action = visualization_msgs::msg::Marker::ADD;
-        double scale = 1.25;
+        double scale = 1.50;
         cy_marker.scale.x =
-                scale * std::abs(mvbb_corners_geometry_msgs.second.x() - mvbb_corners_geometry_msgs.first.x());
+                scale *
+                std::abs(mvbb_corners_geometry_msgs.second.x() - mvbb_corners_geometry_msgs.first.x());
         cy_marker.scale.y =
-                scale * std::abs(mvbb_corners_geometry_msgs.second.y() - mvbb_corners_geometry_msgs.first.y());
+                scale *
+                std::abs(mvbb_corners_geometry_msgs.second.y() - mvbb_corners_geometry_msgs.first.y());
         cy_marker.scale.z =
-                scale * std::abs(mvbb_corners_geometry_msgs.second.z() - mvbb_corners_geometry_msgs.first.z());
+                scale *
+                std::abs(mvbb_corners_geometry_msgs.second.z() - mvbb_corners_geometry_msgs.first.z());
         cy_marker.color.a = 1.0;
         cy_marker.color.r = 1.0;
         cy_marker.color.g = 0.6;
         cy_marker.color.b = 0.6;
-        auto cy_rotation = std::atan2(
-                (mvbb_corners_geometry_msgs.second.x() - mvbb_corners_geometry_msgs.second.x()),
-                (mvbb_corners_geometry_msgs.second.y() - mvbb_corners_geometry_msgs.first.y())
-        );
-        double r, p, y;
-        //cy_marker.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(r, p, cy_rotation);
+
         cy_marker.pose.position.x =
                 (mvbb_corners_geometry_msgs.second.x() + mvbb_corners_geometry_msgs.first.x()) / 2.0;
         cy_marker.pose.position.y =
@@ -141,20 +260,617 @@ void Clustering::cloudOdomCallback(
                 (mvbb_corners_geometry_msgs.second.z() + mvbb_corners_geometry_msgs.first.z()) / 2.0;
         marker_array.markers.push_back(cy_marker);
     }
-    marker_pub_->publish(marker_array);
 }
 
-std::vector<geometry_msgs::msg::Point> Clustering::Vector3List2GeometryMsgs(
-        ApproxMVBB::TypeDefsPoints::Vector3List corners) {
-    std::vector<geometry_msgs::msg::Point> corners_geometry_msgs;
-    for (int i = 0; i < corners.size(); i++) {
-        geometry_msgs::msg::Point korner_point;
-        korner_point.x = corners[i].x();
-        korner_point.y = corners[i].y();
-        korner_point.z = corners[i].z();
-        corners_geometry_msgs.push_back(korner_point);
+void Clustering::initTrack(const vox_nav_msgs::msg::Object &obj) {
+
+    // Only if object can be a track
+    if (!obj.is_new_track) {
+        return;
     }
-    return corners_geometry_msgs;
+
+    // Create new track
+    Track track = Track();
+
+    // Add id and increment
+    track.id = track_id_counter_;
+    track_id_counter_++;
+
+    // Add state information
+    track.sta.x = Eigen::VectorXd::Zero(params_.tra_dim_x);
+    track.sta.x[0] = obj.world_pose.point.x;
+    track.sta.x[1] = obj.world_pose.point.y;
+    track.sta.z = obj.world_pose.point.z - 0.3;
+    track.sta.P = Eigen::MatrixXd::Zero(params_.tra_dim_x, params_.tra_dim_x);
+    track.sta.P << params_.p_init_x, 0, 0, 0, 0,
+            0, params_.p_init_y, 0, 0, 0,
+            0, 0, params_.p_init_v, 0, 0,
+            0, 0, 0, params_.p_init_yaw, 0,
+            0, 0, 0, 0, params_.p_init_yaw_rate;
+    track.sta.Xsig_pred = Eigen::MatrixXd::Zero(
+            params_.tra_dim_x,
+            2 * params_.tra_dim_x_aug + 1);
+
+    // Add semantic information
+    track.sem.name = obj.semantic_name;
+    track.sem.id = obj.semantic_id;
+    track.sem.confidence = obj.semantic_confidence;
+
+    // Add geometric information
+    track.geo.width = obj.width;
+    track.geo.length = obj.length;
+    track.geo.height = obj.height;
+    track.geo.orientation = obj.orientation;
+
+    // Add unique color
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<double> dist(0.0, 255.0);
+    track.r = dist(mt);
+    track.g = dist(mt);
+    track.b = dist(mt);
+    track.prob_existence = 1.0f;
+
+    // Push back to track list
+    tracks_.push_back(track);
+}
+
+void Clustering::Prediction(const double delta_t) {
+
+    // Buffer variables
+    Eigen::VectorXd x_aug = Eigen::VectorXd(params_.tra_dim_x_aug);
+    Eigen::MatrixXd P_aug = Eigen::MatrixXd(params_.tra_dim_x_aug, params_.tra_dim_x_aug);
+    Eigen::MatrixXd Xsig_aug = Eigen::MatrixXd(params_.tra_dim_x_aug, 2 * params_.tra_dim_x_aug + 1);
+
+    // Loop through all tracks
+    for (int i = 0; i < tracks_.size(); ++i) {
+
+        // Grab track
+        Track &track = tracks_[i];
+
+/******************************************************************************
+ * 1. Generate augmented sigma points
+ */
+
+        // Fill augmented mean state
+        x_aug.head(5) = track.sta.x;
+        x_aug(5) = 0;
+        x_aug(6) = 0;
+
+        // Fill augmented covariance matrix
+        P_aug.fill(0.0);
+        P_aug.topLeftCorner(5, 5) = track.sta.P;
+        P_aug(5, 5) = params_.tra_std_acc * params_.tra_std_acc;
+        P_aug(6, 6) = params_.tra_std_yaw_rate * params_.tra_std_yaw_rate;
+
+        // Create square root matrix
+        Eigen::MatrixXd L = P_aug.llt().matrixL();
+
+        // Create augmented sigma points
+        Xsig_aug.col(0) = x_aug;
+        for (int j = 0; j < params_.tra_dim_x_aug; j++) {
+            Xsig_aug.col(j + 1) = x_aug +
+                                  std::sqrt(params_.tra_lambda + params_.tra_dim_x_aug) * L.col(j);
+            Xsig_aug.col(j + 1 + params_.tra_dim_x_aug) = x_aug -
+                                                          std::sqrt(params_.tra_lambda + params_.tra_dim_x_aug) *
+                                                          L.col(j);
+        }
+
+/******************************************************************************
+ * 2. Predict sigma points
+ */
+
+        for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++) {
+
+            // Grab values for better readability
+            double p_x = Xsig_aug(0, j);
+            double p_y = Xsig_aug(1, j);
+            double v = Xsig_aug(2, j);
+            double yaw = Xsig_aug(3, j);
+            double yawd = Xsig_aug(4, j);
+            double nu_a = Xsig_aug(5, j);
+            double nu_yawdd = Xsig_aug(6, j);
+
+            // Predicted state values
+            double px_p, py_p;
+
+            // Avoid division by zero
+            if (fabs(yawd) > 0.001) {
+                px_p = p_x + v / yawd * (sin(yaw + yawd * delta_t) - sin(yaw));
+                py_p = p_y + v / yawd * (cos(yaw) - cos(yaw + yawd * delta_t));
+            } else {
+                px_p = p_x + v * delta_t * cos(yaw);
+                py_p = p_y + v * delta_t * sin(yaw);
+            }
+            double v_p = v;
+            double yaw_p = yaw + yawd * delta_t;
+            double yawd_p = yawd;
+
+            // Add noise
+            px_p = px_p + 0.5 * nu_a * delta_t * delta_t * cos(yaw);
+            py_p = py_p + 0.5 * nu_a * delta_t * delta_t * sin(yaw);
+            v_p = v_p + nu_a * delta_t;
+            yaw_p = yaw_p + 0.5 * nu_yawdd * delta_t * delta_t;
+            yawd_p = yawd_p + nu_yawdd * delta_t;
+
+            // Write predicted sigma point into right column
+            track.sta.Xsig_pred(0, j) = px_p;
+            track.sta.Xsig_pred(1, j) = py_p;
+            track.sta.Xsig_pred(2, j) = v_p;
+            track.sta.Xsig_pred(3, j) = yaw_p;
+            track.sta.Xsig_pred(4, j) = yawd_p;
+        }
+
+/******************************************************************************
+ * 3. Predict state vector and state covariance
+ */
+        // Predicted state mean
+        track.sta.x.fill(0.0);
+        for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++) {
+            track.sta.x = track.sta.x + weights_(j) *
+                                        track.sta.Xsig_pred.col(j);
+        }
+
+        // Predicted state covariance matrix
+        track.sta.P.fill(0.0);
+
+        // Iterate over sigma points
+        for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++) {
+
+            // State difference
+            Eigen::VectorXd x_diff = track.sta.Xsig_pred.col(j) - track.sta.x;
+
+            // Angle normalization
+            while (x_diff(3) > M_PI) { x_diff(3) -= 2. * M_PI; }
+            while (x_diff(3) < -M_PI) { x_diff(3) += 2. * M_PI; }
+
+            track.sta.P = track.sta.P + weights_(j) * x_diff *
+                                        x_diff.transpose();
+        }
+    }
+}
+
+void Clustering::GlobalNearestNeighbor(
+        const vox_nav_msgs::msg::ObjectArray &detected_objects) {
+
+    // Define assoication vectors
+    da_tracks_ = std::vector<int>(tracks_.size(), -1);
+    da_objects_ = std::vector<int>(detected_objects.objects.size(), -1);
+
+    // Loop through tracks
+    for (int i = 0; i < tracks_.size(); ++i) {
+
+        // Buffer variables
+        std::vector<float> distances;
+        std::vector<int> matches;
+
+        // Set data association parameters depending on if
+        // the track is a car or a pedestrian
+        float gate;
+        float box_gate;
+
+        // Pedestrian
+        /*if (tracks_[i].sem.id == 11) {
+            gate = params_.da_ped_dist_pos;
+            box_gate = params_.da_ped_dist_form;
+        }
+            // Car
+        else if (tracks_[i].sem.id == 13) {
+            gate = params_.da_car_dist_pos;
+            box_gate = params_.da_car_dist_form;
+        } else {
+            RCLCPP_WARN(get_logger(), "Wrong semantic for track [%d]", tracks_[i].id);
+        }*/
+        gate = params_.da_ped_dist_pos;
+        box_gate = params_.da_ped_dist_form;
+
+        // Loop through detected objects
+        for (int j = 0; j < detected_objects.objects.size(); ++j) {
+
+            // Calculate distance between track and detected object
+            if (tracks_[i].sem.id == detected_objects.objects[j].semantic_id) {
+                float dist = CalculateDistance(
+                        tracks_[i],
+                        detected_objects.objects[j]);
+
+                if (dist < gate) {
+                    distances.push_back(dist);
+                    matches.push_back(j);
+                }
+            }
+        }
+
+        // If track exactly finds one match assign it
+        if (matches.size() == 1) {
+
+            float box_dist = CalculateEuclideanAndBoxOffset(
+                    tracks_[i],
+                    detected_objects.objects[matches[0]]);
+            if (box_dist < box_gate) {
+                da_tracks_[i] = matches[0];
+                da_objects_[matches[0]] = i;
+            }
+        }
+            // If found more then take best match and block other measurements
+        else if (matches.size() > 1) {
+
+            // Block other measurements to NOT be initialized
+            RCLCPP_WARN(get_logger(), "Multiple associations for track [%d]", tracks_[i].id);
+
+            // Calculate all box distances and find minimum
+            float min_box_dist = box_gate;
+            int min_box_index = -1;
+
+            for (int k = 0; k < matches.size(); ++k) {
+
+                float box_dist = CalculateEuclideanAndBoxOffset(
+                        tracks_[i],
+                        detected_objects.objects[matches[k]]);
+
+                if (box_dist < min_box_dist) {
+                    min_box_index = k;
+                    min_box_dist = box_dist;
+                }
+            }
+
+            for (int k = 0; k < matches.size(); ++k) {
+                if (k == min_box_index) {
+                    da_objects_[matches[k]] = i;
+                    da_tracks_[i] = matches[k];
+                } else {
+                    da_objects_[matches[k]] = -2;
+                }
+            }
+        } else {
+            RCLCPP_WARN(get_logger(), "No measurement found for track [%d]", tracks_[i].id);
+        }
+    }
+}
+
+float Clustering::CalculateDistance(
+        const Track &track,
+        const vox_nav_msgs::msg::Object &object) {
+
+    // Calculate euclidean distance in x,y,z coordinates of track and object
+    return std::abs(track.sta.x(0) - object.world_pose.point.x) +
+           std::abs(track.sta.x(1) - object.world_pose.point.y) +
+           std::abs(track.sta.z - object.world_pose.point.z);
+}
+
+float Clustering::CalculateEuclideanDistanceBetweenTracks(
+        const Track &t1,
+        const Track &t2) {
+
+    // Calculate euclidean distance in x,y,z coordinates of two tracks
+    return sqrt(
+            std::pow(t1.sta.x(0) - t2.sta.x(0), 2) +
+            std::pow(t1.sta.x(1) - t2.sta.x(1), 2) +
+            std::pow(t1.sta.z - t2.sta.z, 2)
+    );
+}
+
+float Clustering::CalculateBoxMismatch(
+        const Track &track,
+        const vox_nav_msgs::msg::Object &object) {
+
+    // Calculate mismatch of both tracked cube and detected cube
+    float box_wl_switched = std::abs(track.geo.width - object.length) +
+                            std::abs(track.geo.length - object.width);
+    float box_wl_ordered = std::abs(track.geo.width - object.width) +
+                           std::abs(track.geo.length - object.length);
+    float box_mismatch = (box_wl_switched < box_wl_ordered) ?
+                         box_wl_switched : box_wl_ordered;
+    box_mismatch += std::abs(track.geo.height - object.height);
+    return box_mismatch;
+}
+
+float Clustering::CalculateEuclideanAndBoxOffset(
+        const Track &track,
+        const vox_nav_msgs::msg::Object &object) {
+
+    // Sum of euclidean offset and box mismatch
+    return CalculateDistance(track, object) +
+           CalculateBoxMismatch(track, object);
+}
+
+bool Clustering::compareGoodAge(Track t1, Track t2) {
+    return t1.hist.good_age < t2.hist.good_age;
+}
+
+void Clustering::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects) {
+
+    // Buffer variables
+    Eigen::VectorXd z = Eigen::VectorXd(params_.tra_dim_z);
+    Eigen::MatrixXd Zsig;
+    Eigen::VectorXd z_pred = Eigen::VectorXd(params_.tra_dim_z);
+    Eigen::MatrixXd S = Eigen::MatrixXd(params_.tra_dim_z, params_.tra_dim_z);
+    Eigen::MatrixXd Tc = Eigen::MatrixXd(params_.tra_dim_x, params_.tra_dim_z);
+
+    // Loop through all tracks
+    for (int i = 0; i < tracks_.size(); ++i) {
+
+        // Grab track
+        Track &track = tracks_[i];
+
+        // If track has not found any measurement
+        if (da_tracks_[i] == -1) {
+
+            // Increment bad aging
+            track.hist.bad_age++;
+        }
+            // If track has found a measurement update it
+        else {
+
+            // Grab measurement
+            z << detected_objects.objects[da_tracks_[i]].world_pose.point.x,
+                    detected_objects.objects[da_tracks_[i]].world_pose.point.y;
+
+/******************************************************************************
+ * 1. Predict measurement
+ */
+            // Init measurement sigma points
+            Zsig = track.sta.Xsig_pred.topLeftCorner(
+                    params_.tra_dim_z,
+                    2 * params_.tra_dim_x_aug + 1);
+
+            // Mean predicted measurement
+            z_pred.fill(0.0);
+            for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++) {
+                z_pred = z_pred + weights_(j) * Zsig.col(j);
+            }
+
+            S.fill(0.0);
+            Tc.fill(0.0);
+            for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++) {
+
+                // Residual
+                Eigen::VectorXd z_sig_diff = Zsig.col(j) - z_pred;
+                S = S + weights_(j) * z_sig_diff * z_sig_diff.transpose();
+
+                // State difference
+                Eigen::VectorXd x_diff = track.sta.Xsig_pred.col(j) - track.sta.x;
+
+                // Angle normalization
+                while (x_diff(3) > M_PI) { x_diff(3) -= 2. * M_PI; }
+                while (x_diff(3) < -M_PI) { x_diff(3) += 2. * M_PI; }
+
+                Tc = Tc + weights_(j) * x_diff * z_sig_diff.transpose();
+            }
+
+            // Add measurement noise covariance matrix
+            S = S + R_laser_;
+
+/******************************************************************************
+ * 2. Update state vector and covariance matrix
+ */
+            // Kalman gain K;
+            Eigen::MatrixXd K = Tc * S.inverse();
+
+            // Residual
+            Eigen::VectorXd z_diff = z - z_pred;
+
+            // Update state mean and covariance matrix
+            track.sta.x = track.sta.x + K * z_diff;
+            track.sta.P = track.sta.P - K * S * K.transpose();
+
+            // Update History
+            track.hist.good_age++;
+            track.hist.bad_age = 0;
+
+/******************************************************************************
+ * 3. Update geometric information of track
+ */
+            // Calculate area of detection and track
+            float det_area =
+                    detected_objects.objects[da_tracks_[i]].length *
+                    detected_objects.objects[da_tracks_[i]].width;
+            float tra_area = track.geo.length * track.geo.width;
+
+            // If track became strongly smaller keep the shape
+            if (params_.tra_occ_factor * det_area < tra_area) {
+                RCLCPP_WARN(
+                        get_logger(), "Track [%d] probably occluded because of dropping size"
+                                      " from [%f] to [%f]", track.id, tra_area, det_area);
+            }
+            // Update the form of the track with measurement
+            track.geo.length =
+                    detected_objects.objects[da_tracks_[i]].length;
+            track.geo.width =
+                    detected_objects.objects[da_tracks_[i]].width;
+            track.geo.height =
+                    detected_objects.objects[da_tracks_[i]].height;
+
+            // Update orientation and ground level
+            track.geo.orientation =
+                    detected_objects.objects[da_tracks_[i]].orientation;
+            track.sta.z =
+                    detected_objects.objects[da_tracks_[i]].world_pose.point.z;
+
+        }
+    }
+}
+
+void Clustering::TrackManagement(const vox_nav_msgs::msg::ObjectArray &detected_objects) {
+
+    // Delete spuriors tracks
+    for (int i = 0; i < tracks_.size(); ++i) {
+
+        // Deletion condition
+        if (tracks_[i].hist.bad_age >= params_.tra_aging_bad) {
+
+            // Print
+            RCLCPP_INFO(get_logger(), "Deletion of T [%d]", tracks_[i].id);
+
+            // Swap track with end of vector and pop back
+            std::swap(tracks_[i], tracks_.back());
+            tracks_.pop_back();
+        }
+    }
+
+    // Create new ones out of untracked new detected object hypothesis
+    // Initialize tracks
+    for (int i = 0; i < detected_objects.objects.size(); ++i) {
+
+        // Unassigned object condition
+        if (da_objects_[i] == -1) {
+
+            // Init new track
+            initTrack(detected_objects.objects[i]);
+        }
+    }
+
+    // Sort tracks upon age
+    std::sort(
+            tracks_.begin(), tracks_.end(), [](Track &t1, Track &t2) {
+                return t1.hist.good_age > t2.hist.good_age;
+            });
+
+    // Clear duplicated tracks
+    for (int i = tracks_.size() - 1; i >= 0; --i) {
+        for (int j = i - 1; j >= 0; --j) {
+            float dist = CalculateEuclideanDistanceBetweenTracks(tracks_[i], tracks_[j]);
+            // ROS_INFO("DIST T [%d] and T [%d] = %f ", tracks_[i].id, tracks_[j].id, dist);
+            if (dist < params_.tra_min_dist_between_tracks) {
+                RCLCPP_WARN(
+                        get_logger(),
+                        "TOO CLOSE: T [%d] and T [%d] = %f ->  T [%d] deleted ",
+                        tracks_[i].id, tracks_[j].id, dist, tracks_[i].id);
+                std::swap(tracks_[i], tracks_.back());
+                tracks_.pop_back();
+            }
+        }
+    }
+}
+
+void Clustering::publishTracks(const std_msgs::msg::Header &header) {
+    // Create track message
+    vox_nav_msgs::msg::ObjectArray track_list;
+    track_list.header.stamp = header.stamp;
+    track_list.header.frame_id = "map";
+
+    visualization_msgs::msg::MarkerArray marker_array;
+
+    // Loop over all tracks
+    for (int i = 0; i < tracks_.size(); ++i) {
+
+        // Grab track
+        Track &track = tracks_[i];
+
+        // Create new message and fill it
+        vox_nav_msgs::msg::Object track_msg;
+        track_msg.id = track.id;
+        track_msg.world_pose.header.frame_id = "map";
+        track_msg.world_pose.point.x = track.sta.x[0];
+        track_msg.world_pose.point.y = track.sta.x[1];
+        track_msg.world_pose.point.z = track.sta.z;
+
+        try {
+            buffer_->transform(
+                    track_msg.world_pose,
+                    track_msg.cam_pose,
+                    "base_link"
+            );
+            buffer_->transform(
+                    track_msg.world_pose,
+                    track_msg.velo_pose,
+                    "base_link"
+            );
+        }
+        catch (tf2::TransformException &ex) {
+            RCLCPP_ERROR(get_logger(), "Received an exception trying to transform a point from"
+                                       "\"base_link\" to \"map\": %s", ex.what());
+        }
+        track_msg.heading = track.sta.x[3];
+        track_msg.velocity = track.sta.x[2];
+        track_msg.width = track.geo.width;
+        track_msg.length = track.geo.length;
+        track_msg.height = track.geo.height;
+        track_msg.orientation = track.geo.orientation;
+        track_msg.semantic_name = track.sem.name;
+        track_msg.semantic_id = track.sem.id;
+        track_msg.semantic_confidence = track.sem.confidence;
+        track_msg.r = track.r;
+        track_msg.g = track.g;
+        track_msg.b = track.b;
+        track_msg.a = track.prob_existence;
+
+        // Push back track message
+        track_list.objects.push_back(track_msg);
+
+        VizObject viz_obj;
+        // Fill in bounding box information
+        viz_obj.bb.action = visualization_msgs::msg::Marker::ADD;
+        viz_obj.bb.ns = "my_namespace";
+        viz_obj.bb.type = visualization_msgs::msg::Marker::CUBE;
+        viz_obj.bb.header.frame_id = "map";
+        viz_obj.bb.id = i;
+        viz_obj.bb.pose.position.x = track_msg.world_pose.point.x;
+        viz_obj.bb.pose.position.y = track_msg.world_pose.point.y;
+        viz_obj.bb.pose.position.z = track_msg.world_pose.point.z + track_msg.height / 2;
+        viz_obj.bb.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, track_msg.orientation);
+        viz_obj.bb.scale.x = track_msg.length;
+        viz_obj.bb.scale.y = track_msg.width;
+        viz_obj.bb.scale.z = track_msg.height;
+        viz_obj.bb.color.a = 1.0;
+        viz_obj.bb.color.r = float(track_msg.r) / 255.0;
+        viz_obj.bb.color.g = float(track_msg.g) / 255.0;
+        viz_obj.bb.color.b = float(track_msg.b) / 255.0;
+
+        // Fill in arrow information
+        viz_obj.arr.action = visualization_msgs::msg::Marker::ADD;
+        viz_obj.arr.ns = "my_namespace";
+        viz_obj.arr.type = visualization_msgs::msg::Marker::ARROW;
+        viz_obj.arr.header.frame_id = "map";
+        viz_obj.arr.id = i + 100;
+        viz_obj.arr.pose.position.x = track_msg.world_pose.point.x;
+        viz_obj.arr.pose.position.y = track_msg.world_pose.point.y;
+        viz_obj.arr.pose.position.z = track_msg.world_pose.point.z + track_msg.height / 2;
+        viz_obj.arr.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, track_msg.orientation);
+        if (abs(track_msg.velocity) < 0.1) {
+            viz_obj.arr.scale.x = 0.1;
+            viz_obj.arr.scale.y = 0.1;
+            viz_obj.arr.scale.z = 0.1;
+        } else {
+            viz_obj.arr.scale.x = track_msg.velocity;
+            viz_obj.arr.scale.y = 0.5;
+            viz_obj.arr.scale.z = 0.5;
+        }
+        viz_obj.arr.color.a = 1.0;
+        viz_obj.arr.color.r = float(track_msg.r) / 255.0;
+        viz_obj.arr.color.g = float(track_msg.g) / 255.0;
+        viz_obj.arr.color.b = float(track_msg.b) / 255.0;
+
+        // Fill in text information
+        viz_obj.txt.action = visualization_msgs::msg::Marker::ADD;
+        viz_obj.txt.ns = "my_namespace";
+        viz_obj.txt.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+        viz_obj.txt.header.frame_id = "map";
+        viz_obj.txt.id = i + 200;
+        viz_obj.txt.pose.position.x = track_msg.world_pose.point.x;
+        viz_obj.txt.pose.position.y = track_msg.world_pose.point.y;
+        viz_obj.txt.pose.position.z = track_msg.world_pose.point.z + track_msg.height / 2;
+        viz_obj.txt.scale.x = 1.0;
+        viz_obj.txt.scale.y = 1.0;
+        viz_obj.txt.scale.z = 1.0;
+        viz_obj.txt.color.a = 1.0;
+        viz_obj.txt.color.r = float(track_msg.r) / 255.0;
+        viz_obj.txt.color.g = float(track_msg.g) / 255.0;
+        viz_obj.txt.color.b = float(track_msg.b) / 255.0;
+        viz_obj.txt.text = std::to_string(track_msg.id);
+
+        marker_array.markers.push_back(viz_obj.arr);
+        marker_array.markers.push_back(viz_obj.bb);
+        marker_array.markers.push_back(viz_obj.txt);
+
+    }
+
+    // Print
+    RCLCPP_INFO(get_logger(), "Publishing Tracking [%d]: # Tracks [%d]", time_frame_,
+                int(tracks_.size()));
+
+    // Publish
+    list_tracked_objects_pub_->publish(track_list);
+    marker_pub_->publish(marker_array);
 }
 
 int main(int argc, char const *argv[]) {
