@@ -1,10 +1,11 @@
 cloud_clustering_rclcpp_node:
   ros__parameters:
+    sacle_up_objects: 1.4
     data_association:
       ped:
         dist:
-          position: 0.8
-          form: 1.6
+          position: 1.0
+          form: 2.0
       car:
         dist:
           position: 2.0
@@ -22,9 +23,9 @@ cloud_clustering_rclcpp_node:
         yaw_rate: 0.314
       lambda: 2.0
       aging:
-        bad: 3
+        bad: 2
       occlusion_factor: 2.0
-      min_dist_between_tracks: 0.2
+      min_dist_between_tracks: 0.3
     track:
       P_init:
         x: 1.0

@@ -24,6 +24,7 @@ Clustering::Clustering()
             "correspondings", rclcpp::SystemDefaultsQoS());
 
     // Define parameters
+    declare_parameter("sacle_up_objects", params_.sacle_up_objects);
     declare_parameter("data_association.ped.dist.position", params_.da_ped_dist_pos);
     declare_parameter("data_association.ped.dist.form", params_.da_ped_dist_form);
     declare_parameter("data_association.car.dist.position", params_.da_car_dist_pos);
@@ -45,6 +46,7 @@ Clustering::Clustering()
     declare_parameter("track.P_init.yaw", params_.p_init_yaw);
     declare_parameter("track.P_init.yaw_rate", params_.p_init_yaw_rate);
 
+    get_parameter("sacle_up_objects", params_.sacle_up_objects);
     get_parameter("data_association.ped.dist.position", params_.da_ped_dist_pos);
     get_parameter("data_association.ped.dist.form", params_.da_ped_dist_form);
     get_parameter("data_association.car.dist.position", params_.da_car_dist_pos);
@@ -129,20 +131,23 @@ void Clustering::cloudOdomCallback(
         const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud,
         const geometry_msgs::msg::PoseArray::ConstSharedPtr &poses) {
 
-    RCLCPP_INFO(get_logger(), "Got %d dynamic objects poses", poses->poses.size());
-
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
 
     pcl_curr = vox_nav_utilities::crop_box<pcl::PointXYZRGB>(
-            pcl_curr, Eigen::Vector4f(-15, -15, -2, 1), Eigen::Vector4f(15, 15, 2, 1));
+            pcl_curr,
+            Eigen::Vector4f(-15, -15, -2, 1),
+            Eigen::Vector4f(15, 15, 2, 1));
     pcl_curr = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(pcl_curr, 0.05);
     pcl_curr = vox_nav_utilities::segmentSurfacePlane<pcl::PointXYZRGB>(pcl_curr, 0.4, true);
+
+    pcl_ros::transformPointCloud("map", *pcl_curr, *pcl_curr, *buffer_);
+
     auto clusters = vox_nav_utilities::euclidean_clustering<pcl::PointXYZRGB>(
             pcl_curr, 20, 10000, 0.32);
     vox_nav_utilities::publishClustersCloud(cloud_pub_, cloud->header, clusters);
 
-    std::vector<std::pair<Eigen::Vector3f, Eigen::Vector3f>> boxes_vector;
+    std::vector<std::pair<Eigen::Vector3f, Eigen::Vector3f>> cluster_boxes_vector;
     for (auto &&cluster: clusters) {
         if (cluster->points.size() < 10) {
             RCLCPP_WARN(this->get_logger(), "THIS OBJECT HAVE TOO FEW POINTS NOT GONNA BUILD A BOX !!");
@@ -155,111 +160,72 @@ void Clustering::cloudOdomCallback(
         }
         cupoch_cloud->SetPoints(points);
         auto oobb = cupoch_cloud->GetAxisAlignedBoundingBox();
-        boxes_vector.push_back(std::make_pair(oobb.GetMinBound(), oobb.GetMaxBound()));
+        cluster_boxes_vector.push_back(std::make_pair(oobb.GetMinBound(), oobb.GetMaxBound()));
     }
 
     vox_nav_msgs::msg::ObjectArray object_array;
 
-    for (size_t i = 0; i < boxes_vector.size(); i++) {
+    for (size_t i = 0; i < cluster_boxes_vector.size(); i++) {
         vox_nav_msgs::msg::Object object;
 
-        auto mvbb_corners_geometry_msgs = boxes_vector[i];
-        geometry_msgs::msg::PoseStamped in_pose, out_pose;
-        in_pose.header = cloud->header;
-        in_pose.pose.position.x =
+        auto mvbb_corners_geometry_msgs = cluster_boxes_vector[i];
+        geometry_msgs::msg::PoseStamped object_pose;
+        object_pose.header.stamp = cloud->header.stamp;
+        object_pose.header.frame_id = "map";
+        object_pose.pose.position.x =
                 (mvbb_corners_geometry_msgs.second.x() + mvbb_corners_geometry_msgs.first.x()) / 2.0;
-        in_pose.pose.position.y =
+        object_pose.pose.position.y =
                 (mvbb_corners_geometry_msgs.second.y() + mvbb_corners_geometry_msgs.first.y()) / 2.0;
-        in_pose.pose.position.z =
+        object_pose.pose.position.z =
                 (mvbb_corners_geometry_msgs.second.z() + mvbb_corners_geometry_msgs.first.z()) / 2.0;
 
-        rclcpp::Duration transform_tolerance(0, 500);
-        bool result;
-        vox_nav_utilities::transformPose(buffer_, "map", in_pose, out_pose, transform_tolerance);
+        object.orientation = 0.0;
+        object.world_pose.header = object_pose.header;
+        object.world_pose.point = object_pose.pose.position;
+        object.velo_pose.header = cloud->header;
 
-        double r, p, y;
-        vox_nav_utilities::getRPYfromMsgQuaternion(out_pose.pose.orientation, r, p, y);
-        object.orientation = y;
-        object.world_pose.header = out_pose.header;
-        object.world_pose.point = out_pose.pose.position;
-        object.velo_pose.header = in_pose.header;
-        object.velo_pose.point = in_pose.pose.position;
-        double scale = 1.50;
-        object.height = scale *
+        geometry_msgs::msg::PoseStamped object_pose_lidar;
+        rclcpp::Duration transform_tolerance(0, 500);
+
+        auto result = vox_nav_utilities::transformPose(buffer_,
+                                                       cloud->header.frame_id,
+                                                       object_pose,
+                                                       object_pose_lidar,
+                                                       transform_tolerance);
+        object.velo_pose.point = object_pose_lidar.pose.position;
+
+        object.height = params_.sacle_up_objects *
                         std::abs(mvbb_corners_geometry_msgs.second.z() - mvbb_corners_geometry_msgs.first.z());
-        object.width = scale *
+        object.width = params_.sacle_up_objects *
                        std::abs(mvbb_corners_geometry_msgs.second.y() - mvbb_corners_geometry_msgs.first.y());
-        object.length = scale *
+        object.length = params_.sacle_up_objects *
                         std::abs(mvbb_corners_geometry_msgs.second.x() - mvbb_corners_geometry_msgs.first.x());
         object.id = i;
         object.semantic_id = 0; // assume that we dont know
         object.is_new_track = true;
-        object_array.header = out_pose.header;
+        object_array.header = object_pose.header;
         object_array.objects.push_back(object);
     }
 
-
     auto time_stamp = get_clock()->now();
-
-    // All other frames
     if (is_initialized_) {
-        double dt = (time_stamp - last_time_stamp_).seconds();
+        double dt = (now() - last_time_stamp_).seconds();
         Prediction(dt);
         GlobalNearestNeighbor(object_array);
         Update(object_array);
         TrackManagement(object_array);
-    }
-        // First frame
-    else {
-
+    } else {
         // Initialize tracks
         for (int i = 0; i < object_array.objects.size(); ++i) {
             initTrack(object_array.objects[i]);
         }
-
-        // Set initialized to true
         is_initialized_ = true;
     }
-
     last_time_stamp_ = time_stamp;
-    // Increment time frame
     time_frame_++;
 
     publishTracks(cloud->header);
 
-    visualization_msgs::msg::MarkerArray marker_array;
-    for (size_t i = 0; i < boxes_vector.size(); i++) {
-        auto mvbb_corners_geometry_msgs = boxes_vector[i];
-        visualization_msgs::msg::Marker cy_marker;
-        cy_marker.header = cloud->header;
-        cy_marker.ns = "my_namespace";
-        cy_marker.id = i + 50;
-        cy_marker.lifetime = rclcpp::Duration::from_seconds(1.0);
-        cy_marker.type = visualization_msgs::msg::Marker::CYLINDER;
-        cy_marker.action = visualization_msgs::msg::Marker::ADD;
-        double scale = 1.50;
-        cy_marker.scale.x =
-                scale *
-                std::abs(mvbb_corners_geometry_msgs.second.x() - mvbb_corners_geometry_msgs.first.x());
-        cy_marker.scale.y =
-                scale *
-                std::abs(mvbb_corners_geometry_msgs.second.y() - mvbb_corners_geometry_msgs.first.y());
-        cy_marker.scale.z =
-                scale *
-                std::abs(mvbb_corners_geometry_msgs.second.z() - mvbb_corners_geometry_msgs.first.z());
-        cy_marker.color.a = 1.0;
-        cy_marker.color.r = 1.0;
-        cy_marker.color.g = 0.6;
-        cy_marker.color.b = 0.6;
-
-        cy_marker.pose.position.x =
-                (mvbb_corners_geometry_msgs.second.x() + mvbb_corners_geometry_msgs.first.x()) / 2.0;
-        cy_marker.pose.position.y =
-                (mvbb_corners_geometry_msgs.second.y() + mvbb_corners_geometry_msgs.first.y()) / 2.0;
-        cy_marker.pose.position.z =
-                (mvbb_corners_geometry_msgs.second.z() + mvbb_corners_geometry_msgs.first.z()) / 2.0;
-        marker_array.markers.push_back(cy_marker);
-    }
 }
 
 void Clustering::initTrack(const vox_nav_msgs::msg::Object &obj) {
@@ -280,7 +246,7 @@ void Clustering::initTrack(const vox_nav_msgs::msg::Object &obj) {
     track.sta.x = Eigen::VectorXd::Zero(params_.tra_dim_x);
     track.sta.x[0] = obj.world_pose.point.x;
     track.sta.x[1] = obj.world_pose.point.y;
-    track.sta.z = obj.world_pose.point.z - 0.3;
+    track.sta.z = obj.world_pose.point.z;
     track.sta.P = Eigen::MatrixXd::Zero(params_.tra_dim_x, params_.tra_dim_x);
     track.sta.P << params_.p_init_x, 0, 0, 0, 0,
             0, params_.p_init_y, 0, 0, 0,
@@ -310,6 +276,12 @@ void Clustering::initTrack(const vox_nav_msgs::msg::Object &obj) {
     track.g = dist(mt);
     track.b = dist(mt);
     track.prob_existence = 1.0f;
+
+    track.hist.historic_positions.push_back(
+            Eigen::Vector3f(obj.world_pose.point.x,
+                            obj.world_pose.point.y,
+                            obj.world_pose.point.z));
+
 
     // Push back to track list
     tracks_.push_back(track);
@@ -461,6 +433,7 @@ void Clustering::GlobalNearestNeighbor(
         } else {
             RCLCPP_WARN(get_logger(), "Wrong semantic for track [%d]", tracks_[i].id);
         }*/
+        // For now treat every obstacle with pedestrian dynamics
         gate = params_.da_ped_dist_pos;
         box_gate = params_.da_ped_dist_form;
 
@@ -657,6 +630,7 @@ void Clustering::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects) 
             track.hist.good_age++;
             track.hist.bad_age = 0;
 
+
 /******************************************************************************
  * 3. Update geometric information of track
  */
@@ -685,6 +659,11 @@ void Clustering::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects) 
                     detected_objects.objects[da_tracks_[i]].orientation;
             track.sta.z =
                     detected_objects.objects[da_tracks_[i]].world_pose.point.z;
+
+            track.hist.historic_positions.push_back(
+                    Eigen::Vector3f(detected_objects.objects[da_tracks_[i]].world_pose.point.x,
+                                    detected_objects.objects[da_tracks_[i]].world_pose.point.y,
+                                    detected_objects.objects[da_tracks_[i]].world_pose.point.z));
 
         }
     }
@@ -801,31 +780,68 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
         // Fill in bounding box information
         viz_obj.bb.action = visualization_msgs::msg::Marker::ADD;
         viz_obj.bb.ns = "my_namespace";
-        viz_obj.bb.type = visualization_msgs::msg::Marker::CUBE;
+        viz_obj.bb.type = visualization_msgs::msg::Marker::CYLINDER;
         viz_obj.bb.header.frame_id = "map";
+        viz_obj.bb.lifetime = rclcpp::Duration(1.0);
         viz_obj.bb.id = i;
         viz_obj.bb.pose.position.x = track_msg.world_pose.point.x;
         viz_obj.bb.pose.position.y = track_msg.world_pose.point.y;
-        viz_obj.bb.pose.position.z = track_msg.world_pose.point.z + track_msg.height / 2;
+        viz_obj.bb.pose.position.z = track_msg.world_pose.point.z;
         viz_obj.bb.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, track_msg.orientation);
         viz_obj.bb.scale.x = track_msg.length;
         viz_obj.bb.scale.y = track_msg.width;
         viz_obj.bb.scale.z = track_msg.height;
-        viz_obj.bb.color.a = 1.0;
+        viz_obj.bb.color.a = 0.75;
         viz_obj.bb.color.r = float(track_msg.r) / 255.0;
         viz_obj.bb.color.g = float(track_msg.g) / 255.0;
         viz_obj.bb.color.b = float(track_msg.b) / 255.0;
 
+        double direction_angle = 0.0;
         // Fill in arrow information
+        if (track.hist.historic_positions.size() > 3) {
+            int num_elements = track.hist.historic_positions.size();
+            direction_angle = std::atan2(
+                    (track.hist.historic_positions.back().y() -
+                     track.hist.historic_positions[num_elements - 3].y()),
+
+                    (track.hist.historic_positions.back().x() -
+                     track.hist.historic_positions[num_elements - 3].x()));
+        }
+
+        visualization_msgs::msg::Marker dynamic_obj_waypoints;
+        dynamic_obj_waypoints.action = visualization_msgs::msg::Marker::ADD;
+        dynamic_obj_waypoints.ns = "my_namespace";
+        dynamic_obj_waypoints.type = visualization_msgs::msg::Marker::SPHERE_LIST;
+        dynamic_obj_waypoints.header.frame_id = "map";
+        dynamic_obj_waypoints.lifetime = rclcpp::Duration(1.0);
+        dynamic_obj_waypoints.id = i + 500;
+        dynamic_obj_waypoints.scale.x = 0.2;
+        dynamic_obj_waypoints.scale.y = 0.2;
+        dynamic_obj_waypoints.scale.z = 0.2;
+        if (abs(track_msg.velocity) > 0.1) {
+            std_msgs::msg::ColorRGBA color;
+            color.r = 1.0;
+            color.a = 0.8;
+            for (auto t: track.hist.historic_positions) {
+                geometry_msgs::msg::Point point;
+                point.x = t.x();
+                point.y = t.y();
+                point.z = t.z();
+                dynamic_obj_waypoints.points.push_back(point);
+                dynamic_obj_waypoints.colors.push_back(color);
+            }
+        }
+
         viz_obj.arr.action = visualization_msgs::msg::Marker::ADD;
         viz_obj.arr.ns = "my_namespace";
         viz_obj.arr.type = visualization_msgs::msg::Marker::ARROW;
         viz_obj.arr.header.frame_id = "map";
+        viz_obj.arr.lifetime = rclcpp::Duration(1.0);
         viz_obj.arr.id = i + 100;
         viz_obj.arr.pose.position.x = track_msg.world_pose.point.x;
         viz_obj.arr.pose.position.y = track_msg.world_pose.point.y;
-        viz_obj.arr.pose.position.z = track_msg.world_pose.point.z + track_msg.height / 2;
-        viz_obj.arr.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, track_msg.orientation);
+        viz_obj.arr.pose.position.z = track_msg.world_pose.point.z;
+        viz_obj.arr.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, direction_angle);
         if (abs(track_msg.velocity) < 0.1) {
             viz_obj.arr.scale.x = 0.1;
             viz_obj.arr.scale.y = 0.1;
@@ -835,7 +851,7 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
             viz_obj.arr.scale.y = 0.5;
             viz_obj.arr.scale.z = 0.5;
         }
-        viz_obj.arr.color.a = 1.0;
+        viz_obj.arr.color.a = 75.5;
         viz_obj.arr.color.r = float(track_msg.r) / 255.0;
         viz_obj.arr.color.g = float(track_msg.g) / 255.0;
         viz_obj.arr.color.b = float(track_msg.b) / 255.0;
@@ -845,10 +861,11 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
         viz_obj.txt.ns = "my_namespace";
         viz_obj.txt.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
         viz_obj.txt.header.frame_id = "map";
+        viz_obj.txt.lifetime = rclcpp::Duration(1.0);
         viz_obj.txt.id = i + 200;
         viz_obj.txt.pose.position.x = track_msg.world_pose.point.x;
         viz_obj.txt.pose.position.y = track_msg.world_pose.point.y;
-        viz_obj.txt.pose.position.z = track_msg.world_pose.point.z + track_msg.height / 2;
+        viz_obj.txt.pose.position.z = track_msg.world_pose.point.z + track_msg.height;
         viz_obj.txt.scale.x = 1.0;
         viz_obj.txt.scale.y = 1.0;
         viz_obj.txt.scale.z = 1.0;
@@ -861,6 +878,7 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
         marker_array.markers.push_back(viz_obj.arr);
         marker_array.markers.push_back(viz_obj.bb);
         marker_array.markers.push_back(viz_obj.txt);
+        marker_array.markers.push_back(dynamic_obj_waypoints);
 
     }
 

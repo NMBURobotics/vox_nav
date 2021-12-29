@@ -56,6 +56,8 @@
 
 struct Parameter {
 
+    float sacle_up_objects;
+
     float da_ped_dist_pos;
     float da_ped_dist_form;
     float da_car_dist_pos;
@@ -85,6 +87,7 @@ struct Parameter {
 struct History {
     int good_age;
     int bad_age;
+    std::vector<Eigen::Vector3f> historic_positions;
 };
 
 struct Geometry {
@@ -136,20 +139,20 @@ public:
 
     ~Clustering();
 
-    typedef message_filters::sync_policies::ApproximateTime <
-    sensor_msgs::msg::PointCloud2,
-    geometry_msgs::msg::PoseArray>
+    typedef message_filters::sync_policies::ApproximateTime<
+            sensor_msgs::msg::PointCloud2,
+            geometry_msgs::msg::PoseArray>
             CloudOdomApprxTimeSyncPolicy;
-    typedef message_filters::Synchronizer <CloudOdomApprxTimeSyncPolicy> CloudOdomApprxTimeSyncer;
+    typedef message_filters::Synchronizer<CloudOdomApprxTimeSyncPolicy> CloudOdomApprxTimeSyncer;
 
     void cloudOdomCallback(
             const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud,
             const geometry_msgs::msg::PoseArray::ConstSharedPtr &poses);
 
 private:
-    message_filters::Subscriber <sensor_msgs::msg::PointCloud2> cloud_subscriber_;
-    message_filters::Subscriber <geometry_msgs::msg::PoseArray> poses_subscriber_;
-    std::shared_ptr <CloudOdomApprxTimeSyncer> cloud_poses_data_approx_time_syncher_;
+    message_filters::Subscriber<sensor_msgs::msg::PointCloud2> cloud_subscriber_;
+    message_filters::Subscriber<geometry_msgs::msg::PoseArray> poses_subscriber_;
+    std::shared_ptr<CloudOdomApprxTimeSyncer> cloud_poses_data_approx_time_syncher_;
 
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
@@ -162,13 +165,13 @@ private:
     int track_id_counter_;
     int time_frame_;
 
-    std::shared_ptr <tf2_ros::Buffer> buffer_;
-    std::shared_ptr <tf2_ros::TransformListener> transform_listener_;
+    std::shared_ptr<tf2_ros::Buffer> buffer_;
+    std::shared_ptr<tf2_ros::TransformListener> transform_listener_;
 
     // UKF
     Eigen::MatrixXd R_laser_;
     Eigen::VectorXd weights_;
-    std::vector <Track> tracks_;
+    std::vector<Track> tracks_;
 
     // Prediction
     rclcpp::Time last_time_stamp_;
