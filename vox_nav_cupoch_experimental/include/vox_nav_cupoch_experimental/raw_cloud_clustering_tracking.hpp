@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2021 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 DISCLAIMER: some parts of code has been taken from; https://github.com/appinho/SARosPerceptionKitti
 Credits to author: Simon Appel, https://github.com/appinho
 */
-
 
 #ifndef VOX_NAV_CUPOCH_EXPERIMENTAL__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
 #define VOX_NAV_CUPOCH_EXPERIMENTAL__RAW_CLOUD_CLUSTERING_TRACKING_HPP_

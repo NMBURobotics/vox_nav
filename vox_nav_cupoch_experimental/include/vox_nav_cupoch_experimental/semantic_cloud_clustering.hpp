@@ -113,8 +113,6 @@ namespace vox_nav_cupoch_experimental
      * @brief Color based denoising, if number of neighbours within radius
      * are more than max_nn, assign the color of search point to dominant color in region
      *
-     *
-     *
      * @param a
      * @param b
      * @param radius
