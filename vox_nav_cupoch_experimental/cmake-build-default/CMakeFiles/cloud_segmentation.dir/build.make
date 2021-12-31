@@ -66,21 +66,21 @@ include CMakeFiles/cloud_segmentation.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/cloud_segmentation.dir/flags.make
 
-CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o: CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o.depend
-CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o: CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o.Release.cmake
-CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o: ../src/cloud_segmentation.cu
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building NVCC (Device) object CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o"
+CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_semantic_cloud_clustering.cu.o: CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_semantic_cloud_clustering.cu.o.depend
+CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_semantic_cloud_clustering.cu.o: CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_semantic_cloud_clustering.cu.o.Release.cmake
+CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_semantic_cloud_clustering.cu.o: ../src/semantic_cloud_clustering.cu
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building NVCC (Device) object CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_semantic_cloud_clustering.cu.o"
 	cd /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src && /opt/clion-2021.2.3/bin/cmake/linux/bin/cmake -E make_directory /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src/.
-	cd /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src && /opt/clion-2021.2.3/bin/cmake/linux/bin/cmake -D verbose:BOOL=$(VERBOSE) -D build_configuration:STRING=Release -D generated_file:STRING=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src/./cloud_segmentation_generated_cloud_segmentation.cu.o -D generated_cubin_file:STRING=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src/./cloud_segmentation_generated_cloud_segmentation.cu.o.cubin.txt -P /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o.Release.cmake
+	cd /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src && /opt/clion-2021.2.3/bin/cmake/linux/bin/cmake -D verbose:BOOL=$(VERBOSE) -D build_configuration:STRING=Release -D generated_file:STRING=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src/./cloud_segmentation_generated_semantic_cloud_clustering.cu.o -D generated_cubin_file:STRING=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src/./cloud_segmentation_generated_semantic_cloud_clustering.cu.o.cubin.txt -P /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_semantic_cloud_clustering.cu.o.Release.cmake
 
 # Object files for target cloud_segmentation
 cloud_segmentation_OBJECTS =
 
 # External object files for target cloud_segmentation
 cloud_segmentation_EXTERNAL_OBJECTS = \
-"/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o"
+"/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_semantic_cloud_clustering.cu.o"
 
-cloud_segmentation: CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o
+cloud_segmentation: CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_semantic_cloud_clustering.cu.o
 cloud_segmentation: CMakeFiles/cloud_segmentation.dir/build.make
 cloud_segmentation: /usr/local/cuda-11.4/lib64/libcudart_static.a
 cloud_segmentation: /usr/lib/x86_64-linux-gnu/librt.so
@@ -502,7 +502,7 @@ CMakeFiles/cloud_segmentation.dir/clean:
 	$(CMAKE_COMMAND) -P CMakeFiles/cloud_segmentation.dir/cmake_clean.cmake
 .PHONY : CMakeFiles/cloud_segmentation.dir/clean
 
-CMakeFiles/cloud_segmentation.dir/depend: CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o
+CMakeFiles/cloud_segmentation.dir/depend: CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_semantic_cloud_clustering.cu.o
 	cd /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/cloud_segmentation.dir/depend
 

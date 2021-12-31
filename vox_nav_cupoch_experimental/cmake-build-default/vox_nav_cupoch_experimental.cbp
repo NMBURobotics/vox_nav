@@ -17,6 +17,138 @@
 					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
+			<Target title="install/local">
+				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 install/local"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="semantic_cloud_clustering">
+				<Option output="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/semantic_cloud_clustering" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DFLANN_USE_CUDA"/>
+					<Add option="-DUSE_RMM"/>
+					<Add option="-DRCUTILS_ENABLE_FAULT_INJECTION"/>
+					<Add option="-DDEFAULT_RMW_IMPLEMENTATION=rmw_fastrtps_cpp"/>
+					<Add option="-DSPDLOG_COMPILED_LIB"/>
+					<Add option="-DDISABLE_PCAP"/>
+					<Add option="-DDISABLE_PNG"/>
+					<Add option="-DDISABLE_LIBUSB_1_0"/>
+					<Add directory="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/include"/>
+					<Add directory="/usr/local/cuda/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/rmm/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/cnmem/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/fmt/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/liblzf/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/eigen"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/spdlog/include"/>
+					<Add directory="/usr/include/jsoncpp"/>
+					<Add directory="/usr/local/cuda-11.4/include"/>
+					<Add directory="/home/atas/colcon_ws/install/vox_nav_utilities/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch_conversions/include"/>
+					<Add directory="/usr/include/vtk-7.1"/>
+					<Add directory="/usr/include/freetype2"/>
+					<Add directory="/usr/include/pcl-1.10"/>
+					<Add directory="/usr/include/libpng16"/>
+					<Add directory="/home/atas/colcon_ws/install/vox_nav_msgs/include"/>
+					<Add directory="/home/atas/colcon_ws/install/pcl_ros/include"/>
+					<Add directory="/home/atas/colcon_ws/install/pcl_conversions/include"/>
+					<Add directory="/opt/ros/foxy/include"/>
+					<Add directory="/usr/include/eigen3"/>
+					<Add directory="/usr/include/ni"/>
+					<Add directory="/usr/include/openni2"/>
+					<Add directory="/home/atas/colcon_ws/install/ApproxMVBB/include"/>
+					<Add directory="/usr/include/c++/9"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/9"/>
+					<Add directory="/usr/include/c++/9/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 semantic_cloud_clustering"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="semantic_cloud_clustering/fast">
+				<Option output="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/semantic_cloud_clustering" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DFLANN_USE_CUDA"/>
+					<Add option="-DUSE_RMM"/>
+					<Add option="-DRCUTILS_ENABLE_FAULT_INJECTION"/>
+					<Add option="-DDEFAULT_RMW_IMPLEMENTATION=rmw_fastrtps_cpp"/>
+					<Add option="-DSPDLOG_COMPILED_LIB"/>
+					<Add option="-DDISABLE_PCAP"/>
+					<Add option="-DDISABLE_PNG"/>
+					<Add option="-DDISABLE_LIBUSB_1_0"/>
+					<Add directory="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/include"/>
+					<Add directory="/usr/local/cuda/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/rmm/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/cnmem/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/fmt/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/liblzf/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/eigen"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/spdlog/include"/>
+					<Add directory="/usr/include/jsoncpp"/>
+					<Add directory="/usr/local/cuda-11.4/include"/>
+					<Add directory="/home/atas/colcon_ws/install/vox_nav_utilities/include"/>
+					<Add directory="/home/atas/colcon_ws/install/cupoch_conversions/include"/>
+					<Add directory="/usr/include/vtk-7.1"/>
+					<Add directory="/usr/include/freetype2"/>
+					<Add directory="/usr/include/pcl-1.10"/>
+					<Add directory="/usr/include/libpng16"/>
+					<Add directory="/home/atas/colcon_ws/install/vox_nav_msgs/include"/>
+					<Add directory="/home/atas/colcon_ws/install/pcl_ros/include"/>
+					<Add directory="/home/atas/colcon_ws/install/pcl_conversions/include"/>
+					<Add directory="/opt/ros/foxy/include"/>
+					<Add directory="/usr/include/eigen3"/>
+					<Add directory="/usr/include/ni"/>
+					<Add directory="/usr/include/openni2"/>
+					<Add directory="/home/atas/colcon_ws/install/ApproxMVBB/include"/>
+					<Add directory="/usr/include/c++/9"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/9"/>
+					<Add directory="/usr/include/c++/9/backward"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 semantic_cloud_clustering/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
 			<Target title="ros2bag_kitti_bin">
 				<Option output="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/ros2bag_kitti_bin" prefix_auto="0" extension_auto="0"/>
 				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
@@ -139,128 +271,6 @@
 					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
-			<Target title="install/local">
-				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
-				<Option type="4"/>
-				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 install/local"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-				</MakeCommands>
-			</Target>
-			<Target title="cloud_segmentation">
-				<Option output="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/cloud_segmentation" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
-				<Option object_output="./"/>
-				<Option type="1"/>
-				<Option compiler="gcc"/>
-				<Compiler>
-					<Add option="-DFLANN_USE_CUDA"/>
-					<Add option="-DUSE_RMM"/>
-					<Add option="-DRCUTILS_ENABLE_FAULT_INJECTION"/>
-					<Add option="-DDEFAULT_RMW_IMPLEMENTATION=rmw_fastrtps_cpp"/>
-					<Add option="-DSPDLOG_COMPILED_LIB"/>
-					<Add option="-DDISABLE_PCAP"/>
-					<Add option="-DDISABLE_PNG"/>
-					<Add option="-DDISABLE_LIBUSB_1_0"/>
-					<Add directory="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/include"/>
-					<Add directory="/usr/local/cuda/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/rmm/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/cnmem/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/fmt/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/liblzf/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/eigen"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/spdlog/include"/>
-					<Add directory="/usr/include/jsoncpp"/>
-					<Add directory="/usr/local/cuda-11.4/include"/>
-					<Add directory="/home/atas/colcon_ws/install/vox_nav_utilities/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch_conversions/include"/>
-					<Add directory="/usr/include/vtk-7.1"/>
-					<Add directory="/usr/include/freetype2"/>
-					<Add directory="/usr/include/pcl-1.10"/>
-					<Add directory="/usr/include/libpng16"/>
-					<Add directory="/home/atas/colcon_ws/install/vox_nav_msgs/include"/>
-					<Add directory="/home/atas/colcon_ws/install/pcl_ros/include"/>
-					<Add directory="/home/atas/colcon_ws/install/pcl_conversions/include"/>
-					<Add directory="/opt/ros/foxy/include"/>
-					<Add directory="/usr/include/eigen3"/>
-					<Add directory="/usr/include/ni"/>
-					<Add directory="/usr/include/openni2"/>
-					<Add directory="/home/atas/colcon_ws/install/ApproxMVBB/include"/>
-					<Add directory="/usr/include/c++/9"/>
-					<Add directory="/usr/include/x86_64-linux-gnu/c++/9"/>
-					<Add directory="/usr/include/c++/9/backward"/>
-					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
-					<Add directory="/usr/local/include"/>
-					<Add directory="/usr/include/x86_64-linux-gnu"/>
-					<Add directory="/usr/include"/>
-				</Compiler>
-				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 cloud_segmentation"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-				</MakeCommands>
-			</Target>
-			<Target title="cloud_segmentation/fast">
-				<Option output="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/cloud_segmentation" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
-				<Option object_output="./"/>
-				<Option type="1"/>
-				<Option compiler="gcc"/>
-				<Compiler>
-					<Add option="-DFLANN_USE_CUDA"/>
-					<Add option="-DUSE_RMM"/>
-					<Add option="-DRCUTILS_ENABLE_FAULT_INJECTION"/>
-					<Add option="-DDEFAULT_RMW_IMPLEMENTATION=rmw_fastrtps_cpp"/>
-					<Add option="-DSPDLOG_COMPILED_LIB"/>
-					<Add option="-DDISABLE_PCAP"/>
-					<Add option="-DDISABLE_PNG"/>
-					<Add option="-DDISABLE_LIBUSB_1_0"/>
-					<Add directory="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/include"/>
-					<Add directory="/usr/local/cuda/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/rmm/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/cnmem/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/fmt/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/liblzf/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/eigen"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch/third_party/spdlog/include"/>
-					<Add directory="/usr/include/jsoncpp"/>
-					<Add directory="/usr/local/cuda-11.4/include"/>
-					<Add directory="/home/atas/colcon_ws/install/vox_nav_utilities/include"/>
-					<Add directory="/home/atas/colcon_ws/install/cupoch_conversions/include"/>
-					<Add directory="/usr/include/vtk-7.1"/>
-					<Add directory="/usr/include/freetype2"/>
-					<Add directory="/usr/include/pcl-1.10"/>
-					<Add directory="/usr/include/libpng16"/>
-					<Add directory="/home/atas/colcon_ws/install/vox_nav_msgs/include"/>
-					<Add directory="/home/atas/colcon_ws/install/pcl_ros/include"/>
-					<Add directory="/home/atas/colcon_ws/install/pcl_conversions/include"/>
-					<Add directory="/opt/ros/foxy/include"/>
-					<Add directory="/usr/include/eigen3"/>
-					<Add directory="/usr/include/ni"/>
-					<Add directory="/usr/include/openni2"/>
-					<Add directory="/home/atas/colcon_ws/install/ApproxMVBB/include"/>
-					<Add directory="/usr/include/c++/9"/>
-					<Add directory="/usr/include/x86_64-linux-gnu/c++/9"/>
-					<Add directory="/usr/include/c++/9/backward"/>
-					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/9/include"/>
-					<Add directory="/usr/local/include"/>
-					<Add directory="/usr/include/x86_64-linux-gnu"/>
-					<Add directory="/usr/include"/>
-				</Compiler>
-				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 cloud_segmentation/fast"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-				</MakeCommands>
-			</Target>
 			<Target title="uninstall">
 				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
 				<Option type="4"/>
@@ -271,8 +281,8 @@
 					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
-			<Target title="cloud_clustering">
-				<Option output="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/cloud_clustering" prefix_auto="0" extension_auto="0"/>
+			<Target title="raw_cloud_clustering_tracking">
+				<Option output="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/raw_cloud_clustering_tracking" prefix_auto="0" extension_auto="0"/>
 				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
@@ -321,14 +331,14 @@
 					<Add directory="/usr/include"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 cloud_clustering"/>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 raw_cloud_clustering_tracking"/>
 					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
 					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
 					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
-			<Target title="cloud_clustering/fast">
-				<Option output="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/cloud_clustering" prefix_auto="0" extension_auto="0"/>
+			<Target title="raw_cloud_clustering_tracking/fast">
+				<Option output="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/raw_cloud_clustering_tracking" prefix_auto="0" extension_auto="0"/>
 				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
@@ -377,37 +387,7 @@
 					<Add directory="/usr/include"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 cloud_clustering/fast"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-				</MakeCommands>
-			</Target>
-			<Target title="test">
-				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
-				<Option type="4"/>
-				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 test"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-				</MakeCommands>
-			</Target>
-			<Target title="edit_cache">
-				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
-				<Option type="4"/>
-				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 edit_cache"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
-				</MakeCommands>
-			</Target>
-			<Target title="rebuild_cache">
-				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
-				<Option type="4"/>
-				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 raw_cloud_clustering_tracking/fast"/>
 					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
 					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
 					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
@@ -438,6 +418,26 @@
 				<Option type="4"/>
 				<MakeCommands>
 					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 install"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="test">
+				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 test"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 edit_cache"/>
 					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
 					<Clean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
 					<DistClean command="/usr/bin/make -j8 -f &quot;/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/Makefile&quot;  VERBOSE=1 clean"/>
@@ -612,23 +612,23 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_clustering.dir/src/cloud_clustering_generated_clustering.cu.o">
-			<Option target="cloud_clustering"/>
-		</Unit>
-		<Unit filename="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/cloud_segmentation.dir/src/cloud_segmentation_generated_cloud_segmentation.cu.o">
-			<Option target="cloud_segmentation"/>
+		<Unit filename="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/raw_cloud_clustering_tracking.dir/src/raw_cloud_clustering_tracking_generated_raw_cloud_clustering_tracking.cu.o">
+			<Option target="raw_cloud_clustering_tracking"/>
 		</Unit>
 		<Unit filename="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/ros2bag_kitti_bin.dir/src/ros2bag_kitti_bin_generated_ros2bag_kitti_bin.cu.o">
 			<Option target="ros2bag_kitti_bin"/>
 		</Unit>
-		<Unit filename="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/src/cloud_segmentation.cu">
-			<Option target="cloud_segmentation"/>
+		<Unit filename="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles/semantic_cloud_clustering.dir/src/semantic_cloud_clustering_generated_semantic_cloud_clustering.cu.o">
+			<Option target="semantic_cloud_clustering"/>
 		</Unit>
-		<Unit filename="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/src/clustering.cu">
-			<Option target="cloud_clustering"/>
+		<Unit filename="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/src/raw_cloud_clustering_tracking.cu">
+			<Option target="raw_cloud_clustering_tracking"/>
 		</Unit>
 		<Unit filename="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/src/ros2bag_kitti_bin.cu">
 			<Option target="ros2bag_kitti_bin"/>
+		</Unit>
+		<Unit filename="/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/src/semantic_cloud_clustering.cu">
+			<Option target="semantic_cloud_clustering"/>
 		</Unit>
 		<Unit filename="/usr/src/googletest/googletest/src/gtest-all.cc">
 			<Option target="gtest"/>

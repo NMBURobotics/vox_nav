@@ -1,30 +1,51 @@
-#include "vox_nav_cupoch_experimental/clustering.hpp"
+// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-Clustering::Clustering()
-        : Node("cloud_clustering_rclcpp_node") {
+/*
+DISCLAIMER: some parts of code has been taken from; https://github.com/appinho/SARosPerceptionKitti
+Credits to author: Simon Appel, https://github.com/appinho
+*/
+
+#include "vox_nav_cupoch_experimental/raw_cloud_clustering_tracking.hpp"
+
+using namespace vox_nav_cupoch_experimental;
+
+RawCloudClusteringTracking::RawCloudClusteringTracking()
+    : Node("cloud_clustering_rclcpp_node")
+{
     cloud_subscriber_.subscribe(this, "points", rmw_qos_profile_sensor_data);
     poses_subscriber_.subscribe(this, "poses", rmw_qos_profile_sensor_data);
 
     cloud_poses_data_approx_time_syncher_.reset(
-            new CloudOdomApprxTimeSyncer(
-                    CloudOdomApprxTimeSyncPolicy(500),
-                    cloud_subscriber_,
-                    poses_subscriber_));
+        new CloudOdomApprxTimeSyncer(
+            CloudOdomApprxTimeSyncPolicy(500),
+            cloud_subscriber_,
+            poses_subscriber_));
 
     cloud_poses_data_approx_time_syncher_->registerCallback(
-            std::bind(
-                    &Clustering::cloudOdomCallback, this,
-                    std::placeholders::_1,
-                    std::placeholders::_2));
+        std::bind(
+            &RawCloudClusteringTracking::cloudOdomCallback, this,
+            std::placeholders::_1,
+            std::placeholders::_2));
 
-    cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-            "merged", rclcpp::SystemDefaultsQoS());
+    cloud_clusters_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "detection/clusters", rclcpp::SystemDefaultsQoS());
 
-    marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
-            "correspondings", rclcpp::SystemDefaultsQoS());
+    tracking_markers_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+        "tracking/objects", rclcpp::SystemDefaultsQoS());
 
     // Define parameters
-    declare_parameter("sacle_up_objects", params_.sacle_up_objects);
     declare_parameter("data_association.ped.dist.position", params_.da_ped_dist_pos);
     declare_parameter("data_association.ped.dist.form", params_.da_ped_dist_form);
     declare_parameter("data_association.car.dist.position", params_.da_car_dist_pos);
@@ -45,8 +66,16 @@ Clustering::Clustering()
     declare_parameter("track.P_init.v", params_.p_init_v);
     declare_parameter("track.P_init.yaw", params_.p_init_yaw);
     declare_parameter("track.P_init.yaw_rate", params_.p_init_yaw_rate);
+    declare_parameter("clustering.x_bound", clustering_params_.x_bound);
+    declare_parameter("clustering.y_bound", clustering_params_.y_bound);
+    declare_parameter("clustering.z_bound", clustering_params_.z_bound);
+    declare_parameter("clustering.downsample_voxel_size", clustering_params_.downsample_voxel_size);
+    declare_parameter("clustering.remove_ground_plane_thres", clustering_params_.remove_ground_plane_thres);
+    declare_parameter("clustering.clustering_min_points", clustering_params_.clustering_min_points);
+    declare_parameter("clustering.clustering_max_points", clustering_params_.clustering_max_points);
+    declare_parameter("clustering.clustering_max_step_size", clustering_params_.clustering_max_step_size);
+    declare_parameter("clustering.sacle_up_objects", clustering_params_.sacle_up_objects);
 
-    get_parameter("sacle_up_objects", params_.sacle_up_objects);
     get_parameter("data_association.ped.dist.position", params_.da_ped_dist_pos);
     get_parameter("data_association.ped.dist.form", params_.da_ped_dist_form);
     get_parameter("data_association.car.dist.position", params_.da_car_dist_pos);
@@ -67,6 +96,15 @@ Clustering::Clustering()
     get_parameter("track.P_init.v", params_.p_init_v);
     get_parameter("track.P_init.yaw", params_.p_init_yaw);
     get_parameter("track.P_init.yaw_rate", params_.p_init_yaw_rate);
+    get_parameter("clustering.x_bound", clustering_params_.x_bound);
+    get_parameter("clustering.y_bound", clustering_params_.y_bound);
+    get_parameter("clustering.z_bound", clustering_params_.z_bound);
+    get_parameter("clustering.downsample_voxel_size", clustering_params_.downsample_voxel_size);
+    get_parameter("clustering.remove_ground_plane_thres", clustering_params_.remove_ground_plane_thres);
+    get_parameter("clustering.clustering_min_points", clustering_params_.clustering_min_points);
+    get_parameter("clustering.clustering_max_points", clustering_params_.clustering_max_points);
+    get_parameter("clustering.clustering_max_step_size", clustering_params_.clustering_max_step_size);
+    get_parameter("clustering.sacle_up_objects", clustering_params_.sacle_up_objects);
 
     // Print parameters
     RCLCPP_INFO_STREAM(get_logger(), "da_ped_dist_pos " << params_.da_ped_dist_pos);
@@ -84,29 +122,37 @@ Clustering::Clustering()
     RCLCPP_INFO_STREAM(get_logger(), "tra_aging_bad " << params_.tra_aging_bad);
     RCLCPP_INFO_STREAM(get_logger(), "tra_occ_factor " << params_.tra_occ_factor);
     RCLCPP_INFO_STREAM(
-            get_logger(), "tra_min_dist_between_tracks " << params_.tra_min_dist_between_tracks);
+        get_logger(), "tra_min_dist_between_tracks " << params_.tra_min_dist_between_tracks);
     RCLCPP_INFO_STREAM(get_logger(), "p_init_x " << params_.p_init_x);
     RCLCPP_INFO_STREAM(get_logger(), "p_init_y " << params_.p_init_y);
     RCLCPP_INFO_STREAM(get_logger(), "p_init_v " << params_.p_init_v);
     RCLCPP_INFO_STREAM(get_logger(), "p_init_yaw " << params_.p_init_yaw);
     RCLCPP_INFO_STREAM(get_logger(), "p_init_yaw_rate " << params_.p_init_yaw_rate);
-
+    RCLCPP_INFO_STREAM(get_logger(), "x_bound " << clustering_params_.x_bound);
+    RCLCPP_INFO_STREAM(get_logger(), "y_bound " << clustering_params_.y_bound);
+    RCLCPP_INFO_STREAM(get_logger(), "z_bound " << clustering_params_.z_bound);
+    RCLCPP_INFO_STREAM(get_logger(), "downsample_voxel_size " << clustering_params_.downsample_voxel_size);
+    RCLCPP_INFO_STREAM(get_logger(), "remove_ground_plane_thres " << clustering_params_.remove_ground_plane_thres);
+    RCLCPP_INFO_STREAM(get_logger(), "clustering_min_points " << clustering_params_.clustering_min_points);
+    RCLCPP_INFO_STREAM(get_logger(), "clustering_max_points " << clustering_params_.clustering_max_points);
+    RCLCPP_INFO_STREAM(get_logger(), "clustering_max_step_size " << clustering_params_.clustering_max_step_size);
+    RCLCPP_INFO_STREAM(get_logger(), "sacle_up_objects " << clustering_params_.sacle_up_objects);
 
     buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
     transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
-
     is_initialized_ = false;
 
     // Measurement covariance
     R_laser_ = Eigen::MatrixXd(params_.tra_dim_z, params_.tra_dim_z);
     R_laser_ << params_.tra_std_lidar_x * params_.tra_std_lidar_x, 0,
-            0, params_.tra_std_lidar_y * params_.tra_std_lidar_y;
+        0, params_.tra_std_lidar_y * params_.tra_std_lidar_y;
 
     // Define weights for UKF
     weights_ = Eigen::VectorXd(2 * params_.tra_dim_x_aug + 1);
     weights_(0) = params_.tra_lambda /
                   (params_.tra_lambda + params_.tra_dim_x_aug);
-    for (int i = 1; i < 2 * params_.tra_dim_x_aug + 1; i++) {
+    for (int i = 1; i < 2 * params_.tra_dim_x_aug + 1; i++)
+    {
         weights_(i) = 0.5 / (params_.tra_dim_x_aug + params_.tra_lambda);
     }
 
@@ -115,47 +161,50 @@ Clustering::Clustering()
 
     // Define Publisher
     list_tracked_objects_pub_ =
-            this->create_publisher<vox_nav_msgs::msg::ObjectArray>(
-                    "/tracking/objects",
-                    rclcpp::SystemDefaultsQoS());
+        this->create_publisher<vox_nav_msgs::msg::ObjectArray>(
+            "/tracking/objects",
+            rclcpp::SystemDefaultsQoS());
 
     // Init counter for publishing
     time_frame_ = 0;
-
+    RCLCPP_INFO(get_logger(), "Creating...");
 }
 
-Clustering::~Clustering() {
+RawCloudClusteringTracking::~RawCloudClusteringTracking()
+{
+    RCLCPP_INFO(get_logger(), "Destroying...");
 }
 
-void Clustering::cloudOdomCallback(
-        const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud,
-        const geometry_msgs::msg::PoseArray::ConstSharedPtr &poses) {
-
+void RawCloudClusteringTracking::cloudOdomCallback(
+    const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud,
+    const geometry_msgs::msg::PoseArray::ConstSharedPtr &poses)
+{
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
 
     pcl_curr = vox_nav_utilities::crop_box<pcl::PointXYZRGB>(
-            pcl_curr,
-            Eigen::Vector4f(-15, -15, -2, 1),
-            Eigen::Vector4f(15, 15, 2, 1));
-    pcl_curr = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(pcl_curr, 0.05);
-    pcl_curr = vox_nav_utilities::segmentSurfacePlane<pcl::PointXYZRGB>(pcl_curr, 0.4, true);
+        pcl_curr,
+        Eigen::Vector4f(-clustering_params_.x_bound, -clustering_params_.y_bound, -clustering_params_.z_bound, 1),
+        Eigen::Vector4f(clustering_params_.x_bound, clustering_params_.y_bound, clustering_params_.z_bound, 1));
+    pcl_curr = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(pcl_curr, clustering_params_.downsample_voxel_size);
+    pcl_curr = vox_nav_utilities::segmentSurfacePlane<pcl::PointXYZRGB>(pcl_curr, clustering_params_.remove_ground_plane_thres, true);
 
     pcl_ros::transformPointCloud("map", *pcl_curr, *pcl_curr, *buffer_);
 
     auto clusters = vox_nav_utilities::euclidean_clustering<pcl::PointXYZRGB>(
-            pcl_curr, 20, 10000, 0.32);
-    vox_nav_utilities::publishClustersCloud(cloud_pub_, cloud->header, clusters);
+        pcl_curr,
+        clustering_params_.clustering_min_points,
+        clustering_params_.clustering_max_points,
+        clustering_params_.clustering_max_step_size);
+    vox_nav_utilities::publishClustersCloud(cloud_clusters_pub_, cloud->header, clusters);
 
     std::vector<std::pair<Eigen::Vector3f, Eigen::Vector3f>> cluster_boxes_vector;
-    for (auto &&cluster: clusters) {
-        if (cluster->points.size() < 10) {
-            RCLCPP_WARN(this->get_logger(), "THIS OBJECT HAVE TOO FEW POINTS NOT GONNA BUILD A BOX !!");
-            continue;
-        }
+    for (auto &&cluster : clusters)
+    {
         auto cupoch_cloud = std::make_shared<cupoch::geometry::PointCloud>();
         thrust::host_vector<Eigen::Vector3f> points;
-        for (auto &&i: cluster->points) {
+        for (auto &&i : cluster->points)
+        {
             points.push_back(Eigen::Vector3f(i.x, i.y, i.z));
         }
         cupoch_cloud->SetPoints(points);
@@ -165,7 +214,8 @@ void Clustering::cloudOdomCallback(
 
     vox_nav_msgs::msg::ObjectArray object_array;
 
-    for (size_t i = 0; i < cluster_boxes_vector.size(); i++) {
+    for (size_t i = 0; i < cluster_boxes_vector.size(); i++)
+    {
         vox_nav_msgs::msg::Object object;
 
         auto mvbb_corners_geometry_msgs = cluster_boxes_vector[i];
@@ -173,11 +223,11 @@ void Clustering::cloudOdomCallback(
         object_pose.header.stamp = cloud->header.stamp;
         object_pose.header.frame_id = "map";
         object_pose.pose.position.x =
-                (mvbb_corners_geometry_msgs.second.x() + mvbb_corners_geometry_msgs.first.x()) / 2.0;
+            (mvbb_corners_geometry_msgs.second.x() + mvbb_corners_geometry_msgs.first.x()) / 2.0;
         object_pose.pose.position.y =
-                (mvbb_corners_geometry_msgs.second.y() + mvbb_corners_geometry_msgs.first.y()) / 2.0;
+            (mvbb_corners_geometry_msgs.second.y() + mvbb_corners_geometry_msgs.first.y()) / 2.0;
         object_pose.pose.position.z =
-                (mvbb_corners_geometry_msgs.second.z() + mvbb_corners_geometry_msgs.first.z()) / 2.0;
+            (mvbb_corners_geometry_msgs.second.z() + mvbb_corners_geometry_msgs.first.z()) / 2.0;
 
         object.orientation = 0.0;
         object.world_pose.header = object_pose.header;
@@ -194,11 +244,11 @@ void Clustering::cloudOdomCallback(
                                                        transform_tolerance);
         object.velo_pose.point = object_pose_lidar.pose.position;
 
-        object.height = params_.sacle_up_objects *
+        object.height = clustering_params_.sacle_up_objects *
                         std::abs(mvbb_corners_geometry_msgs.second.z() - mvbb_corners_geometry_msgs.first.z());
-        object.width = params_.sacle_up_objects *
+        object.width = clustering_params_.sacle_up_objects *
                        std::abs(mvbb_corners_geometry_msgs.second.y() - mvbb_corners_geometry_msgs.first.y());
-        object.length = params_.sacle_up_objects *
+        object.length = clustering_params_.sacle_up_objects *
                         std::abs(mvbb_corners_geometry_msgs.second.x() - mvbb_corners_geometry_msgs.first.x());
         object.id = i;
         object.semantic_id = 0; // assume that we dont know
@@ -208,15 +258,19 @@ void Clustering::cloudOdomCallback(
     }
 
     auto time_stamp = get_clock()->now();
-    if (is_initialized_) {
+    if (is_initialized_)
+    {
         double dt = (now() - last_time_stamp_).seconds();
         Prediction(dt);
         GlobalNearestNeighbor(object_array);
         Update(object_array);
         TrackManagement(object_array);
-    } else {
+    }
+    else
+    {
         // Initialize tracks
-        for (int i = 0; i < object_array.objects.size(); ++i) {
+        for (int i = 0; i < object_array.objects.size(); ++i)
+        {
             initTrack(object_array.objects[i]);
         }
         is_initialized_ = true;
@@ -225,13 +279,14 @@ void Clustering::cloudOdomCallback(
     time_frame_++;
 
     publishTracks(cloud->header);
-
 }
 
-void Clustering::initTrack(const vox_nav_msgs::msg::Object &obj) {
+void RawCloudClusteringTracking::initTrack(const vox_nav_msgs::msg::Object &obj)
+{
 
     // Only if object can be a track
-    if (!obj.is_new_track) {
+    if (!obj.is_new_track)
+    {
         return;
     }
 
@@ -249,13 +304,13 @@ void Clustering::initTrack(const vox_nav_msgs::msg::Object &obj) {
     track.sta.z = obj.world_pose.point.z;
     track.sta.P = Eigen::MatrixXd::Zero(params_.tra_dim_x, params_.tra_dim_x);
     track.sta.P << params_.p_init_x, 0, 0, 0, 0,
-            0, params_.p_init_y, 0, 0, 0,
-            0, 0, params_.p_init_v, 0, 0,
-            0, 0, 0, params_.p_init_yaw, 0,
-            0, 0, 0, 0, params_.p_init_yaw_rate;
+        0, params_.p_init_y, 0, 0, 0,
+        0, 0, params_.p_init_v, 0, 0,
+        0, 0, 0, params_.p_init_yaw, 0,
+        0, 0, 0, 0, params_.p_init_yaw_rate;
     track.sta.Xsig_pred = Eigen::MatrixXd::Zero(
-            params_.tra_dim_x,
-            2 * params_.tra_dim_x_aug + 1);
+        params_.tra_dim_x,
+        2 * params_.tra_dim_x_aug + 1);
 
     // Add semantic information
     track.sem.name = obj.semantic_name;
@@ -278,16 +333,16 @@ void Clustering::initTrack(const vox_nav_msgs::msg::Object &obj) {
     track.prob_existence = 1.0f;
 
     track.hist.historic_positions.push_back(
-            Eigen::Vector3f(obj.world_pose.point.x,
-                            obj.world_pose.point.y,
-                            obj.world_pose.point.z));
-
+        Eigen::Vector3f(obj.world_pose.point.x,
+                        obj.world_pose.point.y,
+                        obj.world_pose.point.z));
 
     // Push back to track list
     tracks_.push_back(track);
 }
 
-void Clustering::Prediction(const double delta_t) {
+void RawCloudClusteringTracking::Prediction(const double delta_t)
+{
 
     // Buffer variables
     Eigen::VectorXd x_aug = Eigen::VectorXd(params_.tra_dim_x_aug);
@@ -295,14 +350,15 @@ void Clustering::Prediction(const double delta_t) {
     Eigen::MatrixXd Xsig_aug = Eigen::MatrixXd(params_.tra_dim_x_aug, 2 * params_.tra_dim_x_aug + 1);
 
     // Loop through all tracks
-    for (int i = 0; i < tracks_.size(); ++i) {
+    for (int i = 0; i < tracks_.size(); ++i)
+    {
 
         // Grab track
         Track &track = tracks_[i];
 
-/******************************************************************************
- * 1. Generate augmented sigma points
- */
+        /******************************************************************************
+         * 1. Generate augmented sigma points
+         */
 
         // Fill augmented mean state
         x_aug.head(5) = track.sta.x;
@@ -320,19 +376,21 @@ void Clustering::Prediction(const double delta_t) {
 
         // Create augmented sigma points
         Xsig_aug.col(0) = x_aug;
-        for (int j = 0; j < params_.tra_dim_x_aug; j++) {
+        for (int j = 0; j < params_.tra_dim_x_aug; j++)
+        {
             Xsig_aug.col(j + 1) = x_aug +
                                   std::sqrt(params_.tra_lambda + params_.tra_dim_x_aug) * L.col(j);
             Xsig_aug.col(j + 1 + params_.tra_dim_x_aug) = x_aug -
                                                           std::sqrt(params_.tra_lambda + params_.tra_dim_x_aug) *
-                                                          L.col(j);
+                                                              L.col(j);
         }
 
-/******************************************************************************
- * 2. Predict sigma points
- */
+        /******************************************************************************
+         * 2. Predict sigma points
+         */
 
-        for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++) {
+        for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++)
+        {
 
             // Grab values for better readability
             double p_x = Xsig_aug(0, j);
@@ -347,10 +405,13 @@ void Clustering::Prediction(const double delta_t) {
             double px_p, py_p;
 
             // Avoid division by zero
-            if (fabs(yawd) > 0.001) {
+            if (fabs(yawd) > 0.001)
+            {
                 px_p = p_x + v / yawd * (sin(yaw + yawd * delta_t) - sin(yaw));
                 py_p = p_y + v / yawd * (cos(yaw) - cos(yaw + yawd * delta_t));
-            } else {
+            }
+            else
+            {
                 px_p = p_x + v * delta_t * cos(yaw);
                 py_p = p_y + v * delta_t * sin(yaw);
             }
@@ -373,44 +434,54 @@ void Clustering::Prediction(const double delta_t) {
             track.sta.Xsig_pred(4, j) = yawd_p;
         }
 
-/******************************************************************************
- * 3. Predict state vector and state covariance
- */
+        /******************************************************************************
+         * 3. Predict state vector and state covariance
+         */
         // Predicted state mean
         track.sta.x.fill(0.0);
-        for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++) {
+        for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++)
+        {
             track.sta.x = track.sta.x + weights_(j) *
-                                        track.sta.Xsig_pred.col(j);
+                                            track.sta.Xsig_pred.col(j);
         }
 
         // Predicted state covariance matrix
         track.sta.P.fill(0.0);
 
         // Iterate over sigma points
-        for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++) {
+        for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++)
+        {
 
             // State difference
             Eigen::VectorXd x_diff = track.sta.Xsig_pred.col(j) - track.sta.x;
 
             // Angle normalization
-            while (x_diff(3) > M_PI) { x_diff(3) -= 2. * M_PI; }
-            while (x_diff(3) < -M_PI) { x_diff(3) += 2. * M_PI; }
+            while (x_diff(3) > M_PI)
+            {
+                x_diff(3) -= 2. * M_PI;
+            }
+            while (x_diff(3) < -M_PI)
+            {
+                x_diff(3) += 2. * M_PI;
+            }
 
             track.sta.P = track.sta.P + weights_(j) * x_diff *
-                                        x_diff.transpose();
+                                            x_diff.transpose();
         }
     }
 }
 
-void Clustering::GlobalNearestNeighbor(
-        const vox_nav_msgs::msg::ObjectArray &detected_objects) {
+void RawCloudClusteringTracking::GlobalNearestNeighbor(
+    const vox_nav_msgs::msg::ObjectArray &detected_objects)
+{
 
     // Define assoication vectors
     da_tracks_ = std::vector<int>(tracks_.size(), -1);
     da_objects_ = std::vector<int>(detected_objects.objects.size(), -1);
 
     // Loop through tracks
-    for (int i = 0; i < tracks_.size(); ++i) {
+    for (int i = 0; i < tracks_.size(); ++i)
+    {
 
         // Buffer variables
         std::vector<float> distances;
@@ -438,15 +509,18 @@ void Clustering::GlobalNearestNeighbor(
         box_gate = params_.da_ped_dist_form;
 
         // Loop through detected objects
-        for (int j = 0; j < detected_objects.objects.size(); ++j) {
+        for (int j = 0; j < detected_objects.objects.size(); ++j)
+        {
 
             // Calculate distance between track and detected object
-            if (tracks_[i].sem.id == detected_objects.objects[j].semantic_id) {
+            if (tracks_[i].sem.id == detected_objects.objects[j].semantic_id)
+            {
                 float dist = CalculateDistance(
-                        tracks_[i],
-                        detected_objects.objects[j]);
+                    tracks_[i],
+                    detected_objects.objects[j]);
 
-                if (dist < gate) {
+                if (dist < gate)
+                {
                     distances.push_back(dist);
                     matches.push_back(j);
                 }
@@ -454,18 +528,21 @@ void Clustering::GlobalNearestNeighbor(
         }
 
         // If track exactly finds one match assign it
-        if (matches.size() == 1) {
+        if (matches.size() == 1)
+        {
 
             float box_dist = CalculateEuclideanAndBoxOffset(
-                    tracks_[i],
-                    detected_objects.objects[matches[0]]);
-            if (box_dist < box_gate) {
+                tracks_[i],
+                detected_objects.objects[matches[0]]);
+            if (box_dist < box_gate)
+            {
                 da_tracks_[i] = matches[0];
                 da_objects_[matches[0]] = i;
             }
         }
-            // If found more then take best match and block other measurements
-        else if (matches.size() > 1) {
+        // If found more then take best match and block other measurements
+        else if (matches.size() > 1)
+        {
 
             // Block other measurements to NOT be initialized
             RCLCPP_WARN(get_logger(), "Multiple associations for track [%d]", tracks_[i].id);
@@ -474,35 +551,44 @@ void Clustering::GlobalNearestNeighbor(
             float min_box_dist = box_gate;
             int min_box_index = -1;
 
-            for (int k = 0; k < matches.size(); ++k) {
+            for (int k = 0; k < matches.size(); ++k)
+            {
 
                 float box_dist = CalculateEuclideanAndBoxOffset(
-                        tracks_[i],
-                        detected_objects.objects[matches[k]]);
+                    tracks_[i],
+                    detected_objects.objects[matches[k]]);
 
-                if (box_dist < min_box_dist) {
+                if (box_dist < min_box_dist)
+                {
                     min_box_index = k;
                     min_box_dist = box_dist;
                 }
             }
 
-            for (int k = 0; k < matches.size(); ++k) {
-                if (k == min_box_index) {
+            for (int k = 0; k < matches.size(); ++k)
+            {
+                if (k == min_box_index)
+                {
                     da_objects_[matches[k]] = i;
                     da_tracks_[i] = matches[k];
-                } else {
+                }
+                else
+                {
                     da_objects_[matches[k]] = -2;
                 }
             }
-        } else {
+        }
+        else
+        {
             RCLCPP_WARN(get_logger(), "No measurement found for track [%d]", tracks_[i].id);
         }
     }
 }
 
-float Clustering::CalculateDistance(
-        const Track &track,
-        const vox_nav_msgs::msg::Object &object) {
+float RawCloudClusteringTracking::CalculateDistance(
+    const Track &track,
+    const vox_nav_msgs::msg::Object &object)
+{
 
     // Calculate euclidean distance in x,y,z coordinates of track and object
     return std::abs(track.sta.x(0) - object.world_pose.point.x) +
@@ -510,47 +596,50 @@ float Clustering::CalculateDistance(
            std::abs(track.sta.z - object.world_pose.point.z);
 }
 
-float Clustering::CalculateEuclideanDistanceBetweenTracks(
-        const Track &t1,
-        const Track &t2) {
+float RawCloudClusteringTracking::CalculateEuclideanDistanceBetweenTracks(
+    const Track &t1,
+    const Track &t2)
+{
 
     // Calculate euclidean distance in x,y,z coordinates of two tracks
     return sqrt(
-            std::pow(t1.sta.x(0) - t2.sta.x(0), 2) +
-            std::pow(t1.sta.x(1) - t2.sta.x(1), 2) +
-            std::pow(t1.sta.z - t2.sta.z, 2)
-    );
+        std::pow(t1.sta.x(0) - t2.sta.x(0), 2) +
+        std::pow(t1.sta.x(1) - t2.sta.x(1), 2) +
+        std::pow(t1.sta.z - t2.sta.z, 2));
 }
 
-float Clustering::CalculateBoxMismatch(
-        const Track &track,
-        const vox_nav_msgs::msg::Object &object) {
+float RawCloudClusteringTracking::CalculateBoxMismatch(
+    const Track &track,
+    const vox_nav_msgs::msg::Object &object)
+{
 
     // Calculate mismatch of both tracked cube and detected cube
     float box_wl_switched = std::abs(track.geo.width - object.length) +
                             std::abs(track.geo.length - object.width);
     float box_wl_ordered = std::abs(track.geo.width - object.width) +
                            std::abs(track.geo.length - object.length);
-    float box_mismatch = (box_wl_switched < box_wl_ordered) ?
-                         box_wl_switched : box_wl_ordered;
+    float box_mismatch = (box_wl_switched < box_wl_ordered) ? box_wl_switched : box_wl_ordered;
     box_mismatch += std::abs(track.geo.height - object.height);
     return box_mismatch;
 }
 
-float Clustering::CalculateEuclideanAndBoxOffset(
-        const Track &track,
-        const vox_nav_msgs::msg::Object &object) {
+float RawCloudClusteringTracking::CalculateEuclideanAndBoxOffset(
+    const Track &track,
+    const vox_nav_msgs::msg::Object &object)
+{
 
     // Sum of euclidean offset and box mismatch
     return CalculateDistance(track, object) +
            CalculateBoxMismatch(track, object);
 }
 
-bool Clustering::compareGoodAge(Track t1, Track t2) {
+bool RawCloudClusteringTracking::compareGoodAge(Track t1, Track t2)
+{
     return t1.hist.good_age < t2.hist.good_age;
 }
 
-void Clustering::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects) {
+void RawCloudClusteringTracking::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects)
+{
 
     // Buffer variables
     Eigen::VectorXd z = Eigen::VectorXd(params_.tra_dim_z);
@@ -560,41 +649,46 @@ void Clustering::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects) 
     Eigen::MatrixXd Tc = Eigen::MatrixXd(params_.tra_dim_x, params_.tra_dim_z);
 
     // Loop through all tracks
-    for (int i = 0; i < tracks_.size(); ++i) {
+    for (int i = 0; i < tracks_.size(); ++i)
+    {
 
         // Grab track
         Track &track = tracks_[i];
 
         // If track has not found any measurement
-        if (da_tracks_[i] == -1) {
+        if (da_tracks_[i] == -1)
+        {
 
             // Increment bad aging
             track.hist.bad_age++;
         }
-            // If track has found a measurement update it
-        else {
+        // If track has found a measurement update it
+        else
+        {
 
             // Grab measurement
             z << detected_objects.objects[da_tracks_[i]].world_pose.point.x,
-                    detected_objects.objects[da_tracks_[i]].world_pose.point.y;
+                detected_objects.objects[da_tracks_[i]].world_pose.point.y;
 
-/******************************************************************************
- * 1. Predict measurement
- */
+            /******************************************************************************
+             * 1. Predict measurement
+             */
             // Init measurement sigma points
             Zsig = track.sta.Xsig_pred.topLeftCorner(
-                    params_.tra_dim_z,
-                    2 * params_.tra_dim_x_aug + 1);
+                params_.tra_dim_z,
+                2 * params_.tra_dim_x_aug + 1);
 
             // Mean predicted measurement
             z_pred.fill(0.0);
-            for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++) {
+            for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++)
+            {
                 z_pred = z_pred + weights_(j) * Zsig.col(j);
             }
 
             S.fill(0.0);
             Tc.fill(0.0);
-            for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++) {
+            for (int j = 0; j < 2 * params_.tra_dim_x_aug + 1; j++)
+            {
 
                 // Residual
                 Eigen::VectorXd z_sig_diff = Zsig.col(j) - z_pred;
@@ -604,8 +698,14 @@ void Clustering::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects) 
                 Eigen::VectorXd x_diff = track.sta.Xsig_pred.col(j) - track.sta.x;
 
                 // Angle normalization
-                while (x_diff(3) > M_PI) { x_diff(3) -= 2. * M_PI; }
-                while (x_diff(3) < -M_PI) { x_diff(3) += 2. * M_PI; }
+                while (x_diff(3) > M_PI)
+                {
+                    x_diff(3) -= 2. * M_PI;
+                }
+                while (x_diff(3) < -M_PI)
+                {
+                    x_diff(3) += 2. * M_PI;
+                }
 
                 Tc = Tc + weights_(j) * x_diff * z_sig_diff.transpose();
             }
@@ -613,9 +713,9 @@ void Clustering::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects) 
             // Add measurement noise covariance matrix
             S = S + R_laser_;
 
-/******************************************************************************
- * 2. Update state vector and covariance matrix
- */
+            /******************************************************************************
+             * 2. Update state vector and covariance matrix
+             */
             // Kalman gain K;
             Eigen::MatrixXd K = Tc * S.inverse();
 
@@ -630,52 +730,55 @@ void Clustering::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects) 
             track.hist.good_age++;
             track.hist.bad_age = 0;
 
-
-/******************************************************************************
- * 3. Update geometric information of track
- */
+            /******************************************************************************
+             * 3. Update geometric information of track
+             */
             // Calculate area of detection and track
             float det_area =
-                    detected_objects.objects[da_tracks_[i]].length *
-                    detected_objects.objects[da_tracks_[i]].width;
+                detected_objects.objects[da_tracks_[i]].length *
+                detected_objects.objects[da_tracks_[i]].width;
             float tra_area = track.geo.length * track.geo.width;
 
             // If track became strongly smaller keep the shape
-            if (params_.tra_occ_factor * det_area < tra_area) {
+            if (params_.tra_occ_factor * det_area < tra_area)
+            {
                 RCLCPP_WARN(
-                        get_logger(), "Track [%d] probably occluded because of dropping size"
-                                      " from [%f] to [%f]", track.id, tra_area, det_area);
+                    get_logger(), "Track [%d] probably occluded because of dropping size"
+                                  " from [%f] to [%f]",
+                    track.id, tra_area, det_area);
             }
             // Update the form of the track with measurement
             track.geo.length =
-                    detected_objects.objects[da_tracks_[i]].length;
+                detected_objects.objects[da_tracks_[i]].length;
             track.geo.width =
-                    detected_objects.objects[da_tracks_[i]].width;
+                detected_objects.objects[da_tracks_[i]].width;
             track.geo.height =
-                    detected_objects.objects[da_tracks_[i]].height;
+                detected_objects.objects[da_tracks_[i]].height;
 
             // Update orientation and ground level
             track.geo.orientation =
-                    detected_objects.objects[da_tracks_[i]].orientation;
+                detected_objects.objects[da_tracks_[i]].orientation;
             track.sta.z =
-                    detected_objects.objects[da_tracks_[i]].world_pose.point.z;
+                detected_objects.objects[da_tracks_[i]].world_pose.point.z;
 
             track.hist.historic_positions.push_back(
-                    Eigen::Vector3f(detected_objects.objects[da_tracks_[i]].world_pose.point.x,
-                                    detected_objects.objects[da_tracks_[i]].world_pose.point.y,
-                                    detected_objects.objects[da_tracks_[i]].world_pose.point.z));
-
+                Eigen::Vector3f(detected_objects.objects[da_tracks_[i]].world_pose.point.x,
+                                detected_objects.objects[da_tracks_[i]].world_pose.point.y,
+                                detected_objects.objects[da_tracks_[i]].world_pose.point.z));
         }
     }
 }
 
-void Clustering::TrackManagement(const vox_nav_msgs::msg::ObjectArray &detected_objects) {
+void RawCloudClusteringTracking::TrackManagement(const vox_nav_msgs::msg::ObjectArray &detected_objects)
+{
 
     // Delete spuriors tracks
-    for (int i = 0; i < tracks_.size(); ++i) {
+    for (int i = 0; i < tracks_.size(); ++i)
+    {
 
         // Deletion condition
-        if (tracks_[i].hist.bad_age >= params_.tra_aging_bad) {
+        if (tracks_[i].hist.bad_age >= params_.tra_aging_bad)
+        {
 
             // Print
             RCLCPP_INFO(get_logger(), "Deletion of T [%d]", tracks_[i].id);
@@ -688,10 +791,12 @@ void Clustering::TrackManagement(const vox_nav_msgs::msg::ObjectArray &detected_
 
     // Create new ones out of untracked new detected object hypothesis
     // Initialize tracks
-    for (int i = 0; i < detected_objects.objects.size(); ++i) {
+    for (int i = 0; i < detected_objects.objects.size(); ++i)
+    {
 
         // Unassigned object condition
-        if (da_objects_[i] == -1) {
+        if (da_objects_[i] == -1)
+        {
 
             // Init new track
             initTrack(detected_objects.objects[i]);
@@ -700,20 +805,22 @@ void Clustering::TrackManagement(const vox_nav_msgs::msg::ObjectArray &detected_
 
     // Sort tracks upon age
     std::sort(
-            tracks_.begin(), tracks_.end(), [](Track &t1, Track &t2) {
-                return t1.hist.good_age > t2.hist.good_age;
-            });
+        tracks_.begin(), tracks_.end(), [](Track &t1, Track &t2)
+        { return t1.hist.good_age > t2.hist.good_age; });
 
     // Clear duplicated tracks
-    for (int i = tracks_.size() - 1; i >= 0; --i) {
-        for (int j = i - 1; j >= 0; --j) {
+    for (int i = tracks_.size() - 1; i >= 0; --i)
+    {
+        for (int j = i - 1; j >= 0; --j)
+        {
             float dist = CalculateEuclideanDistanceBetweenTracks(tracks_[i], tracks_[j]);
             // ROS_INFO("DIST T [%d] and T [%d] = %f ", tracks_[i].id, tracks_[j].id, dist);
-            if (dist < params_.tra_min_dist_between_tracks) {
+            if (dist < params_.tra_min_dist_between_tracks)
+            {
                 RCLCPP_WARN(
-                        get_logger(),
-                        "TOO CLOSE: T [%d] and T [%d] = %f ->  T [%d] deleted ",
-                        tracks_[i].id, tracks_[j].id, dist, tracks_[i].id);
+                    get_logger(),
+                    "TOO CLOSE: T [%d] and T [%d] = %f ->  T [%d] deleted ",
+                    tracks_[i].id, tracks_[j].id, dist, tracks_[i].id);
                 std::swap(tracks_[i], tracks_.back());
                 tracks_.pop_back();
             }
@@ -721,7 +828,8 @@ void Clustering::TrackManagement(const vox_nav_msgs::msg::ObjectArray &detected_
     }
 }
 
-void Clustering::publishTracks(const std_msgs::msg::Header &header) {
+void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header &header)
+{
     // Create track message
     vox_nav_msgs::msg::ObjectArray track_list;
     track_list.header.stamp = header.stamp;
@@ -730,7 +838,8 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
     visualization_msgs::msg::MarkerArray marker_array;
 
     // Loop over all tracks
-    for (int i = 0; i < tracks_.size(); ++i) {
+    for (int i = 0; i < tracks_.size(); ++i)
+    {
 
         // Grab track
         Track &track = tracks_[i];
@@ -743,21 +852,22 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
         track_msg.world_pose.point.y = track.sta.x[1];
         track_msg.world_pose.point.z = track.sta.z;
 
-        try {
+        try
+        {
             buffer_->transform(
-                    track_msg.world_pose,
-                    track_msg.cam_pose,
-                    "base_link"
-            );
+                track_msg.world_pose,
+                track_msg.cam_pose,
+                "base_link");
             buffer_->transform(
-                    track_msg.world_pose,
-                    track_msg.velo_pose,
-                    "base_link"
-            );
+                track_msg.world_pose,
+                track_msg.velo_pose,
+                "base_link");
         }
-        catch (tf2::TransformException &ex) {
+        catch (tf2::TransformException &ex)
+        {
             RCLCPP_ERROR(get_logger(), "Received an exception trying to transform a point from"
-                                       "\"base_link\" to \"map\": %s", ex.what());
+                                       "\"base_link\" to \"map\": %s",
+                         ex.what());
         }
         track_msg.heading = track.sta.x[3];
         track_msg.velocity = track.sta.x[2];
@@ -798,14 +908,48 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
 
         double direction_angle = 0.0;
         // Fill in arrow information
-        if (track.hist.historic_positions.size() > 3) {
+        if (track.hist.historic_positions.size() > 3)
+        {
             int num_elements = track.hist.historic_positions.size();
-            direction_angle = std::atan2(
-                    (track.hist.historic_positions.back().y() -
-                     track.hist.historic_positions[num_elements - 3].y()),
 
-                    (track.hist.historic_positions.back().x() -
-                     track.hist.historic_positions[num_elements - 3].x()));
+            double dy = track.hist.historic_positions.back().y() -
+                        track.hist.historic_positions[num_elements - 3].y();
+
+            double dx = track.hist.historic_positions.back().x() -
+                        track.hist.historic_positions[num_elements - 3].x();
+
+            direction_angle = std::atan2(dy, dx);
+
+            viz_obj.arr.action = visualization_msgs::msg::Marker::ADD;
+            viz_obj.arr.ns = "my_namespace";
+            viz_obj.arr.type = visualization_msgs::msg::Marker::ARROW;
+            viz_obj.arr.header.frame_id = "map";
+            viz_obj.arr.lifetime = rclcpp::Duration(1.0);
+            viz_obj.arr.id = i + 100;
+            viz_obj.arr.scale.x = 0.2;
+            viz_obj.arr.scale.y = 0.35;
+            viz_obj.arr.scale.z = 0.15;
+            geometry_msgs::msg::Point arr_start, arr_end;
+            arr_start.x = track.hist.historic_positions.back().x();
+            arr_start.y = track.hist.historic_positions.back().y();
+            arr_start.z = track.hist.historic_positions.back().z();
+            arr_end.x = track.hist.historic_positions.back().x() + dx;
+            arr_end.y = track.hist.historic_positions.back().y() + dy;
+            arr_end.z = track.hist.historic_positions.back().z();
+            viz_obj.arr.points.push_back(arr_start);
+            viz_obj.arr.points.push_back(arr_end);
+            std_msgs::msg::ColorRGBA color;
+            color.a = 0.75;
+            color.r = float(track_msg.r) / 255.0;
+            color.g = float(track_msg.g) / 255.0;
+            color.b = float(track_msg.b) / 255.0;
+            viz_obj.arr.colors.push_back(color);
+            viz_obj.arr.colors.push_back(color);
+
+            viz_obj.arr.color.a = 0.75;
+            viz_obj.arr.color.r = float(track_msg.r) / 255.0;
+            viz_obj.arr.color.g = float(track_msg.g) / 255.0;
+            viz_obj.arr.color.b = float(track_msg.b) / 255.0;
         }
 
         visualization_msgs::msg::Marker dynamic_obj_waypoints;
@@ -818,11 +962,13 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
         dynamic_obj_waypoints.scale.x = 0.2;
         dynamic_obj_waypoints.scale.y = 0.2;
         dynamic_obj_waypoints.scale.z = 0.2;
-        if (abs(track_msg.velocity) > 0.1) {
+        if (abs(track_msg.velocity) > 0.1)
+        {
             std_msgs::msg::ColorRGBA color;
             color.r = 1.0;
             color.a = 0.8;
-            for (auto t: track.hist.historic_positions) {
+            for (auto t : track.hist.historic_positions)
+            {
                 geometry_msgs::msg::Point point;
                 point.x = t.x();
                 point.y = t.y();
@@ -831,30 +977,6 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
                 dynamic_obj_waypoints.colors.push_back(color);
             }
         }
-
-        viz_obj.arr.action = visualization_msgs::msg::Marker::ADD;
-        viz_obj.arr.ns = "my_namespace";
-        viz_obj.arr.type = visualization_msgs::msg::Marker::ARROW;
-        viz_obj.arr.header.frame_id = "map";
-        viz_obj.arr.lifetime = rclcpp::Duration(1.0);
-        viz_obj.arr.id = i + 100;
-        viz_obj.arr.pose.position.x = track_msg.world_pose.point.x;
-        viz_obj.arr.pose.position.y = track_msg.world_pose.point.y;
-        viz_obj.arr.pose.position.z = track_msg.world_pose.point.z;
-        viz_obj.arr.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, direction_angle);
-        if (abs(track_msg.velocity) < 0.1) {
-            viz_obj.arr.scale.x = 0.1;
-            viz_obj.arr.scale.y = 0.1;
-            viz_obj.arr.scale.z = 0.1;
-        } else {
-            viz_obj.arr.scale.x = track_msg.velocity;
-            viz_obj.arr.scale.y = 0.5;
-            viz_obj.arr.scale.z = 0.5;
-        }
-        viz_obj.arr.color.a = 75.5;
-        viz_obj.arr.color.r = float(track_msg.r) / 255.0;
-        viz_obj.arr.color.g = float(track_msg.g) / 255.0;
-        viz_obj.arr.color.b = float(track_msg.b) / 255.0;
 
         // Fill in text information
         viz_obj.txt.action = visualization_msgs::msg::Marker::ADD;
@@ -879,7 +1001,6 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
         marker_array.markers.push_back(viz_obj.bb);
         marker_array.markers.push_back(viz_obj.txt);
         marker_array.markers.push_back(dynamic_obj_waypoints);
-
     }
 
     // Print
@@ -888,12 +1009,13 @@ void Clustering::publishTracks(const std_msgs::msg::Header &header) {
 
     // Publish
     list_tracked_objects_pub_->publish(track_list);
-    marker_pub_->publish(marker_array);
+    tracking_markers_pub_->publish(marker_array);
 }
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[])
+{
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<Clustering>();
+    auto node = std::make_shared<RawCloudClusteringTracking>();
     rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;

@@ -63,9 +63,9 @@ CMAKE_BINARY_DIR = /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
+all: CMakeFiles/semantic_cloud_clustering.dir/all
 all: CMakeFiles/ros2bag_kitti_bin.dir/all
-all: CMakeFiles/cloud_segmentation.dir/all
-all: CMakeFiles/cloud_clustering.dir/all
+all: CMakeFiles/raw_cloud_clustering_tracking.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -73,11 +73,11 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
+clean: CMakeFiles/semantic_cloud_clustering.dir/clean
 clean: CMakeFiles/ros2bag_kitti_bin.dir/clean
 clean: CMakeFiles/vox_nav_cupoch_experimental_uninstall.dir/clean
-clean: CMakeFiles/cloud_segmentation.dir/clean
 clean: CMakeFiles/uninstall.dir/clean
-clean: CMakeFiles/cloud_clustering.dir/clean
+clean: CMakeFiles/raw_cloud_clustering_tracking.dir/clean
 clean: ../googletest/clean
 .PHONY : clean
 
@@ -99,13 +99,39 @@ clean: ../googletest/clean
 .PHONY : /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/clean
 
 #=============================================================================
+# Target rules for target CMakeFiles/semantic_cloud_clustering.dir
+
+# All Build rule for target.
+CMakeFiles/semantic_cloud_clustering.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/semantic_cloud_clustering.dir/build.make CMakeFiles/semantic_cloud_clustering.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/semantic_cloud_clustering.dir/build.make CMakeFiles/semantic_cloud_clustering.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=9,10 "Built target semantic_cloud_clustering"
+.PHONY : CMakeFiles/semantic_cloud_clustering.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/semantic_cloud_clustering.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles 2
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/semantic_cloud_clustering.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles 0
+.PHONY : CMakeFiles/semantic_cloud_clustering.dir/rule
+
+# Convenience name for target.
+semantic_cloud_clustering: CMakeFiles/semantic_cloud_clustering.dir/rule
+.PHONY : semantic_cloud_clustering
+
+# clean rule for target.
+CMakeFiles/semantic_cloud_clustering.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/semantic_cloud_clustering.dir/build.make CMakeFiles/semantic_cloud_clustering.dir/clean
+.PHONY : CMakeFiles/semantic_cloud_clustering.dir/clean
+
+#=============================================================================
 # Target rules for target CMakeFiles/ros2bag_kitti_bin.dir
 
 # All Build rule for target.
 CMakeFiles/ros2bag_kitti_bin.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ros2bag_kitti_bin.dir/build.make CMakeFiles/ros2bag_kitti_bin.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ros2bag_kitti_bin.dir/build.make CMakeFiles/ros2bag_kitti_bin.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=9,10 "Built target ros2bag_kitti_bin"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=7,8 "Built target ros2bag_kitti_bin"
 .PHONY : CMakeFiles/ros2bag_kitti_bin.dir/all
 
 # Build rule for subdir invocation for target.
@@ -151,32 +177,6 @@ CMakeFiles/vox_nav_cupoch_experimental_uninstall.dir/clean:
 .PHONY : CMakeFiles/vox_nav_cupoch_experimental_uninstall.dir/clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/cloud_segmentation.dir
-
-# All Build rule for target.
-CMakeFiles/cloud_segmentation.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cloud_segmentation.dir/build.make CMakeFiles/cloud_segmentation.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cloud_segmentation.dir/build.make CMakeFiles/cloud_segmentation.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=3,4 "Built target cloud_segmentation"
-.PHONY : CMakeFiles/cloud_segmentation.dir/all
-
-# Build rule for subdir invocation for target.
-CMakeFiles/cloud_segmentation.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/cloud_segmentation.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles 0
-.PHONY : CMakeFiles/cloud_segmentation.dir/rule
-
-# Convenience name for target.
-cloud_segmentation: CMakeFiles/cloud_segmentation.dir/rule
-.PHONY : cloud_segmentation
-
-# clean rule for target.
-CMakeFiles/cloud_segmentation.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cloud_segmentation.dir/build.make CMakeFiles/cloud_segmentation.dir/clean
-.PHONY : CMakeFiles/cloud_segmentation.dir/clean
-
-#=============================================================================
 # Target rules for target CMakeFiles/uninstall.dir
 
 # All Build rule for target.
@@ -203,30 +203,30 @@ CMakeFiles/uninstall.dir/clean:
 .PHONY : CMakeFiles/uninstall.dir/clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/cloud_clustering.dir
+# Target rules for target CMakeFiles/raw_cloud_clustering_tracking.dir
 
 # All Build rule for target.
-CMakeFiles/cloud_clustering.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cloud_clustering.dir/build.make CMakeFiles/cloud_clustering.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cloud_clustering.dir/build.make CMakeFiles/cloud_clustering.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=1,2 "Built target cloud_clustering"
-.PHONY : CMakeFiles/cloud_clustering.dir/all
+CMakeFiles/raw_cloud_clustering_tracking.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raw_cloud_clustering_tracking.dir/build.make CMakeFiles/raw_cloud_clustering_tracking.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raw_cloud_clustering_tracking.dir/build.make CMakeFiles/raw_cloud_clustering_tracking.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=5,6 "Built target raw_cloud_clustering_tracking"
+.PHONY : CMakeFiles/raw_cloud_clustering_tracking.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/cloud_clustering.dir/rule: cmake_check_build_system
+CMakeFiles/raw_cloud_clustering_tracking.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles 2
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/cloud_clustering.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/raw_cloud_clustering_tracking.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles 0
-.PHONY : CMakeFiles/cloud_clustering.dir/rule
+.PHONY : CMakeFiles/raw_cloud_clustering_tracking.dir/rule
 
 # Convenience name for target.
-cloud_clustering: CMakeFiles/cloud_clustering.dir/rule
-.PHONY : cloud_clustering
+raw_cloud_clustering_tracking: CMakeFiles/raw_cloud_clustering_tracking.dir/rule
+.PHONY : raw_cloud_clustering_tracking
 
 # clean rule for target.
-CMakeFiles/cloud_clustering.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cloud_clustering.dir/build.make CMakeFiles/cloud_clustering.dir/clean
-.PHONY : CMakeFiles/cloud_clustering.dir/clean
+CMakeFiles/raw_cloud_clustering_tracking.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raw_cloud_clustering_tracking.dir/build.make CMakeFiles/raw_cloud_clustering_tracking.dir/clean
+.PHONY : CMakeFiles/raw_cloud_clustering_tracking.dir/clean
 
 #=============================================================================
 # Target rules for target /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest.dir
@@ -235,7 +235,7 @@ CMakeFiles/cloud_clustering.dir/clean:
 /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest.dir/all:
 	$(MAKE) $(MAKESILENT) -f /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest.dir/build.make /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest.dir/depend
 	$(MAKE) $(MAKESILENT) -f /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest.dir/build.make /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=5,6 "Built target gtest"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=1,2 "Built target gtest"
 .PHONY : /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest.dir/all
 
 # Build rule for subdir invocation for target.
@@ -261,7 +261,7 @@ gtest: /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/C
 /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest_main.dir/all: /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest.dir/all
 	$(MAKE) $(MAKESILENT) -f /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest_main.dir/build.make /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest_main.dir/depend
 	$(MAKE) $(MAKESILENT) -f /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest_main.dir/build.make /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest_main.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=7,8 "Built target gtest_main"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles --progress-num=3,4 "Built target gtest_main"
 .PHONY : /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/googletest/CMakeFiles/gtest_main.dir/all
 
 # Build rule for subdir invocation for target.

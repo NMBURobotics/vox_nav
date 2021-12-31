@@ -68,41 +68,41 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_segmentation" AND
-     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_segmentation")
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/semantic_cloud_clustering" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/semantic_cloud_clustering")
     file(RPATH_CHECK
-         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_segmentation"
+         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/semantic_cloud_clustering"
          RPATH "")
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental" TYPE EXECUTABLE FILES "/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/cloud_segmentation")
-  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_segmentation" AND
-     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_segmentation")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental" TYPE EXECUTABLE FILES "/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/semantic_cloud_clustering")
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/semantic_cloud_clustering" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/semantic_cloud_clustering")
     file(RPATH_CHANGE
-         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_segmentation"
+         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/semantic_cloud_clustering"
          OLD_RPATH "/home/atas/colcon_ws/install/cupoch/lib:/home/atas/colcon_ws/install/pcl_ros/lib:/opt/ros/foxy/lib:/home/atas/colcon_ws/install/vox_nav_msgs/lib:/home/atas/colcon_ws/install/vox_nav_utilities/lib:/usr/local/cuda-11.4/lib64:/home/atas/colcon_ws/install/ApproxMVBB/lib:/opt/ros/foxy/lib/x86_64-linux-gnu:"
          NEW_RPATH "")
     if(CMAKE_INSTALL_DO_STRIP)
-      execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_segmentation")
+      execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/semantic_cloud_clustering")
     endif()
   endif()
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_clustering" AND
-     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_clustering")
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/raw_cloud_clustering_tracking" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/raw_cloud_clustering_tracking")
     file(RPATH_CHECK
-         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_clustering"
+         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/raw_cloud_clustering_tracking"
          RPATH "")
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental" TYPE EXECUTABLE FILES "/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/cloud_clustering")
-  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_clustering" AND
-     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_clustering")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental" TYPE EXECUTABLE FILES "/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/raw_cloud_clustering_tracking")
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/raw_cloud_clustering_tracking" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/raw_cloud_clustering_tracking")
     file(RPATH_CHANGE
-         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_clustering"
+         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/raw_cloud_clustering_tracking"
          OLD_RPATH "/home/atas/colcon_ws/install/cupoch/lib:/home/atas/colcon_ws/install/pcl_ros/lib:/opt/ros/foxy/lib:/home/atas/colcon_ws/install/vox_nav_msgs/lib:/home/atas/colcon_ws/install/vox_nav_utilities/lib:/usr/local/cuda-11.4/lib64:/home/atas/colcon_ws/install/ApproxMVBB/lib:/opt/ros/foxy/lib/x86_64-linux-gnu:"
          NEW_RPATH "")
     if(CMAKE_INSTALL_DO_STRIP)
-      execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/cloud_clustering")
+      execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/vox_nav_cupoch_experimental/raw_cloud_clustering_tracking")
     endif()
   endif()
 endif()

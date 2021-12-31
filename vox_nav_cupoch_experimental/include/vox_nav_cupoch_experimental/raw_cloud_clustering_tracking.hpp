@@ -12,7 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <Eigen/Core>
+/*
+DISCLAIMER: some parts of code has been taken from; https://github.com/appinho/SARosPerceptionKitti
+Credits to author: Simon Appel, https://github.com/appinho
+*/
+
+
+#ifndef VOX_NAV_CUPOCH_EXPERIMENTAL__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
+#define VOX_NAV_CUPOCH_EXPERIMENTAL__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
+
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/common/common.h>
 #include <pcl/conversions.h>
@@ -23,7 +31,6 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.hpp>
-#include <queue>
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -40,79 +47,97 @@
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 
-#include <ApproxMVBB/AABB.hpp>
-#include <ApproxMVBB/ComputeApproxMVBB.hpp>
+
 #include <cupoch/collision/collision.h>
 #include <cupoch/cupoch.h>
 #include <cupoch/geometry/occupancygrid.h>
 #include <cupoch_conversions/cupoch_conversions.hpp>
 
-#include "vox_nav_cupoch_experimental/visibility_control.h"
 #include "vox_nav_utilities/map_manager_helpers.hpp"
 #include "vox_nav_utilities/pcl_helpers.hpp"
 #include "vox_nav_utilities/tf_helpers.hpp"
 #include "vox_nav_msgs/msg/object.hpp"
 #include "vox_nav_msgs/msg/object_array.hpp"
 
-struct Parameter {
+#include <queue>
+#include <vector>
+#include <string>
+#include <memory>
 
+#include <Eigen/Core>
+
+namespace vox_nav_cupoch_experimental
+{
+  struct ClusteringParameters
+  {
+    float x_bound;
+    float y_bound;
+    float z_bound;
+    float downsample_voxel_size;
+    float remove_ground_plane_thres;
+    float clustering_min_points;
+    float clustering_max_points;
+    float clustering_max_step_size;
     float sacle_up_objects;
-
+  };
+  struct Parameter
+  {
     float da_ped_dist_pos;
     float da_ped_dist_form;
     float da_car_dist_pos;
     float da_car_dist_form;
-
     int tra_dim_z;
     int tra_dim_x;
     int tra_dim_x_aug;
-
     float tra_std_lidar_x;
     float tra_std_lidar_y;
     float tra_std_acc;
     float tra_std_yaw_rate;
     float tra_lambda;
     int tra_aging_bad;
-
     float tra_occ_factor;
     float tra_min_dist_between_tracks;
-
     float p_init_x;
     float p_init_y;
     float p_init_v;
     float p_init_yaw;
     float p_init_yaw_rate;
-};
+  };
 
-struct History {
+  struct History
+  {
     int good_age;
     int bad_age;
     std::vector<Eigen::Vector3f> historic_positions;
-};
+  };
 
-struct Geometry {
+  struct Geometry
+  {
     float width;
     float length;
     float height;
     float orientation;
-};
+  };
 
-struct Semantic {
+  struct Semantic
+  {
     int id;
     std::string name;
     float confidence;
-};
+  };
 
-struct State {
+  struct State
+  {
     Eigen::VectorXd x;
     float z;
     Eigen::MatrixXd P;
     Eigen::VectorXd x_aug;
     Eigen::VectorXd P_aug;
     Eigen::MatrixXd Xsig_pred;
-};
+  };
 
-struct Track {
+  struct Track
+  {
     // Attributes
     int id;
     State sta;
@@ -123,42 +148,64 @@ struct Track {
     int g;
     int b;
     float prob_existence;
-};
+  };
 
-struct VizObject {
+  struct VizObject
+  {
     visualization_msgs::msg::Marker bb;
     visualization_msgs::msg::Marker arr;
     visualization_msgs::msg::Marker txt;
-};
+  };
 
+/**
+ * @brief Given a raw point cloud,
+ * clusterize it and use UKF to track clusters. Publish vis of tracks in RVIZ
+ * and publish vox_nav_msgs::msg::ObjectArray
+ *
+ */
+  class RawCloudClusteringTracking : public rclcpp::Node
+  {
 
-class Clustering : public rclcpp::Node {
-
-public:
-    Clustering();
-
-    ~Clustering();
+  public:
+    /**
+     * @brief Construct a new Raw Cloud Clustering Tracking object
+     *
+     */
+    RawCloudClusteringTracking();
+    /**
+     * @brief Destroy the Raw Cloud Clustering Tracking object
+     *
+     */
+    ~RawCloudClusteringTracking();
 
     typedef message_filters::sync_policies::ApproximateTime<
-            sensor_msgs::msg::PointCloud2,
-            geometry_msgs::msg::PoseArray>
-            CloudOdomApprxTimeSyncPolicy;
+        sensor_msgs::msg::PointCloud2,
+        geometry_msgs::msg::PoseArray>
+      CloudOdomApprxTimeSyncPolicy;
     typedef message_filters::Synchronizer<CloudOdomApprxTimeSyncPolicy> CloudOdomApprxTimeSyncer;
 
+    /**
+     * @brief Processing done in this func.
+     *
+     * @param cloud
+     * @param poses
+     */
     void cloudOdomCallback(
-            const sensor_msgs::msg::PointCloud2::ConstSharedPtr &cloud,
-            const geometry_msgs::msg::PoseArray::ConstSharedPtr &poses);
+      const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud,
+      const geometry_msgs::msg::PoseArray::ConstSharedPtr & poses);
 
-private:
+  private:
     message_filters::Subscriber<sensor_msgs::msg::PointCloud2> cloud_subscriber_;
     message_filters::Subscriber<geometry_msgs::msg::PoseArray> poses_subscriber_;
     std::shared_ptr<CloudOdomApprxTimeSyncer> cloud_poses_data_approx_time_syncher_;
 
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_clusters_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr tracking_markers_pub_;
 
     // Class member
     Parameter params_;
+
+    ClusteringParameters clustering_params_;
 
     // Processing
     bool is_initialized_;
@@ -175,37 +222,30 @@ private:
 
     // Prediction
     rclcpp::Time last_time_stamp_;
-
-    // Publisher
     rclcpp::Publisher<vox_nav_msgs::msg::ObjectArray>::SharedPtr list_tracked_objects_pub_;
 
-    void publishTracks(const std_msgs::msg::Header &header);
-
+    void publishTracks(const std_msgs::msg::Header & header);
     void Prediction(const double delta_t);
-
-    void Update(const vox_nav_msgs::msg::ObjectArray &detected_objects);
-
-    void TrackManagement(const vox_nav_msgs::msg::ObjectArray &detected_objects);
-
-    void initTrack(const vox_nav_msgs::msg::Object &obj);
+    void Update(const vox_nav_msgs::msg::ObjectArray & detected_objects);
+    void TrackManagement(const vox_nav_msgs::msg::ObjectArray & detected_objects);
+    void initTrack(const vox_nav_msgs::msg::Object & obj);
 
     // Data Association members
     std::vector<int> da_tracks_;
     std::vector<int> da_objects_;
 
     // Data Association functions
-    void GlobalNearestNeighbor(const vox_nav_msgs::msg::ObjectArray &detected_objects);
-
-    float CalculateDistance(const Track &track, const vox_nav_msgs::msg::Object &object);
-
-    float CalculateBoxMismatch(const Track &track, const vox_nav_msgs::msg::Object &object);
-
+    void GlobalNearestNeighbor(const vox_nav_msgs::msg::ObjectArray & detected_objects);
+    float CalculateDistance(const Track & track, const vox_nav_msgs::msg::Object & object);
+    float CalculateBoxMismatch(const Track & track, const vox_nav_msgs::msg::Object & object);
     float CalculateEuclideanAndBoxOffset(
-            const Track &track,
-            const vox_nav_msgs::msg::Object &object);
-
-    float CalculateEuclideanDistanceBetweenTracks(const Track &t1, const Track &t2);
-
+      const Track & track,
+      const vox_nav_msgs::msg::Object & object);
+    float CalculateEuclideanDistanceBetweenTracks(const Track & t1, const Track & t2);
     bool compareGoodAge(Track t1, Track t2);
 
-};
+  };
+
+}  // namespace vox_nav_cupoch_experimental
+
+#endif  // VOX_NAV_CUPOCH_EXPERIMENTAL__RAW_CLOUD_CLUSTERING_TRACKING_HPP_

@@ -1,5 +1,5 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/cloud_clustering.dir/src/cloud_clustering_generated_clustering.cu.o"
+  "CMakeFiles/cloud_clustering.dir/src/cloud_clustering_generated_raw_cloud_clustering_tracking.cu.o"
   "cloud_clustering"
   "cloud_clustering.pdb"
 )

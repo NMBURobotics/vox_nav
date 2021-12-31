@@ -77,26 +77,6 @@ install/local/fast: preinstall/fast
 	/opt/clion-2021.2.3/bin/cmake/linux/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
 .PHONY : install/local/fast
 
-# Special rule for the target test
-test:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests..."
-	/opt/clion-2021.2.3/bin/cmake/linux/bin/ctest --force-new-ctest-process $(ARGS)
-.PHONY : test
-
-# Special rule for the target test
-test/fast: test
-.PHONY : test/fast
-
-# Special rule for the target edit_cache
-edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	/opt/clion-2021.2.3/bin/cmake/linux/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
-.PHONY : edit_cache
-
-# Special rule for the target edit_cache
-edit_cache/fast: edit_cache
-.PHONY : edit_cache/fast
-
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
@@ -140,6 +120,26 @@ install/fast: preinstall/fast
 	/opt/clion-2021.2.3/bin/cmake/linux/bin/cmake -P cmake_install.cmake
 .PHONY : install/fast
 
+# Special rule for the target test
+test:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests..."
+	/opt/clion-2021.2.3/bin/cmake/linux/bin/ctest --force-new-ctest-process $(ARGS)
+.PHONY : test
+
+# Special rule for the target test
+test/fast: test
+.PHONY : test/fast
+
+# Special rule for the target edit_cache
+edit_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
+	/opt/clion-2021.2.3/bin/cmake/linux/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+.PHONY : edit_cache
+
+# Special rule for the target edit_cache
+edit_cache/fast: edit_cache
+.PHONY : edit_cache/fast
+
 # The main all target
 all: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default/CMakeFiles /home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/cmake-build-default//CMakeFiles/progress.marks
@@ -172,6 +172,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named semantic_cloud_clustering
+
+# Build rule for target.
+semantic_cloud_clustering: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 semantic_cloud_clustering
+.PHONY : semantic_cloud_clustering
+
+# fast build rule for target.
+semantic_cloud_clustering/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/semantic_cloud_clustering.dir/build.make CMakeFiles/semantic_cloud_clustering.dir/build
+.PHONY : semantic_cloud_clustering/fast
+
+#=============================================================================
 # Target rules for targets named ros2bag_kitti_bin
 
 # Build rule for target.
@@ -198,19 +211,6 @@ vox_nav_cupoch_experimental_uninstall/fast:
 .PHONY : vox_nav_cupoch_experimental_uninstall/fast
 
 #=============================================================================
-# Target rules for targets named cloud_segmentation
-
-# Build rule for target.
-cloud_segmentation: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 cloud_segmentation
-.PHONY : cloud_segmentation
-
-# fast build rule for target.
-cloud_segmentation/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cloud_segmentation.dir/build.make CMakeFiles/cloud_segmentation.dir/build
-.PHONY : cloud_segmentation/fast
-
-#=============================================================================
 # Target rules for targets named uninstall
 
 # Build rule for target.
@@ -224,17 +224,17 @@ uninstall/fast:
 .PHONY : uninstall/fast
 
 #=============================================================================
-# Target rules for targets named cloud_clustering
+# Target rules for targets named raw_cloud_clustering_tracking
 
 # Build rule for target.
-cloud_clustering: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 cloud_clustering
-.PHONY : cloud_clustering
+raw_cloud_clustering_tracking: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 raw_cloud_clustering_tracking
+.PHONY : raw_cloud_clustering_tracking
 
 # fast build rule for target.
-cloud_clustering/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/cloud_clustering.dir/build.make CMakeFiles/cloud_clustering.dir/build
-.PHONY : cloud_clustering/fast
+raw_cloud_clustering_tracking/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/raw_cloud_clustering_tracking.dir/build.make CMakeFiles/raw_cloud_clustering_tracking.dir/build
+.PHONY : raw_cloud_clustering_tracking/fast
 
 #=============================================================================
 # Target rules for targets named gtest
@@ -277,11 +277,11 @@ help:
 	@echo "... test"
 	@echo "... uninstall"
 	@echo "... vox_nav_cupoch_experimental_uninstall"
-	@echo "... cloud_clustering"
-	@echo "... cloud_segmentation"
 	@echo "... gtest"
 	@echo "... gtest_main"
+	@echo "... raw_cloud_clustering_tracking"
 	@echo "... ros2bag_kitti_bin"
+	@echo "... semantic_cloud_clustering"
 .PHONY : help
 
 

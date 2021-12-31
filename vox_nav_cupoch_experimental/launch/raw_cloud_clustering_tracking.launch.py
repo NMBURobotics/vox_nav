@@ -19,8 +19,8 @@ def generate_launch_description():
 
     node = Node(
         package='vox_nav_cupoch_experimental',
-        executable='cloud_clustering',
-        name='cloud_clustering_rclcpp_node',
+        executable='raw_cloud_clustering_tracking',
+        name='raw_cloud_clustering_tracking',
         output='screen',
         # prefix=['xterm -e gdb -ex run --args'],
         # prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no'],
