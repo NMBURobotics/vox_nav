@@ -134,9 +134,9 @@ namespace vox_nav_openvslam
       "/fromLL");
     // setup odom and pose pulishers
     robot_odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>(
-      "openvslam/odometry", rclcpp::SystemDefaultsQoS());
+      "vox_nav/openvslam/odometry", rclcpp::SystemDefaultsQoS());
     robot_pose_in_map_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>(
-      "openvslam/robot_pose", rclcpp::SystemDefaultsQoS());
+      "vox_nav/openvslam/robot_pose", rclcpp::SystemDefaultsQoS());
     // setup TF buffer and listerner to read transforms
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);

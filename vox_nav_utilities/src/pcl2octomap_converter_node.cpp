@@ -89,7 +89,7 @@ namespace vox_nav_utilities
         get_logger()));
 
     octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "octomap_markers", rclcpp::SystemDefaultsQoS());
+      "vox_nav/utils/octomap_markers", rclcpp::SystemDefaultsQoS());
 
     timer_ = this->create_wall_timer(
       std::chrono::milliseconds(static_cast<int>(1)),

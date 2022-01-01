@@ -89,7 +89,8 @@ namespace vox_nav_planning
     }
 
     // Initialize pubs & subs
-    plan_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("plan", 1);
+    plan_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "vox_nav/planning/plan", 1);
 
     this->action_server_ = rclcpp_action::create_server<ComputePathToPose>(
       this->get_node_base_interface(),

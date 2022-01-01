@@ -76,7 +76,9 @@ namespace vox_nav_control
       parent->get_parameter(plugin_name + ".params_configured", mpc_parameters_.params_configured);
 
       interpolated_local_reference_traj_publisher_ =
-        parent->create_publisher<visualization_msgs::msg::MarkerArray>("local_plan", 1);
+        parent->create_publisher<visualization_msgs::msg::MarkerArray>(
+        "/vox_nav/controller/plan",
+        1);
       mpc_controller_ = std::make_shared<MPCControllerCore>(mpc_parameters_);
     }
 

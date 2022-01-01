@@ -148,14 +148,14 @@ namespace vox_nav_map_server
       octomap_point_cloud_publish_topic_, rclcpp::SystemDefaultsQoS());
 
     elevated_surfel_pcl_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      "elevated_surfel_pointcloud", rclcpp::SystemDefaultsQoS());
+      "vox_nav/map_server/elevated_surfel_pointcloud", rclcpp::SystemDefaultsQoS());
 
     octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       octomap_markers_publish_topic_, rclcpp::SystemDefaultsQoS());
 
     elevated_surfel_octomap_markers_publisher_ =
       this->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "elevated_surfel_markers", rclcpp::SystemDefaultsQoS());
+      "vox_nav/map_server/elevated_surfel_markers", rclcpp::SystemDefaultsQoS());
 
     pcd_map_pointcloud_ = vox_nav_utilities::loadPointcloudFromPcd(pcd_map_filename_.c_str());
 
