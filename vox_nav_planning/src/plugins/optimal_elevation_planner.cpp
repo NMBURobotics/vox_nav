@@ -111,7 +111,7 @@ namespace vox_nav_planning
 
     super_voxel_adjacency_marker_pub_ =
       parent->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "supervoxel_adjacency_markers", rclcpp::SystemDefaultsQoS());
+      "vox_nav/supervoxel_adjacency_markers", rclcpp::SystemDefaultsQoS());
 
     RCLCPP_INFO(
       logger_,

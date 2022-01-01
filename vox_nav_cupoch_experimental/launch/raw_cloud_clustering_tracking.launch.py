@@ -24,8 +24,7 @@ def generate_launch_description():
         output='screen',
         # prefix=['xterm -e gdb -ex run --args'],
         #prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no'],
-        remappings=[('points', '/velodyne_points'),
-                    ('poses', '/dynamic_object_poses')],
+        remappings=[('points', '/velodyne_points')],
         parameters=[params]
     )
 

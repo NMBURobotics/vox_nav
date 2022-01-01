@@ -6,15 +6,15 @@ raw_cloud_clustering_tracking:
       z_bound: 2.0
       downsample_voxel_size: 0.05
       remove_ground_plane_thres: 0.4
-      clustering_min_points: 20.0
+      clustering_min_points: 10.0
       clustering_max_points: 10000.0
-      clustering_max_step_size: 0.32
-      sacle_up_objects: 1.4
+      clustering_max_step_size: 0.35
+      sacle_up_objects: 1.5
     data_association:
       ped:
         dist:
-          position: 1.0
-          form: 2.0
+          position: 1.5
+          form: 3.0
       car:
         dist:
           position: 2.0

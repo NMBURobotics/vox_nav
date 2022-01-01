@@ -38,14 +38,10 @@ Credits to author: Simon Appel, https://github.com/appinho
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker_array.hpp>
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/synchronizer.h>
 #include <pcl/filters/model_outlier_removal.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-
 
 #include <cupoch/collision/collision.h>
 #include <cupoch/cupoch.h>
@@ -177,33 +173,26 @@ namespace vox_nav_cupoch_experimental
      */
     ~RawCloudClusteringTracking();
 
-    typedef message_filters::sync_policies::ApproximateTime<
-        sensor_msgs::msg::PointCloud2,
-        geometry_msgs::msg::PoseArray>
-      CloudOdomApprxTimeSyncPolicy;
-    typedef message_filters::Synchronizer<CloudOdomApprxTimeSyncPolicy> CloudOdomApprxTimeSyncer;
-
     /**
      * @brief Processing done in this func.
      *
      * @param cloud
      * @param poses
      */
-    void cloudOdomCallback(
-      const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud,
-      const geometry_msgs::msg::PoseArray::ConstSharedPtr & poses);
+    void cloudCallback(
+      const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
 
   private:
-    message_filters::Subscriber<sensor_msgs::msg::PointCloud2> cloud_subscriber_;
-    message_filters::Subscriber<geometry_msgs::msg::PoseArray> poses_subscriber_;
-    std::shared_ptr<CloudOdomApprxTimeSyncer> cloud_poses_data_approx_time_syncher_;
-
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_clusters_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr tracking_markers_pub_;
+    rclcpp::Time last_time_stamp_;
+    rclcpp::Publisher<vox_nav_msgs::msg::ObjectArray>::SharedPtr list_tracked_objects_pub_;
+    std::shared_ptr<tf2_ros::Buffer> buffer_;
+    std::shared_ptr<tf2_ros::TransformListener> transform_listener_;
 
-    // Class member
+    // Parameters
     Parameter params_;
-
     ClusteringParameters clustering_params_;
 
     // Processing
@@ -211,18 +200,12 @@ namespace vox_nav_cupoch_experimental
     int track_id_counter_;
     int time_frame_;
 
-    std::shared_ptr<tf2_ros::Buffer> buffer_;
-    std::shared_ptr<tf2_ros::TransformListener> transform_listener_;
-
     // UKF
     Eigen::MatrixXd R_laser_;
     Eigen::VectorXd weights_;
     std::vector<Track> tracks_;
 
     // Prediction
-    rclcpp::Time last_time_stamp_;
-    rclcpp::Publisher<vox_nav_msgs::msg::ObjectArray>::SharedPtr list_tracked_objects_pub_;
-
     void publishTracks(const std_msgs::msg::Header & header);
     void Prediction(const double delta_t);
     void Update(const vox_nav_msgs::msg::ObjectArray & detected_objects);
@@ -242,7 +225,6 @@ namespace vox_nav_cupoch_experimental
       const vox_nav_msgs::msg::Object & object);
     float CalculateEuclideanDistanceBetweenTracks(const Track & t1, const Track & t2);
     bool compareGoodAge(Track t1, Track t2);
-
   };
 
 }  // namespace vox_nav_cupoch_experimental

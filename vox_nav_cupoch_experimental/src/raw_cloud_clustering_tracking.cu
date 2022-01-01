@@ -24,20 +24,12 @@ using namespace vox_nav_cupoch_experimental;
 RawCloudClusteringTracking::RawCloudClusteringTracking()
 : Node("cloud_clustering_rclcpp_node")
 {
-  cloud_subscriber_.subscribe(this, "points", rmw_qos_profile_sensor_data);
-  poses_subscriber_.subscribe(this, "poses", rmw_qos_profile_sensor_data);
-
-  cloud_poses_data_approx_time_syncher_.reset(
-    new CloudOdomApprxTimeSyncer(
-      CloudOdomApprxTimeSyncPolicy(50),
-      cloud_subscriber_,
-      poses_subscriber_));
-
-  cloud_poses_data_approx_time_syncher_->registerCallback(
+  cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+    "points",
+    rclcpp::SensorDataQoS(),
     std::bind(
-      &RawCloudClusteringTracking::cloudOdomCallback, this,
-      std::placeholders::_1,
-      std::placeholders::_2));
+      &RawCloudClusteringTracking::cloudCallback,
+      this, std::placeholders::_1));
 
   cloud_clusters_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "/vox_nav/detection/clusters", rclcpp::SystemDefaultsQoS());
@@ -185,9 +177,8 @@ RawCloudClusteringTracking::~RawCloudClusteringTracking()
   RCLCPP_INFO(get_logger(), "Destroying...");
 }
 
-void RawCloudClusteringTracking::cloudOdomCallback(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & cloud,
-  const geometry_msgs::msg::PoseArray::ConstSharedPtr & poses)
+void RawCloudClusteringTracking::cloudCallback(
+  const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::fromROSMsg(*cloud, *pcl_curr);
@@ -195,10 +186,12 @@ void RawCloudClusteringTracking::cloudOdomCallback(
   pcl_curr = vox_nav_utilities::crop_box<pcl::PointXYZRGB>(
     pcl_curr,
     Eigen::Vector4f(
-      -clustering_params_.x_bound, -clustering_params_.y_bound,
+      -clustering_params_.x_bound,
+      -clustering_params_.y_bound,
       -clustering_params_.z_bound, 1),
     Eigen::Vector4f(
-      clustering_params_.x_bound, clustering_params_.y_bound,
+      clustering_params_.x_bound,
+      clustering_params_.y_bound,
       clustering_params_.z_bound, 1));
   pcl_curr = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
     pcl_curr,
@@ -861,11 +854,11 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     VizObject viz_obj;
     // Fill in bounding box information
     viz_obj.bb.action = visualization_msgs::msg::Marker::ADD;
-    viz_obj.bb.ns = "my_namespace";
+    viz_obj.bb.ns = "track_clylinders";
     viz_obj.bb.type = visualization_msgs::msg::Marker::CYLINDER;
     viz_obj.bb.header.frame_id = "map";
-    viz_obj.bb.lifetime = rclcpp::Duration(1.0);
-    viz_obj.bb.id = i;
+    viz_obj.bb.lifetime = rclcpp::Duration::from_seconds(1.0);
+    viz_obj.bb.id = track.id;
     viz_obj.bb.pose.position.x = track_msg.world_pose.point.x;
     viz_obj.bb.pose.position.y = track_msg.world_pose.point.y;
     viz_obj.bb.pose.position.z = track_msg.world_pose.point.z;
@@ -884,21 +877,19 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     // Fill in arrow information
     if (track.hist.historic_positions.size() > 3) {
       int num_elements = track.hist.historic_positions.size();
-
       double dy = track.hist.historic_positions.back().y() -
         track.hist.historic_positions[num_elements - 3].y();
-
       double dx = track.hist.historic_positions.back().x() -
         track.hist.historic_positions[num_elements - 3].x();
 
       track_yaw_angle = std::atan2(dy, dx);
 
       viz_obj.arr.action = visualization_msgs::msg::Marker::ADD;
-      viz_obj.arr.ns = "my_namespace";
+      viz_obj.arr.ns = "track_arrows";
       viz_obj.arr.type = visualization_msgs::msg::Marker::ARROW;
       viz_obj.arr.header.frame_id = "map";
-      viz_obj.arr.lifetime = rclcpp::Duration(1.0);
-      viz_obj.arr.id = i + 100;
+      viz_obj.arr.lifetime = rclcpp::Duration::from_seconds(1.0);
+      viz_obj.arr.id = track.id;
       viz_obj.arr.scale.x = 0.2;
       viz_obj.arr.scale.y = 0.35;
       viz_obj.arr.scale.z = 0.15;
@@ -918,20 +909,16 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
       color.b = float(track_msg.b) / 255.0;
       viz_obj.arr.colors.push_back(color);
       viz_obj.arr.colors.push_back(color);
-
-      viz_obj.arr.color.a = 0.75;
-      viz_obj.arr.color.r = float(track_msg.r) / 255.0;
-      viz_obj.arr.color.g = float(track_msg.g) / 255.0;
-      viz_obj.arr.color.b = float(track_msg.b) / 255.0;
+      viz_obj.arr.color = color;
     }
 
     visualization_msgs::msg::Marker dynamic_obj_waypoints;
     dynamic_obj_waypoints.action = visualization_msgs::msg::Marker::ADD;
-    dynamic_obj_waypoints.ns = "my_namespace";
+    dynamic_obj_waypoints.ns = "track_waypoints";
     dynamic_obj_waypoints.type = visualization_msgs::msg::Marker::SPHERE_LIST;
     dynamic_obj_waypoints.header.frame_id = "map";
-    dynamic_obj_waypoints.lifetime = rclcpp::Duration(1.0);
-    dynamic_obj_waypoints.id = i + 500;
+    dynamic_obj_waypoints.lifetime = rclcpp::Duration::from_seconds(1.0);
+    dynamic_obj_waypoints.id = track.id;
     dynamic_obj_waypoints.scale.x = 0.2;
     dynamic_obj_waypoints.scale.y = 0.2;
     dynamic_obj_waypoints.scale.z = 0.2;
@@ -951,11 +938,11 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
 
     // Fill in text information
     viz_obj.txt.action = visualization_msgs::msg::Marker::ADD;
-    viz_obj.txt.ns = "my_namespace";
+    viz_obj.txt.ns = "track_text";
     viz_obj.txt.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     viz_obj.txt.header.frame_id = "map";
-    viz_obj.txt.lifetime = rclcpp::Duration(1.0);
-    viz_obj.txt.id = i + 200;
+    viz_obj.txt.lifetime = rclcpp::Duration::from_seconds(1.0);
+    viz_obj.txt.id = track.id;
     viz_obj.txt.pose.position.x = track_msg.world_pose.point.x;
     viz_obj.txt.pose.position.y = track_msg.world_pose.point.y;
     viz_obj.txt.pose.position.z = track_msg.world_pose.point.z + track_msg.height;
@@ -971,7 +958,6 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     // Push back track message
     track_msg.orientation = track_yaw_angle;
     track_list.objects.push_back(track_msg);
-
     marker_array.markers.push_back(viz_obj.arr);
     marker_array.markers.push_back(viz_obj.bb);
     marker_array.markers.push_back(viz_obj.txt);
