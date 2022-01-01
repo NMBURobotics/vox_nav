@@ -32,21 +32,9 @@ find_package(visualization_msgs REQUIRED)
 find_package(PCL REQUIRED)
 find_package(vox_nav_msgs REQUIRED)
 
-set(Torch_DIR "/opt/libtorch/share/cmake/Torch") 
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
-option(USE_CUDA "Use CUDA" ON)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_60,code=sm_60)
-set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda")
-find_package(Torch REQUIRED)
-find_package(CUDA REQUIRED)
-find_package(CUDNN REQUIRED)
-
 include_directories(include
-                   ${ApproxMVBB_INCLUDE_DIRS}
                    ${OMPL_INCLUDE_DIRS}
-                   ${PCL_INCLUDE_DIRS}
-                   ${Torch_INCLUDE_DIRS}
-                   ${CUDA_INCLUDE_DIRS})
+                   ${PCL_INCLUDE_DIRS})
 
 set(dependencies
   rclcpp
