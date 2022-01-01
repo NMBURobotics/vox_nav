@@ -849,7 +849,6 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     track_msg.width = track.geo.width;
     track_msg.length = track.geo.length;
     track_msg.height = track.geo.height;
-    track_msg.orientation = track.geo.orientation;
     track_msg.semantic_name = track.sem.name;
     track_msg.semantic_id = track.sem.id;
     track_msg.semantic_confidence = track.sem.confidence;
@@ -858,8 +857,6 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     track_msg.b = track.b;
     track_msg.a = track.prob_existence;
 
-    // Push back track message
-    track_list.objects.push_back(track_msg);
 
     VizObject viz_obj;
     // Fill in bounding box information
@@ -883,7 +880,7 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     viz_obj.bb.color.g = float(track_msg.g) / 255.0;
     viz_obj.bb.color.b = float(track_msg.b) / 255.0;
 
-    double direction_angle = 0.0;
+    double track_yaw_angle = 0.0;
     // Fill in arrow information
     if (track.hist.historic_positions.size() > 3) {
       int num_elements = track.hist.historic_positions.size();
@@ -894,7 +891,7 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
       double dx = track.hist.historic_positions.back().x() -
         track.hist.historic_positions[num_elements - 3].x();
 
-      direction_angle = std::atan2(dy, dx);
+      track_yaw_angle = std::atan2(dy, dx);
 
       viz_obj.arr.action = visualization_msgs::msg::Marker::ADD;
       viz_obj.arr.ns = "my_namespace";
@@ -971,10 +968,15 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     viz_obj.txt.color.b = float(track_msg.b) / 255.0;
     viz_obj.txt.text = std::to_string(track_msg.id);
 
+    // Push back track message
+    track_msg.orientation = track_yaw_angle;
+    track_list.objects.push_back(track_msg);
+
     marker_array.markers.push_back(viz_obj.arr);
     marker_array.markers.push_back(viz_obj.bb);
     marker_array.markers.push_back(viz_obj.txt);
     marker_array.markers.push_back(dynamic_obj_waypoints);
+    track_list.objects.push_back(track_msg);
   }
 
   // Print

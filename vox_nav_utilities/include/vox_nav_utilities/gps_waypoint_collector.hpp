@@ -31,8 +31,6 @@
 
 namespace vox_nav_utilities
 {
-
-
   class GPSWaypointCollector : public rclcpp::Node
   {
   public:
