@@ -833,16 +833,15 @@ def plot_ztest_length():
 
     M = np.asarray(M)
     M = np.interp(M, (M.min(), M.max()), (-1, 1))
-    print(M.sum(axis=0))
-    overall_score = np.round(M.sum(axis=0), 2)
+    overall_score = np.round(M.sum(axis=1), 1)
 
     score_with_planner = []
     for k in range(len(overall_score)):
         string = planners[k] + ": " + str(overall_score[k])
         score_with_planner.append(string)
 
-    df_cm = pd.DataFrame(M, index=[i for i in planners],
-                         columns=[i for i in score_with_planner])
+    df_cm = pd.DataFrame(M, index=[i for i in score_with_planner],
+                         columns=[i for i in planners])
 
     plt.figure(figsize=(7, 7))
     sn.heatmap(df_cm, annot=True, robust=False)
@@ -1258,6 +1257,6 @@ if __name__ == '__main__':
     # plot_cdf_length()
     # plot_cdf_smoothness()
     # plot_cdf_best_cost()
-    # plot_ztest_length()
+    plot_ztest_length()
     # plot_ztest_smooth()
-    score()
+    # score()
