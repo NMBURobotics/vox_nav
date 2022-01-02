@@ -71,6 +71,8 @@ RawCloudClusteringTracking::RawCloudClusteringTracking()
     "clustering.clustering_max_step_size",
     clustering_params_.clustering_max_step_size);
   declare_parameter("clustering.sacle_up_objects", clustering_params_.sacle_up_objects);
+  declare_parameter("clustering.N", clustering_params_.N);
+  declare_parameter("clustering.dt", clustering_params_.dt);
 
   get_parameter("data_association.ped.dist.position", params_.da_ped_dist_pos);
   get_parameter("data_association.ped.dist.form", params_.da_ped_dist_form);
@@ -103,6 +105,8 @@ RawCloudClusteringTracking::RawCloudClusteringTracking()
   get_parameter("clustering.clustering_max_points", clustering_params_.clustering_max_points);
   get_parameter("clustering.clustering_max_step_size", clustering_params_.clustering_max_step_size);
   get_parameter("clustering.sacle_up_objects", clustering_params_.sacle_up_objects);
+  get_parameter("clustering.N", clustering_params_.N);
+  get_parameter("clustering.dt", clustering_params_.dt);
 
   // Print parameters
   RCLCPP_INFO_STREAM(get_logger(), "da_ped_dist_pos " << params_.da_ped_dist_pos);
@@ -140,6 +144,8 @@ RawCloudClusteringTracking::RawCloudClusteringTracking()
   RCLCPP_INFO_STREAM(
     get_logger(), "clustering_max_step_size " << clustering_params_.clustering_max_step_size);
   RCLCPP_INFO_STREAM(get_logger(), "sacle_up_objects " << clustering_params_.sacle_up_objects);
+  RCLCPP_INFO_STREAM(get_logger(), "N " << clustering_params_.N);
+  RCLCPP_INFO_STREAM(get_logger(), "dt " << clustering_params_.dt);
 
   buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
@@ -169,6 +175,9 @@ RawCloudClusteringTracking::RawCloudClusteringTracking()
 
   // Init counter for publishing
   time_frame_ = 0;
+  last_time_stamp_ = now();
+  dynamic_obejct_last_time_stamp_ = now();
+
   RCLCPP_INFO(get_logger(), "Creating...");
 }
 
@@ -852,6 +861,7 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
 
 
     VizObject viz_obj;
+
     // Fill in bounding box information
     viz_obj.bb.action = visualization_msgs::msg::Marker::ADD;
     viz_obj.bb.ns = "track_clylinders";
@@ -862,9 +872,8 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     viz_obj.bb.pose.position.x = track_msg.world_pose.point.x;
     viz_obj.bb.pose.position.y = track_msg.world_pose.point.y;
     viz_obj.bb.pose.position.z = track_msg.world_pose.point.z;
-    viz_obj.bb.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-      0, 0,
-      track_msg.orientation);
+    viz_obj.bb.pose.orientation =
+      vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, track_msg.orientation);
     viz_obj.bb.scale.x = track_msg.length;
     viz_obj.bb.scale.y = track_msg.width;
     viz_obj.bb.scale.z = track_msg.height;
@@ -881,7 +890,6 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
         track.hist.historic_positions[num_elements - 3].y();
       double dx = track.hist.historic_positions.back().x() -
         track.hist.historic_positions[num_elements - 3].x();
-
       track_yaw_angle = std::atan2(dy, dx);
 
       viz_obj.arr.action = visualization_msgs::msg::Marker::ADD;
@@ -890,7 +898,7 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
       viz_obj.arr.header.frame_id = "map";
       viz_obj.arr.lifetime = rclcpp::Duration::from_seconds(1.0);
       viz_obj.arr.id = track.id;
-      viz_obj.arr.scale.x = 0.2;
+      viz_obj.arr.scale.x = 0.20;
       viz_obj.arr.scale.y = 0.35;
       viz_obj.arr.scale.z = 0.15;
       geometry_msgs::msg::Point arr_start, arr_end;
@@ -910,8 +918,28 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
       viz_obj.arr.colors.push_back(color);
       viz_obj.arr.colors.push_back(color);
       viz_obj.arr.color = color;
+
+      // lets predict where the objct will be clustering_params_.N horizons later
+      auto track_position_after_N_horizons = track_msg.world_pose.point;
+      for (int h = 0; h < clustering_params_.N; h++) {
+        track_position_after_N_horizons.x += clustering_params_.dt *
+          (track_msg.velocity * std::cos(track_yaw_angle));
+        track_position_after_N_horizons.y += clustering_params_.dt *
+          (track_msg.velocity * std::sin(track_yaw_angle));
+      }
+      if (std::abs(track_msg.velocity) > 0.4) {
+        viz_obj.bb.pose.orientation =
+          vox_nav_utilities::getMsgQuaternionfromRPY(
+          0, 0, track_yaw_angle);
+        auto dist_to_after_N_horizon_pose =
+          vox_nav_utilities::getEuclidianDistBetweenPoints(
+          track_position_after_N_horizons,
+          track_msg.world_pose.point);
+        viz_obj.bb.scale.x = dist_to_after_N_horizon_pose;
+      }
     }
 
+    // Fill in dynamic object trajs, waypoints as red spheres
     visualization_msgs::msg::Marker dynamic_obj_waypoints;
     dynamic_obj_waypoints.action = visualization_msgs::msg::Marker::ADD;
     dynamic_obj_waypoints.ns = "track_waypoints";

@@ -74,6 +74,8 @@ namespace vox_nav_cupoch_experimental
     float clustering_max_points;
     float clustering_max_step_size;
     float sacle_up_objects;
+    int N;
+    float dt;
   };
   struct Parameter
   {
@@ -187,6 +189,7 @@ namespace vox_nav_cupoch_experimental
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_clusters_pub_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr tracking_markers_pub_;
     rclcpp::Time last_time_stamp_;
+    rclcpp::Time dynamic_obejct_last_time_stamp_;
     rclcpp::Publisher<vox_nav_msgs::msg::ObjectArray>::SharedPtr list_tracked_objects_pub_;
     std::shared_ptr<tf2_ros::Buffer> buffer_;
     std::shared_ptr<tf2_ros::TransformListener> transform_listener_;
