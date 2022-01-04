@@ -18,6 +18,9 @@
     <depend>pcl_ros</depend>
     <depend>ompl</depend>
     <depend>vox_nav_msgs</depend>
+    <depend>vox_nav_utilities</depend>
+    <depend>cupoch_conversions</depend>
+
 
     <test_depend>ament_lint_common</test_depend>
     <test_depend>ament_lint_auto</test_depend>
