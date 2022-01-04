@@ -29,10 +29,6 @@ find_package(thrust REQUIRED)
 find_package(cupoch_conversions REQUIRED)
 find_package(OpenMP REQUIRED)
 
-set(ApproxMVBB_DIR "../../../install/ApproxMVBB/share/ApproxMVBB//cmake")
-message(ApproxMVBB_DIR)
-find_package(ApproxMVBB REQUIRED COMPONENTS XML_SUPPORT KDTREE_SUPPORT)
-
 message("zs: CUPOCH_INCLUDE_DIRS = " ${CUPOCH_INCLUDE_DIRS})
 message("zs: CUPOCH_LIBRARIES = " ${CUPOCH_LIBRARIES})
 message("zs: EIGEN3_INCLUDE_DIRS = " ${EIGEN3_INCLUDE_DIRS})
@@ -77,19 +73,19 @@ cuda_add_executable(ros2bag_kitti_bin src/ros2bag_kitti_bin.cu)
 ament_target_dependencies(ros2bag_kitti_bin ${dependencies})
 target_include_directories(ros2bag_kitti_bin PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_directories(ros2bag_kitti_bin PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(ros2bag_kitti_bin ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core)
+target_link_libraries(ros2bag_kitti_bin ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES})
 
 cuda_add_executable(semantic_cloud_clustering src/semantic_cloud_clustering.cu)
 ament_target_dependencies(semantic_cloud_clustering ${dependencies})
 target_include_directories(semantic_cloud_clustering PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_directories(semantic_cloud_clustering PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(semantic_cloud_clustering ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core OpenMP::OpenMP_CXX)
+target_link_libraries(semantic_cloud_clustering ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
 cuda_add_executable(raw_cloud_clustering_tracking src/raw_cloud_clustering_tracking.cu)
 ament_target_dependencies(raw_cloud_clustering_tracking ${dependencies})
 target_include_directories(raw_cloud_clustering_tracking PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_directories(raw_cloud_clustering_tracking PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(raw_cloud_clustering_tracking ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} ApproxMVBB::Core OpenMP::OpenMP_CXX)
+target_link_libraries(raw_cloud_clustering_tracking ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
 install(TARGETS ros2bag_kitti_bin
                 semantic_cloud_clustering
