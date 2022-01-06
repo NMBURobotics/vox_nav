@@ -981,8 +981,8 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     viz_obj.txt.color.r = float(track_msg.r) / 255.0;
     viz_obj.txt.color.g = float(track_msg.g) / 255.0;
     viz_obj.txt.color.b = float(track_msg.b) / 255.0;
-    //viz_obj.txt.text = std::to_string(track_msg.id);
-    viz_obj.txt.text = std::to_string(track_yaw_angle);
+    viz_obj.txt.text = std::to_string(track_msg.id);
+    //viz_obj.txt.text = std::to_string(track_yaw_angle);
 
     // Push back track message
     track_msg.orientation = track_yaw_angle;
