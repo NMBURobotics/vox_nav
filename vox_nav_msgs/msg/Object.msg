@@ -22,3 +22,4 @@ uint32 b
 float32 a
 
 bool is_new_track
+bool is_dynamic

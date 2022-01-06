@@ -16,6 +16,7 @@
 #include <vox_nav_control/controller_core.hpp>
 #include <vox_nav_control/mpc_controller/mpc_controller_core.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
+#include <vox_nav_msgs/msg/object_array.hpp>
 
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <tf2_ros/buffer.h>
@@ -132,6 +133,13 @@ namespace vox_nav_control
       void publishLocalInterpolatedRefernceStates(
         std::vector<MPCControllerCore::States> interpolated_ref_traj);
 
+      /**
+       * @brief
+       *
+       * @param msg
+       */
+      void obstacleTracksCallback(const vox_nav_msgs::msg::ObjectArray::SharedPtr msg);
+
     private:
       // Given refernce traj to follow, this is set got from planner
       nav_msgs::msg::Path reference_traj_;
@@ -149,6 +157,10 @@ namespace vox_nav_control
         interpolated_local_reference_traj_publisher_;
       // while following global plan whats the max look ahead distance ?, thats global_plan_look_ahead_distance_
       double global_plan_look_ahead_distance_;
+
+      rclcpp::Node * parent_;
+
+      rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr obstacle_tracks_sub_;
     };
 
   } // namespace mpc_controller

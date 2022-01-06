@@ -149,7 +149,7 @@ namespace vox_nav_cupoch_experimental
 
   struct VizObject
   {
-    visualization_msgs::msg::Marker bb;
+    visualization_msgs::msg::Marker cyl;
     visualization_msgs::msg::Marker arr;
     visualization_msgs::msg::Marker txt;
   };

@@ -14,7 +14,8 @@
 
 // Equations and logic parts of this code was based on ;
 // https://github.com/MPC-Berkeley/genesis_path_follower
-// Also refer to https://github.com/MPC-Berkeley/barc/wiki/Car-Model
+// Also refer to;
+// https://github.com/MPC-Berkeley/barc/wiki/Car-Model
 
 #ifndef VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_CORE_HPP_
 #define VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_CORE_HPP_

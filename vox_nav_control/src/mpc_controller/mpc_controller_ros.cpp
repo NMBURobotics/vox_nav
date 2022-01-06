@@ -35,6 +35,7 @@ namespace vox_nav_control
       rclcpp::Node * parent,
       const std::string & plugin_name)
     {
+      parent_ = parent;
       parent->declare_parameter("global_plan_look_ahead_distance", 2.5);
       parent->declare_parameter(plugin_name + ".N", 10);
       parent->declare_parameter(plugin_name + ".DT", 0.1);
@@ -79,6 +80,11 @@ namespace vox_nav_control
         parent->create_publisher<visualization_msgs::msg::MarkerArray>(
         "/vox_nav/controller/plan",
         1);
+
+      obstacle_tracks_sub_ = parent->create_subscription<vox_nav_msgs::msg::ObjectArray>(
+        "/vox_nav/tracking/objects", rclcpp::SystemDefaultsQoS(),
+        std::bind(&MPCControllerROS::obstacleTracksCallback, this, std::placeholders::_1));
+
       mpc_controller_ = std::make_shared<MPCControllerCore>(mpc_parameters_);
     }
 
@@ -291,6 +297,13 @@ namespace vox_nav_control
         marker_array.markers.push_back(marker);
       }
       interpolated_local_reference_traj_publisher_->publish(marker_array);
+    }
+
+    void MPCControllerROS::obstacleTracksCallback(
+      const vox_nav_msgs::msg::ObjectArray::SharedPtr msg)
+    {
+      RCLCPP_INFO(
+        parent_->get_logger(), "Recieved Tracks [%d]", int(msg->objects.size()));
     }
 
   } // namespace mpc_controller

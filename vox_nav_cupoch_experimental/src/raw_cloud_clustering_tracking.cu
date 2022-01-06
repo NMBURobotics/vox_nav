@@ -35,6 +35,9 @@ RawCloudClusteringTracking::RawCloudClusteringTracking()
     "/vox_nav/detection/clusters", rclcpp::SystemDefaultsQoS());
 
   tracking_markers_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "/vox_nav/tracking/object_markers", rclcpp::SystemDefaultsQoS());
+
+  list_tracked_objects_pub_ = this->create_publisher<vox_nav_msgs::msg::ObjectArray>(
     "/vox_nav/tracking/objects", rclcpp::SystemDefaultsQoS());
 
   // Define parameters
@@ -166,12 +169,6 @@ RawCloudClusteringTracking::RawCloudClusteringTracking()
 
   // Start ids for track with 0
   track_id_counter_ = 0;
-
-  // Define Publisher
-  list_tracked_objects_pub_ =
-    this->create_publisher<vox_nav_msgs::msg::ObjectArray>(
-    "/tracking/objects",
-    rclcpp::SystemDefaultsQoS());
 
   // Init counter for publishing
   time_frame_ = 0;
@@ -858,33 +855,35 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     track_msg.g = track.g;
     track_msg.b = track.b;
     track_msg.a = track.prob_existence;
+    track_msg.is_dynamic = false;
 
 
     VizObject viz_obj;
 
     // Fill in bounding box information
-    viz_obj.bb.action = visualization_msgs::msg::Marker::ADD;
-    viz_obj.bb.ns = "track_clylinders";
-    viz_obj.bb.type = visualization_msgs::msg::Marker::CYLINDER;
-    viz_obj.bb.header.frame_id = "map";
-    viz_obj.bb.lifetime = rclcpp::Duration::from_seconds(1.0);
-    viz_obj.bb.id = track.id;
-    viz_obj.bb.pose.position.x = track_msg.world_pose.point.x;
-    viz_obj.bb.pose.position.y = track_msg.world_pose.point.y;
-    viz_obj.bb.pose.position.z = track_msg.world_pose.point.z;
-    viz_obj.bb.pose.orientation =
+    viz_obj.cyl.action = visualization_msgs::msg::Marker::ADD;
+    viz_obj.cyl.ns = "track_clylinders";
+    viz_obj.cyl.type = visualization_msgs::msg::Marker::CYLINDER;
+    viz_obj.cyl.header.frame_id = "map";
+    viz_obj.cyl.lifetime = rclcpp::Duration::from_seconds(1.0);
+    viz_obj.cyl.id = track.id;
+    viz_obj.cyl.pose.position.x = track_msg.world_pose.point.x;
+    viz_obj.cyl.pose.position.y = track_msg.world_pose.point.y;
+    viz_obj.cyl.pose.position.z = track_msg.world_pose.point.z;
+    viz_obj.cyl.pose.orientation =
       vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, track_msg.orientation);
-    viz_obj.bb.scale.x = track_msg.length;
-    viz_obj.bb.scale.y = track_msg.width;
-    viz_obj.bb.scale.z = track_msg.height;
-    viz_obj.bb.color.a = 0.75;
-    viz_obj.bb.color.r = float(track_msg.r) / 255.0;
-    viz_obj.bb.color.g = float(track_msg.g) / 255.0;
-    viz_obj.bb.color.b = float(track_msg.b) / 255.0;
+    viz_obj.cyl.scale.x = track_msg.length;
+    viz_obj.cyl.scale.y = track_msg.width;
+    viz_obj.cyl.scale.z = track_msg.height;
+    viz_obj.cyl.color.a = 0.75;
+    viz_obj.cyl.color.r = float(track_msg.r) / 255.0;
+    viz_obj.cyl.color.g = float(track_msg.g) / 255.0;
+    viz_obj.cyl.color.b = float(track_msg.b) / 255.0;
 
     double track_yaw_angle = 0.0;
     // Fill in arrow information
     if (track.hist.historic_positions.size() > 3) {
+
       int num_elements = track.hist.historic_positions.size();
       double dy = track.hist.historic_positions.back().y() -
         track.hist.historic_positions[num_elements - 3].y();
@@ -928,14 +927,15 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
           (track_msg.velocity * std::sin(track_yaw_angle));
       }
       if (std::abs(track_msg.velocity) > 0.4) {
-        viz_obj.bb.pose.orientation =
+        viz_obj.cyl.pose.orientation =
           vox_nav_utilities::getMsgQuaternionfromRPY(
           0, 0, track_yaw_angle);
         auto dist_to_after_N_horizon_pose =
           vox_nav_utilities::getEuclidianDistBetweenPoints(
           track_position_after_N_horizons,
           track_msg.world_pose.point);
-        viz_obj.bb.scale.x = dist_to_after_N_horizon_pose;
+        viz_obj.cyl.scale.x = dist_to_after_N_horizon_pose;
+        track_msg.is_dynamic = true;
       }
     }
 
@@ -981,22 +981,23 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     viz_obj.txt.color.r = float(track_msg.r) / 255.0;
     viz_obj.txt.color.g = float(track_msg.g) / 255.0;
     viz_obj.txt.color.b = float(track_msg.b) / 255.0;
-    viz_obj.txt.text = std::to_string(track_msg.id);
+    //viz_obj.txt.text = std::to_string(track_msg.id);
+    viz_obj.txt.text = std::to_string(track_yaw_angle);
 
     // Push back track message
     track_msg.orientation = track_yaw_angle;
     track_list.objects.push_back(track_msg);
     marker_array.markers.push_back(viz_obj.arr);
-    marker_array.markers.push_back(viz_obj.bb);
+    marker_array.markers.push_back(viz_obj.cyl);
     marker_array.markers.push_back(viz_obj.txt);
     marker_array.markers.push_back(dynamic_obj_waypoints);
     track_list.objects.push_back(track_msg);
   }
 
   // Print
-  RCLCPP_INFO(
+  /*RCLCPP_INFO(
     get_logger(), "Publishing Tracking [%d]: # Tracks [%d]", time_frame_,
-    int(tracks_.size()));
+    int(tracks_.size()));*/
 
   // Publish
   list_tracked_objects_pub_->publish(track_list);
