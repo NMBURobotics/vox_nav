@@ -34,12 +34,12 @@
 #include <memory>
 #include <vector>
 
-
 #ifndef VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
 #define VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
 
 namespace vox_nav_control
 {
+
   namespace mpc_controller
   {
 /**
@@ -140,6 +140,14 @@ namespace vox_nav_control
        */
       void obstacleTracksCallback(const vox_nav_msgs::msg::ObjectArray::SharedPtr msg);
 
+      /**
+       * @brief Convert ROS msg type of ObjectsArray to vector of Ellipsoid to feed to MPC controller
+       *
+       * @param tracks
+       * @return std::vector<Ellipsoid>
+       */
+      std::vector<Ellipsoid> trackMsg2Ellipsoids(const vox_nav_msgs::msg::ObjectArray & tracks);
+
     private:
       // Given refernce traj to follow, this is set got from planner
       nav_msgs::msg::Path reference_traj_;
@@ -159,8 +167,10 @@ namespace vox_nav_control
       double global_plan_look_ahead_distance_;
 
       rclcpp::Node * parent_;
-
       rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr obstacle_tracks_sub_;
+      vox_nav_msgs::msg::ObjectArray obstacle_tracks_;
+      std::mutex obstacle_tracks_mutex_;
+
     };
 
   } // namespace mpc_controller

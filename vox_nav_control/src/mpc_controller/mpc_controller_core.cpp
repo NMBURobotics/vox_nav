@@ -103,7 +103,8 @@ namespace vox_nav_control
 
       opti_->solver("ipopt", opts);
       // This needs to be called at least once , then we can retrieve opti->debug() information
-      solve();
+      std::vector<Ellipsoid> no_obstackles;
+      solve(no_obstackles);
 
       if (params_.debug_mode) {
         std::cout << "State Weight Matrix Q: \n" << Q << std::endl;
@@ -199,8 +200,6 @@ namespace vox_nav_control
       opti_->subject_to(0 <= sl_df_dv_);
       opti_->subject_to(0 <= sl_acc_dv_);
 
-      // e .g. things like collision avoidance or lateral acceleration bounds could go here.
-      // TODO(fetullah.atas)
     }
 
     void MPCControllerCore::addCost()
@@ -225,13 +224,43 @@ namespace vox_nav_control
       opti_->minimize(cost);
     }
 
-    MPCControllerCore::SolutionResult MPCControllerCore::solve()
+    MPCControllerCore::SolutionResult MPCControllerCore::solve(
+      const std::vector<Ellipsoid> & obstacles)
     {
+      auto opti = std::make_shared<casadi::Opti>(*opti_);
+      casadi::MX pow_squared = 2;
+
+      for (int i = 0; i < params_.N; i++) {
+        for (auto && obs : obstacles) {
+          if (obs.is_dynamic) {
+            opti->subject_to(
+              2.0 <=
+              casadi::MX::pow(
+                (x_dv_(i) - casadi::MX(obs.center.x())) * casadi::cos(obs.heading) +
+                (y_dv_(i) - casadi::MX(obs.center.y())) * casadi::sin(obs.heading), pow_squared) /
+              std::pow(obs.axes.x(), 2)
+              +
+              casadi::MX::pow(
+                (x_dv_(i) - casadi::MX(obs.center.x())) * casadi::sin(obs.heading) -
+                (y_dv_(i) - casadi::MX(obs.center.y())) * casadi::cos(obs.heading), pow_squared) /
+              std::pow(obs.axes.y(), 2));
+          } else {
+            opti->subject_to(
+              2.0 <=
+              casadi::MX::pow(x_dv_(i) - casadi::MX(obs.center.x()), pow_squared) /
+              std::pow(obs.axes.x(), 2)
+              +
+              casadi::MX::pow(y_dv_(i) - casadi::MX(obs.center.y()), pow_squared) /
+              std::pow(obs.axes.y(), 2));
+          }
+        }
+      }
+
       bool is_solution_optimal(false);
       auto start = std::chrono::high_resolution_clock::now();
       casadi::native_DM u_mpc, z_mpc, sl_mpc, z_ref;
       try {
-        auto sol = opti_->solve();
+        auto sol = opti->solve();
         u_mpc = sol.value(u_dv_);
         z_mpc = sol.value(z_dv_);
         sl_mpc = sol.value(sl_dv_);
@@ -239,10 +268,10 @@ namespace vox_nav_control
         is_solution_optimal = true;
       } catch (const std::exception & e) {
         std::cerr << "MPC CONTROL: NON OPTIMAL SOLUTION FOUND!" << '\n';
-        u_mpc = opti_->debug().value(u_dv_);
-        z_mpc = opti_->debug().value(z_dv_);
-        sl_mpc = opti_->debug().value(sl_dv_);
-        z_ref = opti_->debug().value(z_ref_);
+        u_mpc = opti->debug().value(u_dv_);
+        z_mpc = opti->debug().value(z_dv_);
+        sl_mpc = opti->debug().value(sl_dv_);
+        z_ref = opti->debug().value(z_ref_);
       }
       auto end = std::chrono::high_resolution_clock::now();
       auto execution_time =
@@ -270,11 +299,11 @@ namespace vox_nav_control
       result.actual_computed_states = actual_computed_states;
 
       if (params_.debug_mode) {
-        std::cout << "Current States z_curr_: \n " << opti_->debug().value(z_curr_) << std::endl;
-        std::cout << "Refernce Traj states z_ref_: \n" << opti_->debug().value(z_ref_) << std::endl;
-        std::cout << "Actual Traj states z_dv_: \n" << opti_->debug().value(z_dv_) << std::endl;
-        std::cout << "Control inputs u_dv_: \n" << opti_->debug().value(u_dv_) << std::endl;
-        std::cout << "Previous Control inputs u_prev_: \n" << opti_->debug().value(u_prev_) <<
+        std::cout << "Current States z_curr_: \n " << opti->debug().value(z_curr_) << std::endl;
+        std::cout << "Refernce Traj states z_ref_: \n" << opti->debug().value(z_ref_) << std::endl;
+        std::cout << "Actual Traj states z_dv_: \n" << opti->debug().value(z_dv_) << std::endl;
+        std::cout << "Control inputs u_dv_: \n" << opti->debug().value(u_dv_) << std::endl;
+        std::cout << "Previous Control inputs u_prev_: \n" << opti->debug().value(u_prev_) <<
           std::endl;
         std::cout << "Solve took: " << execution_time << " ms" << std::endl;
         std::cout << "acceleration cmd " << result.control_input.acc << std::endl;

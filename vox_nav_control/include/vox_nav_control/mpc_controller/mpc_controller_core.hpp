@@ -25,11 +25,25 @@
 #include <vector>
 #include <memory>
 #include <chrono>
+#include <Eigen/Eigen>
 
 namespace vox_nav_control
 {
   namespace mpc_controller
   {
+
+    /**
+     * @brief We model obstacles with ellipsoids
+     * They are then used in opti stack
+     *
+     */
+    struct Ellipsoid
+    {
+      Eigen::Vector2f center;
+      Eigen::Vector2f axes;
+      bool is_dynamic;
+      double heading;
+    };
 
 /**
  * @brief CASADI based MOdel Predcitive Control for Ackermann Vehicle
@@ -239,7 +253,7 @@ namespace vox_nav_control
        * @return SolutionResult, includes resulting control inputs
        * as well as optimal control variables; computed actual states
        */
-      SolutionResult solve();
+      SolutionResult solve(const std::vector<Ellipsoid> & obstacles);
 
     private:
       std::shared_ptr<casadi::Opti> opti_;
@@ -285,6 +299,20 @@ namespace vox_nav_control
 
       // this will be updated through the constructor.
       Parameters params_;
+
+      casadi::MX z_static_obs_;
+      casadi::MX x_static_obs_;
+      casadi::MX y_static_obs_;
+      casadi::MX a_static_obs_;
+      casadi::MX b_static_obs_;
+
+      casadi::MX z_dynamic_obs_;
+      casadi::MX x_dynamic_obs_;
+      casadi::MX y_dynamic_obs_;
+      casadi::MX a_dynamic_obs_;
+      casadi::MX b_dynamic_obs_;
+      casadi::MX yaw_dynamic_obs_;
+
     };
   } // namespace mpc_controller
 }  // namespace vox_nav_control

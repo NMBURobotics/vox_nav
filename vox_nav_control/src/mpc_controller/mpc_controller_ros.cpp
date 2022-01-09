@@ -120,7 +120,8 @@ namespace vox_nav_control
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
-      MPCControllerCore::SolutionResult res = mpc_controller_->solve();
+      auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
+      MPCControllerCore::SolutionResult res = mpc_controller_->solve(obstacles);
 
       //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x += res.control_input.acc * (dt);
@@ -158,7 +159,10 @@ namespace vox_nav_control
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
-      MPCControllerCore::SolutionResult res = mpc_controller_->solve();
+
+      std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
+      auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
+      MPCControllerCore::SolutionResult res = mpc_controller_->solve(obstacles);
 
       computed_velocity_.linear.x = 0;
       computed_velocity_.angular.z += res.control_input.df * (dt);
@@ -302,8 +306,46 @@ namespace vox_nav_control
     void MPCControllerROS::obstacleTracksCallback(
       const vox_nav_msgs::msg::ObjectArray::SharedPtr msg)
     {
-      RCLCPP_INFO(
-        parent_->get_logger(), "Recieved Tracks [%d]", int(msg->objects.size()));
+      std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
+      obstacle_tracks_ = *msg;
+
+      /*RCLCPP_INFO(
+        parent_->get_logger(), "Recieved Tracks [%d]", int(obstacle_tracks_.objects.size()));*/
+    }
+
+    std::vector<Ellipsoid> MPCControllerROS::trackMsg2Ellipsoids(
+      const vox_nav_msgs::msg::ObjectArray & tracks)
+    {
+      std::vector<Ellipsoid> ellipsoids;
+      for (auto && i : tracks.objects) {
+        // Now lets put the ellipsoid into form of ;
+        // ax^2+2bxy+cy^2=1,
+        // The shape matrix P is;
+        // [a b
+        //  b c]
+        /*
+        std::pow(
+          (x - center.x()) * std::cos(i.heading) + (y - center.y()) * std::sin(i.heading),
+          2) / std::pow(a, 2) +
+
+        std::pow(
+          (x - center.x()) * std::sin(i.heading) - (y - center.y()) * std::cos(i.heading),
+          2) / std::pow(b, 2) = 1;
+
+        */
+        Eigen::Vector2f center(i.world_pose.point.x, i.world_pose.point.y);
+        double a = i.length;
+        double b = i.width;
+        Ellipsoid e;
+        e.heading = i.heading;
+        e.is_dynamic = i.is_dynamic;
+        e.center = center;
+        e.axes = Eigen::Vector2f(a, b);
+        ellipsoids.push_back(e);
+      }
+
+      return ellipsoids;
+
     }
 
   } // namespace mpc_controller

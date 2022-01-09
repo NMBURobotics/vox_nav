@@ -985,6 +985,7 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     //viz_obj.txt.text = std::to_string(track_yaw_angle);
 
     // Push back track message
+    track_msg.heading = track_yaw_angle;
     track_msg.orientation = track_yaw_angle;
     track_list.objects.push_back(track_msg);
     marker_array.markers.push_back(viz_obj.arr);
