@@ -431,7 +431,7 @@ namespace vox_nav_planning
       for (std::size_t path_idx = 0; path_idx < solution_path->getStateCount(); path_idx++) {
         const auto * compound_elevation_state =
           solution_path->getState(path_idx)->as<ompl::base::ElevationStateSpace::StateType>();
-        const auto * se2 = compound_elevation_state->as<ompl::base::SE2StateSpace::StateType>(0);
+        const auto * se2 = compound_elevation_state->as<ompl::base::DubinsStateSpace::StateType>(0);
         const auto * z =
           compound_elevation_state->as<ompl::base::RealVectorStateSpace::StateType>(1);
         geometry_msgs::msg::PoseStamped pose;
@@ -445,9 +445,9 @@ namespace vox_nav_planning
     }
 
     for (size_t i = 1; i < plan_poses.size(); i++) {
-      double dx = plan_poses[i - 1].pose.position.x - plan_poses[i].pose.position.x;
-      double dy = plan_poses[i - 1].pose.position.y - plan_poses[i].pose.position.y;
-      double dz = plan_poses[i - 1].pose.position.z - plan_poses[i].pose.position.z;
+      double dx = plan_poses[i].pose.position.x - plan_poses[i - 1].pose.position.x;
+      double dy = plan_poses[i].pose.position.y - plan_poses[i - 1].pose.position.y;
+      double dz = plan_poses[i].pose.position.z - plan_poses[i - 1].pose.position.z;
       double roll, pitch, yaw;
       yaw = std::atan2(dy, dx);
       pitch = -std::atan2(dz, std::sqrt(dx * dx + dy * dy));

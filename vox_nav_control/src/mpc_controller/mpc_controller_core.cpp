@@ -230,31 +230,31 @@ namespace vox_nav_control
       auto opti = std::make_shared<casadi::Opti>(*opti_);
       casadi::MX pow_squared = 2;
 
-      for (int i = 0; i < params_.N; i++) {
+      /*for (int i = 0; i < params_.N; i++) {
         for (auto && obs : obstacles) {
           if (obs.is_dynamic) {
             opti->subject_to(
-              2.0 <=
+              2.0 >=
               casadi::MX::pow(
                 (x_dv_(i) - casadi::MX(obs.center.x())) * casadi::cos(obs.heading) +
                 (y_dv_(i) - casadi::MX(obs.center.y())) * casadi::sin(obs.heading), pow_squared) /
-              std::pow(obs.axes.x(), 2)
+              casadi::MX::pow(casadi::MX(obs.axes.x()), 2)
               +
               casadi::MX::pow(
                 (x_dv_(i) - casadi::MX(obs.center.x())) * casadi::sin(obs.heading) -
                 (y_dv_(i) - casadi::MX(obs.center.y())) * casadi::cos(obs.heading), pow_squared) /
-              std::pow(obs.axes.y(), 2));
+              casadi::MX::pow(casadi::MX(obs.axes.y()), 2));
           } else {
             opti->subject_to(
-              2.0 <=
+              2.0 >=
               casadi::MX::pow(x_dv_(i) - casadi::MX(obs.center.x()), pow_squared) /
-              std::pow(obs.axes.x(), 2)
+              casadi::MX::pow(casadi::MX(obs.axes.x()), 2)
               +
               casadi::MX::pow(y_dv_(i) - casadi::MX(obs.center.y()), pow_squared) /
-              std::pow(obs.axes.y(), 2));
+              casadi::MX::pow(casadi::MX(obs.axes.y()), 2));
           }
         }
-      }
+      }*/
 
       bool is_solution_optimal(false);
       auto start = std::chrono::high_resolution_clock::now();

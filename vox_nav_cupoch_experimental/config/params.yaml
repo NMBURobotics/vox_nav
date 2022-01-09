@@ -1,11 +1,11 @@
 raw_cloud_clustering_tracking:
   ros__parameters:
     clustering:
-      x_bound: 15.0
-      y_bound: 15.0
+      x_bound: 5.0
+      y_bound: 5.0
       z_bound: 2.0
       downsample_voxel_size: 0.05
-      remove_ground_plane_thres: 0.4
+      remove_ground_plane_thres: 0.6
       clustering_min_points: 10.0
       clustering_max_points: 10000.0
       clustering_max_step_size: 0.5

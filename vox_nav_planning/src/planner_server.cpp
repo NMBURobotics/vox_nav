@@ -271,6 +271,9 @@ namespace vox_nav_planning
       start_marker = marker;
       goal_marker = marker;
 
+      double void_s, yaw;
+      vox_nav_utilities::getRPYfromMsgQuaternion(i.pose.orientation, void_s, void_s, yaw);
+
       visualization_msgs::msg::Marker text;
       text.header.frame_id = "map";
       text.header.stamp = rclcpp::Clock().now();
@@ -279,7 +282,8 @@ namespace vox_nav_planning
       text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
       text.action = visualization_msgs::msg::Marker::ADD;
       text.lifetime = rclcpp::Duration::from_seconds(0);
-      text.text = std::to_string(path_idx);
+      //text.text = std::to_string(path_idx);
+      text.text = std::to_string(yaw);
       text.pose = i.pose;
       text.pose.position.z += 0.5;
       text.scale.x = 0.3;

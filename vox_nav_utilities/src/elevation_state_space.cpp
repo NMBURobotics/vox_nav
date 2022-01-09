@@ -243,7 +243,7 @@ void OctoCellValidStateSampler::updateSearchArea(
 {
   RCLCPP_INFO(logger_, "Updating search area");
 
-  double radius = vox_nav_utilities::getEuclidianDistBetweenPoses(goal, start) / 1.0;
+  double radius = vox_nav_utilities::getEuclidianDistBetweenPoses(goal, start) / 2.0;
   auto search_point_pose = vox_nav_utilities::getLinearInterpolatedPose(goal, start);
   auto search_point_surfel = vox_nav_utilities::poseMsg2PCLSurfel(search_point_pose);
 
@@ -255,7 +255,7 @@ void OctoCellValidStateSampler::updateSearchArea(
   RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
 
   search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
-    search_area_surfels_, 1.0);
+    search_area_surfels_, 1.2);
 
   RCLCPP_INFO(
     logger_, "Uniformly sampled %d search area surfels,", search_area_surfels_->points.size());

@@ -219,13 +219,13 @@ namespace vox_nav_control
       std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
         std::make_shared<ompl::base::RealVectorBounds>(2);
       ompl::base::StateSpacePtr state_space =
-        std::make_shared<ompl::base::SE2StateSpace>();
-      state_space->as<ompl::base::SE2StateSpace>()->setBounds(*state_space_bounds);
+        std::make_shared<ompl::base::DubinsStateSpace>();
+      state_space->as<ompl::base::DubinsStateSpace>()->setBounds(*state_space_bounds);
       ompl::base::SpaceInformationPtr state_space_information =
         std::make_shared<ompl::base::SpaceInformation>(state_space);
       ompl::geometric::PathGeometric path(state_space_information);
 
-      ompl::base::ScopedState<ompl::base::SE2StateSpace>
+      ompl::base::ScopedState<ompl::base::DubinsStateSpace>
       closest_ref_traj_state(state_space),
       ompl_local_goal_state(state_space);
 
@@ -259,8 +259,8 @@ namespace vox_nav_control
       std::vector<MPCControllerCore::States> interpolated_reference_states;
       for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
         // cast the abstract state type to the type we expect
-        const ompl::base::ReedsSheppStateSpace::StateType * interpolated_state =
-          path.getState(path_idx)->as<ompl::base::ReedsSheppStateSpace::StateType>();
+        const ompl::base::DubinsStateSpace::StateType * interpolated_state =
+          path.getState(path_idx)->as<ompl::base::DubinsStateSpace::StateType>();
         MPCControllerCore::States curr_interpolated_state;
         curr_interpolated_state.v = kTARGETSPEED;
         curr_interpolated_state.x = interpolated_state->getX();
@@ -318,20 +318,16 @@ namespace vox_nav_control
     {
       std::vector<Ellipsoid> ellipsoids;
       for (auto && i : tracks.objects) {
-        // Now lets put the ellipsoid into form of ;
-        // ax^2+2bxy+cy^2=1,
-        // The shape matrix P is;
-        // [a b
-        //  b c]
         /*
+
+        https://math.stackexchange.com/questions/426150/what-is-the-general-equation-of-the-ellipse-that-is-not-in-the-origin-and-rotate
+
         std::pow(
           (x - center.x()) * std::cos(i.heading) + (y - center.y()) * std::sin(i.heading),
           2) / std::pow(a, 2) +
-
         std::pow(
           (x - center.x()) * std::sin(i.heading) - (y - center.y()) * std::cos(i.heading),
           2) / std::pow(b, 2) = 1;
-
         */
         Eigen::Vector2f center(i.world_pose.point.x, i.world_pose.point.y);
         double a = i.length;
