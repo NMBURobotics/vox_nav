@@ -21,6 +21,7 @@ from launch.conditions import IfCondition
 import os
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
+
 def generate_launch_description():
 
     share_dir = get_package_share_directory('vox_nav_bringup')
@@ -34,7 +35,8 @@ def generate_launch_description():
 
     decleare_params = DeclareLaunchArgument(
         'params',
-        default_value=os.path.join(share_dir, 'params', 'vox_nav_default_params.yaml'),
+        default_value=os.path.join(
+            share_dir, 'params', 'vox_nav_default_params.yaml'),
         description='Path to the vox_nav parameters file.')
 
     decleare_localization_params = DeclareLaunchArgument(
