@@ -136,12 +136,6 @@ namespace vox_nav_control
       //  State Bound Constraints
       opti_->subject_to(opti_->bounded(params_.V_MIN, v_dv_, params_.V_MAX));
 
-      // Initial state constraints
-      opti_->subject_to(x_dv_(0) == z_curr_(0));
-      opti_->subject_to(y_dv_(0) == z_curr_(1));
-      opti_->subject_to(psi_dv_(0) == z_curr_(2));
-      opti_->subject_to(v_dv_(0) == z_curr_(3));
-
       // state dynamics constraints
       // see here for the equtions: https://github.com/MPC-Berkeley/barc/wiki/Car-Model
       for (int i = 0; i < params_.N; i++) {
@@ -230,25 +224,23 @@ namespace vox_nav_control
       auto opti = std::make_shared<casadi::Opti>(*opti_);
       casadi::MX pow_squared = 2;
 
+      casadi::Slice slice(static_cast<int>(params_.N / 2), params_.N);
+
       for (auto && obs : obstacles) {
         if (obs.is_dynamic) {
           opti->subject_to(
-            1.5 <
+            2.25 <
             casadi::MX::sqrt(
-              casadi::MX::pow(x_dv_(slice_all_) - casadi::MX(obs.center.x()), pow_squared) +
-              casadi::MX::pow(y_dv_(slice_all_) - casadi::MX(obs.center.y()), pow_squared)));
-
-        }   /*else {
-            opti->subject_to(
-              2.0 >=
-              casadi::MX::pow(x_dv_(i) - casadi::MX(obs.center.x()), pow_squared) /
-              casadi::MX::pow(casadi::MX(obs.axes.x()), 2)
-              +
-              casadi::MX::pow(y_dv_(i) - casadi::MX(obs.center.y()), pow_squared) /
-              casadi::MX::pow(casadi::MX(obs.axes.y()), 2));
-          }*/
+              casadi::MX::pow(x_dv_(slice) - casadi::MX(obs.center.x()), pow_squared) +
+              casadi::MX::pow(y_dv_(slice) - casadi::MX(obs.center.y()), pow_squared)));
+        }
       }
 
+      // Initial state constraints
+      opti->subject_to(x_dv_(0) == z_curr_(0));
+      opti->subject_to(y_dv_(0) == z_curr_(1));
+      opti->subject_to(psi_dv_(0) == z_curr_(2));
+      opti->subject_to(v_dv_(0) == z_curr_(3));
 
       bool is_solution_optimal(false);
       auto start = std::chrono::high_resolution_clock::now();

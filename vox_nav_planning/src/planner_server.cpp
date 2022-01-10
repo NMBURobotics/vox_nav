@@ -260,10 +260,10 @@ namespace vox_nav_planning
       marker.lifetime = rclcpp::Duration::from_seconds(0);
       marker.text = std::to_string(path_idx);
       marker.pose = i.pose;
-      marker.scale.x = get_parameter("robot_body_dimens.x").as_double();
-      marker.scale.y = get_parameter("robot_body_dimens.y").as_double();
-      marker.scale.z = get_parameter("robot_body_dimens.z").as_double();
-      marker.color.a = 0.7;
+      marker.scale.x = get_parameter("robot_body_dimens.x").as_double() / 3;
+      marker.scale.y = get_parameter("robot_body_dimens.y").as_double() / 4;
+      marker.scale.z = get_parameter("robot_body_dimens.z").as_double() / 4;
+      marker.color.a = 0.5;
       marker.color.r = 0.0;
       marker.color.g = 1.0;
       marker.color.b = 1.0;
@@ -283,7 +283,7 @@ namespace vox_nav_planning
       text.action = visualization_msgs::msg::Marker::ADD;
       text.lifetime = rclcpp::Duration::from_seconds(0);
       //text.text = std::to_string(path_idx);
-      text.text = std::to_string(yaw);
+      //text.text = std::to_string(yaw);
       text.pose = i.pose;
       text.pose.position.z += 0.5;
       text.scale.x = 0.3;
