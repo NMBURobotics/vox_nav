@@ -81,6 +81,11 @@ namespace vox_nav_control
         "/vox_nav/controller/plan",
         1);
 
+      mpc_computed_traj_publisher_ =
+        parent->create_publisher<visualization_msgs::msg::MarkerArray>(
+        "/vox_nav/controller/mpc_computed_traj",
+        1);
+
       obstacle_tracks_sub_ = parent->create_subscription<vox_nav_msgs::msg::ObjectArray>(
         "/vox_nav/tracking/objects", rclcpp::SystemDefaultsQoS(),
         std::bind(&MPCControllerROS::obstacleTracksCallback, this, std::placeholders::_1));
@@ -130,7 +135,19 @@ namespace vox_nav_control
         rear_axle_tofront_dist;
 
       regulate_max_speed();
-      publishLocalInterpolatedRefernceStates(local_interpolated_reference_states);
+
+      std_msgs::msg::ColorRGBA red_color, blue_color;
+      red_color.r = 1.0;
+      red_color.a = 1.0;
+      blue_color.b = 1.0;
+      blue_color.a = 1.0;
+      publishTrajStates(
+        local_interpolated_reference_states, red_color, "ref_traj",
+        interpolated_local_reference_traj_publisher_);
+      publishTrajStates(
+        res.actual_computed_states, blue_color, "actual_traj",
+        mpc_computed_traj_publisher_);
+
       previous_control_ = res.control_input;
       return computed_velocity_;
     }
@@ -272,35 +289,35 @@ namespace vox_nav_control
     }
 
     void
-    MPCControllerROS::publishLocalInterpolatedRefernceStates(
-      std::vector<MPCControllerCore::States> interpolated_reference_states)
+    MPCControllerROS::publishTrajStates(
+      std::vector<MPCControllerCore::States> interpolated_reference_states,
+      std_msgs::msg::ColorRGBA color,
+      std::string ns,
+      const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher)
     {
       visualization_msgs::msg::MarkerArray marker_array;
       for (int i = 0; i < interpolated_reference_states.size(); i++) {
         visualization_msgs::msg::Marker marker;
         marker.header.frame_id = "map";
         marker.header.stamp = rclcpp::Clock().now();
-        marker.ns = "path";
+        marker.ns = ns;
         marker.id = i;
         marker.type = visualization_msgs::msg::Marker::ARROW;
         marker.action = visualization_msgs::msg::Marker::ADD;
         marker.lifetime = rclcpp::Duration::from_seconds(0);
         marker.pose.position.x = interpolated_reference_states[i].x;
         marker.pose.position.y = interpolated_reference_states[i].y;
-        marker.pose.position.z = 0.6;
+        marker.pose.position.z = 1.3;
         marker.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
           0, 0, interpolated_reference_states[i].psi);
         marker.scale.x = 0.25;
         marker.scale.y = 0.1;
         marker.scale.z = 0.1;
-        marker.color.a = 1.0;
-        // Make it colorful
-        marker.color.r = 1.0 * static_cast<double>(rclcpp::Clock().now().nanoseconds() % 10);
-        marker.color.g = 0.5 * static_cast<double>(rclcpp::Clock().now().nanoseconds() % 10);
-        marker.color.b = 0.2 * static_cast<double>(rclcpp::Clock().now().nanoseconds() % 10);
+        marker.color = color;
+
         marker_array.markers.push_back(marker);
       }
-      interpolated_local_reference_traj_publisher_->publish(marker_array);
+      publisher->publish(marker_array);
     }
 
     void MPCControllerROS::obstacleTracksCallback(

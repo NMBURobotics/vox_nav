@@ -730,30 +730,6 @@ Visualization Manager:
       Value: false
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
-      Name: Global Plan
-      Namespaces:
-        {}
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /vox_nav/planning/plan
-      Value: true
-    - Class: rviz_default_plugins/MarkerArray
-      Enabled: true
-      Name: Local Plan
-      Namespaces:
-        {}
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /vox_nav/controller/plan
-      Value: true
-    - Class: rviz_default_plugins/MarkerArray
-      Enabled: true
       Name: SuperVoxelVisuals
       Namespaces:
         {}
@@ -867,13 +843,17 @@ Visualization Manager:
       Enabled: true
       Name: Object Track Markers
       Namespaces:
-        {}
+        "": true
+        track_arrows: true
+        track_clylinders: true
+        track_text: true
+        track_waypoints: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /vox_nav/tracking/objects
+        Value: /vox_nav/tracking/object_markers
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
@@ -908,6 +888,42 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MPC Refernece Trajectory
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /vox_nav/controller/plan
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MPC Actual Trajectory
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /vox_nav/controller/mpc_computed_traj
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Global Plan
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /vox_nav/planning/plan
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -942,25 +958,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 38.77865219116211
+      Distance: 24.369089126586914
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -5.164064884185791
-        Y: -9.40873908996582
+        X: -6.451197147369385
+        Y: -6.028855323791504
         Z: -2.12070117413532e-05
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.044796347618103
+      Pitch: 0.9497963190078735
       Target Frame: map
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.487678050994873
+      Yaw: 3.3426778316497803
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016

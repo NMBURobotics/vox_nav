@@ -125,13 +125,18 @@ namespace vox_nav_control
         geometry_msgs::msg::PoseStamped curr_robot_pose);
 
       /**
-       * @brief return closest reference trajectory to be feed into conrol sceheme
-       *        The number of returned states will be determined according to time horizon(N)
+       * @brief
        *
-       * @param interpolated_ref_traj
+       * @param interpolated_reference_states
+       * @param color
+       * @param ns
+       * @param publisher
        */
-      void publishLocalInterpolatedRefernceStates(
-        std::vector<MPCControllerCore::States> interpolated_ref_traj);
+      void publishTrajStates(
+        std::vector<MPCControllerCore::States> interpolated_reference_states,
+        std_msgs::msg::ColorRGBA color,
+        std::string ns,
+        const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher);
 
       /**
        * @brief
@@ -163,6 +168,8 @@ namespace vox_nav_control
       // Publish local trajecory currently being fed to controller
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
         interpolated_local_reference_traj_publisher_;
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+        mpc_computed_traj_publisher_;
       // while following global plan whats the max look ahead distance ?, thats global_plan_look_ahead_distance_
       double global_plan_look_ahead_distance_;
 
@@ -170,6 +177,7 @@ namespace vox_nav_control
       rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr obstacle_tracks_sub_;
       vox_nav_msgs::msg::ObjectArray obstacle_tracks_;
       std::mutex obstacle_tracks_mutex_;
+
 
     };
 
