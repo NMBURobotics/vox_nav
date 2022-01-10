@@ -14,7 +14,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <vox_nav_control/controller_core.hpp>
-#include <vox_nav_control/mpc_controller/mpc_controller_core.hpp>
+#include <vox_nav_control/mpc_controller_casadi/mpc_controller_casadi_core.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_msgs/msg/object_array.hpp>
 
@@ -40,7 +40,7 @@
 namespace vox_nav_control
 {
 
-  namespace mpc_controller
+  namespace mpc_controller_casadi
   {
 /**
  * @brief A ROS wrapper around the Core MPC controller class.
@@ -49,20 +49,20 @@ namespace vox_nav_control
  *        The controller server is an ROS2 action named follow_path
  *
  */
-    class MPCControllerROS : public vox_nav_control::ControllerCore
+    class MPCControllerCasadiROS : public vox_nav_control::ControllerCore
     {
     public:
       /**
-       * @brief Construct a new MPCControllerROS object
+       * @brief Construct a new MPCControllerCasadiROS object
        *
        */
-      MPCControllerROS();
+      MPCControllerCasadiROS();
 
       /**
-       * @brief Destroy the MPCControllerROS object
+       * @brief Destroy the MPCControllerCasadiROS object
        *
        */
-      ~MPCControllerROS();
+      ~MPCControllerCasadiROS();
 
       /**
        * @brief gets all parameters required by MPC controller. Sets up an ROS2 stuff, publisher etc.
@@ -119,9 +119,9 @@ namespace vox_nav_control
        *        As well as number of time Horizons(N)
        *
        * @param curr_robot_pose
-       * @return std::vector<MPCControllerCore::States>
+       * @return std::vector<MPCControllerCasadiCore::States>
        */
-      std::vector<MPCControllerCore::States> getLocalInterpolatedReferenceStates(
+      std::vector<MPCControllerCasadiCore::States> getLocalInterpolatedReferenceStates(
         geometry_msgs::msg::PoseStamped curr_robot_pose);
 
       /**
@@ -133,7 +133,7 @@ namespace vox_nav_control
        * @param publisher
        */
       void publishTrajStates(
-        std::vector<MPCControllerCore::States> interpolated_reference_states,
+        std::vector<MPCControllerCasadiCore::States> interpolated_reference_states,
         std_msgs::msg::ColorRGBA color,
         std::string ns,
         const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher);
@@ -159,12 +159,12 @@ namespace vox_nav_control
       // computed velocities as result of MPC
       geometry_msgs::msg::Twist computed_velocity_;
       // MPC core controller object
-      std::shared_ptr<MPCControllerCore> mpc_controller_;
+      std::shared_ptr<MPCControllerCasadiCore> mpc_controller_;
       // parameters struct used for MPC controller
-      MPCControllerCore::Parameters mpc_parameters_;
+      MPCControllerCasadiCore::Parameters mpc_parameters_;
       // Keep a copy of previously applied control inputs, this is neded
       // by MPC algorithm
-      MPCControllerCore::ControlInput previous_control_;
+      MPCControllerCasadiCore::ControlInput previous_control_;
       // Publish local trajecory currently being fed to controller
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
         interpolated_local_reference_traj_publisher_;
@@ -181,7 +181,7 @@ namespace vox_nav_control
 
     };
 
-  } // namespace mpc_controller
+  } // namespace mpc_controller_casadi
 }  // namespace vox_nav_control
 
 #endif  // VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_

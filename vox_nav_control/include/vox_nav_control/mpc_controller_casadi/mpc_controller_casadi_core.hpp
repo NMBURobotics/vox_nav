@@ -29,7 +29,7 @@
 
 namespace vox_nav_control
 {
-  namespace mpc_controller
+  namespace mpc_controller_casadi
   {
 
     /**
@@ -49,7 +49,7 @@ namespace vox_nav_control
  * @brief CASADI based MOdel Predcitive Control for Ackermann Vehicle
  *
  */
-    class MPCControllerCore
+    class MPCControllerCasadiCore
     {
     public:
 /**
@@ -177,17 +177,17 @@ namespace vox_nav_control
       };
 
       /**
-       * @brief Construct a new MPCControllerCore object
+       * @brief Construct a new MPCControllerCasadiCore object
        *
        * @param params
        */
-      MPCControllerCore(Parameters params);
+      MPCControllerCasadiCore(Parameters params);
 
       /**
-       * @brief Destroy the MPCControllerCore object
+       * @brief Destroy the MPCControllerCasadiCore object
        *
        */
-      ~MPCControllerCore();
+      ~MPCControllerCasadiCore();
 
       /**
        * @brief state dynamcs constraints, control input
@@ -314,7 +314,7 @@ namespace vox_nav_control
       casadi::MX yaw_dynamic_obs_;
 
     };
-  } // namespace mpc_controller
+  } // namespace mpc_controller_casadi
 }  // namespace vox_nav_control
 
 #endif  // VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_CORE_HPP_

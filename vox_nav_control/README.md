@@ -3,10 +3,10 @@ Refer to bringup/params.yaml for configuring controller server.
 ```yaml
 vox_nav_controller_server_rclcpp_node:
   ros__parameters:
-    controller_plugin: "MPCControllerROS" # other options: "MPCControllerROS"
+    controller_plugin: "MPCControllerCasadiROS" # other options: "MPCControllerCasadiROS"
     controller_frequency: 15.0
-    MPCControllerROS:
-      plugin: "mpc_controller::MPCControllerROS"
+    MPCControllerCasadiROS:
+      plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
       N: 8                                                        #timesteps in MPC Horizon
       DT: 0.2                                                     #discretization time between timesteps(s)    
       L_F: 0.66                                                   #distance from CoG to front axle(m)
@@ -28,7 +28,7 @@ vox_nav_controller_server_rclcpp_node:
    
 ```
 
-Select a plugin out of 1 available plugins listed as ; MPCControllerROS. 
+Select a plugin out of 1 available plugins listed as ; MPCControllerCasadiROS. 
 
 Test the controller by sending an all zeros path with ;
  

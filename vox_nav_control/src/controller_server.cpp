@@ -32,8 +32,8 @@ namespace vox_nav_control
   ControllerServer::ControllerServer()
   : Node("vox_nav_controller_server_rclcpp_node"),
     pc_loader_("vox_nav_control", "vox_nav_control::ControllerCore"),
-    controller_id_("MPCControllerROS"),
-    controller_type_("mpc_controller::MPCControllerROS")
+    controller_id_("MPCControllerCasadiROS"),
+    controller_type_("mpc_controller::MPCControllerCasadiROS")
   {
     RCLCPP_INFO(get_logger(), "Creating");
 

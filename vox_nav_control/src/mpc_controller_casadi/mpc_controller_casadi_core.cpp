@@ -16,17 +16,17 @@
 // https://github.com/MPC-Berkeley/genesis_path_follower
 // Also refer to https://github.com/MPC-Berkeley/barc/wiki/Car-Model
 
-#include <vox_nav_control/mpc_controller/mpc_controller_core.hpp>
+#include <vox_nav_control/mpc_controller_casadi/mpc_controller_casadi_core.hpp>
 
 #include <memory>
 #include <vector>
 
 namespace vox_nav_control
 {
-  namespace mpc_controller
+  namespace mpc_controller_casadi
   {
 
-    MPCControllerCore::MPCControllerCore(Parameters params)
+    MPCControllerCasadiCore::MPCControllerCasadiCore(Parameters params)
     {
       params_ = params;
       opti_ = std::make_shared<casadi::Opti>();
@@ -127,11 +127,11 @@ namespace vox_nav_control
       }
     }
 
-    MPCControllerCore::~MPCControllerCore()
+    MPCControllerCasadiCore::~MPCControllerCasadiCore()
     {
     }
 
-    void MPCControllerCore::addConstraints()
+    void MPCControllerCasadiCore::addConstraints()
     {
       //  State Bound Constraints
       opti_->subject_to(opti_->bounded(params_.V_MIN, v_dv_, params_.V_MAX));
@@ -196,7 +196,7 @@ namespace vox_nav_control
 
     }
 
-    void MPCControllerCore::addCost()
+    void MPCControllerCasadiCore::addCost()
     {
       auto quad_form = [](casadi::MX z, casadi::Matrix<double> P)
         {
@@ -218,7 +218,7 @@ namespace vox_nav_control
       opti_->minimize(cost);
     }
 
-    MPCControllerCore::SolutionResult MPCControllerCore::solve(
+    MPCControllerCasadiCore::SolutionResult MPCControllerCasadiCore::solve(
       const std::vector<Ellipsoid> & obstacles)
     {
       auto opti = std::make_shared<casadi::Opti>(*opti_);
@@ -299,12 +299,12 @@ namespace vox_nav_control
       return result;
     }
 
-    void MPCControllerCore::updateCurrentStates(States curr_states)
+    void MPCControllerCasadiCore::updateCurrentStates(States curr_states)
     {
       opti_->set_value(z_curr_, {curr_states.x, curr_states.y, curr_states.psi, curr_states.v});
     }
 
-    void MPCControllerCore::updateReferences(std::vector<States> reference_states)
+    void MPCControllerCasadiCore::updateReferences(std::vector<States> reference_states)
     {
       std::vector<double> x_ref, y_ref, psi_ref, v_ref;
       for (int i = 0; i < reference_states.size(); i++) {
@@ -319,12 +319,12 @@ namespace vox_nav_control
       opti_->set_value(v_ref_, v_ref);
     }
 
-    void MPCControllerCore::updatePreviousControlInput(ControlInput previous_control_input)
+    void MPCControllerCasadiCore::updatePreviousControlInput(ControlInput previous_control_input)
     {
       opti_->set_value(u_prev_, {previous_control_input.acc, previous_control_input.df});
     }
 
-    void MPCControllerCore::initializeSlackVars(
+    void MPCControllerCasadiCore::initializeSlackVars(
       std::vector<SlackVars> initial_slack_vars)
     {
       std::vector<double> sl_acc_dv, sl_df_dv;
@@ -336,7 +336,7 @@ namespace vox_nav_control
       opti_->set_initial(sl_dv_(slice_all_, 1), sl_df_dv);
     }
 
-    void MPCControllerCore::initializeActualControlInputs(
+    void MPCControllerCasadiCore::initializeActualControlInputs(
       std::vector<ControlInput> initial_actual_control_inputs)
     {
       std::vector<double> initial_acc_dv, initial_df_dv;
@@ -348,7 +348,7 @@ namespace vox_nav_control
       opti_->set_initial(u_dv_(slice_all_, 1), initial_df_dv);
     }
 
-    void MPCControllerCore::initializeActualStates(std::vector<States> initial_actual_states)
+    void MPCControllerCasadiCore::initializeActualStates(std::vector<States> initial_actual_states)
     {
       std::vector<double> x_dv, y_dv, psi_dv, v_dv;
       for (int i = 0; i < initial_actual_states.size(); i++) {
@@ -363,5 +363,5 @@ namespace vox_nav_control
       opti_->set_initial(v_dv_, v_dv);
     }
 
-  } // namespace mpc_controller
+  } // namespace mpc_controller_casadi
 }  // namespace vox_nav_control

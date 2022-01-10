@@ -1,6 +1,6 @@
 <class_libraries>
-  <library path="mpc_controller">
-    <class type="mpc_controller::MPCControllerROS" base_class_type="vox_nav_control::ControllerCore">
+  <library path="mpc_controller_casadi">
+    <class type="mpc_controller_casadi::MPCControllerCasadiROS" base_class_type="vox_nav_control::ControllerCore">
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>

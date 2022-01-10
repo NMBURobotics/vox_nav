@@ -70,9 +70,9 @@ add_executable(${vox_nav_controller_server_exc_name} src/controller_server.cpp)
 ament_target_dependencies(${vox_nav_controller_server_exc_name} ${dependencies})
 target_link_libraries(${vox_nav_controller_server_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
-set(vox_nav_mpc_controller_lib_name mpc_controller)
-add_library(${vox_nav_mpc_controller_lib_name} SHARED src/mpc_controller/mpc_controller_core.cpp 
-                                                       src/mpc_controller/mpc_controller_ros.cpp)
+set(vox_nav_mpc_controller_lib_name mpc_controller_casadi)
+add_library(${vox_nav_mpc_controller_lib_name} SHARED src/mpc_controller_casadi/mpc_controller_casadi_core.cpp 
+                                                       src/mpc_controller_casadi/mpc_controller_casadi_ros.cpp)
 ament_target_dependencies(${vox_nav_mpc_controller_lib_name} ${dependencies})
 target_link_libraries(${vox_nav_mpc_controller_lib_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl casadi)
 

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <nav_msgs/msg/path.hpp>
-#include <vox_nav_control/mpc_controller/mpc_controller_ros.hpp>
+#include <vox_nav_control/mpc_controller_casadi/mpc_controller_casadi_ros.hpp>
 #include <pluginlib/class_list_macros.hpp>
 
 #include <memory>
@@ -22,16 +22,16 @@
 
 namespace vox_nav_control
 {
-  namespace mpc_controller
+  namespace mpc_controller_casadi
   {
-    MPCControllerROS::MPCControllerROS()
+    MPCControllerCasadiROS::MPCControllerCasadiROS()
     {
     }
 
-    MPCControllerROS::~MPCControllerROS()
+    MPCControllerCasadiROS::~MPCControllerCasadiROS()
     {
     }
-    void MPCControllerROS::initialize(
+    void MPCControllerCasadiROS::initialize(
       rclcpp::Node * parent,
       const std::string & plugin_name)
     {
@@ -88,12 +88,12 @@ namespace vox_nav_control
 
       obstacle_tracks_sub_ = parent->create_subscription<vox_nav_msgs::msg::ObjectArray>(
         "/vox_nav/tracking/objects", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MPCControllerROS::obstacleTracksCallback, this, std::placeholders::_1));
+        std::bind(&MPCControllerCasadiROS::obstacleTracksCallback, this, std::placeholders::_1));
 
-      mpc_controller_ = std::make_shared<MPCControllerCore>(mpc_parameters_);
+      mpc_controller_ = std::make_shared<MPCControllerCasadiCore>(mpc_parameters_);
     }
 
-    geometry_msgs::msg::Twist MPCControllerROS::computeVelocityCommands(
+    geometry_msgs::msg::Twist MPCControllerCasadiROS::computeVelocityCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
@@ -114,19 +114,19 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, roll, pitch, psi);
 
-      MPCControllerCore::States curr_states;
+      MPCControllerCasadiCore::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
-      std::vector<MPCControllerCore::States> local_interpolated_reference_states =
+      std::vector<MPCControllerCasadiCore::States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
-      MPCControllerCore::SolutionResult res = mpc_controller_->solve(obstacles);
+      MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
 
       //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x += res.control_input.acc * (dt);
@@ -152,7 +152,7 @@ namespace vox_nav_control
       return computed_velocity_;
     }
 
-    geometry_msgs::msg::Twist MPCControllerROS::computeHeadingCorrectionCommands(
+    geometry_msgs::msg::Twist MPCControllerCasadiROS::computeHeadingCorrectionCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
@@ -164,13 +164,13 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, nan, nan, psi);
 
-      MPCControllerCore::States curr_states;
+      MPCControllerCasadiCore::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
-      std::vector<MPCControllerCore::States> local_interpolated_reference_states =
+      std::vector<MPCControllerCasadiCore::States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
 
       mpc_controller_->updateCurrentStates(curr_states);
@@ -179,7 +179,7 @@ namespace vox_nav_control
 
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
-      MPCControllerCore::SolutionResult res = mpc_controller_->solve(obstacles);
+      MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
 
       computed_velocity_.linear.x = 0;
       computed_velocity_.angular.z += res.control_input.df * (dt);
@@ -188,12 +188,12 @@ namespace vox_nav_control
       return computed_velocity_;
     }
 
-    void MPCControllerROS::setPlan(const nav_msgs::msg::Path & path)
+    void MPCControllerCasadiROS::setPlan(const nav_msgs::msg::Path & path)
     {
       reference_traj_ = path;
     }
 
-    int MPCControllerROS::nearestStateIndex(
+    int MPCControllerCasadiROS::nearestStateIndex(
       nav_msgs::msg::Path reference_traj, geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
       int closest_state_index = -1;
@@ -211,7 +211,8 @@ namespace vox_nav_control
       return closest_state_index;
     }
 
-    std::vector<MPCControllerCore::States> MPCControllerROS::getLocalInterpolatedReferenceStates(
+    std::vector<MPCControllerCasadiCore::States> MPCControllerCasadiROS::
+    getLocalInterpolatedReferenceStates(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
       double kTARGETSPEED = 0.0;
@@ -273,12 +274,12 @@ namespace vox_nav_control
 
       // Now the local ref traj is interpolated from current robot state up to state at global look ahead distance
       // Lets fill the native MPC type ref states and return to caller
-      std::vector<MPCControllerCore::States> interpolated_reference_states;
+      std::vector<MPCControllerCasadiCore::States> interpolated_reference_states;
       for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
         // cast the abstract state type to the type we expect
         const ompl::base::DubinsStateSpace::StateType * interpolated_state =
           path.getState(path_idx)->as<ompl::base::DubinsStateSpace::StateType>();
-        MPCControllerCore::States curr_interpolated_state;
+        MPCControllerCasadiCore::States curr_interpolated_state;
         curr_interpolated_state.v = kTARGETSPEED;
         curr_interpolated_state.x = interpolated_state->getX();
         curr_interpolated_state.y = interpolated_state->getY();
@@ -289,8 +290,8 @@ namespace vox_nav_control
     }
 
     void
-    MPCControllerROS::publishTrajStates(
-      std::vector<MPCControllerCore::States> interpolated_reference_states,
+    MPCControllerCasadiROS::publishTrajStates(
+      std::vector<MPCControllerCasadiCore::States> interpolated_reference_states,
       std_msgs::msg::ColorRGBA color,
       std::string ns,
       const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher)
@@ -320,7 +321,7 @@ namespace vox_nav_control
       publisher->publish(marker_array);
     }
 
-    void MPCControllerROS::obstacleTracksCallback(
+    void MPCControllerCasadiROS::obstacleTracksCallback(
       const vox_nav_msgs::msg::ObjectArray::SharedPtr msg)
     {
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
@@ -330,7 +331,7 @@ namespace vox_nav_control
         parent_->get_logger(), "Recieved Tracks [%d]", int(obstacle_tracks_.objects.size()));*/
     }
 
-    std::vector<Ellipsoid> MPCControllerROS::trackMsg2Ellipsoids(
+    std::vector<Ellipsoid> MPCControllerCasadiROS::trackMsg2Ellipsoids(
       const vox_nav_msgs::msg::ObjectArray & tracks)
     {
       std::vector<Ellipsoid> ellipsoids;
@@ -361,6 +362,8 @@ namespace vox_nav_control
 
     }
 
-  } // namespace mpc_controller
-  PLUGINLIB_EXPORT_CLASS(mpc_controller::MPCControllerROS, vox_nav_control::ControllerCore)
+  } // namespace mpc_controller_casadi
+  PLUGINLIB_EXPORT_CLASS(
+    mpc_controller_casadi::MPCControllerCasadiROS,
+    vox_nav_control::ControllerCore)
 }  // namespace vox_nav_control

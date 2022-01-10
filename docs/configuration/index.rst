@@ -57,10 +57,10 @@ parameters for these nodes are more or less as following;
 
   vox_nav_controller_server_rclcpp_node:
     ros__parameters:
-        controller_plugin: "MPCControllerROS"                                   # other options: non
+        controller_plugin: "MPCControllerCasadiROS"                                   # other options: non
         controller_frequency: 15.0
-        MPCControllerROS:
-          plugin: "mpc_controller::MPCControllerROS"
+        MPCControllerCasadiROS:
+          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
           N: 8                                                                 # timesteps in MPC Horizon
           DT: 0.2                                                              # discretization time between timesteps(s)
           L_F: 0.66                                                            # distance from CoG to front axle(m)
