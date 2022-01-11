@@ -49,14 +49,15 @@ jobs:
                   rosdep update
                   cd ~/ros2_ws
                   wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos
-                  vcs import src < underlay.repos     
+                  vcs import src < underlay.repos --recursive   
                   rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy   
-                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=true --packages-select casadi ompl
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=true --packages-select casadi ompl ACADO
                   sudo cp install/ompl/lib/libompl.so* /usr/local/lib/
                   sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/  
             - name: Build packages
               run: |
                   source /opt/ros/foxy/setup.bash
                   cd ~/ros2_ws
-                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-skip-regex archived --packages-skip ompl casadi vox_nav_openvslam vox_nav_cupoch_experimental
+                  source build/ACADO/acado_env.sh
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON --packages-skip-regex archived --packages-skip ompl casadi vox_nav_openvslam vox_nav_cupoch_experimental
                   source ~/ros2_ws/install/setup.bash

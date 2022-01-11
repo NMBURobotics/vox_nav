@@ -16,6 +16,10 @@ repositories:
     url: https://github.com/ompl/ompl.git
     version: main  
   botanbot_sim:
-    type: git
-    url: https://github.com/jediofgever/botanbot_sim.git
-    version: main      
+      type: git
+      url: https://github.com/jediofgever/botanbot_sim.git
+      version: main     
+  ACADOtoolkit:
+      type: git
+      url: https://github.com/acado/acado.git
+      version: stable   

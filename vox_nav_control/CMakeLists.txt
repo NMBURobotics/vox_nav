@@ -92,7 +92,7 @@ install(TARGETS ${vox_nav_mpc_controller_lib_name}
 
 install(TARGETS ${vox_nav_controller_server_exc_name}
                 mpc_controller_code_gen
-                #mpc_controller_acado
+                mpc_controller_acado
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
