@@ -1,0 +1,58 @@
+################################################################################
+#
+# Description:
+#	ACADO Toolkit package configuration file
+#
+# Authors:
+#	Milan Vukov, milan.vukov@esat.kuleuven.be
+#
+# Year:
+#	2011 - 2013.
+#
+# NOTE:
+#	- /
+#
+# Usage:
+#	- /
+#
+################################################################################
+
+################################################################################
+#
+# Configurable section
+#
+################################################################################
+
+# 
+# Tell the user project where to find our headers, libraries and external
+# packages, etc.
+#
+SET( ACADO_INCLUDE_DIRS "@ACADO_INSTALL_INCLUDE_DIRS@" )
+SET( ACADO_LIBRARY_DIRS "@ACADO_INSTALL_LIBRARY_DIRS@" )
+SET( ACADO_EXTERNAL_PACKAGES_DIR @ACADO_INSTALL_EXTERNAL_PACKAGES_DIR@ )
+SET( ACADO_CMAKE_DIR @ACADO_INSTALL_CMAKE_DIR@ )
+ 
+#
+# List of ACADO static libraries
+#
+SET( ACADO_STATIC_LIBRARIES @ACADO_INSTALL_STATIC_LIBRARIES@ )
+#
+# List of ACADO shared libraries
+#
+SET( ACADO_SHARED_LIBRARIES @ACADO_INSTALL_SHARED_LIBRARIES@ )
+
+#
+# ACADO is shipped with embedded version of qpOASES. Here is specified
+# where source and header files reside
+#
+SET( ACADO_QPOASES_EMBEDDED_SOURCES @ACADO_INSTALL_QPOASES_EMBEDDED_SOURCES@ )
+SET( ACADO_QPOASES_EMBEDDED_INC_DIRS @ACADO_INSTALL_QPOASES_EMBEDDED_INC_DIRS@ )
+
+################################################################################
+#
+# Validation
+#
+################################################################################
+
+# TODO
+

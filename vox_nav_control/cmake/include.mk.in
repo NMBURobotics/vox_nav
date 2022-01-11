@@ -1,0 +1,63 @@
+################################################################################
+#
+# This script should be used for backward compatibility only, i.e. for an old
+# Makefile based project which depends on ACADO toolkit. All new projects should 
+# be used with CMake based build-system.
+#
+# Authors: Boris Houska, Hans Joachim Ferreau, Joel Andersson, Milan Vukov
+#
+# Notes:
+#	- This is an auto-generated file, do not modify it by hand.
+#	- This script is written to be used on an UNIX based OS.
+#
+################################################################################
+
+#
+# General options
+#
+
+VERBOSE = NO
+
+#
+# Some compiler options
+# 
+
+NO_PARENTHESES_WARNING = -Wno-parentheses 
+
+#
+# Compiler tools
+#
+
+CPP         = @INCLUDE_MK_CPP_EXE@
+RM          = rm
+OBJEXT      = o
+DEF_TARGET  = -o $@
+
+#
+# Compiler flag configured with CMake
+#
+
+CPP_GLOBAL_FLAGS = @INCLUDE_MK_CPP_FLAGS@
+
+#
+# Extensions
+#
+
+EXE =
+
+#
+# Paths
+#
+
+HEADER_PATHS	= @INCLUDE_MK_INCLUDE_DIRS@
+
+LIBS_DIR		= @INCLUDE_MK_LIBRARY_DIRS@
+
+#
+# Libraries
+#
+
+INTEGRATORS_LIBS		= ${LIBS_DIR} @INCLUDE_MK_LIBS@
+CODE_GENERATION_LIBS	= ${INTEGRATORS_LIBS}
+OPTIMAL_CONTROL_LIBS	= ${INTEGRATORS_LIBS}
+TOOLKIT_LIBS			= ${INTEGRATORS_LIBS}

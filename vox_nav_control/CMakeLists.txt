@@ -6,13 +6,10 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
+# Add this repository's cmake modules to CMAKE_MODULE_PATH
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_LIST_DIR}/cmake)
+
 find_package(PkgConfig REQUIRED)
-
-pkg_check_modules(LIBFCL REQUIRED "fcl>=0.5.0")
-# replace LIBFCL_LIBRARIES with full path to the library
-find_library(LIBFCL_LIBRARIES_FULL ${LIBFCL_LIBRARIES} ${LIBFCL_LIBRARY_DIRS})
-set(LIBFCL_LIBRARIES "${LIBFCL_LIBRARIES_FULL}")
-
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
@@ -35,22 +32,26 @@ find_package(pcl_ros REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(vox_nav_msgs REQUIRED)
 find_package(vox_nav_utilities REQUIRED)
+
 find_package(casadi REQUIRED)
+find_package(ACADO REQUIRED)
+
+message(NOTICE ${ACADO_QPOASES_EMBEDDED_INC_DIRS})
 
 include_directories(
   include
-  ${LIBFCL_INCLUDE_DIRS}
+  include/vox_nav_control/mpc_controller_acado/auto_gen
   ${THIS_PACKAGE_INCLUDE_DIRS}
   ${OMPL_INCLUDE_DIRS}
-  ${OCTOMAP_INCLUDE_DIRS}
   ${casadi_INCLUDE_DIR}
-)
+  ${ACADO_INCLUDE_DIRS}
+  ${ACADO_QPOASES_EMBEDDED_INC_DIRS}
+ )
 
 set(dependencies
     rclcpp
     pluginlib
     geometry_msgs
-    octomap_msgs
     sensor_msgs
     nav_msgs
     std_msgs
@@ -59,22 +60,30 @@ set(dependencies
     tf2_ros
     trajectory_msgs
     visualization_msgs
-    OCTOMAP
-    LIBFCL
-    pcl_ros
     vox_nav_msgs
     vox_nav_utilities)
 
 set(vox_nav_controller_server_exc_name vox_nav_controller_server)
 add_executable(${vox_nav_controller_server_exc_name} src/controller_server.cpp)
 ament_target_dependencies(${vox_nav_controller_server_exc_name} ${dependencies})
-target_link_libraries(${vox_nav_controller_server_exc_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
+target_link_libraries(${vox_nav_controller_server_exc_name} ompl)
 
 set(vox_nav_mpc_controller_lib_name mpc_controller_casadi)
 add_library(${vox_nav_mpc_controller_lib_name} SHARED src/mpc_controller_casadi/mpc_controller_casadi_core.cpp 
                                                        src/mpc_controller_casadi/mpc_controller_casadi_ros.cpp)
 ament_target_dependencies(${vox_nav_mpc_controller_lib_name} ${dependencies})
-target_link_libraries(${vox_nav_mpc_controller_lib_name} ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl casadi)
+target_link_libraries(${vox_nav_mpc_controller_lib_name} ompl casadi)
+
+add_executable(mpc_controller_code_gen src/mpc_controller_acado/mpc_controller_code_gen.cpp)
+target_link_libraries(mpc_controller_code_gen ${ACADO_SHARED_LIBRARIES})
+
+add_executable(mpc_controller_acado   ${ACADO_QPOASES_EMBEDDED_SOURCES}
+                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_integrator.c
+                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_solver.c
+                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_qpoases_interface.cpp
+                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.c
+                                      src/mpc_controller_acado/mpc_controller_acado.cpp)
+target_link_libraries(mpc_controller_acado ${ACADO_SHARED_LIBRARIES})
 
 install(TARGETS ${vox_nav_mpc_controller_lib_name}
   ARCHIVE DESTINATION lib
@@ -82,6 +91,8 @@ install(TARGETS ${vox_nav_mpc_controller_lib_name}
   RUNTIME DESTINATION bin)
 
 install(TARGETS ${vox_nav_controller_server_exc_name}
+                mpc_controller_code_gen
+                #mpc_controller_acado
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
