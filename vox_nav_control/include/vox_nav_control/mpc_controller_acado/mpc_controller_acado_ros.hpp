@@ -43,6 +43,22 @@ namespace vox_nav_control
 
   namespace mpc_controller_acado
   {
+
+    enum STATE
+    {
+      kX = 0,
+      kY = 1,
+      kPsi = 2,
+      kV = 3,
+    };
+
+    enum INPUT
+    {
+      kacc = 0,
+      kdf = 1,
+    };
+
+
 /**
  * @brief A ROS wrapper around the Core MPC controller class.
  *        This class interfaces MPC controller with ControllerCore which is base class for plugins.
@@ -53,6 +69,15 @@ namespace vox_nav_control
     class MPCControllerAcadoROS : public vox_nav_control::ControllerCore
     {
     public:
+      EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+        static_assert(
+        kStateSize == 4,
+        "MPCControllerAcadoROS: Wrong model size. Number of states does not match.");
+      static_assert(
+        kInputSize == 2,
+        "MPCControllerAcadoROS: Wrong model size. Number of inputs does not match.");
+
       /**
        * @brief Construct a new MPCControllerAcadoROS object
        *
@@ -154,6 +179,8 @@ namespace vox_nav_control
        */
       std::vector<Ellipsoid> trackMsg2Ellipsoids(const vox_nav_msgs::msg::ObjectArray & tracks);
 
+      void preparationThread();
+
     private:
       // Given refernce traj to follow, this is set got from planner
       nav_msgs::msg::Path reference_traj_;
@@ -178,6 +205,18 @@ namespace vox_nav_control
       rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr obstacle_tracks_sub_;
       vox_nav_msgs::msg::ObjectArray obstacle_tracks_;
       std::mutex obstacle_tracks_mutex_;
+
+      // Preparation Thread
+      std::thread preparation_thread_;
+
+      // Variables
+      float timing_feedback_, timing_preparation_;
+      bool solve_from_scratch_;
+      Eigen::Matrix<float, kStateSize, 1> est_state_;
+      Eigen::Matrix<float, kStateSize, kSamples + 1> reference_states_;
+      Eigen::Matrix<float, kInputSize, kSamples + 1> reference_inputs_;
+      Eigen::Matrix<float, kStateSize, kSamples + 1> predicted_states_;
+      Eigen::Matrix<float, kInputSize, kSamples> predicted_inputs_;
 
     };
 

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <nav_msgs/msg/path.hpp>
-#include <vox_nav_control/mpc_controller_casadi/mpc_controller_casadi_ros.hpp>
+#include <vox_nav_control/mpc_controller_acado/mpc_controller_acado_ros.hpp>
 #include <pluginlib/class_list_macros.hpp>
 
 #include <memory>
@@ -22,16 +22,23 @@
 
 namespace vox_nav_control
 {
-  namespace mpc_controller_casadi
+  namespace mpc_controller_acado
   {
-    MPCControllerCasadiROS::MPCControllerCasadiROS()
+    MPCControllerAcadoROS::MPCControllerAcadoROS()
+    : timing_feedback_(float(1e-3)),
+      timing_preparation_(float(1e-3)),
+      est_state_(  (Eigen::Matrix<float, kStateSize, 1>() << 0, 0, 0, 0).finished()),
+      reference_states_(Eigen::Matrix<float, kStateSize, kSamples + 1>::Zero()),
+      reference_inputs_(Eigen::Matrix<float, kInputSize, kSamples + 1>::Zero()),
+      predicted_states_(Eigen::Matrix<float, kStateSize, kSamples + 1>::Zero()),
+      predicted_inputs_(Eigen::Matrix<float, kInputSize, kSamples>::Zero())
     {
     }
 
-    MPCControllerCasadiROS::~MPCControllerCasadiROS()
+    MPCControllerAcadoROS::~MPCControllerAcadoROS()
     {
     }
-    void MPCControllerCasadiROS::initialize(
+    void MPCControllerAcadoROS::initialize(
       rclcpp::Node * parent,
       const std::string & plugin_name)
     {
@@ -88,12 +95,15 @@ namespace vox_nav_control
 
       obstacle_tracks_sub_ = parent->create_subscription<vox_nav_msgs::msg::ObjectArray>(
         "/vox_nav/tracking/objects", rclcpp::SystemDefaultsQoS(),
-        std::bind(&MPCControllerCasadiROS::obstacleTracksCallback, this, std::placeholders::_1));
+        std::bind(&MPCControllerAcadoROS::obstacleTracksCallback, this, std::placeholders::_1));
 
-      mpc_controller_ = std::make_shared<MPCControllerCasadiCore>(mpc_parameters_);
+      mpc_controller_ = std::make_shared<MPCWrapper<float>>(mpc_parameters_);
+
+      solve_from_scratch_ = true;
+      preparation_thread_ = std::thread(&MPCWrapper<float>::prepare, mpc_controller_);
     }
 
-    geometry_msgs::msg::Twist MPCControllerCasadiROS::computeVelocityCommands(
+    geometry_msgs::msg::Twist MPCControllerAcadoROS::computeVelocityCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
@@ -114,19 +124,28 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, roll, pitch, psi);
 
+      preparation_thread_.join();
+
       States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
+      Eigen::Vector4f curr_states_eig(curr_states.x, curr_states.y, curr_states.psi, curr_states.v);
+
+
       std::vector<States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
-      mpc_controller_->updateCurrentStates(curr_states);
+
+      // update the states
+      mpc_controller_->update(curr_states_eig);
+
       mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
-      MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
+
+      auto res = mpc_controller_->solve(est_state_);
 
       //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x += res.control_input.acc * (dt);
@@ -152,7 +171,7 @@ namespace vox_nav_control
       return computed_velocity_;
     }
 
-    geometry_msgs::msg::Twist MPCControllerCasadiROS::computeHeadingCorrectionCommands(
+    geometry_msgs::msg::Twist MPCControllerAcadoROS::computeHeadingCorrectionCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
@@ -188,12 +207,12 @@ namespace vox_nav_control
       return computed_velocity_;
     }
 
-    void MPCControllerCasadiROS::setPlan(const nav_msgs::msg::Path & path)
+    void MPCControllerAcadoROS::setPlan(const nav_msgs::msg::Path & path)
     {
       reference_traj_ = path;
     }
 
-    int MPCControllerCasadiROS::nearestStateIndex(
+    int MPCControllerAcadoROS::nearestStateIndex(
       nav_msgs::msg::Path reference_traj, geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
       int closest_state_index = -1;
@@ -211,7 +230,7 @@ namespace vox_nav_control
       return closest_state_index;
     }
 
-    std::vector<States> MPCControllerCasadiROS::getLocalInterpolatedReferenceStates(
+    std::vector<States> MPCControllerAcadoROS::getLocalInterpolatedReferenceStates(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
       double kTARGETSPEED = 0.0;
@@ -289,7 +308,7 @@ namespace vox_nav_control
     }
 
     void
-    MPCControllerCasadiROS::publishTrajStates(
+    MPCControllerAcadoROS::publishTrajStates(
       std::vector<States> interpolated_reference_states,
       std_msgs::msg::ColorRGBA color,
       std::string ns,
@@ -320,7 +339,7 @@ namespace vox_nav_control
       publisher->publish(marker_array);
     }
 
-    void MPCControllerCasadiROS::obstacleTracksCallback(
+    void MPCControllerAcadoROS::obstacleTracksCallback(
       const vox_nav_msgs::msg::ObjectArray::SharedPtr msg)
     {
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
@@ -330,7 +349,7 @@ namespace vox_nav_control
         parent_->get_logger(), "Recieved Tracks [%d]", int(obstacle_tracks_.objects.size()));*/
     }
 
-    std::vector<Ellipsoid> MPCControllerCasadiROS::trackMsg2Ellipsoids(
+    std::vector<Ellipsoid> MPCControllerAcadoROS::trackMsg2Ellipsoids(
       const vox_nav_msgs::msg::ObjectArray & tracks)
     {
       std::vector<Ellipsoid> ellipsoids;
@@ -361,8 +380,8 @@ namespace vox_nav_control
 
     }
 
-  } // namespace mpc_controller_casadi
+  } // namespace mpc_controller_acado
   PLUGINLIB_EXPORT_CLASS(
-    mpc_controller_casadi::MPCControllerCasadiROS,
+    mpc_controller_acado::MPCControllerAcadoROS,
     vox_nav_control::ControllerCore)
 }  // namespace vox_nav_control

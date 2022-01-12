@@ -10,7 +10,7 @@ int main()
 
   double L_R = 0.66;
   double L_F = 0.66;
-  const int N = 30;
+  const int N = 8;
   const int Ni = 4;
   const double Ts = 0.1;
   const double min_acc_dv = -1.0;
