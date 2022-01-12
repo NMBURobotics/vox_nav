@@ -40,7 +40,7 @@ int acado_solve( void )
 {
 	acado_nWSR = QPOASES_NWSRMAX;
 
-	QProblem qp(10, 5);
+	QProblem qp(60, 60);
 	
 	returnValue retVal = qp.init(acadoWorkspace.H, acadoWorkspace.g, acadoWorkspace.A, acadoWorkspace.lb, acadoWorkspace.ub, acadoWorkspace.lbA, acadoWorkspace.ubA, acado_nWSR, acadoWorkspace.y);
 
@@ -52,7 +52,7 @@ int acado_solve( void )
 	if (retVal != SUCCESSFUL_RETURN)
 		return (int)retVal;
 		
-	retVal = acado_sa.getHessianInverse( &qp,var );
+	retVal = acado_sa.getHessianInverse( &qp, );
 
 #endif /* ACADO_COMPUTE_COVARIANCE_MATRIX */
 

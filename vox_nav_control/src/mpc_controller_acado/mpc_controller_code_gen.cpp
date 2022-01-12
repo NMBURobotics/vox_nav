@@ -1,15 +1,18 @@
 #include <acado_toolkit.hpp>
 #include <acado_code_generation.hpp>
+#include <acado_gnuplot.hpp>
+
+#include <stdlib.h>
+#include <stdio.h>
 
 int main()
 {
 
   double L_R = 0.66;
   double L_F = 0.66;
-  const int N = 5;
+  const int N = 30;
   const int Ni = 4;
   const double Ts = 0.1;
-
   const double min_acc_dv = -1.0;
   const double max_acc_dv = 1.0;
   const double min_v_dv = -1.0;
@@ -23,9 +26,11 @@ int main()
   ACADO::DifferentialState y_dv;
   ACADO::DifferentialState psi_dv;
   ACADO::DifferentialState v_dv;
-
   ACADO::Control acc_dv;
   ACADO::Control df_dv;
+  ACADO::OnlineData obs_x;
+  ACADO::OnlineData obs_y;
+  ACADO::OnlineData obs_radius;
 
   // DEFINE A DIFFERENTIAL EQUATION:
   // -------------------------------
@@ -41,65 +46,59 @@ int main()
   ACADO::Function rf;
   ACADO::Function rfN;
 
-  rf << x_dv << y_dv << psi_dv << v_dv;
+  rf << x_dv << y_dv << psi_dv << v_dv << acc_dv << df_dv;
   rfN << x_dv << y_dv << psi_dv << v_dv;
 
-
-  // Provide defined weighting matrices:
-  ACADO::DMatrix W = ACADO::eye<double>(rf.getDim());
-  ACADO::DMatrix WN = ACADO::eye<double>(rfN.getDim());
-
-  W(0, 0) = 0.1;
-  W(1, 1) = 0.1;
-  W(2, 2) = 0.05;
-  WN(0, 0) = 1.0;
-  WN(1, 1) = 1.0;
-  WN(2, 2) = 0.05;
-
   ACADO::OCP ocp(0, N * Ts, N);
+
+  ACADO::BMatrix Q_sparse(rf.getDim(), rf.getDim());
+  Q_sparse.setIdentity();
+  ACADO::BMatrix QN_sparse(rfN.getDim(), rfN.getDim());
+  QN_sparse.setIdentity();
+  ocp.minimizeLSQ(Q_sparse, rf);
+  ocp.minimizeLSQEndTerm(QN_sparse, rfN);
 
   ocp.subjectTo(f);
 
   // obstacle contraints
-  // for(int i = 0; i < NUM_OBST; i++){
-  //   ocp.subjectTo(sqrt((x[0]-obst[i][0])*(x[0]-obst[i][0]) + (x[2]-obst[i][1])*(x[2]-obst[i][1])) >= OBST_THRS);
-  // }
-
-  ocp.minimizeLSQ(W, rf);
-  ocp.minimizeLSQEndTerm(WN, rfN);
+  ocp.subjectTo(
+    sqrt(
+      (x_dv - obs_x) * (x_dv - obs_x) +
+      (y_dv - obs_y) * (y_dv - obs_y)) >= 2.0);
 
   // control constraints
   ocp.subjectTo(min_v_dv <= v_dv <= max_v_dv);
   ocp.subjectTo(min_acc_dv <= acc_dv <= max_acc_dv);
   ocp.subjectTo(min_df_dv <= df_dv <= max_df_dv);
 
-  //
-  // Export the code:
-  //
+  ocp.setNOD(3);
+
   ACADO::OCPexport mpc(ocp);
-  mpc.set(ACADO::HESSIAN_APPROXIMATION, ACADO::GAUSS_NEWTON);
-  //mpc.set(DISCRETIZATION_TYPE, SINGLE_SHOOTING);
-  mpc.set(ACADO::DISCRETIZATION_TYPE, ACADO::MULTIPLE_SHOOTING);
-  //mpc.set(INTEGRATOR_TYPE, INT_RK4);
-  mpc.set(ACADO::INTEGRATOR_TYPE, ACADO::INT_IRK_RIIA3);
-  mpc.set(ACADO::NUM_INTEGRATOR_STEPS, N * Ni);
-  mpc.set(ACADO::SPARSE_QP_SOLUTION, ACADO::FULL_CONDENSING);
-  mpc.set(ACADO::QP_SOLVER, ACADO::QP_QPOASES);
+
+  mpc.set(ACADO::HESSIAN_APPROXIMATION, ACADO::GAUSS_NEWTON);           // is robust, stable
+  mpc.set(ACADO::DISCRETIZATION_TYPE, ACADO::MULTIPLE_SHOOTING);        // good convergence
+  mpc.set(ACADO::SPARSE_QP_SOLUTION, ACADO::FULL_CONDENSING_N2);        // due to qpOASES
+  mpc.set(ACADO::INTEGRATOR_TYPE, ACADO::INT_IRK_GL4);                  // accurate
+  mpc.set(ACADO::NUM_INTEGRATOR_STEPS, N);
+  mpc.set(ACADO::QP_SOLVER, ACADO::QP_QPOASES);                         // free, source code
   mpc.set(ACADO::HOTSTART_QP, YES);
-  //	mpc.set(SPARSE_QP_SOLUTION, SPARSE_SOLVER);
-  //	mpc.set(LEVENBERG_MARQUARDT, 1.0e-10);
+  mpc.set(ACADO::CG_USE_OPENMP, YES);                            // paralellization
+  mpc.set(ACADO::CG_HARDCODE_CONSTRAINT_VALUES, NO);             // set on runtime
+  mpc.set(ACADO::CG_USE_VARIABLE_WEIGHTING_MATRIX, YES);         // time-varying costs
+  mpc.set(ACADO::USE_SINGLE_PRECISION, YES);                     // Single precision
   mpc.set(ACADO::GENERATE_TEST_FILE, YES);
   mpc.set(ACADO::GENERATE_MAKE_FILE, NO);
   mpc.set(ACADO::GENERATE_MATLAB_INTERFACE, NO);
-  //	mpc.set(USE_SINGLE_PRECISION, YES);
-  //mpc.set( CG_HARDCODE_CONSTRAINT_VALUES, NO);
-  //	mpc.set(CG_USE_OPENMP, YES);
-  // NOTE: This is crucial for export of MHE!
-  //mpc.set(SPARSE_QP_SOLUTION, CONDENSING);
-  mpc.set(ACADO::FIX_INITIAL_STATE, YES);
+  mpc.set(ACADO::GENERATE_SIMULINK_INTERFACE, NO);
 
+  std::string home = std::getenv("HOME");
 
-  if (mpc.exportCode("/home/atas/colcon_ws/auto_gen") != ACADO::SUCCESSFUL_RETURN) {
+  if (mpc.exportCode(
+      (home +
+      "/colcon_ws/src/vox_nav/vox_nav_control/include/vox_nav_control/mpc_controller_acado/auto_gen")
+      .c_str()) !=
+    ACADO::SUCCESSFUL_RETURN)
+  {
     exit(EXIT_FAILURE);
   }
 
