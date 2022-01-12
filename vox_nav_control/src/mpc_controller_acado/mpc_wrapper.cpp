@@ -130,8 +130,8 @@ namespace vox_nav_control
       T min_df_dv, T max_df_dv)
     {
       // Set input boundaries.
-      Eigen::Matrix<T, 4, 1> lower_bounds = Eigen::Matrix<T, 3, 1>::Zero();
-      Eigen::Matrix<T, 4, 1> upper_bounds = Eigen::Matrix<T, 3, 1>::Zero();
+      Eigen::Matrix<T, 3, 1> lower_bounds = Eigen::Matrix<T, 3, 1>::Zero();
+      Eigen::Matrix<T, 3, 1> upper_bounds = Eigen::Matrix<T, 3, 1>::Zero();
       lower_bounds <<
         min_v_dv, min_acc_dv, min_df_dv;
       upper_bounds <<
@@ -226,7 +226,7 @@ namespace vox_nav_control
       bool do_preparation)
     {
       if (!acado_is_prepared_) {
-        std::cerr << ("MPC: Solver was triggered without preparation, abort!");
+        std::cout << ("MPC: Solver was triggered without preparation, abort!");
         return false;
       }
 

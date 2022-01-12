@@ -63,36 +63,36 @@ set(dependencies
     vox_nav_msgs
     vox_nav_utilities)
 
-set(vox_nav_controller_server_exc_name vox_nav_controller_server)
-add_executable(${vox_nav_controller_server_exc_name} src/controller_server.cpp)
-ament_target_dependencies(${vox_nav_controller_server_exc_name} ${dependencies})
-target_link_libraries(${vox_nav_controller_server_exc_name} ompl)
+add_executable(vox_nav_controller_server src/controller_server.cpp)
+ament_target_dependencies(vox_nav_controller_server ${dependencies})
+target_link_libraries(vox_nav_controller_server ompl)
 
-set(vox_nav_mpc_controller_lib_name mpc_controller_casadi)
-add_library(${vox_nav_mpc_controller_lib_name} SHARED src/mpc_controller_casadi/mpc_controller_casadi_core.cpp 
+add_executable(mpc_controller_acado_code_gen src/mpc_controller_acado/mpc_controller_acado_code_gen.cpp)
+target_link_libraries(mpc_controller_acado_code_gen ${ACADO_SHARED_LIBRARIES})
+
+add_library(mpc_controller_casadi SHARED src/mpc_controller_casadi/mpc_controller_casadi_core.cpp 
                                                        src/mpc_controller_casadi/mpc_controller_casadi_ros.cpp)
-ament_target_dependencies(${vox_nav_mpc_controller_lib_name} ${dependencies})
-target_link_libraries(${vox_nav_mpc_controller_lib_name} ompl casadi)
+ament_target_dependencies(mpc_controller_casadi ${dependencies})
+target_link_libraries(mpc_controller_casadi ompl casadi)
 
-add_executable(mpc_controller_code_gen src/mpc_controller_acado/mpc_controller_code_gen.cpp)
-target_link_libraries(mpc_controller_code_gen ${ACADO_SHARED_LIBRARIES})
+add_library(mpc_controller_acado SHARED   ${ACADO_QPOASES_EMBEDDED_SOURCES}
+                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_integrator.c
+                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_solver.c
+                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_qpoases_interface.cpp
+                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.c
+                                          src/mpc_controller_acado/mpc_wrapper.cpp
+                                          src/mpc_controller_acado/mpc_controller_acado_ros.cpp)
+ament_target_dependencies(mpc_controller_acado ${dependencies})
+target_link_libraries(mpc_controller_acado ompl ${ACADO_SHARED_LIBRARIES})
 
-#add_executable(mpc_controller_acado   ${ACADO_QPOASES_EMBEDDED_SOURCES}
-#                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_integrator.c
-#                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_solver.c
-#                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_qpoases_interface.cpp
-#                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.c
-#                                      src/mpc_controller_acado/mpc_controller_acado.cpp)
-#target_link_libraries(mpc_controller_acado ${ACADO_SHARED_LIBRARIES})
-
-install(TARGETS ${vox_nav_mpc_controller_lib_name}
+install(TARGETS mpc_controller_casadi
+                mpc_controller_acado
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
 
-install(TARGETS ${vox_nav_controller_server_exc_name}
-                mpc_controller_code_gen
-                #mpc_controller_acado
+install(TARGETS vox_nav_controller_server
+                mpc_controller_acado_code_gen
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

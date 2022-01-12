@@ -17,7 +17,7 @@
 
 
 #include <Eigen/Eigen>
-
+#include <iostream>
 #include <vox_nav_control/mpc_controller_acado/auto_gen/acado_common.h>
 #include <vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.h>
 
@@ -33,9 +33,6 @@ namespace vox_nav_control
     static constexpr int kInputSize = ACADO_NU; // number of inputs
     static constexpr int kCostSize = ACADO_NY - ACADO_NU; // number of state costs
     static constexpr int kOdSize = ACADO_NOD; // number of online data
-
-    ACADOvariables acadoVariables;
-    ACADOworkspace acadoWorkspace;
 
     template<typename T>
     class MPCWrapper
@@ -226,10 +223,10 @@ namespace vox_nav_control
       Eigen::Map<Eigen::Matrix<float, kEndRefSize, kEndRefSize>>
       acado_W_end_{acadoVariables.WN};
 
-      Eigen::Map<Eigen::Matrix<float, 4, kSamples, Eigen::ColMajor>>
+      Eigen::Map<Eigen::Matrix<float, 3, kSamples, Eigen::ColMajor>>
       acado_lower_bounds_{acadoVariables.lbValues};
 
-      Eigen::Map<Eigen::Matrix<float, 4, kSamples, Eigen::ColMajor>>
+      Eigen::Map<Eigen::Matrix<float, 3, kSamples, Eigen::ColMajor>>
       acado_upper_bounds_{acadoVariables.ubValues};
 
       Eigen::Matrix<T, kRefSize, kRefSize> W_ = (Eigen::Matrix<T, kRefSize, 1>() <<

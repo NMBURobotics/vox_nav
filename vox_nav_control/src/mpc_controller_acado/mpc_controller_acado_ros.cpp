@@ -97,7 +97,7 @@ namespace vox_nav_control
         "/vox_nav/tracking/objects", rclcpp::SystemDefaultsQoS(),
         std::bind(&MPCControllerAcadoROS::obstacleTracksCallback, this, std::placeholders::_1));
 
-      mpc_controller_ = std::make_shared<MPCWrapper<float>>(mpc_parameters_);
+      mpc_controller_ = std::make_shared<MPCWrapper<float>>();
 
       solve_from_scratch_ = true;
       preparation_thread_ = std::thread(&MPCWrapper<float>::prepare, mpc_controller_);
@@ -125,32 +125,54 @@ namespace vox_nav_control
         curr_robot_pose.pose.orientation, roll, pitch, psi);
 
       preparation_thread_.join();
-
       States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
-      Eigen::Vector4f curr_states_eig(curr_states.x, curr_states.y, curr_states.psi, curr_states.v);
-
+      est_state_ = Eigen::Vector4f(curr_states.x, curr_states.y, curr_states.psi, curr_states.v);
 
       std::vector<States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
+      for (size_t i = 0; i < local_interpolated_reference_states.size(); i++) {
+        reference_states_(0, i) = local_interpolated_reference_states[i].x;
+        reference_states_(1, i) = local_interpolated_reference_states[i].y;
+        reference_states_(2, i) = local_interpolated_reference_states[i].psi;
+        reference_states_(3, i) = local_interpolated_reference_states[i].v;
+        reference_inputs_(0, i) = previous_control_.acc;
+        reference_inputs_(1, i) = previous_control_.df;
+      }
 
       // update the states
-      mpc_controller_->update(curr_states_eig);
+      mpc_controller_->update(est_state_);
+      mpc_controller_->setTrajectory(reference_states_, reference_inputs_);
 
-      mpc_controller_->updateReferences(local_interpolated_reference_states);
-      mpc_controller_->updatePreviousControlInput(previous_control_);
+      static const bool do_preparation_step(false);
+      if (solve_from_scratch_) {
+        RCLCPP_INFO(parent_->get_logger(), "Solving MPC with hover as initial guess.");
+        auto res = mpc_controller_->solve(est_state_);
+        solve_from_scratch_ = false;
+      } else {
+        mpc_controller_->update(est_state_, do_preparation_step);
+      }
+
+      mpc_controller_->getStates(predicted_states_);
+      mpc_controller_->getInputs(predicted_inputs_);
+
+      // Start a thread to prepare for the next execution.
+      preparation_thread_ = std::thread(&MPCControllerAcadoROS::preparationThread, this);
+
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
 
-      auto res = mpc_controller_->solve(est_state_);
+      ControlInput computed_control;
+      computed_control.acc = predicted_inputs_(0, 0);
+      computed_control.df = predicted_inputs_(1, 0);
 
       //  The control output is acceleration but we need to publish speed
-      computed_velocity_.linear.x += res.control_input.acc * (dt);
+      computed_velocity_.linear.x += computed_control.acc * (dt);
       //  The control output is steeering angle but we need to publish angular velocity
-      computed_velocity_.angular.z = (computed_velocity_.linear.x * res.control_input.df) /
+      computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_control.df) /
         rear_axle_tofront_dist;
 
       regulate_max_speed();
@@ -163,11 +185,12 @@ namespace vox_nav_control
       publishTrajStates(
         local_interpolated_reference_states, red_color, "ref_traj",
         interpolated_local_reference_traj_publisher_);
-      publishTrajStates(
-        res.actual_computed_states, blue_color, "actual_traj",
-        mpc_computed_traj_publisher_);
 
-      previous_control_ = res.control_input;
+      /*publishTrajStates(
+        res.actual_computed_states, blue_color, "actual_traj",
+        mpc_computed_traj_publisher_);*/
+
+      previous_control_ = computed_control;
       return computed_velocity_;
     }
 
@@ -177,32 +200,63 @@ namespace vox_nav_control
 
       double dt = mpc_parameters_.DT;
       double kTARGET_SPEED = 0.0;
+      // distance from rear to front axle(m)
+      double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
 
-      // we dont really need roll and pitch here
-      double nan, psi;
+      double roll, pitch, psi;
       vox_nav_utilities::getRPYfromMsgQuaternion(
-        curr_robot_pose.pose.orientation, nan, nan, psi);
+        curr_robot_pose.pose.orientation, roll, pitch, psi);
 
+      preparation_thread_.join();
       States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
+      est_state_ = Eigen::Vector4f(curr_states.x, curr_states.y, curr_states.psi, curr_states.v);
+
       std::vector<States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
+      for (size_t i = 0; i < local_interpolated_reference_states.size(); i++) {
+        reference_states_(0, i) = local_interpolated_reference_states[i].x;
+        reference_states_(1, i) = local_interpolated_reference_states[i].y;
+        reference_states_(2, i) = local_interpolated_reference_states[i].psi;
+        reference_states_(3, i) = local_interpolated_reference_states[i].v;
+        reference_inputs_(0, i) = previous_control_.acc;
+        reference_inputs_(1, i) = previous_control_.df;
+      }
 
-      mpc_controller_->updateCurrentStates(curr_states);
-      mpc_controller_->updateReferences(local_interpolated_reference_states);
-      mpc_controller_->updatePreviousControlInput(previous_control_);
+      // update the states
+      mpc_controller_->update(est_state_);
+      mpc_controller_->setTrajectory(reference_states_, reference_inputs_);
 
-      std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
+      static const bool do_preparation_step(false);
+      if (solve_from_scratch_) {
+        RCLCPP_INFO(parent_->get_logger(), "Solving MPC with hover as initial guess.");
+        auto res = mpc_controller_->solve(est_state_);
+        solve_from_scratch_ = false;
+      } else {
+        mpc_controller_->update(est_state_, do_preparation_step);
+      }
+
+      mpc_controller_->getStates(predicted_states_);
+      mpc_controller_->getInputs(predicted_inputs_);
+
+      // Start a thread to prepare for the next execution.
+      preparation_thread_ = std::thread(&MPCControllerAcadoROS::preparationThread, this);
+
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
-      MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
 
+      ControlInput computed_control;
+      computed_control.acc = predicted_inputs_(0, 0);
+      computed_control.df = predicted_inputs_(1, 0);
+
+      //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x = 0;
-      computed_velocity_.angular.z += res.control_input.df * (dt);
-      previous_control_ = res.control_input;
+      //  The control output is steeering angle but we need to publish angular velocity
+      computed_velocity_.angular.z = (computed_control.acc * computed_control.df) /
+        rear_axle_tofront_dist;
 
       return computed_velocity_;
     }
@@ -287,8 +341,8 @@ namespace vox_nav_control
 
       // The local ref traj now contains only 3 states, we will interpolate this states with OMPL
       // The count of states after interpolation must be same as horizon defined for the control problem , hence
-      // it should be mpc_parameters_.N
-      path.interpolate(mpc_parameters_.N);
+      // it should be mpc_parameters_.N+1
+      path.interpolate(mpc_parameters_.N + 1);
 
       // Now the local ref traj is interpolated from current robot state up to state at global look ahead distance
       // Lets fill the native MPC type ref states and return to caller
