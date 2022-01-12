@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,9 @@
 // limitations under the License.
 
 #include <rclcpp/rclcpp.hpp>
+#include <vox_nav_control/common.hpp>
 #include <vox_nav_control/controller_core.hpp>
-#include <vox_nav_control/mpc_controller_casadi/mpc_controller_casadi_core.hpp>
+#include <vox_nav_control/mpc_controller_acado/mpc_wrapper.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_msgs/msg/object_array.hpp>
 
@@ -34,13 +35,13 @@
 #include <memory>
 #include <vector>
 
-#ifndef VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
-#define VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
+#ifndef VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ACADO_ROS_HPP_
+#define VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ACADO_ROS_HPP_
 
 namespace vox_nav_control
 {
 
-  namespace mpc_controller_casadi
+  namespace mpc_controller_acado
   {
 /**
  * @brief A ROS wrapper around the Core MPC controller class.
@@ -49,20 +50,20 @@ namespace vox_nav_control
  *        The controller server is an ROS2 action named follow_path
  *
  */
-    class MPCControllerCasadiROS : public vox_nav_control::ControllerCore
+    class MPCControllerAcadoROS : public vox_nav_control::ControllerCore
     {
     public:
       /**
-       * @brief Construct a new MPCControllerCasadiROS object
+       * @brief Construct a new MPCControllerAcadoROS object
        *
        */
-      MPCControllerCasadiROS();
+      MPCControllerAcadoROS();
 
       /**
-       * @brief Destroy the MPCControllerCasadiROS object
+       * @brief Destroy the MPCControllerAcadoROS object
        *
        */
-      ~MPCControllerCasadiROS();
+      ~MPCControllerAcadoROS();
 
       /**
        * @brief gets all parameters required by MPC controller. Sets up an ROS2 stuff, publisher etc.
@@ -119,7 +120,7 @@ namespace vox_nav_control
        *        As well as number of time Horizons(N)
        *
        * @param curr_robot_pose
-       * @return std::vector<States>
+       * @return std::vector<MPCControllerCasadiCore::States>
        */
       std::vector<States> getLocalInterpolatedReferenceStates(
         geometry_msgs::msg::PoseStamped curr_robot_pose);
@@ -159,7 +160,7 @@ namespace vox_nav_control
       // computed velocities as result of MPC
       geometry_msgs::msg::Twist computed_velocity_;
       // MPC core controller object
-      std::shared_ptr<MPCControllerCasadiCore> mpc_controller_;
+      std::shared_ptr<MPCWrapper<float>> mpc_controller_;
       // parameters struct used for MPC controller
       Parameters mpc_parameters_;
       // Keep a copy of previously applied control inputs, this is neded
@@ -177,9 +178,10 @@ namespace vox_nav_control
       rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr obstacle_tracks_sub_;
       vox_nav_msgs::msg::ObjectArray obstacle_tracks_;
       std::mutex obstacle_tracks_mutex_;
+
     };
 
-  } // namespace mpc_controller_casadi
+  } // namespace mpc_controller_acado
 }  // namespace vox_nav_control
 
-#endif  // VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ROS_HPP_
+#endif  // VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ACADO_ROS_HPP_

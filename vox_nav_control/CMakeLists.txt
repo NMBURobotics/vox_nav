@@ -77,13 +77,13 @@ target_link_libraries(${vox_nav_mpc_controller_lib_name} ompl casadi)
 add_executable(mpc_controller_code_gen src/mpc_controller_acado/mpc_controller_code_gen.cpp)
 target_link_libraries(mpc_controller_code_gen ${ACADO_SHARED_LIBRARIES})
 
-add_executable(mpc_controller_acado   ${ACADO_QPOASES_EMBEDDED_SOURCES}
-                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_integrator.c
-                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_solver.c
-                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_qpoases_interface.cpp
-                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.c
-                                      src/mpc_controller_acado/mpc_controller_acado.cpp)
-target_link_libraries(mpc_controller_acado ${ACADO_SHARED_LIBRARIES})
+#add_executable(mpc_controller_acado   ${ACADO_QPOASES_EMBEDDED_SOURCES}
+#                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_integrator.c
+#                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_solver.c
+#                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_qpoases_interface.cpp
+#                                      include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.c
+#                                      src/mpc_controller_acado/mpc_controller_acado.cpp)
+#target_link_libraries(mpc_controller_acado ${ACADO_SHARED_LIBRARIES})
 
 install(TARGETS ${vox_nav_mpc_controller_lib_name}
   ARCHIVE DESTINATION lib
@@ -92,7 +92,7 @@ install(TARGETS ${vox_nav_mpc_controller_lib_name}
 
 install(TARGETS ${vox_nav_controller_server_exc_name}
                 mpc_controller_code_gen
-                mpc_controller_acado
+                #mpc_controller_acado
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
