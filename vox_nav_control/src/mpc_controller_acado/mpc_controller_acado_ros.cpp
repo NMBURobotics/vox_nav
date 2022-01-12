@@ -194,6 +194,18 @@ namespace vox_nav_control
       return computed_velocity_;
     }
 
+    void MPCControllerAcadoROS::preparationThread()
+    {
+      const clock_t start = clock();
+
+      mpc_controller_->prepare();
+
+      // Timing
+      const clock_t end = clock();
+      timing_preparation_ = 0.9 * timing_preparation_ +
+        0.1 * double(end - start) / CLOCKS_PER_SEC;
+    }
+
     geometry_msgs::msg::Twist MPCControllerAcadoROS::computeHeadingCorrectionCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {

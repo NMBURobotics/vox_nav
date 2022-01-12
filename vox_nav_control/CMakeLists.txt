@@ -108,6 +108,7 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_include_directories(include)
-ament_export_libraries(${mpc_controller_exc_name})
+ament_export_libraries(mpc_controller_casadi)
+ament_export_libraries(mpc_controller_acado)
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 ament_package()

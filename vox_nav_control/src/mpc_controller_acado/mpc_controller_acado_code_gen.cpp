@@ -85,6 +85,7 @@ int main()
   mpc.set(ACADO::CG_USE_OPENMP, YES);                            // paralellization
   mpc.set(ACADO::CG_HARDCODE_CONSTRAINT_VALUES, NO);             // set on runtime
   mpc.set(ACADO::CG_USE_VARIABLE_WEIGHTING_MATRIX, YES);         // time-varying costs
+  mpc.set(ACADO::CG_MODULE_NAME, "private_namespace");
   mpc.set(ACADO::USE_SINGLE_PRECISION, YES);                     // Single precision
   mpc.set(ACADO::GENERATE_TEST_FILE, YES);
   mpc.set(ACADO::GENERATE_MAKE_FILE, NO);
