@@ -22,6 +22,8 @@ namespace vox_nav_control
 {
   namespace mpc_controller_acado
   {
+
+
     template<typename T>
     MPCWrapper<T>::MPCWrapper()
     : acado_reference_states_{acadoVariables.y},
@@ -31,9 +33,9 @@ namespace vox_nav_control
       acado_inputs_{acadoVariables.u},
       acado_online_data_{acadoVariables.od},
       acado_W_{acadoVariables.W},
-      acado_W_end_{acadoVariables.WN},
-      acado_lower_bounds_{acadoVariables.lbValues},
-      acado_upper_bounds_{acadoVariables.ubValues}
+      acado_W_end_{acadoVariables.WN}
+      //acado_lower_bounds_{acadoVariables.lbValues},
+      //acado_upper_bounds_{acadoVariables.ubValues}
     {
       memset(&acadoWorkspace, 0, sizeof( acadoWorkspace ));
       memset(&acadoVariables, 0, sizeof( acadoVariables ));
@@ -139,23 +141,27 @@ namespace vox_nav_control
 
     template<typename T>
     bool MPCWrapper<T>::setLimits(
-      T min_v_dv, T max_v_dv,
       T min_acc_dv, T max_acc_dv,
       T min_df_dv, T max_df_dv)
     {
       // Set input boundaries.
       Eigen::Matrix<T, 3, 1> lower_bounds = Eigen::Matrix<T, 3, 1>::Zero();
       Eigen::Matrix<T, 3, 1> upper_bounds = Eigen::Matrix<T, 3, 1>::Zero();
-      lower_bounds <<
-        min_v_dv, min_acc_dv, min_df_dv;
-      upper_bounds <<
-        max_v_dv, max_acc_dv, max_df_dv;
+
+      lower_bounds << min_acc_dv, min_df_dv;
+      upper_bounds << max_acc_dv, max_df_dv;
 
       acado_lower_bounds_ =
         lower_bounds.replicate(1, kSamples).template cast<float>();
 
       acado_upper_bounds_ =
         upper_bounds.replicate(1, kSamples).template cast<float>();
+
+      std::cout << "acado_lower_bounds_: " << std::endl;
+      std::cout << acado_lower_bounds_ << std::endl;
+      std::cout << "acado_upper_bounds_: " << std::endl;
+      std::cout << acado_upper_bounds_ << std::endl;
+
       return true;
     }
 

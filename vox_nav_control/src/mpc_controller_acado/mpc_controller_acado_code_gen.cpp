@@ -11,14 +11,13 @@ int main()
   double L_R = 0.66;
   double L_F = 0.66;
   const int N = 8;
-  const int Ni = 4;
-  const double Ts = 0.1;
+  const double Ts = 0.2;
   const double min_acc_dv = -1.0;
   const double max_acc_dv = 1.0;
   const double min_v_dv = -1.0;
   const double max_v_dv = 1.0;
-  const double min_df_dv = -M_PI / 2;
-  const double max_df_dv = M_PI / 2;
+  const double min_df_dv = -M_PI_2 / 4;
+  const double max_df_dv = M_PI_2 / 4;
 
   // INTRODUCE THE VARIABLES (acadoVariables.x):
   // -------------------------
@@ -61,15 +60,15 @@ int main()
   ocp.subjectTo(f);
 
   // obstacle contraints
-  ocp.subjectTo(
+  /*ocp.subjectTo(
     sqrt(
       (x_dv - obs_x) * (x_dv - obs_x) +
-      (y_dv - obs_y) * (y_dv - obs_y)) >= 2.0);
+      (y_dv - obs_y) * (y_dv - obs_y)) >= 2.0);*/
 
   // control constraints
-  ocp.subjectTo(min_v_dv <= v_dv <= max_v_dv);
   ocp.subjectTo(min_acc_dv <= acc_dv <= max_acc_dv);
   ocp.subjectTo(min_df_dv <= df_dv <= max_df_dv);
+  ocp.subjectTo(min_v_dv <= v_dv <= max_v_dv);
 
   ocp.setNOD(3);
 
@@ -83,12 +82,11 @@ int main()
   mpc.set(ACADO::QP_SOLVER, ACADO::QP_QPOASES);                         // free, source code
   mpc.set(ACADO::HOTSTART_QP, YES);
   mpc.set(ACADO::CG_USE_OPENMP, YES);                            // paralellization
-  mpc.set(ACADO::CG_HARDCODE_CONSTRAINT_VALUES, NO);             // set on runtime
+  mpc.set(ACADO::CG_HARDCODE_CONSTRAINT_VALUES, YES);             // set on runtime
   mpc.set(ACADO::CG_USE_VARIABLE_WEIGHTING_MATRIX, YES);         // time-varying costs
-  mpc.set(ACADO::CG_MODULE_NAME, "private_namespace");
   mpc.set(ACADO::USE_SINGLE_PRECISION, YES);                     // Single precision
   mpc.set(ACADO::GENERATE_TEST_FILE, YES);
-  mpc.set(ACADO::GENERATE_MAKE_FILE, YES);
+  mpc.set(ACADO::GENERATE_MAKE_FILE, NO);
   mpc.set(ACADO::GENERATE_MATLAB_INTERFACE, NO);
   mpc.set(ACADO::GENERATE_SIMULINK_INTERFACE, NO);
 

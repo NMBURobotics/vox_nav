@@ -80,8 +80,6 @@ namespace vox_nav_control
       /**
        * @brief Set the Limits object
        *
-       * @param min_v_dv
-       * @param max_v_dv
        * @param min_acc_dv
        * @param max_acc_dv
        * @param min_df_dv
@@ -90,7 +88,6 @@ namespace vox_nav_control
        * @return false
        */
       bool setLimits(
-        T min_v_dv, T max_v_dv,
         T min_acc_dv, T max_acc_dv,
         T min_df_dv, T max_df_dv);
 

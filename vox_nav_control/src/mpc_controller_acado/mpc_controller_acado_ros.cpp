@@ -85,13 +85,11 @@ namespace vox_nav_control
 
       interpolated_local_reference_traj_publisher_ =
         parent->create_publisher<visualization_msgs::msg::MarkerArray>(
-        "/vox_nav/controller/plan",
-        1);
+        "/vox_nav/controller/plan", 1);
 
       mpc_computed_traj_publisher_ =
         parent->create_publisher<visualization_msgs::msg::MarkerArray>(
-        "/vox_nav/controller/mpc_computed_traj",
-        1);
+        "/vox_nav/controller/mpc_computed_traj", 1);
 
       obstacle_tracks_sub_ = parent->create_subscription<vox_nav_msgs::msg::ObjectArray>(
         "/vox_nav/tracking/objects", rclcpp::SystemDefaultsQoS(),
@@ -99,8 +97,21 @@ namespace vox_nav_control
 
       mpc_controller_ = std::make_shared<MPCWrapper<float>>();
 
+      /*mpc_controller_->setLimits(
+        mpc_parameters_.A_MIN, mpc_parameters_.A_MAX,
+        mpc_parameters_.DF_MIN, mpc_parameters_.DF_MAX);*/
+
+      Eigen::Matrix<float, kCostSize, kCostSize> Q = (Eigen::Matrix<float, kCostSize, 1>() <<
+        10.0, 10.0, 10, 10).finished().asDiagonal();
+      Eigen::Matrix<float, kInputSize, kInputSize> R = (Eigen::Matrix<float, kInputSize, 1>() <<
+        100.0, 10.0).finished().asDiagonal();
+
+      mpc_controller_->setCosts(Q, R);
+
       solve_from_scratch_ = true;
       preparation_thread_ = std::thread(&MPCWrapper<float>::prepare, mpc_controller_);
+
+
     }
 
     geometry_msgs::msg::Twist MPCControllerAcadoROS::computeVelocityCommands(
@@ -116,7 +127,7 @@ namespace vox_nav_control
         };
 
       double dt = mpc_parameters_.DT;
-      double kTARGET_SPEED = 0.0;
+      double kTARGET_SPEED = 1.0;
       // distance from rear to front axle(m)
       double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
 
@@ -145,8 +156,14 @@ namespace vox_nav_control
       }
 
       // update the states
-      mpc_controller_->update(est_state_);
       mpc_controller_->setTrajectory(reference_states_, reference_inputs_);
+
+      if (mpc_parameters_.debug_mode) {
+        std::cout << "reference_states_: " << std::endl;
+        std::cout << reference_states_ << std::endl;
+        std::cout << "reference_inputs_: " << std::endl;
+        std::cout << reference_inputs_ << std::endl;
+      }
 
       static const bool do_preparation_step(false);
       if (solve_from_scratch_) {
@@ -164,6 +181,15 @@ namespace vox_nav_control
       preparation_thread_ = std::thread(&MPCControllerAcadoROS::preparationThread, this);
 
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
+
+      if (mpc_parameters_.debug_mode) {
+        std::cout << "predicted_states_: " << std::endl;
+        std::cout << predicted_states_ << std::endl;
+        std::cout << "predicted_control: " << std::endl;
+        std::cout << predicted_inputs_ << std::endl;
+        acado_printDifferentialVariables();
+        acado_printControlVariables();
+      }
 
       ControlInput computed_control;
       computed_control.acc = predicted_inputs_(0, 0);
@@ -243,7 +269,7 @@ namespace vox_nav_control
       mpc_controller_->update(est_state_);
       mpc_controller_->setTrajectory(reference_states_, reference_inputs_);
 
-      static const bool do_preparation_step(false);
+      static const bool do_preparation_step(true);
       if (solve_from_scratch_) {
         RCLCPP_INFO(parent_->get_logger(), "Solving MPC with hover as initial guess.");
         auto res = mpc_controller_->solve(est_state_);
@@ -299,7 +325,7 @@ namespace vox_nav_control
     std::vector<States> MPCControllerAcadoROS::getLocalInterpolatedReferenceStates(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
-      double kTARGETSPEED = 0.0;
+      double kTARGETSPEED = 1.0;
       // Now lets find nearest trajectory point to robot base
       int nearsest_traj_state_index = nearestStateIndex(reference_traj_, curr_robot_pose);
 

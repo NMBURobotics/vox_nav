@@ -300,11 +300,11 @@ b[7] = rk_dim8_bPerm[7];
 
 /** Matrix of size: 2 x 2 (row major format) */
 static const real_t acado_Ah_mat[ 4 ] = 
-{ 2.5000000000000001e-02, 5.3867513459481292e-02, 
--3.8675134594812867e-03, 2.5000000000000001e-02 };
+{ 5.0000000000000003e-02, 1.0773502691896258e-01, 
+-7.7350269189625735e-03, 5.0000000000000003e-02 };
 
 
-/* Fixed step size:0.1 */
+/* Fixed step size:0.2 */
 int acado_integrate( real_t* const rk_eta, int resetIntegrator )
 {
 int error;
@@ -447,7 +447,7 @@ rk_diffK[i + 6] = rk_b[i * 4 + 3];
 for (i = 0; i < 4; ++i)
 {
 rk_diffsNew2[(i * 6) + (run1)] = (i == run1-0);
-rk_diffsNew2[(i * 6) + (run1)] += + rk_diffK[i * 2]*(real_t)5.0000000000000003e-02 + rk_diffK[i * 2 + 1]*(real_t)5.0000000000000003e-02;
+rk_diffsNew2[(i * 6) + (run1)] += + rk_diffK[i * 2]*(real_t)1.0000000000000001e-01 + rk_diffK[i * 2 + 1]*(real_t)1.0000000000000001e-01;
 }
 }
 for (run1 = 0; run1 < 2; ++run1)
@@ -471,13 +471,13 @@ rk_diffK[i + 6] = rk_b[i * 4 + 3];
 }
 for (i = 0; i < 4; ++i)
 {
-rk_diffsNew2[(i * 6) + (run1 + 4)] = + rk_diffK[i * 2]*(real_t)5.0000000000000003e-02 + rk_diffK[i * 2 + 1]*(real_t)5.0000000000000003e-02;
+rk_diffsNew2[(i * 6) + (run1 + 4)] = + rk_diffK[i * 2]*(real_t)1.0000000000000001e-01 + rk_diffK[i * 2 + 1]*(real_t)1.0000000000000001e-01;
 }
 }
-rk_eta[0] += + rk_kkk[0]*(real_t)5.0000000000000003e-02 + rk_kkk[1]*(real_t)5.0000000000000003e-02;
-rk_eta[1] += + rk_kkk[2]*(real_t)5.0000000000000003e-02 + rk_kkk[3]*(real_t)5.0000000000000003e-02;
-rk_eta[2] += + rk_kkk[4]*(real_t)5.0000000000000003e-02 + rk_kkk[5]*(real_t)5.0000000000000003e-02;
-rk_eta[3] += + rk_kkk[6]*(real_t)5.0000000000000003e-02 + rk_kkk[7]*(real_t)5.0000000000000003e-02;
+rk_eta[0] += + rk_kkk[0]*(real_t)1.0000000000000001e-01 + rk_kkk[1]*(real_t)1.0000000000000001e-01;
+rk_eta[1] += + rk_kkk[2]*(real_t)1.0000000000000001e-01 + rk_kkk[3]*(real_t)1.0000000000000001e-01;
+rk_eta[2] += + rk_kkk[4]*(real_t)1.0000000000000001e-01 + rk_kkk[5]*(real_t)1.0000000000000001e-01;
+rk_eta[3] += + rk_kkk[6]*(real_t)1.0000000000000001e-01 + rk_kkk[7]*(real_t)1.0000000000000001e-01;
 for (i = 0; i < 4; ++i)
 {
 for (j = 0; j < 4; ++j)
