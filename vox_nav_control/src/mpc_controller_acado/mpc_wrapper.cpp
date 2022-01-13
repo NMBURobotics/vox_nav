@@ -14,12 +14,26 @@
 
 #include <vox_nav_control/mpc_controller_acado/mpc_wrapper.hpp>
 
+/* Global variables used by the solver. */
+ACADOvariables acadoVariables;
+ACADOworkspace acadoWorkspace;
+
 namespace vox_nav_control
 {
   namespace mpc_controller_acado
   {
     template<typename T>
     MPCWrapper<T>::MPCWrapper()
+    : acado_reference_states_{acadoVariables.y},
+      acado_reference_end_state_{acadoVariables.yN},
+      acado_initial_state_{acadoVariables.x0},
+      acado_states_{acadoVariables.x},
+      acado_inputs_{acadoVariables.u},
+      acado_online_data_{acadoVariables.od},
+      acado_W_{acadoVariables.W},
+      acado_W_end_{acadoVariables.WN},
+      acado_lower_bounds_{acadoVariables.lbValues},
+      acado_upper_bounds_{acadoVariables.ubValues}
     {
       memset(&acadoWorkspace, 0, sizeof( acadoWorkspace ));
       memset(&acadoVariables, 0, sizeof( acadoVariables ));

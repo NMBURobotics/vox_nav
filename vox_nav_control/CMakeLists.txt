@@ -36,8 +36,6 @@ find_package(vox_nav_utilities REQUIRED)
 find_package(casadi REQUIRED)
 find_package(ACADO REQUIRED)
 
-message(NOTICE ${ACADO_QPOASES_EMBEDDED_INC_DIRS})
-
 include_directories(
   include
   include/vox_nav_control/mpc_controller_acado/auto_gen
@@ -75,18 +73,24 @@ add_library(mpc_controller_casadi SHARED src/mpc_controller_casadi/mpc_controlle
 ament_target_dependencies(mpc_controller_casadi ${dependencies})
 target_link_libraries(mpc_controller_casadi ompl casadi)
 
-add_library(mpc_controller_acado SHARED   ${ACADO_QPOASES_EMBEDDED_SOURCES}
-                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_integrator.c
+add_library(mpc_solver_acado SHARED   
+                                          ${ACADO_QPOASES_EMBEDDED_SOURCES}
+                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_common.h
                                           include/vox_nav_control/mpc_controller_acado/auto_gen/acado_solver.c
+                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_integrator.c
+                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_qpoases_interface.hpp
                                           include/vox_nav_control/mpc_controller_acado/auto_gen/acado_qpoases_interface.cpp
-                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.c
-                                          src/mpc_controller_acado/mpc_wrapper.cpp
-                                          src/mpc_controller_acado/mpc_controller_acado_ros.cpp)
+                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.h
+                                          include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.c)
+
+add_library(mpc_controller_acado SHARED src/mpc_controller_acado/mpc_wrapper.cpp
+                                        src/mpc_controller_acado/mpc_controller_acado_ros.cpp)
 ament_target_dependencies(mpc_controller_acado ${dependencies})
-target_link_libraries(mpc_controller_acado ompl ${ACADO_SHARED_LIBRARIES})
+target_link_libraries(mpc_controller_acado ompl ${ACADO_SHARED_LIBRARIES} mpc_solver_acado)
 
 install(TARGETS mpc_controller_casadi
                 mpc_controller_acado
+                mpc_solver_acado
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
@@ -110,5 +114,6 @@ endif()
 ament_export_include_directories(include)
 ament_export_libraries(mpc_controller_casadi)
 ament_export_libraries(mpc_controller_acado)
+ament_export_libraries(mpc_solver_acado)
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 ament_package()

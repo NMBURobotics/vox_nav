@@ -88,7 +88,7 @@ int main()
   mpc.set(ACADO::CG_MODULE_NAME, "private_namespace");
   mpc.set(ACADO::USE_SINGLE_PRECISION, YES);                     // Single precision
   mpc.set(ACADO::GENERATE_TEST_FILE, YES);
-  mpc.set(ACADO::GENERATE_MAKE_FILE, NO);
+  mpc.set(ACADO::GENERATE_MAKE_FILE, YES);
   mpc.set(ACADO::GENERATE_MATLAB_INTERFACE, NO);
   mpc.set(ACADO::GENERATE_SIMULINK_INTERFACE, NO);
 
