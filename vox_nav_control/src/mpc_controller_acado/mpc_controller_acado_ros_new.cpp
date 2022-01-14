@@ -187,10 +187,10 @@ namespace vox_nav_control
           acadoVariables.y[i] = local_interpolated_reference_states[index].x;
         } else if (state == STATE::kY) {
           acadoVariables.y[i] = local_interpolated_reference_states[index].y;
-        } else if (state == STATE::kPsi) {
-          acadoVariables.y[i] = local_interpolated_reference_states[index].psi;
         } else if (state == STATE::kV) {
           acadoVariables.y[i] = local_interpolated_reference_states[index].v;
+        } else if (state == STATE::kPsi) {
+          acadoVariables.y[i] = local_interpolated_reference_states[index].psi;
         } else if (state == 4) {
           acadoVariables.y[i] = previous_control_.begin()->acc;
         } else if (state == 5) {
@@ -205,18 +205,18 @@ namespace vox_nav_control
           acadoVariables.yN[i] = local_interpolated_reference_states[index].x;
         } else if (i == STATE::kY) {
           acadoVariables.yN[i] = local_interpolated_reference_states[index].y;
-        } else if (i == STATE::kPsi) {
-          acadoVariables.yN[i] = local_interpolated_reference_states[index].psi;
         } else if (i == STATE::kV) {
           acadoVariables.yN[i] = local_interpolated_reference_states[index].v;
+        } else if (i == STATE::kPsi) {
+          acadoVariables.yN[i] = local_interpolated_reference_states[index].psi;
         }
       }
 
       // MPC: set the current state feedback
       acadoVariables.x0[0] = curr_states.x;
       acadoVariables.x0[1] = curr_states.y;
-      acadoVariables.x0[2] = curr_states.psi;
-      acadoVariables.x0[3] = curr_states.v;
+      acadoVariables.x0[2] = curr_states.v;
+      acadoVariables.x0[3] = curr_states.psi;
 
       acado_preparationStep();
 
