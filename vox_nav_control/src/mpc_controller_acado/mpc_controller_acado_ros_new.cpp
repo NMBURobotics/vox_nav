@@ -120,12 +120,12 @@ namespace vox_nav_control
       // Prepare first step
       acado_preparationStep();
 
-      double w_x = 100;
-      double w_y = 200;
-      double w_vel = 10;
-      double w_yaw = 10;
-      double w_acc = 1;
-      double w_df = 1;
+      double w_x = 10;
+      double w_y = 10;
+      double w_vel = 0.1;
+      double w_yaw = 0.1;
+      double w_acc = 100;
+      double w_df = 10;
 
       for (int i = 0; i < ACADO_N; i++) {
         // Setup diagonal entries
@@ -192,9 +192,9 @@ namespace vox_nav_control
         } else if (state == STATE::kV) {
           acadoVariables.y[i] = local_interpolated_reference_states[index].v;
         } else if (state == 4) {
-          acadoVariables.y[i] = previous_control_[index].acc;
+          acadoVariables.y[i] = previous_control_.begin()->acc;
         } else if (state == 5) {
-          acadoVariables.y[i] = previous_control_[index].df;
+          acadoVariables.y[i] = previous_control_.begin()->df;
         }
       }
 

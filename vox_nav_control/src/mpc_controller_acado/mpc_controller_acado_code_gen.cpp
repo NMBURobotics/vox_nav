@@ -10,8 +10,8 @@ int main()
 
   double L_R = 0.66;
   double L_F = 0.66;
-  const int N = 10;
-  const int Ni = 6;
+  const int N = 8;
+  const int Ni = 1;
   const double Ts = 0.1;
   const double min_acc_dv = -1.0;
   const double max_acc_dv = 1.0;
@@ -87,7 +87,7 @@ int main()
   mpc.set(HOTSTART_QP, YES);
   mpc.set(GENERATE_TEST_FILE, YES);
   mpc.set(GENERATE_MAKE_FILE, NO);
-  mpc.set(GENERATE_MATLAB_INTERFACE, YES);
+  mpc.set(GENERATE_MATLAB_INTERFACE, NO);
   mpc.set(CG_USE_VARIABLE_WEIGHTING_MATRIX, YES);
   mpc.set(FIX_INITIAL_STATE, YES);
 
