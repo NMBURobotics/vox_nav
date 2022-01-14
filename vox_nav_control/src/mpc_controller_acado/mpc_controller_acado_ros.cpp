@@ -20,18 +20,15 @@
 #include <vector>
 #include <string>
 
+/* Global variables used by the solver. */
+ACADOvariables acadoVariables;
+ACADOworkspace acadoWorkspace;
+
 namespace vox_nav_control
 {
   namespace mpc_controller_acado
   {
     MPCControllerAcadoROS::MPCControllerAcadoROS()
-    : timing_feedback_(float(1e-3)),
-      timing_preparation_(float(1e-3)),
-      est_state_(  (Eigen::Matrix<float, kStateSize, 1>() << 0, 0, 0, 0).finished()),
-      reference_states_(Eigen::Matrix<float, kStateSize, kSamples + 1>::Zero()),
-      reference_inputs_(Eigen::Matrix<float, kInputSize, kSamples + 1>::Zero()),
-      predicted_states_(Eigen::Matrix<float, kStateSize, kSamples + 1>::Zero()),
-      predicted_inputs_(Eigen::Matrix<float, kInputSize, kSamples>::Zero())
     {
     }
 
@@ -95,22 +92,58 @@ namespace vox_nav_control
         "/vox_nav/tracking/objects", rclcpp::SystemDefaultsQoS(),
         std::bind(&MPCControllerAcadoROS::obstacleTracksCallback, this, std::placeholders::_1));
 
-      mpc_controller_ = std::make_shared<MPCWrapper<float>>();
 
-      /*mpc_controller_->setLimits(
-        mpc_parameters_.A_MIN, mpc_parameters_.A_MAX,
-        mpc_parameters_.DF_MIN, mpc_parameters_.DF_MAX);*/
+      // Initialize the solver.
+      acado_initializeSolver();
 
-      Eigen::Matrix<float, kCostSize, kCostSize> Q = (Eigen::Matrix<float, kCostSize, 1>() <<
-        10.0, 10.0, 10, 10).finished().asDiagonal();
-      Eigen::Matrix<float, kInputSize, kInputSize> R = (Eigen::Matrix<float, kInputSize, 1>() <<
-        100.0, 10.0).finished().asDiagonal();
+      // Initialize the states and controls.
+      for (int i = 0; i < ACADO_NX * (ACADO_N + 1); ++i) {
+        acadoVariables.x[i] = 0.0;
+      }
 
-      mpc_controller_->setCosts(Q, R);
+      for (int i = 0; i < ACADO_NU * ACADO_N; ++i) {
+        acadoVariables.u[i] = 0.0;
+      }
 
-      solve_from_scratch_ = true;
-      preparation_thread_ = std::thread(&MPCWrapper<float>::prepare, mpc_controller_);
+      for (int i = 0; i < ACADO_NY * ACADO_N; ++i) {
+        acadoVariables.y[i] = 0.0;
+      }
 
+      for (int i = 0; i < ACADO_NYN; ++i) {
+        acadoVariables.yN[i] = 0.0;
+      }
+
+      for (int i = 0; i < ACADO_N; i++) {
+        previous_control_.push_back(ControlInput());
+      }
+
+      // Prepare first step
+      acado_preparationStep();
+
+      double w_x = mpc_parameters_.Q[STATE::kX];
+      double w_y = mpc_parameters_.Q[STATE::kY];
+      double w_vel = mpc_parameters_.Q[STATE::kV];
+      double w_yaw = mpc_parameters_.Q[STATE::kPsi];
+      double w_acc = mpc_parameters_.R[INPUT::kacc];
+      double w_df = mpc_parameters_.R[INPUT::kdf];
+
+      for (int i = 0; i < ACADO_N; i++) {
+        // Setup diagonal entries
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 0] = w_x;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 1] = w_y;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 2] = w_vel;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 3] = w_yaw;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 4] = w_acc;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 5] = w_df;
+      }
+      acadoVariables.WN[(ACADO_NYN + 1) * 0] = w_x;
+      acadoVariables.WN[(ACADO_NYN + 1) * 1] = w_y;
+      acadoVariables.WN[(ACADO_NYN + 1) * 2] = w_vel;
+      acadoVariables.WN[(ACADO_NYN + 1) * 3] = w_yaw;
+
+      for (int i = 0; i < ACADO_N * ACADO_NY; i++) {
+        acadoVariables.W[i] = 1;
+      }
 
     }
 
@@ -135,71 +168,86 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, roll, pitch, psi);
 
-      preparation_thread_.join();
       States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
-      est_state_ = Eigen::Vector4f(curr_states.x, curr_states.y, curr_states.psi, curr_states.v);
+      auto est_state =
+        Eigen::Vector4f(curr_states.x, curr_states.y, curr_states.psi, curr_states.v);
 
       std::vector<States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
 
-      for (size_t i = 0; i < local_interpolated_reference_states.size(); i++) {
-        reference_states_(0, i) = local_interpolated_reference_states[i].x;
-        reference_states_(1, i) = local_interpolated_reference_states[i].y;
-        reference_states_(2, i) = local_interpolated_reference_states[i].psi;
-        reference_states_(3, i) = local_interpolated_reference_states[i].v;
-        reference_inputs_(0, i) = previous_control_.acc;
-        reference_inputs_(1, i) = previous_control_.df;
+      for (int i = 0; i < ACADO_NY * ACADO_N; ++i) { // NY * N = 4 * 10 = 40
+        int state = i % ACADO_NY;
+        int index = i / ACADO_NY;
+        if (state == STATE::kX) {
+          acadoVariables.y[i] = local_interpolated_reference_states[index].x;
+        } else if (state == STATE::kY) {
+          acadoVariables.y[i] = local_interpolated_reference_states[index].y;
+        } else if (state == STATE::kV) {
+          acadoVariables.y[i] = local_interpolated_reference_states[index].v;
+        } else if (state == STATE::kPsi) {
+          acadoVariables.y[i] = local_interpolated_reference_states[index].psi;
+        } else if (state == 4) {
+          acadoVariables.y[i] = previous_control_.begin()->acc;
+        } else if (state == 5) {
+          acadoVariables.y[i] = previous_control_.begin()->df;
+        }
       }
 
-      // update the states
-      mpc_controller_->setTrajectory(reference_states_, reference_inputs_);
-
-      if (mpc_parameters_.debug_mode) {
-        std::cout << "reference_states_: " << std::endl;
-        std::cout << reference_states_ << std::endl;
-        std::cout << "reference_inputs_: " << std::endl;
-        std::cout << reference_inputs_ << std::endl;
+      // Set the Terminal Reference
+      for (int i = 0; i < ACADO_NYN; ++i) {
+        auto index = local_interpolated_reference_states.size() - 1;
+        if (i == STATE::kX) {
+          acadoVariables.yN[i] = local_interpolated_reference_states[index].x;
+        } else if (i == STATE::kY) {
+          acadoVariables.yN[i] = local_interpolated_reference_states[index].y;
+        } else if (i == STATE::kV) {
+          acadoVariables.yN[i] = local_interpolated_reference_states[index].v;
+        } else if (i == STATE::kPsi) {
+          acadoVariables.yN[i] = local_interpolated_reference_states[index].psi;
+        }
       }
 
-      static const bool do_preparation_step(false);
-      if (solve_from_scratch_) {
-        RCLCPP_INFO(parent_->get_logger(), "Solving MPC with hover as initial guess.");
-        auto res = mpc_controller_->solve(est_state_);
-        solve_from_scratch_ = false;
-      } else {
-        mpc_controller_->update(est_state_, do_preparation_step);
-      }
+      // MPC: set the current state feedback
+      acadoVariables.x0[0] = curr_states.x;
+      acadoVariables.x0[1] = curr_states.y;
+      acadoVariables.x0[2] = curr_states.v;
+      acadoVariables.x0[3] = curr_states.psi;
 
-      mpc_controller_->getStates(predicted_states_);
-      mpc_controller_->getInputs(predicted_inputs_);
+      acado_preparationStep();
 
-      // Start a thread to prepare for the next execution.
-      preparation_thread_ = std::thread(&MPCControllerAcadoROS::preparationThread, this);
+      auto ret = acado_feedbackStep();
 
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
 
       if (mpc_parameters_.debug_mode) {
-        std::cout << "predicted_states_: " << std::endl;
-        std::cout << predicted_states_ << std::endl;
-        std::cout << "predicted_control: " << std::endl;
-        std::cout << predicted_inputs_ << std::endl;
+        std::cout << "Return code from acado_feedbackStep(): " << ret << std::endl;
         acado_printDifferentialVariables();
         acado_printControlVariables();
       }
 
-      ControlInput computed_control;
-      computed_control.acc = predicted_inputs_(0, 0);
-      computed_control.df = predicted_inputs_(1, 0);
+      std::vector<ControlInput> computed_controls;
+      real_t * u = acado_getVariablesU();
+      for (int i = 0; i < ACADO_N; ++i) {
+        ControlInput curr;
+        for (int j = 0; j < ACADO_NU; ++j) {
+          if (j == 0) {
+            curr.acc = (double)u[i * ACADO_NU + j];
+          } else {
+            curr.df = (double)u[i * ACADO_NU + j];
+          }
+        }
+        computed_controls.push_back(curr);
+      }
 
       //  The control output is acceleration but we need to publish speed
-      computed_velocity_.linear.x += computed_control.acc * (dt);
+      computed_velocity_.linear.x += computed_controls.begin()->acc * (dt);
       //  The control output is steeering angle but we need to publish angular velocity
-      computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_control.df) /
+      computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
         rear_axle_tofront_dist;
 
       regulate_max_speed();
@@ -217,21 +265,11 @@ namespace vox_nav_control
         res.actual_computed_states, blue_color, "actual_traj",
         mpc_computed_traj_publisher_);*/
 
-      previous_control_ = computed_control;
+      previous_control_ = computed_controls;
+
       return computed_velocity_;
     }
 
-    void MPCControllerAcadoROS::preparationThread()
-    {
-      const clock_t start = clock();
-
-      mpc_controller_->prepare();
-
-      // Timing
-      const clock_t end = clock();
-      timing_preparation_ = 0.9 * timing_preparation_ +
-        0.1 * double(end - start) / CLOCKS_PER_SEC;
-    }
 
     geometry_msgs::msg::Twist MPCControllerAcadoROS::computeHeadingCorrectionCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
@@ -246,50 +284,26 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, roll, pitch, psi);
 
-      preparation_thread_.join();
       States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
-      est_state_ = Eigen::Vector4f(curr_states.x, curr_states.y, curr_states.psi, curr_states.v);
+      auto est_state =
+        Eigen::Vector4f(curr_states.x, curr_states.y, curr_states.psi, curr_states.v);
 
       std::vector<States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
       for (size_t i = 0; i < local_interpolated_reference_states.size(); i++) {
-        reference_states_(0, i) = local_interpolated_reference_states[i].x;
-        reference_states_(1, i) = local_interpolated_reference_states[i].y;
-        reference_states_(2, i) = local_interpolated_reference_states[i].psi;
-        reference_states_(3, i) = local_interpolated_reference_states[i].v;
-        reference_inputs_(0, i) = previous_control_.acc;
-        reference_inputs_(1, i) = previous_control_.df;
+
       }
-
-      // update the states
-      mpc_controller_->update(est_state_);
-      mpc_controller_->setTrajectory(reference_states_, reference_inputs_);
-
-      static const bool do_preparation_step(true);
-      if (solve_from_scratch_) {
-        RCLCPP_INFO(parent_->get_logger(), "Solving MPC with hover as initial guess.");
-        auto res = mpc_controller_->solve(est_state_);
-        solve_from_scratch_ = false;
-      } else {
-        mpc_controller_->update(est_state_, do_preparation_step);
-      }
-
-      mpc_controller_->getStates(predicted_states_);
-      mpc_controller_->getInputs(predicted_inputs_);
-
-      // Start a thread to prepare for the next execution.
-      preparation_thread_ = std::thread(&MPCControllerAcadoROS::preparationThread, this);
 
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
 
       ControlInput computed_control;
-      computed_control.acc = predicted_inputs_(0, 0);
-      computed_control.df = predicted_inputs_(1, 0);
+      computed_control.acc = 0;//predicted_inputs_(0, 0);
+      computed_control.df = 0;//predicted_inputs_(1, 0);
 
       //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x = 0;

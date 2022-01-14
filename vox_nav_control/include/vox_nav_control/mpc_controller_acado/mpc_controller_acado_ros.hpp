@@ -15,7 +15,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <vox_nav_control/common.hpp>
 #include <vox_nav_control/controller_core.hpp>
-#include <vox_nav_control/mpc_controller_acado/mpc_wrapper.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_msgs/msg/object_array.hpp>
 
@@ -34,6 +33,10 @@
 #include <string>
 #include <memory>
 #include <vector>
+
+#include <vox_nav_control/mpc_controller_acado/auto_gen/acado_common.h>
+#include <vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.h>
+
 
 #ifndef VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ACADO_ROS_HPP_
 #define VOX_NAV_CONTROL__MPC_CONTROLLER__MPC_CONTROLLER_ACADO_ROS_HPP_
@@ -170,20 +173,17 @@ namespace vox_nav_control
        */
       std::vector<Ellipsoid> trackMsg2Ellipsoids(const vox_nav_msgs::msg::ObjectArray & tracks);
 
-      void preparationThread();
-
     private:
       // Given refernce traj to follow, this is set got from planner
       nav_msgs::msg::Path reference_traj_;
       // computed velocities as result of MPC
       geometry_msgs::msg::Twist computed_velocity_;
       // MPC core controller object
-      std::shared_ptr<MPCWrapper<float>> mpc_controller_;
       // parameters struct used for MPC controller
       Parameters mpc_parameters_;
       // Keep a copy of previously applied control inputs, this is neded
       // by MPC algorithm
-      ControlInput previous_control_;
+      std::vector<ControlInput> previous_control_;
       // Publish local trajecory currently being fed to controller
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
         interpolated_local_reference_traj_publisher_;
@@ -196,18 +196,6 @@ namespace vox_nav_control
       rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr obstacle_tracks_sub_;
       vox_nav_msgs::msg::ObjectArray obstacle_tracks_;
       std::mutex obstacle_tracks_mutex_;
-
-      // Preparation Thread
-      std::thread preparation_thread_;
-
-      // Variables
-      float timing_feedback_, timing_preparation_;
-      bool solve_from_scratch_;
-      Eigen::Matrix<float, kStateSize, 1> est_state_;
-      Eigen::Matrix<float, kStateSize, kSamples + 1> reference_states_;
-      Eigen::Matrix<float, kInputSize, kSamples + 1> reference_inputs_;
-      Eigen::Matrix<float, kStateSize, kSamples + 1> predicted_states_;
-      Eigen::Matrix<float, kInputSize, kSamples> predicted_inputs_;
 
     };
 
