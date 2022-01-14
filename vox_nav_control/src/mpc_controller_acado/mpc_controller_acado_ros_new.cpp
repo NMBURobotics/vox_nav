@@ -145,6 +145,7 @@ namespace vox_nav_control
         acadoVariables.W[i] = 1;
       }
 
+
     }
 
     geometry_msgs::msg::Twist MPCControllerAcadoROS::computeVelocityCommands(
