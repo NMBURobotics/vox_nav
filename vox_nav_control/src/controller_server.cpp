@@ -61,7 +61,7 @@ namespace vox_nav_control
         pc_loader_.createSharedInstance(controller_type_);
       controller_->initialize(this, controller_id_);
       RCLCPP_INFO(
-        get_logger(), "Created controller plugin %s of type %s",
+        get_logger(), "Created and initialized controller plugin %s of type %s",
         controller_id_.c_str(), controller_type_.c_str());
     } catch (const pluginlib::PluginlibException & ex) {
       RCLCPP_FATAL(
