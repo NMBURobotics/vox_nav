@@ -732,7 +732,7 @@ Visualization Manager:
       Enabled: true
       Name: SuperVoxelVisuals
       Namespaces:
-        {}
+        supervoxel_markers_ns: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -843,11 +843,7 @@ Visualization Manager:
       Enabled: true
       Name: Object Track Markers
       Namespaces:
-        "": true
-        track_arrows: true
-        track_clylinders: true
-        track_text: true
-        track_waypoints: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -892,7 +888,7 @@ Visualization Manager:
       Enabled: true
       Name: MPC Refernece Trajectory
       Namespaces:
-        {}
+        ref_traj: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -916,7 +912,7 @@ Visualization Manager:
       Enabled: true
       Name: Global Plan
       Namespaces:
-        {}
+        path: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -958,25 +954,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 24.369089126586914
+      Distance: 32.80506134033203
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -6.451197147369385
-        Y: -6.028855323791504
-        Z: -2.12070117413532e-05
+        X: 4.167567253112793
+        Y: 0.7499061226844788
+        Z: -1.8928527424577624e-05
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9497963190078735
+      Pitch: 1.5697963237762451
       Target Frame: map
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.3426778316497803
+      Yaw: 0.5526782870292664
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016

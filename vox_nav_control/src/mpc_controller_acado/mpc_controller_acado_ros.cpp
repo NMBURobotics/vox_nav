@@ -340,9 +340,20 @@ namespace vox_nav_control
     std::vector<States> MPCControllerAcadoROS::getLocalInterpolatedReferenceStates(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
+      double robot_roll, robot_pitch, robot_yaw;
+      geometry_msgs::msg::PoseStamped front_axle_pose;
+      vox_nav_utilities::getRPYfromMsgQuaternion(
+        curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_yaw);
+
+      front_axle_pose.pose.position.x =
+        curr_robot_pose.pose.position.x + 1.5 * mpc_parameters_.L_F * std::cos(robot_yaw);
+      front_axle_pose.pose.position.y =
+        curr_robot_pose.pose.position.y + 1.5 * mpc_parameters_.L_F * std::sin(robot_yaw);
+      front_axle_pose.pose.position.z = 0;
+
       double kTARGETSPEED = 1.0;
       // Now lets find nearest trajectory point to robot base
-      int nearsest_traj_state_index = nearestStateIndex(reference_traj_, curr_robot_pose);
+      int nearsest_traj_state_index = nearestStateIndex(reference_traj_, front_axle_pose);
 
       // Auto calculate interpolation steps
       double path_euclidian_length = 0.0;
@@ -369,30 +380,32 @@ namespace vox_nav_control
       ompl::geometric::PathGeometric path(state_space_information);
 
       ompl::base::ScopedState<ompl::base::SE2StateSpace>
-      curr_robot_pose_state(state_space),
       closest_ref_traj_state(state_space),
       ompl_local_goal_state(state_space);
 
       // Feed initial state, which is closest ref trajectory state
       double void_var, yaw;
 
-      // Feed Current robot state
-      /*vox_nav_utilities::getRPYfromMsgQuaternion(
-        curr_robot_pose.pose.orientation, void_var, void_var, yaw);
-      curr_robot_pose_state[0] = curr_robot_pose.pose.position.x;
-      curr_robot_pose_state[1] = curr_robot_pose.pose.position.y;
-      curr_robot_pose_state[2] = yaw;
-      path.append(static_cast<ompl::base::State *>(curr_robot_pose_state.get()));*/
-
-      // Feed Intermediate state , which is nearest state in ref traj
-      int intermediate_state_index = (local_goal_state_index - nearsest_traj_state_index) / 2;
-      intermediate_state_index += nearsest_traj_state_index;
-      vox_nav_utilities::getRPYfromMsgQuaternion(
-        reference_traj_.poses[nearsest_traj_state_index].pose.orientation, void_var, void_var, yaw);
-      closest_ref_traj_state[0] = reference_traj_.poses[nearsest_traj_state_index].pose.position.x;
-      closest_ref_traj_state[1] = reference_traj_.poses[nearsest_traj_state_index].pose.position.y;
-      closest_ref_traj_state[2] = yaw;
-      path.append(static_cast<ompl::base::State *>(closest_ref_traj_state.get()));
+      if (local_goal_state_index - nearsest_traj_state_index < mpc_parameters_.N) {
+        // Feed Intermediate state , which is nearest state in ref traj
+        vox_nav_utilities::getRPYfromMsgQuaternion(
+          curr_robot_pose.pose.orientation, void_var, void_var, yaw);
+        closest_ref_traj_state[0] = curr_robot_pose.pose.position.x;
+        closest_ref_traj_state[1] = curr_robot_pose.pose.position.y;
+        closest_ref_traj_state[2] = yaw;
+        path.append(static_cast<ompl::base::State *>(closest_ref_traj_state.get()));
+      } else {
+        // Feed Intermediate state , which is nearest state in ref traj
+        vox_nav_utilities::getRPYfromMsgQuaternion(
+          reference_traj_.poses[nearsest_traj_state_index].pose.orientation, void_var, void_var,
+          yaw);
+        closest_ref_traj_state[0] =
+          reference_traj_.poses[nearsest_traj_state_index].pose.position.x;
+        closest_ref_traj_state[1] =
+          reference_traj_.poses[nearsest_traj_state_index].pose.position.y;
+        closest_ref_traj_state[2] = yaw;
+        path.append(static_cast<ompl::base::State *>(closest_ref_traj_state.get()));
+      }
 
       // Feed the final state, which the local goal for the current control effort.
       // This is basically the state in the ref trajectory, which is closest to global_plan_look_ahead_distance_
