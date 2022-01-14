@@ -4,21 +4,58 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <rclcpp/rclcpp.hpp>
 
-int main()
+int main(int argc, char ** argv)
 {
 
-  double L_R = 0.66;
-  double L_F = 0.66;
-  const int N = 8;
-  const int Ni = 1;
-  const double Ts = 0.1;
-  const double min_acc_dv = -1.0;
-  const double max_acc_dv = 1.0;
-  const double min_v_dv = -1.0;
-  const double max_v_dv = 1.0;
-  const double min_df_dv = -M_PI_2 / 4;
-  const double max_df_dv = M_PI_2 / 4;
+  rclcpp::init(argc, argv);
+
+  int N;
+  int Ni;
+  double DT;
+  double L_F;
+  double L_R;
+  double min_acc_dv;
+  double max_acc_dv;
+  double min_df_dv;
+  double max_df_dv;
+
+  auto node = std::make_shared<rclcpp::Node>("vox_nav_controller_server_rclcpp_node");
+
+  RCLCPP_INFO(node->get_logger(), "Trying to acquire paramaters for %s", node->get_name());
+
+  std::string plugin_name = "MPCControllerAcadoROS";
+  node->declare_parameter(plugin_name + ".N", 10);
+  node->declare_parameter(plugin_name + ".Ni", 1);
+  node->declare_parameter(plugin_name + ".DT", 0.1);
+  node->declare_parameter(plugin_name + ".L_F", 0.66);
+  node->declare_parameter(plugin_name + ".L_R", 0.66);
+  node->declare_parameter(plugin_name + ".A_MIN", -1.0);
+  node->declare_parameter(plugin_name + ".A_MAX", 1.0);
+  node->declare_parameter(plugin_name + ".DF_MIN", -0.5);
+  node->declare_parameter(plugin_name + ".DF_MAX", 0.5);
+  node->get_parameter(plugin_name + ".N", N);
+  node->get_parameter(plugin_name + ".Ni", Ni);
+  node->get_parameter(plugin_name + ".DT", DT);
+  node->get_parameter(plugin_name + ".L_F", L_F);
+  node->get_parameter(plugin_name + ".L_R", L_R);
+  node->get_parameter(plugin_name + ".A_MIN", min_acc_dv);
+  node->get_parameter(plugin_name + ".A_MAX", max_acc_dv);
+  node->get_parameter(plugin_name + ".DF_MIN", min_df_dv);
+  node->get_parameter(plugin_name + ".DF_MAX", max_df_dv);
+
+  RCLCPP_INFO(node->get_logger(), "Generating acado code with following parameters");
+
+  RCLCPP_INFO_STREAM(node->get_logger(), "N " << N);
+  RCLCPP_INFO_STREAM(node->get_logger(), "Ni " << Ni);
+  RCLCPP_INFO_STREAM(node->get_logger(), "DT " << DT);
+  RCLCPP_INFO_STREAM(node->get_logger(), "L_F " << L_F);
+  RCLCPP_INFO_STREAM(node->get_logger(), "L_R " << L_R);
+  RCLCPP_INFO_STREAM(node->get_logger(), "A_MIN " << min_acc_dv);
+  RCLCPP_INFO_STREAM(node->get_logger(), "A_MAX " << max_acc_dv);
+  RCLCPP_INFO_STREAM(node->get_logger(), "DF_MIN " << min_df_dv);
+  RCLCPP_INFO_STREAM(node->get_logger(), "DF_MAX " << max_df_dv);
 
   // INTRODUCE THE VARIABLES (acadoVariables.x):
   // -------------------------
@@ -36,13 +73,11 @@ int main()
   // -------------------------------
   ACADO::DifferentialEquation f;
 
-  //auto beta = atan(L_R / (L_R + L_F) * tan(df_dv));
-
-  f << dot(x_dv) == v_dv * cos(psi_dv /*+ beta*/);
-  f << dot(y_dv) == v_dv * sin(psi_dv /*+ beta*/);
-  //f << dot(psi_dv) == (v_dv / L_R * sin(beta));
+  auto beta = atan(L_R / (L_R + L_F) * tan(df_dv));
+  f << dot(x_dv) == v_dv * cos(psi_dv + beta);
+  f << dot(y_dv) == v_dv * sin(psi_dv + beta);
   f << dot(v_dv) == acc_dv;
-  f << dot(psi_dv) == v_dv * tan(df_dv) / L_R;
+  f << dot(psi_dv) == (v_dv / L_R * sin(beta));
 
   ACADO::Function rf;
   ACADO::Function rfN;
@@ -50,7 +85,7 @@ int main()
   rf << x_dv << y_dv << v_dv << psi_dv << acc_dv << df_dv;
   rfN << x_dv << y_dv << v_dv << psi_dv;
 
-  ACADO::OCP ocp(0, N * Ts, N);
+  ACADO::OCP ocp(0, N * DT, N);
 
   ocp.subjectTo(f);
 
@@ -63,7 +98,6 @@ int main()
   // control constraints
   ocp.subjectTo(min_acc_dv <= acc_dv <= max_acc_dv);
   ocp.subjectTo(min_df_dv <= df_dv <= max_df_dv);
-  //ocp.subjectTo(min_v_dv <= v_dv <= max_v_dv);
 
   // Provide defined weighting matrices:
   ACADO::BMatrix W = ACADO::eye<bool>(rf.getDim());
@@ -80,14 +114,14 @@ int main()
 
   mpc.set(HESSIAN_APPROXIMATION, GAUSS_NEWTON);
   mpc.set(DISCRETIZATION_TYPE, MULTIPLE_SHOOTING);
-  mpc.set(INTEGRATOR_TYPE, INT_IRK_RIIA3);
+  mpc.set(INTEGRATOR_TYPE, INT_IRK_GL4);
   mpc.set(NUM_INTEGRATOR_STEPS, N * Ni);
   mpc.set(SPARSE_QP_SOLUTION, FULL_CONDENSING);
   mpc.set(QP_SOLVER, QP_QPOASES);
   mpc.set(HOTSTART_QP, YES);
   mpc.set(GENERATE_TEST_FILE, YES);
+  mpc.set(CG_USE_OPENMP, YES);
   mpc.set(GENERATE_MAKE_FILE, NO);
-  mpc.set(GENERATE_MATLAB_INTERFACE, NO);
   mpc.set(CG_USE_VARIABLE_WEIGHTING_MATRIX, YES);
   mpc.set(FIX_INITIAL_STATE, YES);
 

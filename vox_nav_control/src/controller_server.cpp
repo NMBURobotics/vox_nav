@@ -185,7 +185,7 @@ namespace vox_nav_control
       auto & clock = *this->get_clock();
       RCLCPP_INFO_THROTTLE(
         get_logger(),
-        clock, 500, "Remaining Distance to goal %.4f ...",
+        clock, 1000, "Remaining Distance to goal %.4f ...",
         vox_nav_utilities::getEuclidianDistBetweenPoses(
           curr_robot_pose,
           goal->path.poses.back()));
@@ -249,6 +249,13 @@ namespace vox_nav_control
           "Contol loop missed its desired rate of %.4f Hz. Current loop rate is %.4f Hz",
           1 / controller_duration_, 1 / cycle_duration.seconds());
       }
+
+      // Print the Loop Rate once in a while
+      RCLCPP_INFO_THROTTLE(
+        get_logger(),
+        clock,
+        2000, // ms
+        "Current Control loop rate is %.4f Hz", 1 / cycle_duration.seconds());
       rate.sleep();
     }
     auto cycle_duration = steady_clock_.now() - start_time;

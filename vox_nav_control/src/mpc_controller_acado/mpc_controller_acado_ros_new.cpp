@@ -226,12 +226,9 @@ namespace vox_nav_control
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
 
       if (mpc_parameters_.debug_mode) {
-        std::cout << "Return code: " << ret << std::endl;
+        std::cout << "Return code from acado_feedbackStep(): " << ret << std::endl;
         acado_printDifferentialVariables();
         acado_printControlVariables();
-        std::cout << "acado_getVariablesU : " << ret << std::endl;
-        std::cout << acado_getVariablesU() << std::endl;
-
       }
 
       std::vector<ControlInput> computed_controls;

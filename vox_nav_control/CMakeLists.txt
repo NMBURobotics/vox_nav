@@ -66,9 +66,10 @@ ament_target_dependencies(vox_nav_controller_server ${dependencies})
 target_link_libraries(vox_nav_controller_server ompl)
 
 add_executable(mpc_controller_acado_code_gen src/mpc_controller_acado/mpc_controller_acado_code_gen.cpp)
+ament_target_dependencies(mpc_controller_acado_code_gen ${dependencies})
 target_link_libraries(mpc_controller_acado_code_gen ${ACADO_SHARED_LIBRARIES})
 
-add_library(mpc_controller_casadi SHARED src/mpc_controller_casadi/mpc_controller_casadi_core.cpp 
+add_library(mpc_controller_casadi SHARED               src/mpc_controller_casadi/mpc_controller_casadi_core.cpp 
                                                        src/mpc_controller_casadi/mpc_controller_casadi_ros.cpp)
 ament_target_dependencies(mpc_controller_casadi ${dependencies})
 target_link_libraries(mpc_controller_casadi ompl casadi)
@@ -115,9 +116,8 @@ install(TARGETS vox_nav_controller_server
 install(DIRECTORY include/
   DESTINATION include/)
 
-install(
-  DIRECTORY 
-  DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY cmake launch 
+DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
