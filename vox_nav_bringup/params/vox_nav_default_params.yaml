@@ -61,7 +61,7 @@ vox_nav_controller_server_rclcpp_node:
       goal_tolerance_distance: 0.2                                            # in meters, once smaller than this one controller tries to minimize orientation error
       goal_tolerance_orientation: 0.1                                         # in radians, once smaller than this value,controller exits with success
       transform_timeout: 0.01                                                 # seconds, this is used to regulate lookUpTransfrom calls from tf2
-      global_plan_look_ahead_distance: 3.0                                    # look this amount of meters from current robot pose to remaining global path
+      global_plan_look_ahead_distance: 3.2                                    # look this amount of meters from current robot pose to remaining global path
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
          N: 8                                                                 # timesteps in MPC Horizon
@@ -93,10 +93,10 @@ vox_nav_controller_server_rclcpp_node:
          V_MAX: 1.5
          A_MIN: -1.0                                                          # min / max acceleration constraint(m / s ^ 2)
          A_MAX: 1.0
-         DF_MIN: -0.25                                                         # min / max front steer angle constraint(rad)
-         DF_MAX: 0.25
-         Q: [10.0, 200.0, 10.0, 100000.0]                                           # weights on x, y, v, and psi.
-         R: [10.0, 10.0]                                                      # weights on input acc and df, acceleration and steering angle
+         DF_MIN: -0.6                                                         # min / max front steer angle constraint(rad)
+         DF_MAX: 0.6
+         Q: [10.0, 10.0, 0.0, 0.0]                                           # weights on x, y, v, and psi.
+         R: [10.0, 100.0]                                                      # weights on input acc and df, acceleration and steering angle
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
 

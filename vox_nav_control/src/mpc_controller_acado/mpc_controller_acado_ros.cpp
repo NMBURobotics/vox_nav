@@ -142,7 +142,7 @@ namespace vox_nav_control
       acadoVariables.WN[(ACADO_NYN + 1) * 3] = w_yaw;
 
       for (int i = 0; i < ACADO_N * ACADO_NY; i++) {
-        acadoVariables.W[i] = 1;
+        //acadoVariables.W[i] = 1;
       }
 
     }
@@ -362,20 +362,31 @@ namespace vox_nav_control
       std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
         std::make_shared<ompl::base::RealVectorBounds>(2);
       ompl::base::StateSpacePtr state_space =
-        std::make_shared<ompl::base::DubinsStateSpace>();
-      state_space->as<ompl::base::DubinsStateSpace>()->setBounds(*state_space_bounds);
+        std::make_shared<ompl::base::SE2StateSpace>();
+      state_space->as<ompl::base::SE2StateSpace>()->setBounds(*state_space_bounds);
       ompl::base::SpaceInformationPtr state_space_information =
         std::make_shared<ompl::base::SpaceInformation>(state_space);
       ompl::geometric::PathGeometric path(state_space_information);
 
-      ompl::base::ScopedState<ompl::base::DubinsStateSpace>
+      ompl::base::ScopedState<ompl::base::SE2StateSpace>
+      curr_robot_pose_state(state_space),
       closest_ref_traj_state(state_space),
       ompl_local_goal_state(state_space);
 
       // Feed initial state, which is closest ref trajectory state
       double void_var, yaw;
 
+      // Feed Current robot state
+      /*vox_nav_utilities::getRPYfromMsgQuaternion(
+        curr_robot_pose.pose.orientation, void_var, void_var, yaw);
+      curr_robot_pose_state[0] = curr_robot_pose.pose.position.x;
+      curr_robot_pose_state[1] = curr_robot_pose.pose.position.y;
+      curr_robot_pose_state[2] = yaw;
+      path.append(static_cast<ompl::base::State *>(curr_robot_pose_state.get()));*/
+
       // Feed Intermediate state , which is nearest state in ref traj
+      int intermediate_state_index = (local_goal_state_index - nearsest_traj_state_index) / 2;
+      intermediate_state_index += nearsest_traj_state_index;
       vox_nav_utilities::getRPYfromMsgQuaternion(
         reference_traj_.poses[nearsest_traj_state_index].pose.orientation, void_var, void_var, yaw);
       closest_ref_traj_state[0] = reference_traj_.poses[nearsest_traj_state_index].pose.position.x;
@@ -402,8 +413,8 @@ namespace vox_nav_control
       std::vector<States> interpolated_reference_states;
       for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
         // cast the abstract state type to the type we expect
-        const ompl::base::DubinsStateSpace::StateType * interpolated_state =
-          path.getState(path_idx)->as<ompl::base::DubinsStateSpace::StateType>();
+        const ompl::base::SE2StateSpace::StateType * interpolated_state =
+          path.getState(path_idx)->as<ompl::base::SE2StateSpace::StateType>();
         States curr_interpolated_state;
         curr_interpolated_state.v = kTARGETSPEED;
         curr_interpolated_state.x = interpolated_state->getX();
