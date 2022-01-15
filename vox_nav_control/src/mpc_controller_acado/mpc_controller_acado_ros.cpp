@@ -112,22 +112,20 @@ namespace vox_nav_control
         };
 
       double dt = mpc_parameters_.DT;
-      double kTARGET_SPEED = 1.0;
-      // distance from rear to front axle(m)
-      double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
+      double kTARGET_SPEED = mpc_parameters_.V_MAX;
 
-      double roll, pitch, psi;
+      double robot_roll, robot_pitch, robot_psi;
       vox_nav_utilities::getRPYfromMsgQuaternion(
-        curr_robot_pose.pose.orientation, roll, pitch, psi);
+        curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
 
       States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
-      curr_states.psi = psi;
+      curr_states.psi = robot_psi;
       curr_states.v = kTARGET_SPEED;
 
-      std::vector<States> local_interpolated_reference_states =
-        getLocalInterpolatedReferenceStates(curr_robot_pose);
+      std::vector<States> local_interpolated_reference_states = getLocalInterpolatedReferenceStates(
+        curr_robot_pose);
 
       setRefrenceStates(local_interpolated_reference_states, previous_control_);
       updateCurrentStates(curr_states);
@@ -150,7 +148,7 @@ namespace vox_nav_control
       computed_velocity_.linear.x += computed_controls.begin()->acc * (dt);
       //  The control output is steeering angle but we need to publish angular velocity
       computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
-        rear_axle_tofront_dist;
+        (mpc_parameters_.L_R + mpc_parameters_.L_F);
 
       regulate_max_speed();
 
@@ -172,43 +170,46 @@ namespace vox_nav_control
       return computed_velocity_;
     }
 
-
     geometry_msgs::msg::Twist MPCControllerAcadoROS::computeHeadingCorrectionCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
-
       double dt = mpc_parameters_.DT;
-      double kTARGET_SPEED = 0.0;
-      // distance from rear to front axle(m)
-      double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
+      double kTARGET_SPEED = mpc_parameters_.V_MAX;
 
-      double roll, pitch, psi;
+      double robot_roll, robot_pitch, robot_psi;
       vox_nav_utilities::getRPYfromMsgQuaternion(
-        curr_robot_pose.pose.orientation, roll, pitch, psi);
+        curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
 
       States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
-      curr_states.psi = psi;
+      curr_states.psi = robot_psi;
       curr_states.v = kTARGET_SPEED;
 
-      std::vector<States> local_interpolated_reference_states =
-        getLocalInterpolatedReferenceStates(curr_robot_pose);
-      for (size_t i = 0; i < local_interpolated_reference_states.size(); i++) {
+      std::vector<States> local_interpolated_reference_states = getLocalInterpolatedReferenceStates(
+        curr_robot_pose);
 
-      }
+      setRefrenceStates(local_interpolated_reference_states, previous_control_);
+      updateCurrentStates(curr_states);
+
+      acado_preparationStep();
+      auto ret = acado_feedbackStep();
 
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
 
-      ControlInput computed_control;
-      computed_control.acc = 0;//predicted_inputs_(0, 0);
-      computed_control.df = 0;//predicted_inputs_(1, 0);
+      if (mpc_parameters_.debug_mode) {
+        std::cout << "Return code from acado_feedbackStep(): " << ret << std::endl;
+        acado_printDifferentialVariables();
+        acado_printControlVariables();
+      }
+
+      std::vector<ControlInput> computed_controls = getPredictedControlsFromAcado();
+      std::vector<States> computed_states = getPredictedStatesFromAcado();
 
       //  The control output is acceleration but we need to publish speed
-      computed_velocity_.linear.x = 0;
+      computed_velocity_.linear.x += 0;
       //  The control output is steeering angle but we need to publish angular velocity
-      computed_velocity_.angular.z = (computed_control.acc * computed_control.df) /
-        rear_axle_tofront_dist;
+      computed_velocity_.angular.z += computed_controls.begin()->df * dt;
 
       return computed_velocity_;
     }

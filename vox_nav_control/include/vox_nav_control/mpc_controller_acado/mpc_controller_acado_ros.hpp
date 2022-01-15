@@ -240,7 +240,6 @@ namespace vox_nav_control
       rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr obstacle_tracks_sub_;
       vox_nav_msgs::msg::ObjectArray obstacle_tracks_;
       std::mutex obstacle_tracks_mutex_;
-
     };
 
   } // namespace mpc_controller_acado

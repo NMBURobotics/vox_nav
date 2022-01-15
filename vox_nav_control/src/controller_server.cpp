@@ -175,7 +175,8 @@ namespace vox_nav_control
         return;
       }
 
-      geometry_msgs::msg::PoseStamped curr_robot_pose;
+      geometry_msgs::msg::PoseStamped curr_robot_pose, curr_robot_steering_angle;
+
       vox_nav_utilities::getCurrentPose(
         curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
 
