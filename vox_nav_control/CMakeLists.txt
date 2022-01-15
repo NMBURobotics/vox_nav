@@ -74,7 +74,7 @@ add_library(mpc_controller_casadi SHARED               src/mpc_controller_casadi
 ament_target_dependencies(mpc_controller_casadi ${dependencies})
 target_link_libraries(mpc_controller_casadi ompl casadi)
 
-set(ACADO_CODE_IS_READY ON)
+option(ACADO_CODE_IS_READY "Whether Acado code has been generated" ON)
 
 if(ACADO_CODE_IS_READY)
 

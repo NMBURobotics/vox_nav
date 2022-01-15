@@ -56,7 +56,7 @@ vox_nav_planner_server_rclcpp_node:
 
 vox_nav_controller_server_rclcpp_node:
    ros__parameters:
-      controller_plugin: "MPCControllerAcadoROS"                                   # other options: non
+      controller_plugin: "MPCControllerAcadoROS"                              # other options: non
       controller_frequency: 200.0                                             # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
       goal_tolerance_distance: 0.2                                            # in meters, once smaller than this one controller tries to minimize orientation error
       goal_tolerance_orientation: 0.1                                         # in radians, once smaller than this value,controller exits with success
@@ -84,7 +84,7 @@ vox_nav_controller_server_rclcpp_node:
          params_configured: True
       MPCControllerAcadoROS:
          plugin: "mpc_controller_acado::MPCControllerAcadoROS"
-         N: 20                                                                 # timesteps in MPC Horizon
+         N: 20                                                                # timesteps in MPC Horizon
          Ni: 1
          DT: 0.1                                                              # discretization time between timesteps(s)
          L_F: 0.67                                                            # distance from CoG to front axle(m)
