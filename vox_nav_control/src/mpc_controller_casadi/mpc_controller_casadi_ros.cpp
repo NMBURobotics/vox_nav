@@ -114,14 +114,17 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, roll, pitch, psi);
 
-      States curr_states;
+      vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
-      std::vector<States> local_interpolated_reference_states =
-        getLocalInterpolatedReferenceStates(curr_robot_pose);
+      std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
+        getLocalInterpolatedReferenceStates(
+        curr_robot_pose, mpc_parameters_, reference_traj_,
+        global_plan_look_ahead_distance_);
+
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
@@ -141,10 +144,10 @@ namespace vox_nav_control
       red_color.a = 1.0;
       blue_color.b = 1.0;
       blue_color.a = 1.0;
-      publishTrajStates(
+      vox_nav_control::common::publishTrajStates(
         local_interpolated_reference_states, red_color, "ref_traj",
         interpolated_local_reference_traj_publisher_);
-      publishTrajStates(
+      vox_nav_control::common::publishTrajStates(
         res.actual_computed_states, blue_color, "actual_traj",
         mpc_computed_traj_publisher_);
 
@@ -164,14 +167,16 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, nan, nan, psi);
 
-      States curr_states;
+      vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
-      std::vector<States> local_interpolated_reference_states =
-        getLocalInterpolatedReferenceStates(curr_robot_pose);
+      std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
+        getLocalInterpolatedReferenceStates(
+        curr_robot_pose, mpc_parameters_, reference_traj_,
+        global_plan_look_ahead_distance_);
 
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(local_interpolated_reference_states);
@@ -193,133 +198,6 @@ namespace vox_nav_control
       reference_traj_ = path;
     }
 
-    int MPCControllerCasadiROS::nearestStateIndex(
-      nav_msgs::msg::Path reference_traj, geometry_msgs::msg::PoseStamped curr_robot_pose)
-    {
-      int closest_state_index = -1;
-      int closest_state_distance = 10000.0;
-      for (int i = 0; i < reference_traj.poses.size(); i++) {
-
-        double curr_distance =
-          vox_nav_utilities::getEuclidianDistBetweenPoses(reference_traj.poses[i], curr_robot_pose);
-
-        if (curr_distance < closest_state_distance) {
-          closest_state_distance = curr_distance;
-          closest_state_index = i;
-        }
-      }
-      return closest_state_index;
-    }
-
-    std::vector<States> MPCControllerCasadiROS::getLocalInterpolatedReferenceStates(
-      geometry_msgs::msg::PoseStamped curr_robot_pose)
-    {
-      double kTARGETSPEED = 0.0;
-      // Now lets find nearest trajectory point to robot base
-      int nearsest_traj_state_index = nearestStateIndex(reference_traj_, curr_robot_pose);
-
-      // Auto calculate interpolation steps
-      double path_euclidian_length = 0.0;
-      for (size_t i = 1; i < reference_traj_.poses.size(); i++) {
-        path_euclidian_length += vox_nav_utilities::getEuclidianDistBetweenPoses(
-          reference_traj_.poses[i], reference_traj_.poses[i - 1]);
-      }
-
-      double interpolation_step_size = path_euclidian_length / reference_traj_.poses.size();
-      int states_to_see_horizon = global_plan_look_ahead_distance_ / interpolation_step_size;
-      int local_goal_state_index = nearsest_traj_state_index + states_to_see_horizon;
-      if (local_goal_state_index >= reference_traj_.poses.size() - 1) {
-        local_goal_state_index = reference_traj_.poses.size() - 1;
-      }
-      // Define a state space, we basically need this only because we want to use OMPL's
-      // geometric path, And then we can interpolate this path
-      std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
-        std::make_shared<ompl::base::RealVectorBounds>(2);
-      ompl::base::StateSpacePtr state_space =
-        std::make_shared<ompl::base::DubinsStateSpace>();
-      state_space->as<ompl::base::DubinsStateSpace>()->setBounds(*state_space_bounds);
-      ompl::base::SpaceInformationPtr state_space_information =
-        std::make_shared<ompl::base::SpaceInformation>(state_space);
-      ompl::geometric::PathGeometric path(state_space_information);
-
-      ompl::base::ScopedState<ompl::base::DubinsStateSpace>
-      closest_ref_traj_state(state_space),
-      ompl_local_goal_state(state_space);
-
-      // Feed initial state, which is closest ref trajectory state
-      double void_var, yaw;
-
-      // Feed Intermediate state , which is nearest state in ref traj
-      vox_nav_utilities::getRPYfromMsgQuaternion(
-        reference_traj_.poses[nearsest_traj_state_index].pose.orientation, void_var, void_var, yaw);
-      closest_ref_traj_state[0] = reference_traj_.poses[nearsest_traj_state_index].pose.position.x;
-      closest_ref_traj_state[1] = reference_traj_.poses[nearsest_traj_state_index].pose.position.y;
-      closest_ref_traj_state[2] = yaw;
-      path.append(static_cast<ompl::base::State *>(closest_ref_traj_state.get()));
-
-      // Feed the final state, which the local goal for the current control effort.
-      // This is basically the state in the ref trajectory, which is closest to global_plan_look_ahead_distance_
-      vox_nav_utilities::getRPYfromMsgQuaternion(
-        reference_traj_.poses[local_goal_state_index].pose.orientation, void_var, void_var, yaw);
-      ompl_local_goal_state[0] = reference_traj_.poses[local_goal_state_index].pose.position.x;
-      ompl_local_goal_state[1] = reference_traj_.poses[local_goal_state_index].pose.position.y;
-      ompl_local_goal_state[2] = yaw;
-      path.append(static_cast<ompl::base::State *>(ompl_local_goal_state.get()));
-
-      // The local ref traj now contains only 3 states, we will interpolate this states with OMPL
-      // The count of states after interpolation must be same as horizon defined for the control problem , hence
-      // it should be mpc_parameters_.N
-      path.interpolate(mpc_parameters_.N);
-
-      // Now the local ref traj is interpolated from current robot state up to state at global look ahead distance
-      // Lets fill the native MPC type ref states and return to caller
-      std::vector<States> interpolated_reference_states;
-      for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
-        // cast the abstract state type to the type we expect
-        const ompl::base::DubinsStateSpace::StateType * interpolated_state =
-          path.getState(path_idx)->as<ompl::base::DubinsStateSpace::StateType>();
-        States curr_interpolated_state;
-        curr_interpolated_state.v = kTARGETSPEED;
-        curr_interpolated_state.x = interpolated_state->getX();
-        curr_interpolated_state.y = interpolated_state->getY();
-        curr_interpolated_state.psi = interpolated_state->getYaw();
-        interpolated_reference_states.push_back(curr_interpolated_state);
-      }
-      return interpolated_reference_states;
-    }
-
-    void
-    MPCControllerCasadiROS::publishTrajStates(
-      std::vector<States> interpolated_reference_states,
-      std_msgs::msg::ColorRGBA color,
-      std::string ns,
-      const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher)
-    {
-      visualization_msgs::msg::MarkerArray marker_array;
-      for (int i = 0; i < interpolated_reference_states.size(); i++) {
-        visualization_msgs::msg::Marker marker;
-        marker.header.frame_id = "map";
-        marker.header.stamp = rclcpp::Clock().now();
-        marker.ns = ns;
-        marker.id = i;
-        marker.type = visualization_msgs::msg::Marker::ARROW;
-        marker.action = visualization_msgs::msg::Marker::ADD;
-        marker.lifetime = rclcpp::Duration::from_seconds(0);
-        marker.pose.position.x = interpolated_reference_states[i].x;
-        marker.pose.position.y = interpolated_reference_states[i].y;
-        marker.pose.position.z = 1.3;
-        marker.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-          0, 0, interpolated_reference_states[i].psi);
-        marker.scale.x = 0.25;
-        marker.scale.y = 0.1;
-        marker.scale.z = 0.1;
-        marker.color = color;
-
-        marker_array.markers.push_back(marker);
-      }
-      publisher->publish(marker_array);
-    }
-
     void MPCControllerCasadiROS::obstacleTracksCallback(
       const vox_nav_msgs::msg::ObjectArray::SharedPtr msg)
     {
@@ -330,10 +208,10 @@ namespace vox_nav_control
         parent_->get_logger(), "Recieved Tracks [%d]", int(obstacle_tracks_.objects.size()));*/
     }
 
-    std::vector<Ellipsoid> MPCControllerCasadiROS::trackMsg2Ellipsoids(
+    std::vector<vox_nav_control::common::Ellipsoid> MPCControllerCasadiROS::trackMsg2Ellipsoids(
       const vox_nav_msgs::msg::ObjectArray & tracks)
     {
-      std::vector<Ellipsoid> ellipsoids;
+      std::vector<vox_nav_control::common::Ellipsoid> ellipsoids;
       for (auto && i : tracks.objects) {
         /*
 
@@ -349,7 +227,7 @@ namespace vox_nav_control
         Eigen::Vector2f center(i.world_pose.point.x, i.world_pose.point.y);
         double a = i.length;
         double b = i.width;
-        Ellipsoid e;
+        vox_nav_control::common::Ellipsoid e;
         e.heading = i.heading;
         e.is_dynamic = i.is_dynamic;
         e.center = center;

@@ -33,6 +33,7 @@
 #include "pluginlib/class_list_macros.hpp"
 
 #include "vox_nav_control/controller_core.hpp"
+#include "vox_nav_control/common.hpp"
 #include "vox_nav_utilities/tf_helpers.hpp"
 
 namespace vox_nav_control

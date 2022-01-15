@@ -1,3 +1,17 @@
+// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <acado_toolkit.hpp>
 #include <acado_code_generation.hpp>
 #include <acado_gnuplot.hpp>
@@ -65,9 +79,9 @@ int main(int argc, char ** argv)
   ACADO::DifferentialState psi_dv;
   ACADO::Control acc_dv;
   ACADO::Control df_dv;
-  //ACADO::OnlineData obs_x;
-  //ACADO::OnlineData obs_y;
-  //ACADO::OnlineData obs_radius;
+  /*ACADO::OnlineData obs_x;
+  ACADO::OnlineData obs_y;
+  ACADO::OnlineData obs_radius;*/
 
   // DEFINE A DIFFERENTIAL EQUATION:
   // -------------------------------
@@ -106,7 +120,7 @@ int main(int argc, char ** argv)
   ocp.minimizeLSQ(W, rf);
   ocp.minimizeLSQEndTerm(WN, rfN);
 
-  //ocp.setNOD(3);
+  // ocp.setNOD(3);
 
   ACADO::OCPexport mpc(ocp);
 
@@ -126,17 +140,20 @@ int main(int argc, char ** argv)
   mpc.set(FIX_INITIAL_STATE, YES);
 
   std::string home = std::getenv("HOME");
+  std::string full_path = home +
+    "/colcon_ws/src/vox_nav/vox_nav_control/include/vox_nav_control/mpc_controller_acado/auto_gen";
 
-  if (mpc.exportCode(
-      (home +
-      "/colcon_ws/src/vox_nav/vox_nav_control/include/vox_nav_control/mpc_controller_acado/auto_gen")
-      .c_str()) !=
-    ACADO::SUCCESSFUL_RETURN)
-  {
+  if (mpc.exportCode(full_path.c_str()) != ACADO::SUCCESSFUL_RETURN) {
     exit(EXIT_FAILURE);
   }
 
   mpc.printDimensionsQP();
+
+  RCLCPP_INFO(
+    node->get_logger(),
+    "Dumped auto generated code to: %s, Note that it needs to be under ::vox_nav/vox_nav_control/include/vox_nav_control/mpc_controller_acado/auto_gen::",
+    full_path.c_str()
+  );
 
   return EXIT_SUCCESS;
 }

@@ -68,17 +68,6 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose) = 0;
 
     /**
-    * @brief get the index of nearest trajectory state to current robot pose
-    *
-    * @param reference_traj
-    * @param curr_robot_pose
-    * @return int
-    */
-    virtual int nearestStateIndex(
-      nav_msgs::msg::Path reference_traj,
-      geometry_msgs::msg::PoseStamped curr_robot_pose) = 0;
-
-    /**
     * @brief Compute required velocity commands to drive the robot along the reference_trajectory_
     *
     * @param curr_robot_pose

@@ -23,13 +23,6 @@
 #include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker_array.hpp>
 
-#include <ompl/geometric/PathGeometric.h>
-#include <ompl/base/SpaceInformation.h>
-#include <ompl/base/spaces/SE2StateSpace.h>
-#include <ompl/base/spaces/DubinsStateSpace.h>
-#include <ompl/base/spaces/ReedsSheppStateSpace.h>
-#include <ompl/base/ScopedState.h>
-
 #include <string>
 #include <memory>
 #include <vector>
@@ -103,42 +96,6 @@ namespace vox_nav_control
       override;
 
       /**
-       * @brief get the index of nearest trajectory state to current robot pose
-       *
-       * @param reference_traj
-       * @param curr_robot_pose
-       * @return int
-       */
-      int nearestStateIndex(
-        nav_msgs::msg::Path reference_traj,
-        geometry_msgs::msg::PoseStamped curr_robot_pose)
-      override;
-
-      /**
-       * @brief Get the Interpolated Reference States, This is determined by the look ahead distance set in the parameters.
-       *        As well as number of time Horizons(N)
-       *
-       * @param curr_robot_pose
-       * @return std::vector<States>
-       */
-      std::vector<States> getLocalInterpolatedReferenceStates(
-        geometry_msgs::msg::PoseStamped curr_robot_pose);
-
-      /**
-       * @brief
-       *
-       * @param interpolated_reference_states
-       * @param color
-       * @param ns
-       * @param publisher
-       */
-      void publishTrajStates(
-        std::vector<States> interpolated_reference_states,
-        std_msgs::msg::ColorRGBA color,
-        std::string ns,
-        const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher);
-
-      /**
        * @brief
        *
        * @param msg
@@ -151,7 +108,8 @@ namespace vox_nav_control
        * @param tracks
        * @return std::vector<Ellipsoid>
        */
-      std::vector<Ellipsoid> trackMsg2Ellipsoids(const vox_nav_msgs::msg::ObjectArray & tracks);
+      std::vector<vox_nav_control::common::Ellipsoid> trackMsg2Ellipsoids(
+        const vox_nav_msgs::msg::ObjectArray & tracks);
 
     private:
       // Given refernce traj to follow, this is set got from planner
@@ -161,10 +119,10 @@ namespace vox_nav_control
       // MPC core controller object
       std::shared_ptr<MPCControllerCasadiCore> mpc_controller_;
       // parameters struct used for MPC controller
-      Parameters mpc_parameters_;
+      vox_nav_control::common::Parameters mpc_parameters_;
       // Keep a copy of previously applied control inputs, this is neded
       // by MPC algorithm
-      ControlInput previous_control_;
+      vox_nav_control::common::ControlInput previous_control_;
       // Publish local trajecory currently being fed to controller
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
         interpolated_local_reference_traj_publisher_;

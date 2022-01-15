@@ -64,9 +64,9 @@ namespace vox_nav_control
         // Execution ime took by solver in milliseconds
         int solve_time_ms;
         // computed control input as result of optimal control
-        ControlInput control_input;
+        vox_nav_control::common::ControlInput control_input;
         // actual states that are going to be achieved in the time horizon
-        std::vector<States> actual_computed_states;
+        std::vector<vox_nav_control::common::States> actual_computed_states;
         SolutionResult()
         : is_optimal(false),
           solve_time_ms(0)
@@ -78,7 +78,7 @@ namespace vox_nav_control
        *
        * @param params
        */
-      MPCControllerCasadiCore(Parameters params);
+      MPCControllerCasadiCore(vox_nav_control::common::Parameters params);
 
       /**
        * @brief Destroy the MPCControllerCasadiCore object
@@ -104,21 +104,21 @@ namespace vox_nav_control
        *
        * @param curr_states
        */
-      void updateCurrentStates(States curr_states);
+      void updateCurrentStates(vox_nav_control::common::States curr_states);
 
       /**
        * @brief update current refernce states in horizon
        *
        * @param reference_states
        */
-      void updateReferences(std::vector<States> reference_states);
+      void updateReferences(std::vector<vox_nav_control::common::States> reference_states);
 
       /**
        * @brief update previous control input
        *
        * @param previous_control_input
        */
-      void updatePreviousControlInput(ControlInput previous_control_input);
+      void updatePreviousControlInput(vox_nav_control::common::ControlInput previous_control_input);
 
       /**
        * @brief initialize slack variables, mostly just equalizing them to zero
@@ -134,7 +134,8 @@ namespace vox_nav_control
        *
        * @param initial_actual_states
        */
-      void initializeActualStates(std::vector<States> initial_actual_states);
+      void initializeActualStates(
+        std::vector<vox_nav_control::common::States> initial_actual_states);
 
       /**
      * @brief  initialize control inputs, mostly just equalizing them to zero. These cannot be updated
@@ -142,7 +143,8 @@ namespace vox_nav_control
      *
      * @param initial_actual_control_inputs
      */
-      void initializeActualControlInputs(std::vector<ControlInput> initial_actual_control_inputs);
+      void initializeActualControlInputs(
+        std::vector<vox_nav_control::common::ControlInput> initial_actual_control_inputs);
 
       /**
        * @brief solve the actual optiml control problem
@@ -150,7 +152,7 @@ namespace vox_nav_control
        * @return SolutionResult, includes resulting control inputs
        * as well as optimal control variables; computed actual states
        */
-      SolutionResult solve(const std::vector<Ellipsoid> & obstacles);
+      SolutionResult solve(const std::vector<vox_nav_control::common::Ellipsoid> & obstacles);
 
     private:
       std::shared_ptr<casadi::Opti> opti_;
@@ -195,7 +197,7 @@ namespace vox_nav_control
       casadi::MX sl_df_dv_;
 
       // this will be updated through the constructor.
-      Parameters params_;
+      vox_nav_control::common::Parameters params_;
 
       casadi::MX z_static_obs_;
       casadi::MX x_static_obs_;

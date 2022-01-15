@@ -180,7 +180,9 @@ namespace vox_nav_control
       vox_nav_utilities::getCurrentPose(
         curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
 
-      int nearest_traj_pose_index = controller_->nearestStateIndex(goal->path, curr_robot_pose);
+      int nearest_traj_pose_index = vox_nav_control::common::nearestStateIndex(
+        goal->path,
+        curr_robot_pose);
       curr_robot_pose.pose.position.z = goal->path.poses[nearest_traj_pose_index].pose.position.z;
 
       auto & clock = *this->get_clock();

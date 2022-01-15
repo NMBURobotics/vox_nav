@@ -26,7 +26,7 @@ namespace vox_nav_control
   namespace mpc_controller_casadi
   {
 
-    MPCControllerCasadiCore::MPCControllerCasadiCore(Parameters params)
+    MPCControllerCasadiCore::MPCControllerCasadiCore(vox_nav_control::common::Parameters params)
     {
       params_ = params;
       opti_ = std::make_shared<casadi::Opti>();
@@ -67,26 +67,28 @@ namespace vox_nav_control
       addCost();
 
       // Kind of a test , set all current states to zero
-      States curr_states;
+      vox_nav_control::common::States curr_states;
       updateCurrentStates(curr_states);
 
       // Kind of a test, set reference states in horizon to zeros
-      States mock_reference_state;
-      std::vector<States> mock_reference_states(params_.N, mock_reference_state);
+      vox_nav_control::common::States mock_reference_state;
+      std::vector<vox_nav_control::common::States> mock_reference_states(params_.N,
+        mock_reference_state);
       updateReferences(mock_reference_states);
 
       // Initialize actual states in horizon and set them all to zeros
-      States initial_actual_state;
-      std::vector<States> initial_actual_states(params_.N + 1, initial_actual_state);
+      vox_nav_control::common::States initial_actual_state;
+      std::vector<vox_nav_control::common::States> initial_actual_states(params_.N + 1,
+        initial_actual_state);
       initializeActualStates(initial_actual_states);
 
       // Kind of a test, just set previous control inputs to zeros
-      ControlInput previous_control_input;
+      vox_nav_control::common::ControlInput previous_control_input;
       updatePreviousControlInput(previous_control_input);
 
       // initiazlize actual control inputs , all zeros
-      ControlInput initial_actual_control_input;
-      std::vector<ControlInput> initial_actual_control_inputs(params_.N,
+      vox_nav_control::common::ControlInput initial_actual_control_input;
+      std::vector<vox_nav_control::common::ControlInput> initial_actual_control_inputs(params_.N,
         initial_actual_control_input);
       initializeActualControlInputs(initial_actual_control_inputs);
 
@@ -103,7 +105,7 @@ namespace vox_nav_control
 
       opti_->solver("ipopt", opts);
       // This needs to be called at least once , then we can retrieve opti->debug() information
-      std::vector<Ellipsoid> no_obstackles;
+      std::vector<vox_nav_control::common::Ellipsoid> no_obstackles;
       solve(no_obstackles);
 
       if (params_.debug_mode) {
@@ -219,7 +221,7 @@ namespace vox_nav_control
     }
 
     MPCControllerCasadiCore::SolutionResult MPCControllerCasadiCore::solve(
-      const std::vector<Ellipsoid> & obstacles)
+      const std::vector<vox_nav_control::common::Ellipsoid> & obstacles)
     {
       auto opti = std::make_shared<casadi::Opti>(*opti_);
       casadi::MX pow_squared = 2;
@@ -264,9 +266,9 @@ namespace vox_nav_control
         std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 
       // get actual_computed_states
-      std::vector<States> actual_computed_states;
+      std::vector<vox_nav_control::common::States> actual_computed_states;
       for (int i = 0; i < params_.N + 1; i++) {
-        States ith_computed_state;
+        vox_nav_control::common::States ith_computed_state;
         ith_computed_state.x = z_mpc(i, 0).scalar();
         ith_computed_state.y = z_mpc(i, 1).scalar();
         ith_computed_state.psi = z_mpc(i, 2).scalar();
@@ -274,7 +276,7 @@ namespace vox_nav_control
         actual_computed_states.push_back(ith_computed_state);
       }
 
-      ControlInput control_input;
+      vox_nav_control::common::ControlInput control_input;
       control_input.acc = u_mpc(0, 0).scalar();
       control_input.df = u_mpc(0, 1).scalar();
 
@@ -299,12 +301,13 @@ namespace vox_nav_control
       return result;
     }
 
-    void MPCControllerCasadiCore::updateCurrentStates(States curr_states)
+    void MPCControllerCasadiCore::updateCurrentStates(vox_nav_control::common::States curr_states)
     {
       opti_->set_value(z_curr_, {curr_states.x, curr_states.y, curr_states.psi, curr_states.v});
     }
 
-    void MPCControllerCasadiCore::updateReferences(std::vector<States> reference_states)
+    void MPCControllerCasadiCore::updateReferences(
+      std::vector<vox_nav_control::common::States> reference_states)
     {
       std::vector<double> x_ref, y_ref, psi_ref, v_ref;
       for (int i = 0; i < reference_states.size(); i++) {
@@ -319,7 +322,8 @@ namespace vox_nav_control
       opti_->set_value(v_ref_, v_ref);
     }
 
-    void MPCControllerCasadiCore::updatePreviousControlInput(ControlInput previous_control_input)
+    void MPCControllerCasadiCore::updatePreviousControlInput(
+      vox_nav_control::common::ControlInput previous_control_input)
     {
       opti_->set_value(u_prev_, {previous_control_input.acc, previous_control_input.df});
     }
@@ -337,7 +341,7 @@ namespace vox_nav_control
     }
 
     void MPCControllerCasadiCore::initializeActualControlInputs(
-      std::vector<ControlInput> initial_actual_control_inputs)
+      std::vector<vox_nav_control::common::ControlInput> initial_actual_control_inputs)
     {
       std::vector<double> initial_acc_dv, initial_df_dv;
       for (int i = 0; i < initial_actual_control_inputs.size(); i++) {
@@ -348,7 +352,8 @@ namespace vox_nav_control
       opti_->set_initial(u_dv_(slice_all_, 1), initial_df_dv);
     }
 
-    void MPCControllerCasadiCore::initializeActualStates(std::vector<States> initial_actual_states)
+    void MPCControllerCasadiCore::initializeActualStates(
+      std::vector<vox_nav_control::common::States> initial_actual_states)
     {
       std::vector<double> x_dv, y_dv, psi_dv, v_dv;
       for (int i = 0; i < initial_actual_states.size(); i++) {

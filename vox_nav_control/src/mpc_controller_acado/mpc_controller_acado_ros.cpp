@@ -118,14 +118,16 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
 
-      States curr_states;
+      vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = robot_psi;
       curr_states.v = kTARGET_SPEED;
 
-      std::vector<States> local_interpolated_reference_states = getLocalInterpolatedReferenceStates(
-        curr_robot_pose);
+      std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
+        getLocalInterpolatedReferenceStates(
+        curr_robot_pose, mpc_parameters_, reference_traj_,
+        global_plan_look_ahead_distance_);
 
       setRefrenceStates(local_interpolated_reference_states, previous_control_);
       updateCurrentStates(curr_states);
@@ -141,8 +143,9 @@ namespace vox_nav_control
         acado_printControlVariables();
       }
 
-      std::vector<ControlInput> computed_controls = getPredictedControlsFromAcado();
-      std::vector<States> computed_states = getPredictedStatesFromAcado();
+      std::vector<vox_nav_control::common::ControlInput> computed_controls =
+        getPredictedControlsFromAcado();
+      std::vector<vox_nav_control::common::States> computed_states = getPredictedStatesFromAcado();
 
       //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x += computed_controls.begin()->acc * (dt);
@@ -180,14 +183,15 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
 
-      States curr_states;
+      vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = robot_psi;
       curr_states.v = kTARGET_SPEED;
-
-      std::vector<States> local_interpolated_reference_states = getLocalInterpolatedReferenceStates(
-        curr_robot_pose);
+      std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
+        getLocalInterpolatedReferenceStates(
+        curr_robot_pose, mpc_parameters_, reference_traj_,
+        global_plan_look_ahead_distance_);
 
       setRefrenceStates(local_interpolated_reference_states, previous_control_);
       updateCurrentStates(curr_states);
@@ -203,8 +207,9 @@ namespace vox_nav_control
         acado_printControlVariables();
       }
 
-      std::vector<ControlInput> computed_controls = getPredictedControlsFromAcado();
-      std::vector<States> computed_states = getPredictedStatesFromAcado();
+      std::vector<vox_nav_control::common::ControlInput> computed_controls =
+        getPredictedControlsFromAcado();
+      std::vector<vox_nav_control::common::States> computed_states = getPredictedStatesFromAcado();
 
       //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x += 0;
@@ -219,157 +224,6 @@ namespace vox_nav_control
       reference_traj_ = path;
     }
 
-    int MPCControllerAcadoROS::nearestStateIndex(
-      nav_msgs::msg::Path reference_traj, geometry_msgs::msg::PoseStamped curr_robot_pose)
-    {
-      int closest_state_index = -1;
-      int closest_state_distance = 10000.0;
-      for (int i = 0; i < reference_traj.poses.size(); i++) {
-
-        double curr_distance =
-          vox_nav_utilities::getEuclidianDistBetweenPoses(reference_traj.poses[i], curr_robot_pose);
-
-        if (curr_distance < closest_state_distance) {
-          closest_state_distance = curr_distance;
-          closest_state_index = i;
-        }
-      }
-      return closest_state_index;
-    }
-
-    std::vector<States> MPCControllerAcadoROS::getLocalInterpolatedReferenceStates(
-      geometry_msgs::msg::PoseStamped curr_robot_pose)
-    {
-      double robot_roll, robot_pitch, robot_yaw;
-      geometry_msgs::msg::PoseStamped front_axle_pose;
-      vox_nav_utilities::getRPYfromMsgQuaternion(
-        curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_yaw);
-
-      front_axle_pose.pose.position.x =
-        curr_robot_pose.pose.position.x + 1.5 * mpc_parameters_.L_F * std::cos(robot_yaw);
-      front_axle_pose.pose.position.y =
-        curr_robot_pose.pose.position.y + 1.5 * mpc_parameters_.L_F * std::sin(robot_yaw);
-      front_axle_pose.pose.position.z = 0;
-
-      double kTARGETSPEED = 1.0;
-      // Now lets find nearest trajectory point to robot base
-      int nearsest_traj_state_index = nearestStateIndex(reference_traj_, front_axle_pose);
-
-      // Auto calculate interpolation steps
-      double path_euclidian_length = 0.0;
-      for (size_t i = 1; i < reference_traj_.poses.size(); i++) {
-        path_euclidian_length += vox_nav_utilities::getEuclidianDistBetweenPoses(
-          reference_traj_.poses[i], reference_traj_.poses[i - 1]);
-      }
-
-      double interpolation_step_size = path_euclidian_length / reference_traj_.poses.size();
-      int states_to_see_horizon = global_plan_look_ahead_distance_ / interpolation_step_size;
-      int local_goal_state_index = nearsest_traj_state_index + states_to_see_horizon;
-      if (local_goal_state_index >= reference_traj_.poses.size() - 1) {
-        local_goal_state_index = reference_traj_.poses.size() - 1;
-      }
-      // Define a state space, we basically need this only because we want to use OMPL's
-      // geometric path, And then we can interpolate this path
-      std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
-        std::make_shared<ompl::base::RealVectorBounds>(2);
-      ompl::base::StateSpacePtr state_space =
-        std::make_shared<ompl::base::SE2StateSpace>();
-      state_space->as<ompl::base::SE2StateSpace>()->setBounds(*state_space_bounds);
-      ompl::base::SpaceInformationPtr state_space_information =
-        std::make_shared<ompl::base::SpaceInformation>(state_space);
-      ompl::geometric::PathGeometric path(state_space_information);
-
-      ompl::base::ScopedState<ompl::base::SE2StateSpace>
-      closest_ref_traj_state(state_space),
-      ompl_local_goal_state(state_space);
-
-      // Feed initial state, which is closest ref trajectory state
-      double void_var, yaw;
-
-      if (local_goal_state_index - nearsest_traj_state_index < mpc_parameters_.N) {
-        // Feed Intermediate state , which is nearest state in ref traj
-        vox_nav_utilities::getRPYfromMsgQuaternion(
-          curr_robot_pose.pose.orientation, void_var, void_var, yaw);
-        closest_ref_traj_state[0] = curr_robot_pose.pose.position.x;
-        closest_ref_traj_state[1] = curr_robot_pose.pose.position.y;
-        closest_ref_traj_state[2] = yaw;
-        path.append(static_cast<ompl::base::State *>(closest_ref_traj_state.get()));
-      } else {
-        // Feed Intermediate state , which is nearest state in ref traj
-        vox_nav_utilities::getRPYfromMsgQuaternion(
-          reference_traj_.poses[nearsest_traj_state_index].pose.orientation, void_var, void_var,
-          yaw);
-        closest_ref_traj_state[0] =
-          reference_traj_.poses[nearsest_traj_state_index].pose.position.x;
-        closest_ref_traj_state[1] =
-          reference_traj_.poses[nearsest_traj_state_index].pose.position.y;
-        closest_ref_traj_state[2] = yaw;
-        path.append(static_cast<ompl::base::State *>(closest_ref_traj_state.get()));
-      }
-
-      // Feed the final state, which the local goal for the current control effort.
-      // This is basically the state in the ref trajectory, which is closest to global_plan_look_ahead_distance_
-      vox_nav_utilities::getRPYfromMsgQuaternion(
-        reference_traj_.poses[local_goal_state_index].pose.orientation, void_var, void_var, yaw);
-      ompl_local_goal_state[0] = reference_traj_.poses[local_goal_state_index].pose.position.x;
-      ompl_local_goal_state[1] = reference_traj_.poses[local_goal_state_index].pose.position.y;
-      ompl_local_goal_state[2] = yaw;
-      path.append(static_cast<ompl::base::State *>(ompl_local_goal_state.get()));
-
-      // The local ref traj now contains only 3 states, we will interpolate this states with OMPL
-      // The count of states after interpolation must be same as horizon defined for the control problem , hence
-      // it should be mpc_parameters_.N+1
-      path.interpolate(mpc_parameters_.N + 1);
-
-      // Now the local ref traj is interpolated from current robot state up to state at global look ahead distance
-      // Lets fill the native MPC type ref states and return to caller
-      std::vector<States> interpolated_reference_states;
-      for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
-        // cast the abstract state type to the type we expect
-        const ompl::base::SE2StateSpace::StateType * interpolated_state =
-          path.getState(path_idx)->as<ompl::base::SE2StateSpace::StateType>();
-        States curr_interpolated_state;
-        curr_interpolated_state.v = kTARGETSPEED;
-        curr_interpolated_state.x = interpolated_state->getX();
-        curr_interpolated_state.y = interpolated_state->getY();
-        curr_interpolated_state.psi = interpolated_state->getYaw();
-        interpolated_reference_states.push_back(curr_interpolated_state);
-      }
-      return interpolated_reference_states;
-    }
-
-    void
-    MPCControllerAcadoROS::publishTrajStates(
-      std::vector<States> interpolated_reference_states,
-      std_msgs::msg::ColorRGBA color,
-      std::string ns,
-      const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher)
-    {
-      visualization_msgs::msg::MarkerArray marker_array;
-      for (int i = 0; i < interpolated_reference_states.size(); i++) {
-        visualization_msgs::msg::Marker marker;
-        marker.header.frame_id = "map";
-        marker.header.stamp = rclcpp::Clock().now();
-        marker.ns = ns;
-        marker.id = i;
-        marker.type = visualization_msgs::msg::Marker::ARROW;
-        marker.action = visualization_msgs::msg::Marker::ADD;
-        marker.lifetime = rclcpp::Duration::from_seconds(0);
-        marker.pose.position.x = interpolated_reference_states[i].x;
-        marker.pose.position.y = interpolated_reference_states[i].y;
-        marker.pose.position.z = 1.3;
-        marker.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-          0, 0, interpolated_reference_states[i].psi);
-        marker.scale.x = 0.25;
-        marker.scale.y = 0.1;
-        marker.scale.z = 0.1;
-        marker.color = color;
-
-        marker_array.markers.push_back(marker);
-      }
-      publisher->publish(marker_array);
-    }
-
     void MPCControllerAcadoROS::obstacleTracksCallback(
       const vox_nav_msgs::msg::ObjectArray::SharedPtr msg)
     {
@@ -380,10 +234,10 @@ namespace vox_nav_control
         parent_->get_logger(), "Recieved Tracks [%d]", int(obstacle_tracks_.objects.size()));*/
     }
 
-    std::vector<Ellipsoid> MPCControllerAcadoROS::trackMsg2Ellipsoids(
+    std::vector<vox_nav_control::common::Ellipsoid> MPCControllerAcadoROS::trackMsg2Ellipsoids(
       const vox_nav_msgs::msg::ObjectArray & tracks)
     {
-      std::vector<Ellipsoid> ellipsoids;
+      std::vector<vox_nav_control::common::Ellipsoid> ellipsoids;
       for (auto && i : tracks.objects) {
         /*
 
@@ -399,7 +253,7 @@ namespace vox_nav_control
         Eigen::Vector2f center(i.world_pose.point.x, i.world_pose.point.y);
         double a = i.length;
         double b = i.width;
-        Ellipsoid e;
+        vox_nav_control::common::Ellipsoid e;
         e.heading = i.heading;
         e.is_dynamic = i.is_dynamic;
         e.center = center;
@@ -429,7 +283,7 @@ namespace vox_nav_control
         acadoVariables.yN[i] = 0.0;
       }
       for (int i = 0; i < ACADO_N; i++) {
-        previous_control_.push_back(ControlInput());
+        previous_control_.push_back(vox_nav_control::common::ControlInput());
       }
       // Prepare first step
       acado_preparationStep();
@@ -437,12 +291,12 @@ namespace vox_nav_control
 
     void MPCControllerAcadoROS::initAcadoWeights()
     {
-      double w_x = mpc_parameters_.Q[STATE::kX];
-      double w_y = mpc_parameters_.Q[STATE::kY];
-      double w_vel = mpc_parameters_.Q[STATE::kV];
-      double w_yaw = mpc_parameters_.Q[STATE::kPsi];
-      double w_acc = mpc_parameters_.R[INPUT::kacc];
-      double w_df = mpc_parameters_.R[INPUT::kdf];
+      double w_x = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kX];
+      double w_y = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kY];
+      double w_vel = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kV];
+      double w_yaw = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kPsi];
+      double w_acc = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kacc];
+      double w_df = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kdf];
       for (int i = 0; i < ACADO_N; i++) {
         // Setup diagonal entries
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 0] = w_x;
@@ -463,20 +317,20 @@ namespace vox_nav_control
     }
 
     void MPCControllerAcadoROS::setRefrenceStates(
-      const std::vector<States> & ref_states,
-      const std::vector<ControlInput> & prev_controls)
+      const std::vector<vox_nav_control::common::States> & ref_states,
+      const std::vector<vox_nav_control::common::ControlInput> & prev_controls)
     {
 
       for (int i = 0; i < ACADO_NY * ACADO_N; ++i) {
         int state = i % ACADO_NY;
         int index = i / ACADO_NY;
-        if (state == STATE::kX) {
+        if (state == vox_nav_control::common::STATE_ENUM::kX) {
           acadoVariables.y[i] = ref_states[index].x;
-        } else if (state == STATE::kY) {
+        } else if (state == vox_nav_control::common::STATE_ENUM::kY) {
           acadoVariables.y[i] = ref_states[index].y;
-        } else if (state == STATE::kV) {
+        } else if (state == vox_nav_control::common::STATE_ENUM::kV) {
           acadoVariables.y[i] = ref_states[index].v;
-        } else if (state == STATE::kPsi) {
+        } else if (state == vox_nav_control::common::STATE_ENUM::kPsi) {
           acadoVariables.y[i] = ref_states[index].psi;
         } else if (state == 4) {
           acadoVariables.y[i] = prev_controls.begin()->acc;
@@ -488,19 +342,19 @@ namespace vox_nav_control
       // Set the Terminal Reference
       for (int i = 0; i < ACADO_NYN; ++i) {
         auto index = ref_states.size() - 1;
-        if (i == STATE::kX) {
+        if (i == vox_nav_control::common::STATE_ENUM::kX) {
           acadoVariables.yN[i] = ref_states[index].x;
-        } else if (i == STATE::kY) {
+        } else if (i == vox_nav_control::common::STATE_ENUM::kY) {
           acadoVariables.yN[i] = ref_states[index].y;
-        } else if (i == STATE::kV) {
+        } else if (i == vox_nav_control::common::STATE_ENUM::kV) {
           acadoVariables.yN[i] = ref_states[index].v;
-        } else if (i == STATE::kPsi) {
+        } else if (i == vox_nav_control::common::STATE_ENUM::kPsi) {
           acadoVariables.yN[i] = ref_states[index].psi;
         }
       }
     }
 
-    void MPCControllerAcadoROS::updateCurrentStates(States curr_states)
+    void MPCControllerAcadoROS::updateCurrentStates(vox_nav_control::common::States curr_states)
     {
       // MPC: set the current state feedback
       acadoVariables.x0[0] = curr_states.x;
@@ -509,12 +363,13 @@ namespace vox_nav_control
       acadoVariables.x0[3] = curr_states.psi;
     }
 
-    std::vector<ControlInput> MPCControllerAcadoROS::getPredictedControlsFromAcado()
+    std::vector<vox_nav_control::common::ControlInput> MPCControllerAcadoROS::
+    getPredictedControlsFromAcado()
     {
-      std::vector<ControlInput> computed_controls;
+      std::vector<vox_nav_control::common::ControlInput> computed_controls;
       real_t * u = acado_getVariablesU();
       for (int i = 0; i < ACADO_N; ++i) {
-        ControlInput curr;
+        vox_nav_control::common::ControlInput curr;
         for (int j = 0; j < ACADO_NU; ++j) {
           if (j == 0) {
             curr.acc = (double)u[i * ACADO_NU + j];
@@ -527,19 +382,19 @@ namespace vox_nav_control
       return computed_controls;
     }
 
-    std::vector<States> MPCControllerAcadoROS::getPredictedStatesFromAcado()
+    std::vector<vox_nav_control::common::States> MPCControllerAcadoROS::getPredictedStatesFromAcado()
     {
-      std::vector<States> computed_states;
+      std::vector<vox_nav_control::common::States> computed_states;
       real_t * x = acado_getVariablesX();
       for (int i = 0; i < ACADO_N; ++i) {
-        States curr;
+        vox_nav_control::common::States curr;
         for (int j = 0; j < ACADO_NX; ++j) {
 
-          if (j == STATE::kX) {
+          if (j == vox_nav_control::common::STATE_ENUM::kX) {
             curr.x = (double)x[i * ACADO_NX + j];
-          } else if (j == STATE::kY) {
+          } else if (j == vox_nav_control::common::STATE_ENUM::kY) {
             curr.y = (double)x[i * ACADO_NX + j];
-          } else if (j == STATE::kY) {
+          } else if (j == vox_nav_control::common::STATE_ENUM::kY) {
             curr.v = (double)x[i * ACADO_NX + j];
           } else {
             curr.psi = (double)x[i * ACADO_NX + j];
