@@ -23,7 +23,7 @@
 #include <Eigen/Eigen>
 #include <ompl/geometric/PathGeometric.h>
 #include <ompl/base/SpaceInformation.h>
-#include <ompl/base/spaces/SE2StateSpace.h>
+#include <ompl/base/spaces/ReedsSheppStateSpace.h>
 #include <ompl/base/spaces/DubinsStateSpace.h>
 #include <ompl/base/spaces/ReedsSheppStateSpace.h>
 #include <ompl/base/ScopedState.h>
@@ -211,13 +211,13 @@ namespace vox_nav_control
       std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
         std::make_shared<ompl::base::RealVectorBounds>(2);
       ompl::base::StateSpacePtr state_space =
-        std::make_shared<ompl::base::SE2StateSpace>();
-      state_space->as<ompl::base::SE2StateSpace>()->setBounds(*state_space_bounds);
+        std::make_shared<ompl::base::ReedsSheppStateSpace>();
+      state_space->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds);
       ompl::base::SpaceInformationPtr state_space_information =
         std::make_shared<ompl::base::SpaceInformation>(state_space);
       ompl::geometric::PathGeometric path(state_space_information);
 
-      ompl::base::ScopedState<ompl::base::SE2StateSpace>
+      ompl::base::ScopedState<ompl::base::ReedsSheppStateSpace>
       closest_ref_traj_state(state_space),
       ompl_local_goal_state(state_space);
 
@@ -256,16 +256,16 @@ namespace vox_nav_control
 
       // The local ref traj now contains only 3 states, we will interpolate this states with OMPL
       // The count of states after interpolation must be same as horizon defined for the control problem , hence
-      // it should be mpc_parameters_.N+1
-      path.interpolate(mpc_parameters.N + 1);
+      // it should be mpc_parameters_.N
+      path.interpolate(mpc_parameters.N);
 
       // Now the local ref traj is interpolated from current robot state up to state at global look ahead distance
       // Lets fill the native MPC type ref states and return to caller
       std::vector<States> interpolated_reference_states;
       for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
         // cast the abstract state type to the type we expect
-        const ompl::base::SE2StateSpace::StateType * interpolated_state =
-          path.getState(path_idx)->as<ompl::base::SE2StateSpace::StateType>();
+        const ompl::base::ReedsSheppStateSpace::StateType * interpolated_state =
+          path.getState(path_idx)->as<ompl::base::ReedsSheppStateSpace::StateType>();
         States curr_interpolated_state;
         curr_interpolated_state.v = kTARGETSPEED;
         curr_interpolated_state.x = interpolated_state->getX();

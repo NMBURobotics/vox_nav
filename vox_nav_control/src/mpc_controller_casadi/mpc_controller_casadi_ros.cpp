@@ -106,7 +106,6 @@ namespace vox_nav_control
         };
 
       double dt = mpc_parameters_.DT;
-      double kTARGET_SPEED = 0.0;
       // distance from rear to front axle(m)
       double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
 
@@ -118,10 +117,10 @@ namespace vox_nav_control
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
-      curr_states.v = kTARGET_SPEED;
+      curr_states.v = 0.0;
 
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
-        getLocalInterpolatedReferenceStates(
+        vox_nav_control::common::getLocalInterpolatedReferenceStates(
         curr_robot_pose, mpc_parameters_, reference_traj_,
         global_plan_look_ahead_distance_);
 
@@ -160,7 +159,6 @@ namespace vox_nav_control
     {
 
       double dt = mpc_parameters_.DT;
-      double kTARGET_SPEED = 0.0;
 
       // we dont really need roll and pitch here
       double nan, psi;
@@ -171,10 +169,10 @@ namespace vox_nav_control
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
-      curr_states.v = kTARGET_SPEED;
+      curr_states.v = 0.0;
 
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
-        getLocalInterpolatedReferenceStates(
+        vox_nav_control::common::getLocalInterpolatedReferenceStates(
         curr_robot_pose, mpc_parameters_, reference_traj_,
         global_plan_look_ahead_distance_);
 
