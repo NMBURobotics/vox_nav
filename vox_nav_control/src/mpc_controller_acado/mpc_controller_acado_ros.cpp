@@ -92,59 +92,11 @@ namespace vox_nav_control
         "/vox_nav/tracking/objects", rclcpp::SystemDefaultsQoS(),
         std::bind(&MPCControllerAcadoROS::obstacleTracksCallback, this, std::placeholders::_1));
 
+      //Sets initial states, inputs to zeros and makes solver ready
+      initAcadoStuff();
 
-      // Initialize the solver.
-      acado_initializeSolver();
-
-      // Initialize the states and controls.
-      for (int i = 0; i < ACADO_NX * (ACADO_N + 1); ++i) {
-        acadoVariables.x[i] = 0.0;
-      }
-
-      for (int i = 0; i < ACADO_NU * ACADO_N; ++i) {
-        acadoVariables.u[i] = 0.0;
-      }
-
-      for (int i = 0; i < ACADO_NY * ACADO_N; ++i) {
-        acadoVariables.y[i] = 0.0;
-      }
-
-      for (int i = 0; i < ACADO_NYN; ++i) {
-        acadoVariables.yN[i] = 0.0;
-      }
-
-      for (int i = 0; i < ACADO_N; i++) {
-        previous_control_.push_back(ControlInput());
-      }
-
-      // Prepare first step
-      acado_preparationStep();
-
-      double w_x = mpc_parameters_.Q[STATE::kX];
-      double w_y = mpc_parameters_.Q[STATE::kY];
-      double w_vel = mpc_parameters_.Q[STATE::kV];
-      double w_yaw = mpc_parameters_.Q[STATE::kPsi];
-      double w_acc = mpc_parameters_.R[INPUT::kacc];
-      double w_df = mpc_parameters_.R[INPUT::kdf];
-
-      for (int i = 0; i < ACADO_N; i++) {
-        // Setup diagonal entries
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 0] = w_x;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 1] = w_y;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 2] = w_vel;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 3] = w_yaw;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 4] = w_acc;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 5] = w_df;
-      }
-      acadoVariables.WN[(ACADO_NYN + 1) * 0] = w_x;
-      acadoVariables.WN[(ACADO_NYN + 1) * 1] = w_y;
-      acadoVariables.WN[(ACADO_NYN + 1) * 2] = w_vel;
-      acadoVariables.WN[(ACADO_NYN + 1) * 3] = w_yaw;
-
-      for (int i = 0; i < ACADO_N * ACADO_NY; i++) {
-        //acadoVariables.W[i] = 1;
-      }
-
+      // use parameters in mpc_parameters_.Q and mpc_parameters_.R
+      initAcadoWeights();
     }
 
     geometry_msgs::msg::Twist MPCControllerAcadoROS::computeVelocityCommands(
@@ -174,52 +126,13 @@ namespace vox_nav_control
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
 
-      auto est_state =
-        Eigen::Vector4f(curr_states.x, curr_states.y, curr_states.psi, curr_states.v);
-
       std::vector<States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
 
-      for (int i = 0; i < ACADO_NY * ACADO_N; ++i) { // NY * N = 4 * 10 = 40
-        int state = i % ACADO_NY;
-        int index = i / ACADO_NY;
-        if (state == STATE::kX) {
-          acadoVariables.y[i] = local_interpolated_reference_states[index].x;
-        } else if (state == STATE::kY) {
-          acadoVariables.y[i] = local_interpolated_reference_states[index].y;
-        } else if (state == STATE::kV) {
-          acadoVariables.y[i] = local_interpolated_reference_states[index].v;
-        } else if (state == STATE::kPsi) {
-          acadoVariables.y[i] = local_interpolated_reference_states[index].psi;
-        } else if (state == 4) {
-          acadoVariables.y[i] = previous_control_.begin()->acc;
-        } else if (state == 5) {
-          acadoVariables.y[i] = previous_control_.begin()->df;
-        }
-      }
-
-      // Set the Terminal Reference
-      for (int i = 0; i < ACADO_NYN; ++i) {
-        auto index = local_interpolated_reference_states.size() - 1;
-        if (i == STATE::kX) {
-          acadoVariables.yN[i] = local_interpolated_reference_states[index].x;
-        } else if (i == STATE::kY) {
-          acadoVariables.yN[i] = local_interpolated_reference_states[index].y;
-        } else if (i == STATE::kV) {
-          acadoVariables.yN[i] = local_interpolated_reference_states[index].v;
-        } else if (i == STATE::kPsi) {
-          acadoVariables.yN[i] = local_interpolated_reference_states[index].psi;
-        }
-      }
-
-      // MPC: set the current state feedback
-      acadoVariables.x0[0] = curr_states.x;
-      acadoVariables.x0[1] = curr_states.y;
-      acadoVariables.x0[2] = curr_states.v;
-      acadoVariables.x0[3] = curr_states.psi;
+      setRefrenceStates(local_interpolated_reference_states, previous_control_);
+      updateCurrentStates(curr_states);
 
       acado_preparationStep();
-
       auto ret = acado_feedbackStep();
 
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
@@ -230,19 +143,8 @@ namespace vox_nav_control
         acado_printControlVariables();
       }
 
-      std::vector<ControlInput> computed_controls;
-      real_t * u = acado_getVariablesU();
-      for (int i = 0; i < ACADO_N; ++i) {
-        ControlInput curr;
-        for (int j = 0; j < ACADO_NU; ++j) {
-          if (j == 0) {
-            curr.acc = (double)u[i * ACADO_NU + j];
-          } else {
-            curr.df = (double)u[i * ACADO_NU + j];
-          }
-        }
-        computed_controls.push_back(curr);
-      }
+      std::vector<ControlInput> computed_controls = getPredictedControlsFromAcado();
+      std::vector<States> computed_states = getPredictedStatesFromAcado();
 
       //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x += computed_controls.begin()->acc * (dt);
@@ -261,9 +163,9 @@ namespace vox_nav_control
         local_interpolated_reference_states, red_color, "ref_traj",
         interpolated_local_reference_traj_publisher_);
 
-      /*publishTrajStates(
-        res.actual_computed_states, blue_color, "actual_traj",
-        mpc_computed_traj_publisher_);*/
+      publishTrajStates(
+        computed_states, blue_color, "actual_traj",
+        mpc_computed_traj_publisher_);
 
       previous_control_ = computed_controls;
 
@@ -289,9 +191,6 @@ namespace vox_nav_control
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = psi;
       curr_states.v = kTARGET_SPEED;
-
-      auto est_state =
-        Eigen::Vector4f(curr_states.x, curr_states.y, curr_states.psi, curr_states.v);
 
       std::vector<States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(curr_robot_pose);
@@ -509,6 +408,145 @@ namespace vox_nav_control
 
       return ellipsoids;
 
+    }
+
+    void MPCControllerAcadoROS::initAcadoStuff()
+    {
+      // Initialize the solver.
+      acado_initializeSolver();
+      // Initialize the states and controls.
+      for (int i = 0; i < ACADO_NX * (ACADO_N + 1); ++i) {
+        acadoVariables.x[i] = 0.0;
+      }
+      for (int i = 0; i < ACADO_NU * ACADO_N; ++i) {
+        acadoVariables.u[i] = 0.0;
+      }
+      for (int i = 0; i < ACADO_NY * ACADO_N; ++i) {
+        acadoVariables.y[i] = 0.0;
+      }
+      for (int i = 0; i < ACADO_NYN; ++i) {
+        acadoVariables.yN[i] = 0.0;
+      }
+      for (int i = 0; i < ACADO_N; i++) {
+        previous_control_.push_back(ControlInput());
+      }
+      // Prepare first step
+      acado_preparationStep();
+    }
+
+    void MPCControllerAcadoROS::initAcadoWeights()
+    {
+      double w_x = mpc_parameters_.Q[STATE::kX];
+      double w_y = mpc_parameters_.Q[STATE::kY];
+      double w_vel = mpc_parameters_.Q[STATE::kV];
+      double w_yaw = mpc_parameters_.Q[STATE::kPsi];
+      double w_acc = mpc_parameters_.R[INPUT::kacc];
+      double w_df = mpc_parameters_.R[INPUT::kdf];
+      for (int i = 0; i < ACADO_N; i++) {
+        // Setup diagonal entries
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 0] = w_x;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 1] = w_y;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 2] = w_vel;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 3] = w_yaw;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 4] = w_acc;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 5] = w_df;
+      }
+      acadoVariables.WN[(ACADO_NYN + 1) * 0] = w_x;
+      acadoVariables.WN[(ACADO_NYN + 1) * 1] = w_y;
+      acadoVariables.WN[(ACADO_NYN + 1) * 2] = w_vel;
+      acadoVariables.WN[(ACADO_NYN + 1) * 3] = w_yaw;
+
+      for (int i = 0; i < ACADO_N * ACADO_NY; i++) {
+        //acadoVariables.W[i] = 1;
+      }
+    }
+
+    void MPCControllerAcadoROS::setRefrenceStates(
+      const std::vector<States> & ref_states,
+      const std::vector<ControlInput> & prev_controls)
+    {
+
+      for (int i = 0; i < ACADO_NY * ACADO_N; ++i) {
+        int state = i % ACADO_NY;
+        int index = i / ACADO_NY;
+        if (state == STATE::kX) {
+          acadoVariables.y[i] = ref_states[index].x;
+        } else if (state == STATE::kY) {
+          acadoVariables.y[i] = ref_states[index].y;
+        } else if (state == STATE::kV) {
+          acadoVariables.y[i] = ref_states[index].v;
+        } else if (state == STATE::kPsi) {
+          acadoVariables.y[i] = ref_states[index].psi;
+        } else if (state == 4) {
+          acadoVariables.y[i] = prev_controls.begin()->acc;
+        } else if (state == 5) {
+          acadoVariables.y[i] = prev_controls.begin()->df;
+        }
+      }
+
+      // Set the Terminal Reference
+      for (int i = 0; i < ACADO_NYN; ++i) {
+        auto index = ref_states.size() - 1;
+        if (i == STATE::kX) {
+          acadoVariables.yN[i] = ref_states[index].x;
+        } else if (i == STATE::kY) {
+          acadoVariables.yN[i] = ref_states[index].y;
+        } else if (i == STATE::kV) {
+          acadoVariables.yN[i] = ref_states[index].v;
+        } else if (i == STATE::kPsi) {
+          acadoVariables.yN[i] = ref_states[index].psi;
+        }
+      }
+    }
+
+    void MPCControllerAcadoROS::updateCurrentStates(States curr_states)
+    {
+      // MPC: set the current state feedback
+      acadoVariables.x0[0] = curr_states.x;
+      acadoVariables.x0[1] = curr_states.y;
+      acadoVariables.x0[2] = curr_states.v;
+      acadoVariables.x0[3] = curr_states.psi;
+    }
+
+    std::vector<ControlInput> MPCControllerAcadoROS::getPredictedControlsFromAcado()
+    {
+      std::vector<ControlInput> computed_controls;
+      real_t * u = acado_getVariablesU();
+      for (int i = 0; i < ACADO_N; ++i) {
+        ControlInput curr;
+        for (int j = 0; j < ACADO_NU; ++j) {
+          if (j == 0) {
+            curr.acc = (double)u[i * ACADO_NU + j];
+          } else {
+            curr.df = (double)u[i * ACADO_NU + j];
+          }
+        }
+        computed_controls.push_back(curr);
+      }
+      return computed_controls;
+    }
+
+    std::vector<States> MPCControllerAcadoROS::getPredictedStatesFromAcado()
+    {
+      std::vector<States> computed_states;
+      real_t * x = acado_getVariablesX();
+      for (int i = 0; i < ACADO_N; ++i) {
+        States curr;
+        for (int j = 0; j < ACADO_NX; ++j) {
+
+          if (j == STATE::kX) {
+            curr.x = (double)x[i * ACADO_NX + j];
+          } else if (j == STATE::kY) {
+            curr.y = (double)x[i * ACADO_NX + j];
+          } else if (j == STATE::kY) {
+            curr.v = (double)x[i * ACADO_NX + j];
+          } else {
+            curr.psi = (double)x[i * ACADO_NX + j];
+          }
+        }
+        computed_states.push_back(curr);
+      }
+      return computed_states;
     }
 
   } // namespace mpc_controller_acado

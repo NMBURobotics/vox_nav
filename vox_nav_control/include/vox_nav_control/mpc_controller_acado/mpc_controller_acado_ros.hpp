@@ -61,7 +61,6 @@ namespace vox_nav_control
       kdf = 1,
     };
 
-
 /**
  * @brief A ROS wrapper around the Core MPC controller class.
  *        This class interfaces MPC controller with ControllerCore which is base class for plugins.
@@ -172,6 +171,51 @@ namespace vox_nav_control
        * @return std::vector<Ellipsoid>
        */
       std::vector<Ellipsoid> trackMsg2Ellipsoids(const vox_nav_msgs::msg::ObjectArray & tracks);
+
+      // ACADO SPECIFIC FUNCTIONS
+
+      /**
+       * @brief Sets acado states and inputs to zeros, makes the acado solver ready for the work
+       *
+       */
+      void initAcadoStuff();
+
+      /**
+       * @brief Sets the weight matrixes W and WN, values are set from yamls file
+       *
+       */
+      void initAcadoWeights();
+
+      /**
+       * @brief Set the Refrence States object
+       *
+       * @param ref_states
+       * @param prev_controls
+       */
+      void setRefrenceStates(
+        const std::vector<States> & ref_states,
+        const std::vector<ControlInput> & prev_controls);
+
+      /**
+       * @brief update the current states
+       *
+       * @param curr_states
+       */
+      void updateCurrentStates(States curr_states);
+
+      /**
+       * @brief Get the Computed Controls From Acado object
+       *
+       * @return std::vector<ControlInput>
+       */
+      std::vector<ControlInput> getPredictedControlsFromAcado();
+
+      /**
+       * @brief Get the Predicted Statess From Acado object
+       *
+       * @return std::vector<States>
+       */
+      std::vector<States> getPredictedStatesFromAcado();
 
     private:
       // Given refernce traj to follow, this is set got from planner

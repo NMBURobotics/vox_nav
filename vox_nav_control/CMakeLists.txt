@@ -88,8 +88,7 @@ if(ACADO_CODE_IS_READY)
               include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.h
               include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.c)
 
-  add_library(mpc_controller_acado SHARED #src/mpc_controller_acado/mpc_wrapper.cpp
-                                          src/mpc_controller_acado/mpc_controller_acado_ros.cpp)
+  add_library(mpc_controller_acado SHARED  src/mpc_controller_acado/mpc_controller_acado_ros.cpp)
   ament_target_dependencies(mpc_controller_acado ${dependencies})
   target_link_libraries(mpc_controller_acado ompl ${ACADO_SHARED_LIBRARIES} mpc_solver_acado)
 
