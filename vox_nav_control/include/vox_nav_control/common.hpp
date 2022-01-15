@@ -176,7 +176,8 @@ namespace vox_nav_control
       const geometry_msgs::msg::PoseStamped & curr_robot_pose,
       const Parameters & mpc_parameters,
       const nav_msgs::msg::Path & reference_traj,
-      const double global_plan_look_ahead_distance)
+      const double global_plan_look_ahead_distance,
+      std::shared_ptr<ompl::base::SpaceInformation> si)
     {
       double robot_roll, robot_pitch, robot_yaw;
       geometry_msgs::msg::PoseStamped front_axle_pose;
@@ -184,12 +185,11 @@ namespace vox_nav_control
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_yaw);
 
       front_axle_pose.pose.position.x =
-        curr_robot_pose.pose.position.x + 1.5 * mpc_parameters.L_F * std::cos(robot_yaw);
+        curr_robot_pose.pose.position.x + mpc_parameters.L_F * std::cos(robot_yaw);
       front_axle_pose.pose.position.y =
-        curr_robot_pose.pose.position.y + 1.5 * mpc_parameters.L_F * std::sin(robot_yaw);
+        curr_robot_pose.pose.position.y + mpc_parameters.L_F * std::sin(robot_yaw);
       front_axle_pose.pose.position.z = 0;
 
-      double kTARGETSPEED = 1.0;
       // Now lets find nearest trajectory point to robot base
       int nearsest_traj_state_index = nearestStateIndex(reference_traj, front_axle_pose);
 
@@ -208,18 +208,11 @@ namespace vox_nav_control
       }
       // Define a state space, we basically need this only because we want to use OMPL's
       // geometric path, And then we can interpolate this path
-      std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
-        std::make_shared<ompl::base::RealVectorBounds>(2);
-      ompl::base::StateSpacePtr state_space =
-        std::make_shared<ompl::base::ReedsSheppStateSpace>();
-      state_space->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds);
-      ompl::base::SpaceInformationPtr state_space_information =
-        std::make_shared<ompl::base::SpaceInformation>(state_space);
-      ompl::geometric::PathGeometric path(state_space_information);
+      ompl::geometric::PathGeometric path(si);
 
-      ompl::base::ScopedState<ompl::base::ReedsSheppStateSpace>
-      closest_ref_traj_state(state_space),
-      ompl_local_goal_state(state_space);
+      ompl::base::ScopedState<>
+      closest_ref_traj_state(si->getStateSpace()),
+      ompl_local_goal_state(si->getStateSpace());
 
       // Feed initial state, which is closest ref trajectory state
       double void_var, yaw;
@@ -267,7 +260,7 @@ namespace vox_nav_control
         const ompl::base::ReedsSheppStateSpace::StateType * interpolated_state =
           path.getState(path_idx)->as<ompl::base::ReedsSheppStateSpace::StateType>();
         States curr_interpolated_state;
-        curr_interpolated_state.v = kTARGETSPEED;
+        curr_interpolated_state.v = mpc_parameters.V_MAX;
         curr_interpolated_state.x = interpolated_state->getX();
         curr_interpolated_state.y = interpolated_state->getY();
         curr_interpolated_state.psi = interpolated_state->getYaw();

@@ -37,6 +37,8 @@ namespace vox_nav_control
     {
       parent_ = parent;
       parent->declare_parameter("global_plan_look_ahead_distance", 2.5);
+      parent->declare_parameter("ref_traj_se2_space", "REEDS");
+      parent->declare_parameter("rho", 2.5);
       parent->declare_parameter(plugin_name + ".N", 10);
       parent->declare_parameter(plugin_name + ".DT", 0.1);
       parent->declare_parameter(plugin_name + ".L_F", 0.66);
@@ -57,6 +59,8 @@ namespace vox_nav_control
       parent->declare_parameter(plugin_name + ".params_configured", false);
 
       parent->get_parameter("global_plan_look_ahead_distance", global_plan_look_ahead_distance_);
+      parent->get_parameter("ref_traj_se2_space", selected_se2_space_name_);
+      parent->get_parameter("rho", rho_);
       parent->get_parameter(plugin_name + ".N", mpc_parameters_.N);
       parent->get_parameter(plugin_name + ".DT", mpc_parameters_.DT);
       parent->get_parameter(plugin_name + ".L_F", mpc_parameters_.L_F);
@@ -91,6 +95,22 @@ namespace vox_nav_control
         std::bind(&MPCControllerCasadiROS::obstacleTracksCallback, this, std::placeholders::_1));
 
       mpc_controller_ = std::make_shared<MPCControllerCasadiCore>(mpc_parameters_);
+
+
+      std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
+        std::make_shared<ompl::base::RealVectorBounds>(2);
+      if (selected_se2_space_name_ == "SE2") {
+        state_space_ = std::make_shared<ompl::base::SE2StateSpace>();
+        state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*state_space_bounds);
+      } else if (selected_se2_space_name_ == "DUBINS") {
+        state_space_ = std::make_shared<ompl::base::DubinsStateSpace>(rho_, false);
+        state_space_->as<ompl::base::DubinsStateSpace>()->setBounds(*state_space_bounds);
+      } else {
+        state_space_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(rho_);
+        state_space_->as<ompl::base::ReedsSheppStateSpace>()->setBounds(*state_space_bounds);
+      }
+      state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
+
     }
 
     geometry_msgs::msg::Twist MPCControllerCasadiROS::computeVelocityCommands(
@@ -122,7 +142,7 @@ namespace vox_nav_control
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
         vox_nav_control::common::getLocalInterpolatedReferenceStates(
         curr_robot_pose, mpc_parameters_, reference_traj_,
-        global_plan_look_ahead_distance_);
+        global_plan_look_ahead_distance_, state_space_information_);
 
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(local_interpolated_reference_states);
@@ -174,7 +194,7 @@ namespace vox_nav_control
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
         vox_nav_control::common::getLocalInterpolatedReferenceStates(
         curr_robot_pose, mpc_parameters_, reference_traj_,
-        global_plan_look_ahead_distance_);
+        global_plan_look_ahead_distance_, state_space_information_);
 
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(local_interpolated_reference_states);

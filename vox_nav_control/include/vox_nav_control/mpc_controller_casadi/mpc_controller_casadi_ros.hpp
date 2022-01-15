@@ -135,6 +135,12 @@ namespace vox_nav_control
       rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr obstacle_tracks_sub_;
       vox_nav_msgs::msg::ObjectArray obstacle_tracks_;
       std::mutex obstacle_tracks_mutex_;
+
+      ompl::base::StateSpacePtr state_space_;
+      std::string selected_se2_space_name_;
+      // curve radius for reeds and dubins only
+      double rho_;
+      ompl::base::SpaceInformationPtr state_space_information_;
     };
 
   } // namespace mpc_controller_casadi
