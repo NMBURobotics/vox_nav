@@ -1,7 +1,7 @@
 Refer to `vox_nav/vox_nav_bringup/params/vox_nav_default_params.yaml` for configuring controller server. 
 
 Currently Two plugins for controller are available; `MPCControllerCasadiROS` and `MPCControllerAcadoROS`.
-These to are MPC implementation using differnt tools. Acado generates extremely fast C code while Casadi generates OK speed. 
+These two are MPC implementations using different tools. Acado generates extremely fast C code while Casadi generates OK speed code. 
 
 You can generate the Acado code with; 
 
@@ -26,6 +26,8 @@ Finally build the `MPCControllerAcadoROS` with;
 ```bash
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON
 ```
+
+Full list of paramters for controller plugins;
 
 ```yaml
 vox_nav_controller_server_rclcpp_node:
