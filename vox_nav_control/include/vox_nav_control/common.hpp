@@ -191,7 +191,7 @@ namespace vox_nav_control
       front_axle_pose.pose.position.z = 0;
 
       // Now lets find nearest trajectory point to robot base
-      int nearsest_traj_state_index = nearestStateIndex(reference_traj, front_axle_pose);
+      int nearsest_traj_state_index = nearestStateIndex(reference_traj, curr_robot_pose);
 
       // Auto calculate interpolation steps
       double path_euclidian_length = 0.0;

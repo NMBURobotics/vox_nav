@@ -82,9 +82,9 @@ extern "C"
 /** Total number of QP optimization variables. */
 #define ACADO_QP_NV 32
 /** Number of integration steps per shooting interval. */
-#define ACADO_RK_NIS 4
+#define ACADO_RK_NIS 1
 /** Number of Runge-Kutta stages per integration step. */
-#define ACADO_RK_NSTAGES 2
+#define ACADO_RK_NSTAGES 4
 /** Providing interface for arrival cost. */
 #define ACADO_USE_ARRIVAL_COST 0
 /** Indicator for usage of non-hard-coded linear terms in the objective. */
@@ -151,9 +151,6 @@ real_t x0[ 4 ];
  */
 typedef struct ACADOworkspace_
 {
-/** Column vector of size: 17 */
-real_t rhs_aux[ 17 ];
-
 /** Column vector of size: 64 */
 real_t d[ 64 ];
 
@@ -242,7 +239,7 @@ real_t y[ 32 ];
 
 /** Performs the integration and sensitivity propagation for one shooting interval.
  *
- *  \param rk_eta Working array of size 6 to pass the input values and return the results.
+ *  \param rk_eta Working array to pass the input values and return the results.
  *  \param resetIntegrator The internal memory of the integrator can be reset.
  *
  *  \return Status code of the integrator.
@@ -254,14 +251,7 @@ int acado_integrate( real_t* const rk_eta, int resetIntegrator );
  *  \param in Input to the exported function.
  *  \param out Output of the exported function.
  */
-void acado_rhs(const real_t* in, real_t* out);
-
-/** Export of an ACADO symbolic function.
- *
- *  \param in Input to the exported function.
- *  \param out Output of the exported function.
- */
-void acado_diffs(const real_t* in, real_t* out);
+void acado_rhs_forw(const real_t* in, real_t* out);
 
 /** Preparation step of the RTI scheme.
  *

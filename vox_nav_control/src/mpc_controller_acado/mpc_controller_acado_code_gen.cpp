@@ -87,6 +87,7 @@ int main(int argc, char ** argv)
   // -------------------------------
   ACADO::DifferentialEquation f;
 
+  // FULL ACKERMAN MODEL
   auto beta = atan(L_R / (L_R + L_F) * tan(df_dv));
   f << dot(x_dv) == v_dv * cos(psi_dv + beta);
   f << dot(y_dv) == v_dv * sin(psi_dv + beta);
@@ -128,7 +129,7 @@ int main(int argc, char ** argv)
 
   mpc.set(HESSIAN_APPROXIMATION, GAUSS_NEWTON);
   mpc.set(DISCRETIZATION_TYPE, MULTIPLE_SHOOTING);
-  mpc.set(INTEGRATOR_TYPE, INT_IRK_GL4);
+  mpc.set(INTEGRATOR_TYPE, INT_RK4);
   mpc.set(NUM_INTEGRATOR_STEPS, N * Ni);
   mpc.set(SPARSE_QP_SOLUTION, FULL_CONDENSING);
   mpc.set(QP_SOLVER, QP_QPOASES);
