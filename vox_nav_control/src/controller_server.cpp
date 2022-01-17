@@ -164,6 +164,9 @@ namespace vox_nav_control
     volatile bool is_goal_distance_tolerance_satisfied = false;
     volatile bool is_goal_orientation_tolerance_satisfied = false;
 
+    double average_time_taken_by_controller_loop = 0.0;
+    double control_cycles = 0;
+
     while (rclcpp::ok() && !is_goal_distance_tolerance_satisfied) {
 
       auto loop_start_time = steady_clock_.now();
@@ -237,7 +240,21 @@ namespace vox_nav_control
         break;
       }
 
+      auto control_cycle_start_time = steady_clock_.now();
       computed_velocity_commands = controller_->computeVelocityCommands(curr_robot_pose);
+      auto control_cycle_duration = steady_clock_.now() - control_cycle_start_time;
+
+      average_time_taken_by_controller_loop += control_cycle_duration.seconds();
+      control_cycles += 1.0;
+
+      // Print the Loop Rate once in a while
+      RCLCPP_INFO_THROTTLE(
+        get_logger(),
+        clock,
+        2000, // ms
+        "Average Current Control loop rate is %.4f Hz",
+        1.0 / (average_time_taken_by_controller_loop / control_cycles));
+
       // Update sequence
       auto elapsed_time = steady_clock_.now() - start_time;
       feedback->elapsed_time = elapsed_time;
@@ -253,12 +270,6 @@ namespace vox_nav_control
           1 / controller_duration_, 1 / cycle_duration.seconds());
       }
 
-      // Print the Loop Rate once in a while
-      RCLCPP_INFO_THROTTLE(
-        get_logger(),
-        clock,
-        2000, // ms
-        "Current Control loop rate is %.4f Hz", 1 / cycle_duration.seconds());
       rate.sleep();
     }
     auto cycle_duration = steady_clock_.now() - start_time;
