@@ -87,12 +87,17 @@ int main(int argc, char ** argv)
   // -------------------------------
   ACADO::DifferentialEquation f;
 
-  // FULL ACKERMAN MODEL
+  /*// FULL ACKERMAN MODEL
   auto beta = atan(L_R / (L_R + L_F) * tan(df_dv));
   f << dot(x_dv) == v_dv * cos(psi_dv + beta);
   f << dot(y_dv) == v_dv * sin(psi_dv + beta);
   f << dot(v_dv) == acc_dv;
-  f << dot(psi_dv) == (v_dv / L_R * sin(beta));
+  f << dot(psi_dv) == (v_dv / L_R * sin(beta));*/
+
+  f << dot(x_dv) == v_dv * cos(psi_dv);
+  f << dot(y_dv) == v_dv * sin(psi_dv);
+  f << dot(v_dv) == acc_dv;  // control acceleration and
+  f << dot(psi_dv) == df_dv; // and angular speed
 
   ACADO::Function rf;
   ACADO::Function rfN;

@@ -169,8 +169,10 @@ namespace vox_nav_control
       //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x += computed_controls.begin()->acc * (dt);
       //  The control output is steeering angle but we need to publish angular velocity
-      computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
-        (mpc_parameters_.L_R + mpc_parameters_.L_F);
+      /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
+        (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
+
+      computed_velocity_.angular.z = computed_controls.begin()->df;
 
       regulate_max_speed();
 
