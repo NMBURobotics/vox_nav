@@ -1,5 +1,6 @@
 import sqlite3
 from sqlite3 import Error
+from turtle import position
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
@@ -10,6 +11,12 @@ from matplotlib import colors as mcolors
 import math
 import seaborn as sn
 import pandas as pd
+import math
+from scipy.stats import norm
+
+
+def normpdf(x, mean, sd):
+    return norm.pdf(x, loc=mean, scale=sd)
 
 
 def create_connection(db_file):
@@ -235,6 +242,8 @@ def plot_gaussian_length():
     means, f = zip(*sorted(zip(means, f)))
     means_copy, x = zip(*sorted(zip(means_copy, x)))
 
+    print(means)
+
     index = 0
 
     colors = dict(mcolors.BASE_COLORS, **mcolors.TABLEAU_COLORS,
@@ -253,7 +262,7 @@ def plot_gaussian_length():
 
         plt.plot(x_axis, norm.pdf(x_axis, mean, std),
                  label=legend_label, marker=index % 11, color=list(colors.values())[color_index])
-        plt.legend(loc="best", prop={'size': 16})
+        plt.legend(loc="best", prop={'size': 24})
 
         plt.title(
             "Normal Distribution of Path Lenghts, Sorted by Lowest Mean(μ) Values", fontsize=18)
@@ -606,7 +615,7 @@ def plot_cdf_smoothness():
         plt.plot(x, y, label=legend_label, marker=index % 11,
                  color=list(colors.values())[color_index])
         index += 1
-        plt.legend(loc="best", prop={'size': 16})
+        plt.legend(loc="best", prop={'size': 24})
     plt.xlim([-0.01, 0.8])
 
     plt.show()
@@ -810,29 +819,37 @@ def plot_ztest_length():
     f = np.asarray(f, dtype=object)
     means = np.asarray(means)
     planners = np.asarray(planners)
-    means_copy = means
-    means_copy1 = means
-    means_copy2 = means
-
-    # means, f = zip(*sorted(zip(means, f)))
-    # means_copy, stds = zip(*sorted(zip(means_copy, stds)))
-    # means_copy1, Ns = zip(*sorted(zip(means_copy1, Ns)))
-    # means_copy2, planners = zip(*sorted(zip(means_copy2, planners)))
 
     M = []
+    M_binary = []
 
     for i in range(0, len(means)):
         K = []
+        K_binary = []
         for j in range(0, len(means)):
-            sigma_1 = (stds[i] / Ns[i]) ** 2
-            sigma_2 = (stds[j] / Ns[j]) ** 2
-            Z = (means[i] - means[j]) / math.sqrt(sigma_1 + sigma_2)
-            K.append(Z)
+            sigma_1 = (stds[i]) ** 2 / Ns[i]
+            sigma_2 = (stds[j]) ** 2 / Ns[j]
+            Z = (means[j] - means[i]) / math.sqrt(sigma_1 + sigma_2)
+            P = 2*normpdf(Z, means[j], stds[j])
+            P = 100 * math.copysign(1, Z) * P
+
+            if P > 0.035:
+                binary_P = 1
+            else:
+                binary_P = -1.0
+            if(Z == 0.0):
+                binary_P = 0.0
+                P = 0.0
+
+            K.append(P)
+            K_binary.append(binary_P)
 
         M.append(K)
+        M_binary.append(K_binary)
 
     M = np.asarray(M)
-    M = np.interp(M, (M.min(), M.max()), (-1, 1))
+    M_binary = np.asarray(M_binary)
+    # M = np.interp(M, (M.min(), M.max()), (-1, 1))
     overall_score = np.round(M.sum(axis=1), 1)
 
     score_with_planner = []
@@ -840,18 +857,22 @@ def plot_ztest_length():
         string = planners[k] + ": " + str(overall_score[k])
         score_with_planner.append(string)
 
-    df_cm = pd.DataFrame(M, index=[i for i in score_with_planner],
+    df_cm = pd.DataFrame(M_binary, index=[i for i in score_with_planner],
                          columns=[i for i in planners])
 
-    plt.figure(figsize=(7, 7))
+    f, ax = plt.subplots(figsize=(7, 7))
     sn.heatmap(df_cm, annot=True, robust=False)
 
-    plt.title(
-        "Normalized Z values of one-by-one comparison, This matrix is acquired from distributions given for path lengths", fontsize=18)
-    plt.xlabel("Planner", fontsize=18)
-    plt.ylabel("Planner", fontsize=18)
-    plt.xticks(rotation=45, fontsize=18)
-    plt.yticks(rotation=45, fontsize=18)
+    ax.set_title(
+        "A matrix representing whether a planner's p-value was above significance value of 0.035 in comparasion to other planner", fontsize=18)
+    ax.set_ylabel("Planner", fontsize=18)
+    ax.set_xlabel(" ", fontsize=18)
+
+    ax.xaxis.set_ticks_position('top')
+    ax.xaxis.set_label_position('top')
+
+    plt.xticks(rotation=35, fontsize=18)
+    plt.yticks(rotation=35, fontsize=18)
 
     plt.show()
 
@@ -1203,38 +1224,47 @@ def score():
         K_smooth = []
         for j in range(0, len(means_length)):
 
-            sigma_1 = (stds_length[i] / Ns_length[i]) ** 2
-            sigma_2 = (stds_length[j] / Ns_length[j]) ** 2
-            Z = (means_length[i] - means_length[j]) / \
-                math.sqrt(sigma_1 + sigma_2)
-            K_length.append(Z)
+            sigma_1 = (stds_length[i] ** 2) / Ns_length[i]
+            sigma_2 = (stds_length[j] ** 2) / Ns_length[j]
 
-            sigma_1 = (stds_smooth[i] / Ns_smooth[i]) ** 2
-            sigma_2 = (stds_smooth[j] / Ns_smooth[j]) ** 2
-            Z = (means_smooth[i] - means_smooth[j]) / \
+            Z = (means_length[j] - means_length[i]) / \
                 math.sqrt(sigma_1 + sigma_2)
 
-            K_smooth.append(Z)
+            P = 2*normpdf(Z, means_length[j], stds_length[j])
+            P = 100*math.copysign(1, Z) * P
+
+            K_length.append(P)
+
+            sigma_1 = (stds_smooth[i] ** 2) / Ns_smooth[i]
+            sigma_2 = (stds_smooth[j] ** 2) / Ns_smooth[j]
+
+            Z = (means_smooth[j] - means_smooth[i]) / \
+                math.sqrt(sigma_1 + sigma_2)
+
+            P = 2*normpdf(Z, means_smooth[j], stds_smooth[j])
+            P = 0.1 * math.copysign(1, Z) * P
+
+            K_smooth.append(P)
 
         M_length.append(K_length)
         M_smooth.append(K_smooth)
 
     M_length = np.asarray(M_length)
-    M_length = np.interp(M_length, (M_length.min(), M_length.max()), (-1, 1))
+    #M_length = np.interp(M_length, (M_length.min(), M_length.max()), (-1, 1))
 
     M_smooth = np.asarray(M_smooth)
-    M_smooth = np.interp(M_smooth, (M_smooth.min(), M_smooth.max()), (-1, 1))
+    #M_smooth = np.interp(M_smooth, (M_smooth.min(), M_smooth.max()), (-1, 1))
 
     print(f[:, 1])
     print("===============")
-    print(M_length.sum(axis=0))
+    print(M_length.sum(axis=1))
     print("===============")
-    print(M_smooth.sum(axis=0))
+    print(M_smooth.sum(axis=1))
     print("===============")
-    print(M_length.sum(axis=0) + M_smooth.sum(axis=0))
+    print(M_length.sum(axis=1) + M_smooth.sum(axis=1))
     print("===============")
-    final_score = (0.8 * M_length.sum(axis=0) + 0.2 *
-                   M_smooth.sum(axis=0)) * f[:, 1]
+    final_score = (0.67 * M_length.sum(axis=1) + 0.33 *
+                   M_smooth.sum(axis=1)) * f[:, 1]
     print(final_score)
 
     final_score, planners = zip(*sorted(zip(final_score, planners)))
@@ -1257,6 +1287,6 @@ if __name__ == '__main__':
     # plot_cdf_length()
     # plot_cdf_smoothness()
     # plot_cdf_best_cost()
-    plot_ztest_length()
+    # plot_ztest_length()
     # plot_ztest_smooth()
-    # score()
+    score()
