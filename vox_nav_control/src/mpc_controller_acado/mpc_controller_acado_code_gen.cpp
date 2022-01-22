@@ -79,9 +79,6 @@ int main(int argc, char ** argv)
   ACADO::DifferentialState psi_dv;
   ACADO::Control acc_dv;
   ACADO::Control df_dv;
-  /*ACADO::OnlineData obs_x;
-  ACADO::OnlineData obs_y;
-  ACADO::OnlineData obs_radius;*/
 
   // DEFINE A DIFFERENTIAL EQUATION:
   // -------------------------------
@@ -99,25 +96,51 @@ int main(int argc, char ** argv)
   f << dot(v_dv) == acc_dv;  // control acceleration and
   f << dot(psi_dv) == df_dv; // and angular speed
 
+  struct Obstacle
+  {
+    ACADO::OnlineData x;
+    ACADO::OnlineData y;
+    ACADO::OnlineData r;
+  };
+
+
+  std::vector<ACADO::Expression> experssions;
+  std::vector<Obstacle> obstacles;
+
+  for (size_t i = 0; i < 1; i++) {
+    Obstacle obs;
+    auto obs1 = 10 /
+      (1 + exp(10 * (sqrt(pow((x_dv - obs.x), 2) + pow((y_dv - obs.y), 2)) - obs.r)));
+    experssions.push_back(obs1);
+    obstacles.push_back(obs);
+  }
+
   ACADO::Function rf;
   ACADO::Function rfN;
 
   rf << x_dv << y_dv << v_dv << psi_dv << acc_dv << df_dv;
   rfN << x_dv << y_dv << v_dv << psi_dv;
 
+  ACADO::DifferentialState express;
+  for (auto && i : experssions) {
+    express += i;
+  }
+  rf << express;
+
   ACADO::OCP ocp(0, N * DT, N);
 
   ocp.subjectTo(f);
 
-  // obstacle contraints
-  /*ocp.subjectTo(
-    sqrt(
-      (x_dv - obs_x) * (x_dv - obs_x) +
-      (y_dv - obs_y) * (y_dv - obs_y)) >= 2.0);*/
-
   // control constraints
   ocp.subjectTo(min_acc_dv <= acc_dv <= max_acc_dv);
   ocp.subjectTo(min_df_dv <= df_dv <= max_df_dv);
+
+  for (auto && i : obstacles) {
+    ocp.subjectTo(
+      sqrt(
+        pow((x_dv - i.x), 2) +
+        pow((y_dv - i.y), 2)) - i.r >= 0.0);
+  }
 
   // Provide defined weighting matrices:
   ACADO::BMatrix W = ACADO::eye<bool>(rf.getDim());
@@ -126,7 +149,7 @@ int main(int argc, char ** argv)
   ocp.minimizeLSQ(W, rf);
   ocp.minimizeLSQEndTerm(WN, rfN);
 
-  // ocp.setNOD(3);
+  ocp.setNOD(obstacles.size() * 3);
 
   ACADO::OCPexport mpc(ocp);
 
@@ -134,7 +157,7 @@ int main(int argc, char ** argv)
 
   mpc.set(HESSIAN_APPROXIMATION, GAUSS_NEWTON);
   mpc.set(DISCRETIZATION_TYPE, MULTIPLE_SHOOTING);
-  mpc.set(INTEGRATOR_TYPE, INT_RK4);
+  mpc.set(INTEGRATOR_TYPE, INT_EX_EULER);
   mpc.set(NUM_INTEGRATOR_STEPS, N * Ni);
   mpc.set(SPARSE_QP_SOLUTION, FULL_CONDENSING);
   mpc.set(QP_SOLVER, QP_QPOASES);

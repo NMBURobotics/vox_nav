@@ -166,13 +166,17 @@ namespace vox_nav_control
         getPredictedControlsFromAcado();
       std::vector<vox_nav_control::common::States> computed_states = getPredictedStatesFromAcado();
 
-      //  The control output is acceleration but we need to publish speed
-      computed_velocity_.linear.x += computed_controls.begin()->acc * (dt);
-      //  The control output is steeering angle but we need to publish angular velocity
-      /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
-        (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
+      if (std::isnan(computed_controls.begin()->acc) || std::isnan(computed_controls.begin()->df)) {
+        RCLCPP_WARN(parent_->get_logger(), "NAN Control outputs from Acado!");
+      } else {
+        //  The control output is acceleration but we need to publish speed
+        computed_velocity_.linear.x += computed_controls.begin()->acc * (dt);
+        //  The control output is steeering angle but we need to publish angular velocity
+        /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
+          (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
+        computed_velocity_.angular.z = computed_controls.begin()->df;
+      }
 
-      computed_velocity_.angular.z = computed_controls.begin()->df;
 
       regulate_max_speed();
 
@@ -306,6 +310,11 @@ namespace vox_nav_control
       for (int i = 0; i < ACADO_N; i++) {
         previous_control_.push_back(vox_nav_control::common::ControlInput());
       }
+
+      for (size_t i = 0; i < ACADO_NOD * (ACADO_N + 1); i++) {
+        acadoVariables.od[i] = 0.1;
+      }
+
       // Prepare first step
       acado_preparationStep();
     }
@@ -318,6 +327,7 @@ namespace vox_nav_control
       double w_yaw = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kPsi];
       double w_acc = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kacc];
       double w_df = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kdf];
+      double w_obs = 0.0;
       for (int i = 0; i < ACADO_N; i++) {
         // Setup diagonal entries
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 0] = w_x;
@@ -326,6 +336,7 @@ namespace vox_nav_control
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 3] = w_yaw;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 4] = w_acc;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 5] = w_df;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 6] = w_obs;
       }
       acadoVariables.WN[(ACADO_NYN + 1) * 0] = w_x;
       acadoVariables.WN[(ACADO_NYN + 1) * 1] = w_y;
@@ -372,6 +383,22 @@ namespace vox_nav_control
         } else if (i == vox_nav_control::common::STATE_ENUM::kPsi) {
           acadoVariables.yN[i] = ref_states[index].psi;
         }
+      }
+
+      // Set the obstacles
+      for (int i = 0; i < ACADO_NOD * (ACADO_N + 1); ++i) {
+
+        int state = i % ACADO_NOD;
+        int index = i / (ACADO_N + 1);
+
+        if (state == vox_nav_control::common::STATE_ENUM::kX) {
+          acadoVariables.od[i] = 0.0;
+        } else if (state == vox_nav_control::common::STATE_ENUM::kY) {
+          acadoVariables.od[i] = -5.0;
+        } else {
+          acadoVariables.od[i] = 2.0;
+        }
+
       }
     }
 
