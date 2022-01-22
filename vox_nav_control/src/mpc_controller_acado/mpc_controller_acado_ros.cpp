@@ -61,6 +61,7 @@ namespace vox_nav_control
       parent->declare_parameter(plugin_name + ".R", std::vector<double>({10.0, 100.0}));
       parent->declare_parameter(plugin_name + ".debug_mode", false);
       parent->declare_parameter(plugin_name + ".params_configured", false);
+      parent->declare_parameter(plugin_name + ".max_obstacles", 1);
 
       parent->get_parameter("global_plan_look_ahead_distance", global_plan_look_ahead_distance_);
       parent->get_parameter("ref_traj_se2_space", selected_se2_space_name_);
@@ -83,6 +84,7 @@ namespace vox_nav_control
       parent->get_parameter(plugin_name + ".R", mpc_parameters_.R);
       parent->get_parameter(plugin_name + ".debug_mode", mpc_parameters_.debug_mode);
       parent->get_parameter(plugin_name + ".params_configured", mpc_parameters_.params_configured);
+      parent->get_parameter(plugin_name + ".max_obstacles", mpc_parameters_.max_obstacles);
 
       interpolated_local_reference_traj_publisher_ =
         parent->create_publisher<visualization_msgs::msg::MarkerArray>(
@@ -176,7 +178,6 @@ namespace vox_nav_control
           (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
         computed_velocity_.angular.z = computed_controls.begin()->df;
       }
-
 
       regulate_max_speed();
 
@@ -323,25 +324,25 @@ namespace vox_nav_control
     {
       double w_x = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kX];
       double w_y = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kY];
-      double w_vel = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kV];
       double w_yaw = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kPsi];
+      double w_vel = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kV];
+      double w_obs = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kObs];
       double w_acc = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kacc];
       double w_df = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kdf];
-      double w_obs = 0.0;
       for (int i = 0; i < ACADO_N; i++) {
         // Setup diagonal entries
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 0] = w_x;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 1] = w_y;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 2] = w_vel;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 3] = w_yaw;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 2] = w_yaw;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 3] = w_vel;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 4] = w_acc;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 5] = w_df;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 6] = w_obs;
       }
       acadoVariables.WN[(ACADO_NYN + 1) * 0] = w_x;
       acadoVariables.WN[(ACADO_NYN + 1) * 1] = w_y;
-      acadoVariables.WN[(ACADO_NYN + 1) * 2] = w_vel;
-      acadoVariables.WN[(ACADO_NYN + 1) * 3] = w_yaw;
+      acadoVariables.WN[(ACADO_NYN + 1) * 2] = w_yaw;
+      acadoVariables.WN[(ACADO_NYN + 1) * 3] = w_vel;
 
       for (int i = 0; i < ACADO_N * ACADO_NY; i++) {
         //acadoVariables.W[i] = 1;
@@ -360,10 +361,10 @@ namespace vox_nav_control
           acadoVariables.y[i] = ref_states[index].x;
         } else if (state == vox_nav_control::common::STATE_ENUM::kY) {
           acadoVariables.y[i] = ref_states[index].y;
-        } else if (state == vox_nav_control::common::STATE_ENUM::kV) {
-          acadoVariables.y[i] = ref_states[index].v;
         } else if (state == vox_nav_control::common::STATE_ENUM::kPsi) {
           acadoVariables.y[i] = ref_states[index].psi;
+        } else if (state == vox_nav_control::common::STATE_ENUM::kV) {
+          acadoVariables.y[i] = ref_states[index].v;
         } else if (state == 4) {
           acadoVariables.y[i] = prev_controls.begin()->acc;
         } else if (state == 5) {
@@ -378,27 +379,24 @@ namespace vox_nav_control
           acadoVariables.yN[i] = ref_states[index].x;
         } else if (i == vox_nav_control::common::STATE_ENUM::kY) {
           acadoVariables.yN[i] = ref_states[index].y;
-        } else if (i == vox_nav_control::common::STATE_ENUM::kV) {
-          acadoVariables.yN[i] = ref_states[index].v;
         } else if (i == vox_nav_control::common::STATE_ENUM::kPsi) {
           acadoVariables.yN[i] = ref_states[index].psi;
+        } else if (i == vox_nav_control::common::STATE_ENUM::kV) {
+          acadoVariables.yN[i] = ref_states[index].v;
         }
       }
 
-      // Set the obstacles
       for (int i = 0; i < ACADO_NOD * (ACADO_N + 1); ++i) {
+        int index = i % (ACADO_N + 1);
 
-        int state = i % ACADO_NOD;
-        int index = i / (ACADO_N + 1);
-
-        if (state == vox_nav_control::common::STATE_ENUM::kX) {
+        index = index % 3;
+        if (index == vox_nav_control::common::STATE_ENUM::kX) {
           acadoVariables.od[i] = 0.0;
-        } else if (state == vox_nav_control::common::STATE_ENUM::kY) {
+        } else if (index == vox_nav_control::common::STATE_ENUM::kY) {
           acadoVariables.od[i] = -5.0;
         } else {
           acadoVariables.od[i] = 2.0;
         }
-
       }
     }
 
@@ -407,8 +405,8 @@ namespace vox_nav_control
       // MPC: set the current state feedback
       acadoVariables.x0[0] = curr_states.x;
       acadoVariables.x0[1] = curr_states.y;
-      acadoVariables.x0[2] = curr_states.v;
-      acadoVariables.x0[3] = curr_states.psi;
+      acadoVariables.x0[2] = curr_states.psi;
+      acadoVariables.x0[3] = curr_states.v;
     }
 
     std::vector<vox_nav_control::common::ControlInput> MPCControllerAcadoROS::
@@ -442,10 +440,10 @@ namespace vox_nav_control
             curr.x = (double)x[i * ACADO_NX + j];
           } else if (j == vox_nav_control::common::STATE_ENUM::kY) {
             curr.y = (double)x[i * ACADO_NX + j];
-          } else if (j == vox_nav_control::common::STATE_ENUM::kY) {
-            curr.v = (double)x[i * ACADO_NX + j];
-          } else {
+          } else if (j == vox_nav_control::common::STATE_ENUM::kPsi) {
             curr.psi = (double)x[i * ACADO_NX + j];
+          } else {
+            curr.v = (double)x[i * ACADO_NX + j];
           }
         }
         computed_states.push_back(curr);
@@ -453,8 +451,8 @@ namespace vox_nav_control
       return computed_states;
     }
 
-  } // namespace mpc_controller_acado
+  }   // namespace mpc_controller_acado
   PLUGINLIB_EXPORT_CLASS(
     mpc_controller_acado::MPCControllerAcadoROS,
     vox_nav_control::ControllerCore)
-}  // namespace vox_nav_control
+}   // namespace vox_nav_control

@@ -27,6 +27,7 @@ int main(int argc, char ** argv)
 
   int N;
   int Ni;
+  int max_obstacles; // should be the nearest ones
   double DT;
   double L_F;
   double L_R;
@@ -34,14 +35,17 @@ int main(int argc, char ** argv)
   double max_acc_dv;
   double min_df_dv;
   double max_df_dv;
+  double robot_radius;
 
   auto node = std::make_shared<rclcpp::Node>("vox_nav_controller_server_rclcpp_node");
 
   RCLCPP_INFO(node->get_logger(), "Trying to acquire paramaters for %s", node->get_name());
 
   std::string plugin_name = "MPCControllerAcadoROS";
+  node->declare_parameter("robot_radius", 0.8);
   node->declare_parameter(plugin_name + ".N", 10);
   node->declare_parameter(plugin_name + ".Ni", 1);
+  node->declare_parameter(plugin_name + ".max_obstacles", 1);
   node->declare_parameter(plugin_name + ".DT", 0.1);
   node->declare_parameter(plugin_name + ".L_F", 0.66);
   node->declare_parameter(plugin_name + ".L_R", 0.66);
@@ -49,8 +53,11 @@ int main(int argc, char ** argv)
   node->declare_parameter(plugin_name + ".A_MAX", 1.0);
   node->declare_parameter(plugin_name + ".DF_MIN", -0.5);
   node->declare_parameter(plugin_name + ".DF_MAX", 0.5);
+
+  node->get_parameter("robot_radius", robot_radius);
   node->get_parameter(plugin_name + ".N", N);
   node->get_parameter(plugin_name + ".Ni", Ni);
+  node->get_parameter(plugin_name + ".max_obstacles", max_obstacles);
   node->get_parameter(plugin_name + ".DT", DT);
   node->get_parameter(plugin_name + ".L_F", L_F);
   node->get_parameter(plugin_name + ".L_R", L_R);
@@ -61,8 +68,10 @@ int main(int argc, char ** argv)
 
   RCLCPP_INFO(node->get_logger(), "Generating acado code with following parameters");
 
+  RCLCPP_INFO_STREAM(node->get_logger(), "robot_radius " << robot_radius);
   RCLCPP_INFO_STREAM(node->get_logger(), "N " << N);
   RCLCPP_INFO_STREAM(node->get_logger(), "Ni " << Ni);
+  RCLCPP_INFO_STREAM(node->get_logger(), "max_obstacles " << max_obstacles);
   RCLCPP_INFO_STREAM(node->get_logger(), "DT " << DT);
   RCLCPP_INFO_STREAM(node->get_logger(), "L_F " << L_F);
   RCLCPP_INFO_STREAM(node->get_logger(), "L_R " << L_R);
@@ -75,8 +84,9 @@ int main(int argc, char ** argv)
   // -------------------------
   ACADO::DifferentialState x_dv;
   ACADO::DifferentialState y_dv;
-  ACADO::DifferentialState v_dv;
   ACADO::DifferentialState psi_dv;
+  ACADO::DifferentialState v_dv;
+
   ACADO::Control acc_dv;
   ACADO::Control df_dv;
 
@@ -91,54 +101,48 @@ int main(int argc, char ** argv)
   f << dot(v_dv) == acc_dv;
   f << dot(psi_dv) == (v_dv / L_R * sin(beta));*/
 
+  // Simlistic model for acceleration and angular speed control
   f << dot(x_dv) == v_dv * cos(psi_dv);
   f << dot(y_dv) == v_dv * sin(psi_dv);
-  f << dot(v_dv) == acc_dv;  // control acceleration and
   f << dot(psi_dv) == df_dv; // and angular speed
+  f << dot(v_dv) == acc_dv;  // control acceleration and
 
-  struct Obstacle
+  struct Obstacle // Defined by circles TODO(jediofgever), ellipses
   {
     ACADO::OnlineData x;
     ACADO::OnlineData y;
     ACADO::OnlineData r;
   };
 
-  std::vector<ACADO::Expression> experssions;
   std::vector<Obstacle> obstacles;
+  ACADO::DifferentialState obstacle_cost;
 
-  for (size_t i = 0; i < 1; i++) {
+  for (size_t i = 0; i < max_obstacles; i++) {
     Obstacle obs;
-    auto obs1 = 10 /
+    auto obs_expression = 10 /
       (1 + exp(10 * (sqrt(pow((x_dv - obs.x), 2) + pow((y_dv - obs.y), 2)) - obs.r)));
-    experssions.push_back(obs1);
+    obstacle_cost += obs_expression;
     obstacles.push_back(obs);
   }
 
   ACADO::Function rf;
   ACADO::Function rfN;
 
-  rf << x_dv << y_dv << v_dv << psi_dv << acc_dv << df_dv;
-  rfN << x_dv << y_dv << v_dv << psi_dv;
-
-  ACADO::DifferentialState express;
-  for (auto && i : experssions) {
-    express += i;
-  }
-  rf << express;
+  rf << x_dv << y_dv << psi_dv << v_dv << acc_dv << df_dv << obstacle_cost;
+  rfN << x_dv << y_dv << psi_dv << v_dv;
 
   ACADO::OCP ocp(0, N * DT, N);
-
+  // dynamics
   ocp.subjectTo(f);
-
   // control constraints
   ocp.subjectTo(min_acc_dv <= acc_dv <= max_acc_dv);
   ocp.subjectTo(min_df_dv <= df_dv <= max_df_dv);
 
+  // obstacle constraints
   for (auto && i : obstacles) {
     ocp.subjectTo(
       sqrt(
-        pow((x_dv - i.x), 2) +
-        pow((y_dv - i.y), 2)) - i.r >= 0.0);
+        pow((x_dv - i.x), 2) + pow((y_dv - i.y), 2)) - (i.r + robot_radius) >= 0.0);
   }
 
   // Provide defined weighting matrices:

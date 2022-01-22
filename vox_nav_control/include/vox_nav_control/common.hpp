@@ -41,6 +41,7 @@ namespace vox_nav_control
       kY = 1,
       kPsi = 2,
       kV = 3,
+      kObs = 4,
     };
 
     enum INPUT_ENUM
@@ -131,6 +132,8 @@ namespace vox_nav_control
       // set this true only if user figured the configration
       bool params_configured;
 
+      int max_obstacles;
+
       // Assign meaningful default values to this parameters
       Parameters()
       : N(10),
@@ -150,7 +153,8 @@ namespace vox_nav_control
         Q({100.0, 100.0, 10.0, 0.1}),
         R({10.0, 10.0}),
         debug_mode(true),
-        params_configured(false) {}
+        params_configured(false),
+        max_obstacles(1) {}
     };
 
     static int nearestStateIndex(

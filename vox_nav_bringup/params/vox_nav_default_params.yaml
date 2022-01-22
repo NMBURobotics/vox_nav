@@ -64,6 +64,7 @@ vox_nav_controller_server_rclcpp_node:
       global_plan_look_ahead_distance: 4.2                                    # look this amount of meters from current robot pose to remaining global path
       ref_traj_se2_space: "REEDS"                                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 2.0                                                                # Curve radius form reeds and dubins only
+      robot_radius: 0.5                                                             
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
          N: 8                                                                 # timesteps in MPC Horizon
@@ -80,7 +81,7 @@ vox_nav_controller_server_rclcpp_node:
          A_DOT_MAX: 1.0
          DF_DOT_MIN: -0.8                                                     # min / max front steer angle rate constraint(rad / s)
          DF_DOT_MAX: 0.8
-         Q: [10.0, 10.0, 0.1, 0.1]                                            # weights on x, y, psi, and v.
+         Q: [10.0, 10.0, 0.1, 0.1]                                            # weights on x, y, psi, v.
          R: [10.0, 100.0]                                                     # weights on jerk and slew rate(steering angle derivative)
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
@@ -97,10 +98,11 @@ vox_nav_controller_server_rclcpp_node:
          A_MAX: 1.0
          DF_MIN: -0.6                                                         # min / max front steer angle constraint(rad)
          DF_MAX: 0.6
-         Q: [10.0, 10.0, 0.0, 0.0]                                            # weights on x, y, v, and psi.
-         R: [100.0, 100.0]                                                      # weights on input acc and df, acceleration and steering angle
+         Q: [10.0, 10.0, 0.0, 0.0, 0.0]                                       # weights on x, y, psi, and v, obstacle_cost.
+         R: [100.0, 100.0]                                                    # weights on input acc and df, acceleration and steering angle
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
+         max_obstacles: 16
 
 vox_nav_map_server_rclcpp_node:
   ros__parameters:

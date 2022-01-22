@@ -25,8 +25,8 @@ real_t odeAuxVar[ 16 ];
 
 real_t rk_ttt;
 
-/** Row vector of size: 33 */
-real_t rk_xxx[ 33 ];
+/** Row vector of size: 78 */
+real_t rk_xxx[ 78 ];
 
 /** Row vector of size: 28 */
 real_t rk_kkk[ 28 ];
@@ -41,36 +41,36 @@ const real_t* u = in + 28;
 real_t* a = odeAuxVar;
 
 /* Compute intermediate quantities: */
-a[0] = (cos(xd[3]));
-a[1] = (sin(xd[3]));
-a[2] = ((real_t)(-1.0000000000000000e+00)*(sin(xd[3])));
-a[3] = (xd[16]*a[2]);
-a[4] = (xd[17]*a[2]);
-a[5] = (xd[18]*a[2]);
-a[6] = (xd[19]*a[2]);
-a[7] = (cos(xd[3]));
-a[8] = (xd[16]*a[7]);
-a[9] = (xd[17]*a[7]);
-a[10] = (xd[18]*a[7]);
-a[11] = (xd[19]*a[7]);
-a[12] = (xd[26]*a[2]);
-a[13] = (xd[27]*a[2]);
-a[14] = (xd[26]*a[7]);
-a[15] = (xd[27]*a[7]);
+a[0] = (cos(xd[2]));
+a[1] = (sin(xd[2]));
+a[2] = ((real_t)(-1.0000000000000000e+00)*(sin(xd[2])));
+a[3] = (xd[12]*a[2]);
+a[4] = (xd[13]*a[2]);
+a[5] = (xd[14]*a[2]);
+a[6] = (xd[15]*a[2]);
+a[7] = (cos(xd[2]));
+a[8] = (xd[12]*a[7]);
+a[9] = (xd[13]*a[7]);
+a[10] = (xd[14]*a[7]);
+a[11] = (xd[15]*a[7]);
+a[12] = (xd[24]*a[2]);
+a[13] = (xd[25]*a[2]);
+a[14] = (xd[24]*a[7]);
+a[15] = (xd[25]*a[7]);
 
 /* Compute outputs: */
-out[0] = (xd[2]*a[0]);
-out[1] = (xd[2]*a[1]);
-out[2] = u[0];
-out[3] = u[1];
-out[4] = ((xd[12]*a[0])+(xd[2]*a[3]));
-out[5] = ((xd[13]*a[0])+(xd[2]*a[4]));
-out[6] = ((xd[14]*a[0])+(xd[2]*a[5]));
-out[7] = ((xd[15]*a[0])+(xd[2]*a[6]));
-out[8] = ((xd[12]*a[1])+(xd[2]*a[8]));
-out[9] = ((xd[13]*a[1])+(xd[2]*a[9]));
-out[10] = ((xd[14]*a[1])+(xd[2]*a[10]));
-out[11] = ((xd[15]*a[1])+(xd[2]*a[11]));
+out[0] = (xd[3]*a[0]);
+out[1] = (xd[3]*a[1]);
+out[2] = u[1];
+out[3] = u[0];
+out[4] = ((xd[16]*a[0])+(xd[3]*a[3]));
+out[5] = ((xd[17]*a[0])+(xd[3]*a[4]));
+out[6] = ((xd[18]*a[0])+(xd[3]*a[5]));
+out[7] = ((xd[19]*a[0])+(xd[3]*a[6]));
+out[8] = ((xd[16]*a[1])+(xd[3]*a[8]));
+out[9] = ((xd[17]*a[1])+(xd[3]*a[9]));
+out[10] = ((xd[18]*a[1])+(xd[3]*a[10]));
+out[11] = ((xd[19]*a[1])+(xd[3]*a[11]));
 out[12] = (real_t)(0.0000000000000000e+00);
 out[13] = (real_t)(0.0000000000000000e+00);
 out[14] = (real_t)(0.0000000000000000e+00);
@@ -79,14 +79,14 @@ out[16] = (real_t)(0.0000000000000000e+00);
 out[17] = (real_t)(0.0000000000000000e+00);
 out[18] = (real_t)(0.0000000000000000e+00);
 out[19] = (real_t)(0.0000000000000000e+00);
-out[20] = ((xd[24]*a[0])+(xd[2]*a[12]));
-out[21] = ((xd[25]*a[0])+(xd[2]*a[13]));
-out[22] = ((xd[24]*a[1])+(xd[2]*a[14]));
-out[23] = ((xd[25]*a[1])+(xd[2]*a[15]));
-out[24] = (real_t)(1.0000000000000000e+00);
-out[25] = (real_t)(0.0000000000000000e+00);
-out[26] = (real_t)(0.0000000000000000e+00);
-out[27] = (real_t)(1.0000000000000000e+00);
+out[20] = ((xd[26]*a[0])+(xd[3]*a[12]));
+out[21] = ((xd[27]*a[0])+(xd[3]*a[13]));
+out[22] = ((xd[26]*a[1])+(xd[3]*a[14]));
+out[23] = ((xd[27]*a[1])+(xd[3]*a[15]));
+out[24] = (real_t)(0.0000000000000000e+00);
+out[25] = (real_t)(1.0000000000000000e+00);
+out[26] = (real_t)(1.0000000000000000e+00);
+out[27] = (real_t)(0.0000000000000000e+00);
 }
 
 /* Fixed step size:0.1 */
@@ -125,6 +125,51 @@ rk_xxx[29] = rk_eta[29];
 rk_xxx[30] = rk_eta[30];
 rk_xxx[31] = rk_eta[31];
 rk_xxx[32] = rk_eta[32];
+rk_xxx[33] = rk_eta[33];
+rk_xxx[34] = rk_eta[34];
+rk_xxx[35] = rk_eta[35];
+rk_xxx[36] = rk_eta[36];
+rk_xxx[37] = rk_eta[37];
+rk_xxx[38] = rk_eta[38];
+rk_xxx[39] = rk_eta[39];
+rk_xxx[40] = rk_eta[40];
+rk_xxx[41] = rk_eta[41];
+rk_xxx[42] = rk_eta[42];
+rk_xxx[43] = rk_eta[43];
+rk_xxx[44] = rk_eta[44];
+rk_xxx[45] = rk_eta[45];
+rk_xxx[46] = rk_eta[46];
+rk_xxx[47] = rk_eta[47];
+rk_xxx[48] = rk_eta[48];
+rk_xxx[49] = rk_eta[49];
+rk_xxx[50] = rk_eta[50];
+rk_xxx[51] = rk_eta[51];
+rk_xxx[52] = rk_eta[52];
+rk_xxx[53] = rk_eta[53];
+rk_xxx[54] = rk_eta[54];
+rk_xxx[55] = rk_eta[55];
+rk_xxx[56] = rk_eta[56];
+rk_xxx[57] = rk_eta[57];
+rk_xxx[58] = rk_eta[58];
+rk_xxx[59] = rk_eta[59];
+rk_xxx[60] = rk_eta[60];
+rk_xxx[61] = rk_eta[61];
+rk_xxx[62] = rk_eta[62];
+rk_xxx[63] = rk_eta[63];
+rk_xxx[64] = rk_eta[64];
+rk_xxx[65] = rk_eta[65];
+rk_xxx[66] = rk_eta[66];
+rk_xxx[67] = rk_eta[67];
+rk_xxx[68] = rk_eta[68];
+rk_xxx[69] = rk_eta[69];
+rk_xxx[70] = rk_eta[70];
+rk_xxx[71] = rk_eta[71];
+rk_xxx[72] = rk_eta[72];
+rk_xxx[73] = rk_eta[73];
+rk_xxx[74] = rk_eta[74];
+rk_xxx[75] = rk_eta[75];
+rk_xxx[76] = rk_eta[76];
+rk_xxx[77] = rk_eta[77];
 
 for (run1 = 0; run1 < 1; ++run1)
 {
