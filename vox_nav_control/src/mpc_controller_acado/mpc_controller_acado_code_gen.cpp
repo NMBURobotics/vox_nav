@@ -103,7 +103,6 @@ int main(int argc, char ** argv)
     ACADO::OnlineData r;
   };
 
-
   std::vector<ACADO::Expression> experssions;
   std::vector<Obstacle> obstacles;
 
