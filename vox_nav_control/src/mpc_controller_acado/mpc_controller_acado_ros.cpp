@@ -418,20 +418,17 @@ namespace vox_nav_control
         }
       }
 
-      // Set the obstacles
+      // Set the obstacles , Ellipeses
       for (int i = 0; i < (ACADO_N + 1); ++i) {
         for (int o = 0; o < obstacle_tracks.objects.size(); o++) {
-
-          int x_index = (i * ACADO_NOD) + (3 * o + 0);
-          int y_index = (i * ACADO_NOD) + (3 * o + 1);
-          int r_index = (i * ACADO_NOD) + (3 * o + 2);
-
-          acadoVariables.od[x_index] =
-            obstacle_tracks.objects[o].world_pose.point.x;
-          acadoVariables.od[y_index] =
-            obstacle_tracks.objects[o].world_pose.point.y;
-          acadoVariables.od[r_index] =
-            std::min(obstacle_tracks.objects[o].width, obstacle_tracks.objects[o].length);
+          int h_index = (i * ACADO_NOD) + (4 * o + 0);
+          int k_index = (i * ACADO_NOD) + (4 * o + 1);
+          int a_index = (i * ACADO_NOD) + (4 * o + 2);
+          int b_index = (i * ACADO_NOD) + (4 * o + 3);
+          acadoVariables.od[h_index] = obstacle_tracks.objects[o].world_pose.point.x;
+          acadoVariables.od[k_index] = obstacle_tracks.objects[o].world_pose.point.y;
+          acadoVariables.od[a_index] = obstacle_tracks.objects[o].length;
+          acadoVariables.od[b_index] = obstacle_tracks.objects[o].width;
         }
       }
 
@@ -441,7 +438,6 @@ namespace vox_nav_control
         }
         std::cout << std::endl;
       }*/
-
 
     }
 

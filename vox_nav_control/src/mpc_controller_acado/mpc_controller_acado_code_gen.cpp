@@ -107,11 +107,12 @@ int main(int argc, char ** argv)
   f << dot(psi_dv) == df_dv; // and angular speed
   f << dot(v_dv) == acc_dv;  // control acceleration and
 
-  struct Obstacle // Defined by circles TODO(jediofgever), ellipses
+  struct Obstacle // Defined by ellipses TODO(jediofgever), ellipses
   {
-    ACADO::OnlineData x;
-    ACADO::OnlineData y;
-    ACADO::OnlineData r;
+    ACADO::OnlineData h; // center x
+    ACADO::OnlineData k; // center y
+    ACADO::OnlineData a; // length along x axis
+    ACADO::OnlineData b; // length along y axis
   };
 
   std::vector<Obstacle> obstacles;
@@ -119,8 +120,13 @@ int main(int argc, char ** argv)
 
   for (size_t i = 0; i < max_obstacles; i++) {
     Obstacle obs;
+
     auto obs_expression = 10 /
-      (1 + exp(10 * (sqrt(pow((x_dv - obs.x), 2) + pow((y_dv - obs.y), 2)) - obs.r)));
+      (1 + exp(
+        10 * (sqrt(
+          pow((x_dv - obs.h), 2) +
+          pow((y_dv - obs.k), 2)) - obs.a)));
+
     obstacle_cost += obs_expression;
     obstacles.push_back(obs);
   }
@@ -141,8 +147,8 @@ int main(int argc, char ** argv)
   // obstacle constraints
   for (auto && i : obstacles) {
     ocp.subjectTo(
-      sqrt(
-        pow((x_dv - i.x), 2) + pow((y_dv - i.y), 2)) - (i.r + robot_radius) >= 0.0);
+      pow((x_dv - i.h), 2) / pow(i.a, 2) +
+      pow((y_dv - i.k), 2) / pow(i.b, 2) - (robot_radius) >= 1.0);
   }
 
   // Provide defined weighting matrices:
@@ -151,8 +157,7 @@ int main(int argc, char ** argv)
 
   ocp.minimizeLSQ(W, rf);
   ocp.minimizeLSQEndTerm(WN, rfN);
-
-  ocp.setNOD(obstacles.size() * 3);
+  ocp.setNOD(obstacles.size() * 4);
 
   ACADO::OCPexport mpc(ocp);
 
