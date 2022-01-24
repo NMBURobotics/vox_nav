@@ -118,17 +118,20 @@ int main(int argc, char ** argv)
   std::vector<Obstacle> obstacles;
   ACADO::DifferentialState obstacle_cost;
 
+  //Costs related to obstacles
   for (size_t i = 0; i < max_obstacles; i++) {
-    Obstacle obs;
 
-    auto obs_expression = 10 /
-      (1 + exp(
-        10 * (sqrt(
-          pow((x_dv - obs.h), 2) +
-          pow((y_dv - obs.k), 2)) - obs.a)));
+    Obstacle obs;
+    auto obs_expression =
+      ((pow((x_dv - obs.h), 2) / pow(obs.a, 2) +
+      pow((y_dv - obs.k), 2) / pow(obs.b, 2) - 1.0));
+
+    obs_expression = obs_expression.getPowInt(4);
+    obs_expression = exp(1.0 / obs_expression);
 
     obstacle_cost += obs_expression;
     obstacles.push_back(obs);
+
   }
 
   ACADO::Function rf;
@@ -160,7 +163,6 @@ int main(int argc, char ** argv)
   ocp.setNOD(obstacles.size() * 4);
 
   ACADO::OCPexport mpc(ocp);
-
   USING_NAMESPACE_ACADO
 
   mpc.set(HESSIAN_APPROXIMATION, GAUSS_NEWTON);

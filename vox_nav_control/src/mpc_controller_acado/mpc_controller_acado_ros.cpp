@@ -178,8 +178,8 @@ namespace vox_nav_control
       std::vector<vox_nav_control::common::States> computed_states = getPredictedStatesFromAcado();
 
       if (std::isnan(computed_controls.begin()->acc) || std::isnan(computed_controls.begin()->df) ||
-        std::abs(computed_controls.begin()->acc) > mpc_parameters_.A_MAX ||
-        std::abs(computed_controls.begin()->df) > mpc_parameters_.DF_MAX)
+        std::abs(computed_controls.begin()->acc) > 2 * mpc_parameters_.A_MAX ||
+        std::abs(computed_controls.begin()->df) > 2 * mpc_parameters_.DF_MAX)
       {
         RCLCPP_WARN(parent_->get_logger(), "NAN or Invalid Control outputs from Acado!");
         // Reset The Controller
@@ -385,7 +385,6 @@ namespace vox_nav_control
       const vox_nav_msgs::msg::ObjectArray & obstacle_tracks,
       const std::vector<vox_nav_control::common::ControlInput> & prev_controls)
     {
-
       for (int i = 0; i < ACADO_NY * ACADO_N; ++i) {
         int state = i % ACADO_NY;
         int index = i / ACADO_NY;

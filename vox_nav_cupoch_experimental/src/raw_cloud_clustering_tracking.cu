@@ -870,8 +870,7 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     viz_obj.cyl.pose.position.x = track_msg.world_pose.point.x;
     viz_obj.cyl.pose.position.y = track_msg.world_pose.point.y;
     viz_obj.cyl.pose.position.z = track_msg.world_pose.point.z;
-    viz_obj.cyl.pose.orientation =
-      vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, track_msg.orientation);
+    viz_obj.cyl.pose.orientation = geometry_msgs::msg::Quaternion();
     viz_obj.cyl.scale.x = track_msg.length;
     viz_obj.cyl.scale.y = track_msg.width;
     viz_obj.cyl.scale.z = track_msg.height;
@@ -928,14 +927,14 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
       }
       if (std::abs(track_msg.velocity) > 0.4) {
         viz_obj.cyl.pose.orientation =
-          vox_nav_utilities::getMsgQuaternionfromRPY(
-          0, 0, track_yaw_angle);
+          vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, track_yaw_angle);
         auto dist_to_after_N_horizon_pose =
           vox_nav_utilities::getEuclidianDistBetweenPoints(
-          track_position_after_N_horizons,
-          track_msg.world_pose.point);
+          track_position_after_N_horizons, track_msg.world_pose.point);
         viz_obj.cyl.scale.x = dist_to_after_N_horizon_pose;
         track_msg.is_dynamic = true;
+        track_msg.orientation = track_yaw_angle;
+        track_msg.heading = track_yaw_angle;
       }
     }
 
