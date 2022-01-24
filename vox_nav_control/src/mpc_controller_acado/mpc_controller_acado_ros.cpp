@@ -150,7 +150,16 @@ namespace vox_nav_control
         curr_robot_pose, mpc_parameters_, reference_traj_,
         global_plan_look_ahead_distance_, state_space_information_);
 
-      setRefrenceStates(local_interpolated_reference_states, previous_control_);
+      std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
+      vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles = *trimObstaclesToN(
+        obstacle_tracks_,
+        curr_robot_pose,
+        mpc_parameters_.max_obstacles);
+
+      setRefrenceStates(
+        local_interpolated_reference_states,
+        trimmed_N_obstacles,
+        previous_control_);
       updateCurrentStates(curr_states);
 
       acado_preparationStep();
@@ -168,16 +177,30 @@ namespace vox_nav_control
         getPredictedControlsFromAcado();
       std::vector<vox_nav_control::common::States> computed_states = getPredictedStatesFromAcado();
 
-      if (std::isnan(computed_controls.begin()->acc) || std::isnan(computed_controls.begin()->df)) {
-        RCLCPP_WARN(parent_->get_logger(), "NAN Control outputs from Acado!");
-      } else {
-        //  The control output is acceleration but we need to publish speed
-        computed_velocity_.linear.x += computed_controls.begin()->acc * (dt);
-        //  The control output is steeering angle but we need to publish angular velocity
-        /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
-          (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
-        computed_velocity_.angular.z = computed_controls.begin()->df;
+      if (std::isnan(computed_controls.begin()->acc) || std::isnan(computed_controls.begin()->df) ||
+        std::abs(computed_controls.begin()->acc) > mpc_parameters_.A_MAX ||
+        std::abs(computed_controls.begin()->df) > mpc_parameters_.DF_MAX)
+      {
+        RCLCPP_WARN(parent_->get_logger(), "NAN or Invalid Control outputs from Acado!");
+        // Reset The Controller
+        // Reset all solver memory
+        memset(&acadoWorkspace, 0, sizeof( acadoWorkspace ));
+        memset(&acadoVariables, 0, sizeof( acadoVariables ));
+        initAcadoStuff();
+        initAcadoWeights();
+        // reset all control inputs as they are invalid
+        std::fill(
+          computed_controls.begin(),
+          computed_controls.end(),
+          vox_nav_control::common::ControlInput());
       }
+
+      //  The control output is acceleration but we need to publish speed
+      computed_velocity_.linear.x += computed_controls.begin()->acc * (dt);
+      //  The control output is steeering angle but we need to publish angular velocity
+      /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
+        (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
+      computed_velocity_.angular.z = computed_controls.begin()->df;
 
       regulate_max_speed();
 
@@ -219,7 +242,15 @@ namespace vox_nav_control
         curr_robot_pose, mpc_parameters_, reference_traj_,
         global_plan_look_ahead_distance_, state_space_information_);
 
-      setRefrenceStates(local_interpolated_reference_states, previous_control_);
+      std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
+      vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles = *trimObstaclesToN(
+        obstacle_tracks_,
+        curr_robot_pose,
+        mpc_parameters_.max_obstacles);
+      setRefrenceStates(
+        local_interpolated_reference_states,
+        trimmed_N_obstacles,
+        previous_control_);
       updateCurrentStates(curr_states);
 
       acado_preparationStep();
@@ -256,8 +287,8 @@ namespace vox_nav_control
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
       obstacle_tracks_ = *msg;
 
-      /*RCLCPP_INFO(
-        parent_->get_logger(), "Recieved Tracks [%d]", int(obstacle_tracks_.objects.size()));*/
+      RCLCPP_INFO(
+        parent_->get_logger(), "Recieved Tracks [%d]", int(obstacle_tracks_.objects.size()));
     }
 
     std::vector<vox_nav_control::common::Ellipsoid> MPCControllerAcadoROS::trackMsg2Ellipsoids(
@@ -313,7 +344,7 @@ namespace vox_nav_control
       }
 
       for (size_t i = 0; i < ACADO_NOD * (ACADO_N + 1); i++) {
-        acadoVariables.od[i] = 0.1;
+        acadoVariables.od[i] = 0.0;
       }
 
       // Prepare first step
@@ -351,6 +382,7 @@ namespace vox_nav_control
 
     void MPCControllerAcadoROS::setRefrenceStates(
       const std::vector<vox_nav_control::common::States> & ref_states,
+      const vox_nav_msgs::msg::ObjectArray & obstacle_tracks,
       const std::vector<vox_nav_control::common::ControlInput> & prev_controls)
     {
 
@@ -386,18 +418,31 @@ namespace vox_nav_control
         }
       }
 
-      for (int i = 0; i < ACADO_NOD * (ACADO_N + 1); ++i) {
-        int index = i % (ACADO_N + 1);
+      // Set the obstacles
+      for (int i = 0; i < (ACADO_N + 1); ++i) {
+        for (int o = 0; o < obstacle_tracks.objects.size(); o++) {
 
-        index = index % 3;
-        if (index == vox_nav_control::common::STATE_ENUM::kX) {
-          acadoVariables.od[i] = 0.0;
-        } else if (index == vox_nav_control::common::STATE_ENUM::kY) {
-          acadoVariables.od[i] = -5.0;
-        } else {
-          acadoVariables.od[i] = 2.0;
+          int x_index = (i * ACADO_NOD) + (3 * o + 0);
+          int y_index = (i * ACADO_NOD) + (3 * o + 1);
+          int r_index = (i * ACADO_NOD) + (3 * o + 2);
+
+          acadoVariables.od[x_index] =
+            obstacle_tracks.objects[o].world_pose.point.x;
+          acadoVariables.od[y_index] =
+            obstacle_tracks.objects[o].world_pose.point.y;
+          acadoVariables.od[r_index] =
+            std::min(obstacle_tracks.objects[o].width, obstacle_tracks.objects[o].length);
         }
       }
+
+      /*for (size_t i = 0; i < 17; i++) {
+        for (size_t j = 0; j < 12; j++) {
+          std::cout << acadoVariables.od[(i * 12 ) + j] << " ";
+        }
+        std::cout << std::endl;
+      }*/
+
+
     }
 
     void MPCControllerAcadoROS::updateCurrentStates(vox_nav_control::common::States curr_states)
@@ -449,6 +494,68 @@ namespace vox_nav_control
         computed_states.push_back(curr);
       }
       return computed_states;
+    }
+
+    vox_nav_msgs::msg::ObjectArray::SharedPtr MPCControllerAcadoROS::trimObstaclesToN(
+      const vox_nav_msgs::msg::ObjectArray & obstacle_tracks,
+      const geometry_msgs::msg::PoseStamped & curr_robot_pose,
+      int N)
+    {
+      auto trimmed_N_obstacles = std::make_shared<vox_nav_msgs::msg::ObjectArray>(obstacle_tracks);
+
+      if (obstacle_tracks.objects.size() < N) {
+
+        if (mpc_parameters_.debug_mode) {
+          RCLCPP_INFO(
+            parent_->get_logger(),
+            "Detected less number of obstacles than params_.max_obstacles, actual obstacles are %d "
+            " while params_.max_obstacles(N) is %d", obstacle_tracks.objects.size(), N);
+
+          RCLCPP_INFO(
+            parent_->get_logger(),
+            "Gonna create %d ghost obstacles",
+            N - obstacle_tracks.objects.size());
+        }
+
+        for (size_t i = 0; i < N - obstacle_tracks.objects.size(); i++) {
+          vox_nav_msgs::msg::Object ghost_obstacle;
+          ghost_obstacle.world_pose.point.x = 20000.0;
+          ghost_obstacle.world_pose.point.y = 20000.0;
+          ghost_obstacle.world_pose.point.z = 20000.0;
+          ghost_obstacle.length = 0.1;
+          ghost_obstacle.width = 0.1;
+          ghost_obstacle.height = 0.1;
+          trimmed_N_obstacles->objects.push_back(ghost_obstacle);
+        }
+      } else {
+        trimmed_N_obstacles->objects.clear();
+        trimmed_N_obstacles->objects.resize(N);
+
+        std::vector<double> distances;
+        for (auto && obs : obstacle_tracks.objects) {
+          double dist = vox_nav_utilities::getEuclidianDistBetweenPoints(
+            obs.world_pose.point,
+            curr_robot_pose.pose.position);
+          distances.push_back(dist);
+        }
+
+        std::vector<int> sorted_indices(distances.size());
+        std::iota(sorted_indices.begin(), sorted_indices.end(), 0);
+        auto comparator = [&distances](int a, int b) {return distances[a] < distances[b];};
+        std::sort(sorted_indices.begin(), sorted_indices.end(), comparator);
+
+        for (size_t i = 0; i < N; i++) {
+          trimmed_N_obstacles->objects[i] = obstacle_tracks.objects[sorted_indices[i]];
+        }
+      }
+
+      if (mpc_parameters_.debug_mode) {
+        RCLCPP_INFO(
+          parent_->get_logger(),
+          "Feeding exactly %d obstacles to MPC solver", trimmed_N_obstacles->objects.size());
+      }
+
+      return trimmed_N_obstacles;
     }
 
   }   // namespace mpc_controller_acado
