@@ -64,7 +64,7 @@ vox_nav_controller_server_rclcpp_node:
       global_plan_look_ahead_distance: 5.0                                    # look this amount of meters from current robot pose to remaining global path
       ref_traj_se2_space: "REEDS"                                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 2.0                                                                # Curve radius form reeds and dubins only
-      robot_radius: 1.8                                                             
+      robot_radius: 0.94                                                             
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
          N: 8                                                                 # timesteps in MPC Horizon
@@ -98,11 +98,11 @@ vox_nav_controller_server_rclcpp_node:
          A_MAX: 1.0
          DF_MIN: -0.9                                                         # min / max front steer angle constraint(rad)
          DF_MAX: 0.9
-         Q: [10.0, 10.0, 0.0, 0.0, 10.0]                                      # weights on x, y, psi, and v, obstacle_cost.
+         Q: [10.0, 10.0, 0.0, 0.0, 1.0]                                       # weights on x, y, psi, and v, obstacle_cost.
          R: [10.0, 100.0]                                                     # weights on input acc and df, acceleration and steering angle
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
-         max_obstacles: 4
+         max_obstacles: 8
 
 vox_nav_map_server_rclcpp_node:
   ros__parameters:

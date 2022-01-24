@@ -935,6 +935,12 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
         track_msg.is_dynamic = true;
         track_msg.orientation = track_yaw_angle;
         track_msg.heading = track_yaw_angle;
+        viz_obj.cyl.scale.x *= 1.4;
+        viz_obj.cyl.scale.y *= 1.4;
+        viz_obj.cyl.scale.z *= 1.4;
+        track_msg.length = viz_obj.cyl.scale.x;
+        track_msg.width = viz_obj.cyl.scale.y;
+        track_msg.height = viz_obj.cyl.scale.z;
       }
     }
 

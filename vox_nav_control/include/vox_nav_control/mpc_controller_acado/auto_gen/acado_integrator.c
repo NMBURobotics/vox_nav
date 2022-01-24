@@ -30,8 +30,8 @@ real_t auxVar[ 4 ];
 
 real_t rk_ttt;
 
-/** Row vector of size: 22 */
-real_t rk_xxx[ 22 ];
+/** Row vector of size: 38 */
+real_t rk_xxx[ 38 ];
 
 /** Matrix of size: 4 x 2 (row major format) */
 real_t rk_kkk[ 8 ];
@@ -321,6 +321,22 @@ rk_xxx[18] = rk_eta[42];
 rk_xxx[19] = rk_eta[43];
 rk_xxx[20] = rk_eta[44];
 rk_xxx[21] = rk_eta[45];
+rk_xxx[22] = rk_eta[46];
+rk_xxx[23] = rk_eta[47];
+rk_xxx[24] = rk_eta[48];
+rk_xxx[25] = rk_eta[49];
+rk_xxx[26] = rk_eta[50];
+rk_xxx[27] = rk_eta[51];
+rk_xxx[28] = rk_eta[52];
+rk_xxx[29] = rk_eta[53];
+rk_xxx[30] = rk_eta[54];
+rk_xxx[31] = rk_eta[55];
+rk_xxx[32] = rk_eta[56];
+rk_xxx[33] = rk_eta[57];
+rk_xxx[34] = rk_eta[58];
+rk_xxx[35] = rk_eta[59];
+rk_xxx[36] = rk_eta[60];
+rk_xxx[37] = rk_eta[61];
 
 for (run = 0; run < 1; ++run)
 {

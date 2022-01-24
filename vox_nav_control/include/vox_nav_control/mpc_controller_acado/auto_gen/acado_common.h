@@ -64,9 +64,9 @@ extern "C"
 /** Number of control/estimation intervals. */
 #define ACADO_N 16
 /** Number of online data values. */
-#define ACADO_NOD 16
+#define ACADO_NOD 32
 /** Number of path constraints. */
-#define ACADO_NPAC 4
+#define ACADO_NPAC 8
 /** Number of control variables. */
 #define ACADO_NU 2
 /** Number of differential variables. */
@@ -116,11 +116,11 @@ real_t x[ 68 ];
  */
 real_t u[ 32 ];
 
-/** Matrix of size: 17 x 16 (row major format)
+/** Matrix of size: 17 x 32 (row major format)
  * 
  *  Matrix containing 17 online data vectors.
  */
-real_t od[ 272 ];
+real_t od[ 544 ];
 
 /** Column vector of size: 112
  * 
@@ -175,11 +175,11 @@ real_t evGx[ 256 ];
 /** Matrix of size: 64 x 2 (row major format) */
 real_t evGu[ 128 ];
 
-/** Column vector of size: 60 */
-real_t objAuxVar[ 60 ];
+/** Column vector of size: 120 */
+real_t objAuxVar[ 120 ];
 
-/** Row vector of size: 22 */
-real_t objValueIn[ 22 ];
+/** Row vector of size: 38 */
+real_t objValueIn[ 38 ];
 
 /** Row vector of size: 35 */
 real_t objValueOut[ 35 ];
@@ -202,26 +202,26 @@ real_t QN1[ 16 ];
 /** Matrix of size: 4 x 4 (row major format) */
 real_t QN2[ 16 ];
 
-/** Column vector of size: 56 */
-real_t conAuxVar[ 56 ];
+/** Column vector of size: 112 */
+real_t conAuxVar[ 112 ];
 
-/** Row vector of size: 22 */
-real_t conValueIn[ 22 ];
+/** Row vector of size: 38 */
+real_t conValueIn[ 38 ];
 
-/** Row vector of size: 28 */
-real_t conValueOut[ 28 ];
+/** Row vector of size: 56 */
+real_t conValueOut[ 56 ];
 
-/** Column vector of size: 64 */
-real_t evH[ 64 ];
+/** Column vector of size: 128 */
+real_t evH[ 128 ];
 
-/** Matrix of size: 64 x 4 (row major format) */
-real_t evHx[ 256 ];
+/** Matrix of size: 128 x 4 (row major format) */
+real_t evHx[ 512 ];
 
-/** Matrix of size: 64 x 2 (row major format) */
-real_t evHu[ 128 ];
+/** Matrix of size: 128 x 2 (row major format) */
+real_t evHu[ 256 ];
 
-/** Column vector of size: 4 */
-real_t evHxd[ 4 ];
+/** Column vector of size: 8 */
+real_t evHxd[ 8 ];
 
 /** Column vector of size: 4 */
 real_t Dx0[ 4 ];
@@ -244,17 +244,17 @@ real_t QDy[ 68 ];
 /** Matrix of size: 32 x 4 (row major format) */
 real_t H10[ 128 ];
 
-/** Matrix of size: 64 x 4 (row major format) */
-real_t A01[ 256 ];
+/** Matrix of size: 128 x 4 (row major format) */
+real_t A01[ 512 ];
 
-/** Column vector of size: 64 */
-real_t pacA01Dx0[ 64 ];
+/** Column vector of size: 128 */
+real_t pacA01Dx0[ 128 ];
 
 /** Matrix of size: 32 x 32 (row major format) */
 real_t H[ 1024 ];
 
-/** Matrix of size: 64 x 32 (row major format) */
-real_t A[ 2048 ];
+/** Matrix of size: 128 x 32 (row major format) */
+real_t A[ 4096 ];
 
 /** Column vector of size: 32 */
 real_t g[ 32 ];
@@ -265,17 +265,17 @@ real_t lb[ 32 ];
 /** Column vector of size: 32 */
 real_t ub[ 32 ];
 
-/** Column vector of size: 64 */
-real_t lbA[ 64 ];
+/** Column vector of size: 128 */
+real_t lbA[ 128 ];
 
-/** Column vector of size: 64 */
-real_t ubA[ 64 ];
+/** Column vector of size: 128 */
+real_t ubA[ 128 ];
 
 /** Column vector of size: 32 */
 real_t x[ 32 ];
 
-/** Column vector of size: 96 */
-real_t y[ 96 ];
+/** Column vector of size: 160 */
+real_t y[ 160 ];
 
 
 } ACADOworkspace;
@@ -287,7 +287,7 @@ real_t y[ 96 ];
 
 /** Performs the integration and sensitivity propagation for one shooting interval.
  *
- *  \param rk_eta Working array of size 22 to pass the input values and return the results.
+ *  \param rk_eta Working array of size 38 to pass the input values and return the results.
  *  \param resetIntegrator The internal memory of the integrator can be reset.
  *
  *  \return Status code of the integrator.

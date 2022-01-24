@@ -120,7 +120,6 @@ int main(int argc, char ** argv)
 
   //Costs related to obstacles
   for (size_t i = 0; i < max_obstacles; i++) {
-
     Obstacle obs;
     auto obs_expression =
       ((pow((x_dv - obs.h), 2) / pow(obs.a, 2) +
@@ -131,7 +130,6 @@ int main(int argc, char ** argv)
 
     obstacle_cost += obs_expression;
     obstacles.push_back(obs);
-
   }
 
   ACADO::Function rf;
@@ -151,7 +149,7 @@ int main(int argc, char ** argv)
   for (auto && i : obstacles) {
     ocp.subjectTo(
       pow((x_dv - i.h), 2) / pow(i.a, 2) +
-      pow((y_dv - i.k), 2) / pow(i.b, 2) - (robot_radius) >= 1.0);
+      pow((y_dv - i.k), 2) / pow(i.b, 2) - (robot_radius + 1.0) >= 0.0);
   }
 
   // Provide defined weighting matrices:
