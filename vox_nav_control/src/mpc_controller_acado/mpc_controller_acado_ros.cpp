@@ -125,6 +125,17 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
+      double curr_robot_speed = 0.0;
+      if (!previous_robot_pose_.header.stamp.sec || !previous_time_.seconds()) {
+        RCLCPP_INFO(parent_->get_logger(), "Recieved initial compute control command");
+        curr_robot_speed = 0.0;
+      } else {
+        double dt = (parent_->get_clock()->now() - previous_time_).seconds();
+        double dist = vox_nav_utilities::getEuclidianDistBetweenPoses(
+          curr_robot_pose, previous_robot_pose_);
+        curr_robot_speed = dist / dt;
+      }
+
       auto regulate_max_speed = [this]() {
           if (computed_velocity_.linear.x > mpc_parameters_.V_MAX) {
             computed_velocity_.linear.x = mpc_parameters_.V_MAX;
@@ -141,7 +152,7 @@ namespace vox_nav_control
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = robot_psi;
-      curr_states.v = mpc_parameters_.V_MAX; // ????
+      curr_states.v = curr_robot_speed; // ????
 
       // We will interpolate mpc_parameters_.N traj points in the look ahead distance
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
@@ -229,6 +240,8 @@ namespace vox_nav_control
         mpc_computed_traj_publisher_);
 
       previous_control_ = computed_controls;
+      previous_time_ = parent_->get_clock()->now();
+      previous_robot_pose_ = curr_robot_pose;
 
       // Controller server will publish this
       return computed_velocity_;

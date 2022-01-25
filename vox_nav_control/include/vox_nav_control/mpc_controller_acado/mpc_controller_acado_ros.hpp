@@ -189,6 +189,9 @@ namespace vox_nav_control
       // Keep a copy of previously applied control inputs, this is neded
       // by MPC algorithm
       std::vector<vox_nav_control::common::ControlInput> previous_control_;
+      geometry_msgs::msg::PoseStamped previous_robot_pose_;
+      rclcpp::Time previous_time_;
+
       // Publish local trajecory currently being fed to controller
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
         interpolated_local_reference_traj_publisher_;
