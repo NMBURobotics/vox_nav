@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -104,6 +104,7 @@ namespace vox_nav_control
       // use parameters in mpc_parameters_.Q and mpc_parameters_.R
       initAcadoWeights();
 
+      // This is used to interpolate local refernce states
       std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
         std::make_shared<ompl::base::RealVectorBounds>(2);
       if (selected_se2_space_name_ == "SE2") {
@@ -132,9 +133,6 @@ namespace vox_nav_control
           }
         };
 
-      double dt = mpc_parameters_.DT;
-      double kTARGET_SPEED = mpc_parameters_.V_MAX;
-
       double robot_roll, robot_pitch, robot_psi;
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
@@ -143,40 +141,49 @@ namespace vox_nav_control
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = robot_psi;
-      curr_states.v = kTARGET_SPEED;
+      curr_states.v = mpc_parameters_.V_MAX; // ????
 
+      // We will interpolate mpc_parameters_.N traj points in the look ahead distance
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(
         curr_robot_pose, mpc_parameters_, reference_traj_,
         global_plan_look_ahead_distance_, state_space_information_);
 
+      // There is a limit of number of obstacles we can handle,
+      // There will be always a fixed amount of obstacles
+      // If there is no obstacles at all just fill with ghost obstacles(all zeros)
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
       vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles = *trimObstaclesToN(
         obstacle_tracks_,
         curr_robot_pose,
         mpc_parameters_.max_obstacles);
 
+      // Update references and previous control inputs
       setRefrenceStates(
         local_interpolated_reference_states,
         trimmed_N_obstacles,
         previous_control_);
+
+      // update current states
       updateCurrentStates(curr_states);
 
+      // prepare acado for a step
       acado_preparationStep();
       auto ret = acado_feedbackStep();
 
-      auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
-
+      // if debug mode print predicted states and controls from acado
       if (mpc_parameters_.debug_mode) {
         std::cout << "Return code from acado_feedbackStep(): " << ret << std::endl;
         acado_printDifferentialVariables();
         acado_printControlVariables();
       }
 
+      // now lets retrieve computed controls and apply
       std::vector<vox_nav_control::common::ControlInput> computed_controls =
         getPredictedControlsFromAcado();
       std::vector<vox_nav_control::common::States> computed_states = getPredictedStatesFromAcado();
 
+      // Check if the computed control are nonsense, if so , reset the acado and re-init
       if (std::isnan(computed_controls.begin()->acc) || std::isnan(computed_controls.begin()->df) ||
         std::abs(computed_controls.begin()->acc) > 2 * mpc_parameters_.A_MAX ||
         std::abs(computed_controls.begin()->df) > 2 * mpc_parameters_.DF_MAX)
@@ -196,11 +203,12 @@ namespace vox_nav_control
       }
 
       //  The control output is acceleration but we need to publish speed
-      computed_velocity_.linear.x += computed_controls.begin()->acc * (dt);
+      computed_velocity_.linear.x += computed_controls.begin()->acc * (mpc_parameters_.DT);
       //  The control output is steeering angle but we need to publish angular velocity
+      computed_velocity_.angular.z = computed_controls.begin()->df;
+      // swtich to this in case of a full ackermann model
       /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
         (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
-      computed_velocity_.angular.z = computed_controls.begin()->df;
 
       regulate_max_speed();
 
@@ -209,16 +217,20 @@ namespace vox_nav_control
       red_color.a = 1.0;
       blue_color.b = 1.0;
       blue_color.a = 1.0;
+
+      // Refernce , interpolated traj
       publishTrajStates(
         local_interpolated_reference_states, red_color, "ref_traj",
         interpolated_local_reference_traj_publisher_);
 
+      // Computed actual traj
       publishTrajStates(
         computed_states, blue_color, "actual_traj",
         mpc_computed_traj_publisher_);
 
       previous_control_ = computed_controls;
 
+      // Controller server will publish this
       return computed_velocity_;
     }
 
