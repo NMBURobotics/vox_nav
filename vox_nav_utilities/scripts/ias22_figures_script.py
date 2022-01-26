@@ -873,7 +873,7 @@ def plot_ztest_length():
                          columns=[i for i in score_with_planner])
 
     f, ax = plt.subplots(figsize=(7, 7))
-    sn.heatmap(df_cm, annot=True, robust=False)
+    sn.heatmap(df_cm, annot=False, robust=True,)
 
     ax.set_title(
         "A matrix representing whether a planner's p-value was above significance value of " + str(a) + " in comparasion to other planner", fontsize=18)

@@ -250,8 +250,25 @@ namespace vox_nav_control
     geometry_msgs::msg::Twist MPCControllerAcadoROS::computeHeadingCorrectionCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
-      double dt = mpc_parameters_.DT;
-      double kTARGET_SPEED = mpc_parameters_.V_MAX;
+
+      auto regulate_max_speed = [this]() {
+          if (computed_velocity_.linear.x > mpc_parameters_.V_MAX) {
+            computed_velocity_.linear.x = mpc_parameters_.V_MAX;
+          } else if (computed_velocity_.linear.x < mpc_parameters_.V_MIN) {
+            computed_velocity_.linear.x = mpc_parameters_.V_MIN;
+          }
+        };
+
+      double curr_robot_speed = 0.0;
+      if (!previous_robot_pose_.header.stamp.sec || !previous_time_.seconds()) {
+        RCLCPP_INFO(parent_->get_logger(), "Recieved initial compute control command");
+        curr_robot_speed = 0.0;
+      } else {
+        double dt = (parent_->get_clock()->now() - previous_time_).seconds();
+        double dist = vox_nav_utilities::getEuclidianDistBetweenPoses(
+          curr_robot_pose, previous_robot_pose_);
+        curr_robot_speed = dist / dt;
+      }
 
       double robot_roll, robot_pitch, robot_psi;
       vox_nav_utilities::getRPYfromMsgQuaternion(
@@ -261,7 +278,8 @@ namespace vox_nav_control
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = robot_psi;
-      curr_states.v = kTARGET_SPEED;
+      curr_states.v = curr_robot_speed; // ????
+
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(
         curr_robot_pose, mpc_parameters_, reference_traj_,
@@ -293,10 +311,38 @@ namespace vox_nav_control
         getPredictedControlsFromAcado();
       std::vector<vox_nav_control::common::States> computed_states = getPredictedStatesFromAcado();
 
+      // Check if the computed control are nonsense, if so , reset the acado and re-init
+      if (std::isnan(computed_controls.begin()->acc) || std::isnan(computed_controls.begin()->df) ||
+        std::abs(computed_controls.begin()->acc) > 2 * mpc_parameters_.A_MAX ||
+        std::abs(computed_controls.begin()->df) > 2 * mpc_parameters_.DF_MAX)
+      {
+        RCLCPP_WARN(parent_->get_logger(), "NAN or Invalid Control outputs from Acado!");
+        // Reset The Controller
+        // Reset all solver memory
+        memset(&acadoWorkspace, 0, sizeof( acadoWorkspace ));
+        memset(&acadoVariables, 0, sizeof( acadoVariables ));
+        initAcadoStuff();
+        initAcadoWeights();
+        // reset all control inputs as they are invalid
+        std::fill(
+          computed_controls.begin(),
+          computed_controls.end(),
+          vox_nav_control::common::ControlInput());
+      }
+
       //  The control output is acceleration but we need to publish speed
-      computed_velocity_.linear.x += 0;
+      computed_velocity_.linear.x += computed_controls.begin()->acc * (mpc_parameters_.DT);
       //  The control output is steeering angle but we need to publish angular velocity
-      computed_velocity_.angular.z += computed_controls.begin()->df * dt;
+      computed_velocity_.angular.z = computed_controls.begin()->df;
+      // swtich to this in case of a full ackermann model
+      /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
+        (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
+
+      regulate_max_speed();
+
+      previous_control_ = computed_controls;
+      previous_time_ = parent_->get_clock()->now();
+      previous_robot_pose_ = curr_robot_pose;
 
       return computed_velocity_;
     }
