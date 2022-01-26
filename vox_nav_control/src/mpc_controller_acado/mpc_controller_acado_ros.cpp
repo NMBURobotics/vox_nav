@@ -152,7 +152,7 @@ namespace vox_nav_control
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = robot_psi;
-      curr_states.v = curr_robot_speed; // ????
+      curr_states.v = curr_robot_speed;
 
       // We will interpolate mpc_parameters_.N traj points in the look ahead distance
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
@@ -214,7 +214,9 @@ namespace vox_nav_control
       }
 
       //  The control output is acceleration but we need to publish speed
+
       computed_velocity_.linear.x += computed_controls.begin()->acc * (mpc_parameters_.DT);
+
       //  The control output is steeering angle but we need to publish angular velocity
       computed_velocity_.angular.z = computed_controls.begin()->df;
       // swtich to this in case of a full ackermann model
@@ -331,7 +333,9 @@ namespace vox_nav_control
       }
 
       //  The control output is acceleration but we need to publish speed
-      computed_velocity_.linear.x += computed_controls.begin()->acc * (mpc_parameters_.DT);
+      //computed_velocity_.linear.x += computed_controls.begin()->acc * (mpc_parameters_.DT);
+      computed_velocity_.linear.x = 0.0;
+
       //  The control output is steeering angle but we need to publish angular velocity
       computed_velocity_.angular.z = computed_controls.begin()->df;
       // swtich to this in case of a full ackermann model

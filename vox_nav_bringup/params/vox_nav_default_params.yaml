@@ -89,17 +89,17 @@ vox_nav_controller_server_rclcpp_node:
          plugin: "mpc_controller_acado::MPCControllerAcadoROS"
          N: 16                                                                # timesteps in MPC Horizon
          Ni: 1
-         DT: 0.1                                                              # discretization time between timesteps(s)
+         DT: 0.4                                                              # discretization time between timesteps(s)
          L_F: 0.67                                                            # distance from CoG to front axle(m)
          L_R: 0.67                                                            # distance from CoG to rear axle(m)
          V_MIN: -1.0                                                          # min / max velocity constraint(m / s)
          V_MAX: 1.5
-         A_MIN: -1.0                                                          # min / max acceleration constraint(m / s ^ 2)
+         A_MIN: -1.5                                                          # min / max acceleration constraint(m / s ^ 2)
          A_MAX: 1.0
-         DF_MIN: -0.9                                                         # min / max front steer angle constraint(rad)
-         DF_MAX: 0.9
+         DF_MIN: -0.4                                                         # min / max front steer angle constraint(rad)
+         DF_MAX: 0.4
          Q: [10.0, 10.0, 0.0, 0.0, 1.0]                                       # weights on x, y, psi, and v, obstacle_cost.
-         R: [10.0, 100.0]                                                     # weights on input acc and df, acceleration and steering angle
+         R: [10.0, 100.0]                                                      # weights on input acc and df, acceleration and steering angle
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
          max_obstacles: 8
