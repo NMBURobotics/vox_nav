@@ -211,6 +211,8 @@ namespace vox_nav_control
           computed_controls.begin(),
           computed_controls.end(),
           vox_nav_control::common::ControlInput());
+
+        computed_velocity_ = geometry_msgs::msg::Twist();
       }
 
       //  The control output is acceleration but we need to publish speed
@@ -220,6 +222,7 @@ namespace vox_nav_control
       //  The control output is steeering angle but we need to publish angular velocity
       computed_velocity_.angular.z = computed_controls.begin()->df;
       // swtich to this in case of a full ackermann model
+
       /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
         (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
 
@@ -265,8 +268,10 @@ namespace vox_nav_control
       if (!previous_robot_pose_.header.stamp.sec || !previous_time_.seconds()) {
         RCLCPP_INFO(parent_->get_logger(), "Recieved initial compute control command");
         curr_robot_speed = 0.0;
-      } else {
-        double dt = (parent_->get_clock()->now() - previous_time_).seconds();
+      }
+
+      double dt = (parent_->get_clock()->now() - previous_time_).seconds();
+      if (dt > 1.0) {
         double dist = vox_nav_utilities::getEuclidianDistBetweenPoses(
           curr_robot_pose, previous_robot_pose_);
         curr_robot_speed = dist / dt;
@@ -330,6 +335,7 @@ namespace vox_nav_control
           computed_controls.begin(),
           computed_controls.end(),
           vox_nav_control::common::ControlInput());
+        computed_velocity_ = geometry_msgs::msg::Twist();
       }
 
       //  The control output is acceleration but we need to publish speed
@@ -339,6 +345,7 @@ namespace vox_nav_control
       //  The control output is steeering angle but we need to publish angular velocity
       computed_velocity_.angular.z = computed_controls.begin()->df;
       // swtich to this in case of a full ackermann model
+
       /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
         (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
 
@@ -435,12 +442,14 @@ namespace vox_nav_control
       double w_obs = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kObs];
       double w_acc = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kacc];
       double w_df = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kdf];
+
+      double coeff = 1.0;
       for (int i = 0; i < ACADO_N; i++) {
         // Setup diagonal entries
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 0] = w_x;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 1] = w_y;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 2] = w_yaw;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 3] = w_vel;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 0] = w_x * coeff;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 1] = w_y * coeff;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 2] = w_yaw * coeff;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 3] = w_vel * coeff;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 4] = w_acc;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 5] = w_df;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 6] = w_obs;
@@ -449,10 +458,6 @@ namespace vox_nav_control
       acadoVariables.WN[(ACADO_NYN + 1) * 1] = w_y;
       acadoVariables.WN[(ACADO_NYN + 1) * 2] = w_yaw;
       acadoVariables.WN[(ACADO_NYN + 1) * 3] = w_vel;
-
-      for (int i = 0; i < ACADO_N * ACADO_NY; i++) {
-        //acadoVariables.W[i] = 1;
-      }
     }
 
     void MPCControllerAcadoROS::setRefrenceStates(
@@ -571,7 +576,8 @@ namespace vox_nav_control
       const geometry_msgs::msg::PoseStamped & curr_robot_pose,
       int N)
     {
-      auto trimmed_N_obstacles = std::make_shared<vox_nav_msgs::msg::ObjectArray>(obstacle_tracks);
+      auto trimmed_N_obstacles =
+        std::make_shared<vox_nav_msgs::msg::ObjectArray>(obstacle_tracks);
 
       if (obstacle_tracks.objects.size() < N) {
 

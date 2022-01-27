@@ -94,18 +94,18 @@ int main(int argc, char ** argv)
   // -------------------------------
   ACADO::DifferentialEquation f;
 
-  /*// FULL ACKERMAN MODEL
-  auto beta = atan(L_R / (L_R + L_F) * tan(df_dv));
+  // FULL ACKERMAN MODEL
+  /*auto beta = atan(L_R / (L_R + L_F) * tan(df_dv));
   f << dot(x_dv) == v_dv * cos(psi_dv + beta);
   f << dot(y_dv) == v_dv * sin(psi_dv + beta);
-  f << dot(v_dv) == acc_dv;
-  f << dot(psi_dv) == (v_dv / L_R * sin(beta));*/
+  f << dot(psi_dv) == (v_dv / L_R * sin(beta));
+  f << dot(v_dv) == acc_dv;*/
 
   // Simlistic model for acceleration and angular speed control
   f << dot(x_dv) == v_dv * cos(psi_dv);
   f << dot(y_dv) == v_dv * sin(psi_dv);
-  f << dot(psi_dv) == df_dv; // and angular speed
-  f << dot(v_dv) == acc_dv;  // control acceleration and
+  f << dot(psi_dv) == df_dv;  // and angular speed
+  f << dot(v_dv) == acc_dv;   // control acceleration and
 
   struct Obstacle // Defined by ellipses TODO(jediofgever), ellipses
   {
@@ -128,7 +128,7 @@ int main(int argc, char ** argv)
     obs_expression = obs_expression.getPowInt(4);
     obs_expression = exp(1.0 / obs_expression);
 
-    obstacle_cost += obs_expression;
+    //obstacle_cost += obs_expression;
     obstacles.push_back(obs);
   }
 
@@ -141,16 +141,16 @@ int main(int argc, char ** argv)
   ACADO::OCP ocp(0, N * DT, N);
   // dynamics
   ocp.subjectTo(f);
-  // control constraints
+  // control constraints with jerk
   ocp.subjectTo(min_acc_dv <= acc_dv <= max_acc_dv);
   ocp.subjectTo(min_df_dv <= df_dv <= max_df_dv);
 
   // obstacle constraints
-  for (auto && i : obstacles) {
+  /*for (auto && i : obstacles) {
     ocp.subjectTo(
       pow((x_dv - i.h), 2) / pow(i.a, 2) +
       pow((y_dv - i.k), 2) / pow(i.b, 2) - (robot_radius + 1.0) >= 0.0);
-  }
+  }*/
 
   // Provide defined weighting matrices:
   ACADO::BMatrix W = ACADO::eye<bool>(rf.getDim());

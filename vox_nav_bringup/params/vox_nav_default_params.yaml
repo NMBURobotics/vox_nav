@@ -57,13 +57,13 @@ vox_nav_planner_server_rclcpp_node:
 vox_nav_controller_server_rclcpp_node:
    ros__parameters:
       controller_plugin: "MPCControllerAcadoROS"                             # other options: non
-      controller_frequency: 200.0                                              # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
+      controller_frequency: 30.0                                              # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
       goal_tolerance_distance: 0.4                                            # in meters, once smaller than this one controller tries to minimize orientation error
       goal_tolerance_orientation: 0.1                                         # in radians, once smaller than this value,controller exits with success
       transform_timeout: 0.01                                                 # seconds, this is used to regulate lookUpTransfrom calls from tf2
-      global_plan_look_ahead_distance: 5.0                                    # look this amount of meters from current robot pose to remaining global path
+      global_plan_look_ahead_distance: 4.0                                    # look this amount of meters from current robot pose to remaining global path
       ref_traj_se2_space: "REEDS"                                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
-      rho: 2.0                                                                # Curve radius form reeds and dubins only
+      rho: 2.5                                                                # Curve radius form reeds and dubins only
       robot_radius: 0.94                                                             
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
@@ -89,17 +89,17 @@ vox_nav_controller_server_rclcpp_node:
          plugin: "mpc_controller_acado::MPCControllerAcadoROS"
          N: 16                                                                # timesteps in MPC Horizon
          Ni: 1
-         DT: 0.4                                                              # discretization time between timesteps(s)
+         DT: 0.2                                                              # discretization time between timesteps(s)
          L_F: 0.67                                                            # distance from CoG to front axle(m)
          L_R: 0.67                                                            # distance from CoG to rear axle(m)
-         V_MIN: -1.0                                                          # min / max velocity constraint(m / s)
+         V_MIN: -1.5                                                          # min / max velocity constraint(m / s)
          V_MAX: 1.5
-         A_MIN: -1.5                                                          # min / max acceleration constraint(m / s ^ 2)
-         A_MAX: 1.0
+         A_MIN: -0.5                                                          # min / max acceleration constraint(m / s ^ 2)
+         A_MAX: 0.5
          DF_MIN: -0.4                                                         # min / max front steer angle constraint(rad)
          DF_MAX: 0.4
-         Q: [10.0, 10.0, 0.0, 0.0, 1.0]                                       # weights on x, y, psi, and v, obstacle_cost.
-         R: [10.0, 100.0]                                                      # weights on input acc and df, acceleration and steering angle
+         Q: [10.0, 10.0, 0.0, 0.0, 0.0]                                       # weights on x, y, psi, and v, obstacle_cost.
+         R: [10.0, 100.0]                                                     # weights on input acc and df, acceleration and steering angle
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
          max_obstacles: 8

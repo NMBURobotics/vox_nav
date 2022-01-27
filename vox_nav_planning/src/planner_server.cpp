@@ -283,7 +283,7 @@ namespace vox_nav_planning
       text.action = visualization_msgs::msg::Marker::ADD;
       text.lifetime = rclcpp::Duration::from_seconds(0);
       //text.text = std::to_string(path_idx);
-      //text.text = std::to_string(yaw);
+      text.text = std::to_string(yaw);
       text.pose = i.pose;
       text.pose.position.z += 0.5;
       text.scale.x = 0.3;

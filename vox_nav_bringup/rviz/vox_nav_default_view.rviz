@@ -435,6 +435,10 @@ Visualization Manager:
           Value: true
         leg3:
           Value: true
+        map:
+          Value: true
+        odom:
+          Value: true
         pipe0_1:
           Value: true
         pipe0_2:
@@ -455,6 +459,8 @@ Visualization Manager:
           Value: true
         pipe4_2:
           Value: true
+        static_map:
+          Value: true
         top0:
           Value: true
         top1:
@@ -462,6 +468,8 @@ Visualization Manager:
         top2:
           Value: true
         top3:
+          Value: true
+        utm:
           Value: true
         velodyne_link:
           Value: true
@@ -481,7 +489,115 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        utm:
+          map:
+            odom:
+              base_link:
+                base_sensor_link:
+                  camera_bottom_screw_frame:
+                    camera_link:
+                      camera_depth_frame:
+                        camera_color_frame:
+                          camera_color_optical_frame:
+                            {}
+                        camera_depth_optical_frame:
+                          {}
+                        camera_left_ir_frame:
+                          camera_left_ir_optical_frame:
+                            {}
+                        camera_right_ir_frame:
+                          camera_right_ir_optical_frame:
+                            {}
+                  gps_link:
+                    {}
+                  imu_link:
+                    {}
+                  velodyne_link:
+                    {}
+                  wide_angle_camera_link:
+                    {}
+                bat0:
+                  {}
+                bat1:
+                  {}
+                corner0:
+                  corner0_1:
+                    {}
+                  corner0_2:
+                    {}
+                  corner0_3:
+                    {}
+                  corner0_4:
+                    {}
+                corner1:
+                  corner1_1:
+                    {}
+                  corner1_2:
+                    {}
+                  corner1_3:
+                    {}
+                  corner1_4:
+                    {}
+                corner2:
+                  corner2_1:
+                    {}
+                  corner2_2:
+                    {}
+                  corner2_3:
+                    {}
+                  corner2_4:
+                    {}
+                corner3:
+                  corner3_1:
+                    {}
+                  corner3_2:
+                    {}
+                  corner3_3:
+                    {}
+                  corner3_4:
+                    {}
+                leg0:
+                  wheel0_link:
+                    {}
+                leg1:
+                  wheel1_link:
+                    {}
+                leg2:
+                  wheel2_link:
+                    {}
+                leg3:
+                  wheel3_link:
+                    {}
+                pipe0_1:
+                  {}
+                pipe0_2:
+                  {}
+                pipe1_1:
+                  {}
+                pipe1_2:
+                  {}
+                pipe2_1:
+                  {}
+                pipe2_2:
+                  {}
+                pipe3_1:
+                  {}
+                pipe3_2:
+                  {}
+                pipe4_1:
+                  {}
+                pipe4_2:
+                  {}
+                top0:
+                  {}
+                top1:
+                  {}
+                top2:
+                  {}
+                top3:
+                  {}
+            static_map:
+              {}
       Update Interval: 0
       Value: true
     - Class: rviz_default_plugins/Image
@@ -772,7 +888,7 @@ Visualization Manager:
       Enabled: true
       Name: MPC Refernece Trajectory
       Namespaces:
-        {}
+        ref_traj: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -784,7 +900,7 @@ Visualization Manager:
       Enabled: true
       Name: MPC Actual Trajectory
       Namespaces:
-        {}
+        actual_traj: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -796,7 +912,7 @@ Visualization Manager:
       Enabled: true
       Name: Global Plan
       Namespaces:
-        {}
+        path: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -838,25 +954,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 58.51213073730469
+      Distance: 27.654685974121094
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -7.2011871337890625
-        Y: -4.275267601013184
-        Z: 2.2331621948978864e-05
+        X: 1.7165002822875977
+        Y: -8.58521842956543
+        Z: 1.0887530152103864e-05
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.3397966623306274
+      Pitch: 1.2397961616516113
       Target Frame: map
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.1140518188476562
+      Yaw: 3.1490519046783447
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016
