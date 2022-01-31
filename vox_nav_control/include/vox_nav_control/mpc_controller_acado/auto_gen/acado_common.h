@@ -62,7 +62,7 @@ extern "C"
 /** Indicator for fixed initial state. */
 #define ACADO_INITIAL_STATE_FIXED 1
 /** Number of control/estimation intervals. */
-#define ACADO_N 16
+#define ACADO_N 20
 /** Number of online data values. */
 #define ACADO_NOD 32
 /** Number of path constraints. */
@@ -80,7 +80,7 @@ extern "C"
 /** Number of references/measurements on the last (N + 1)st node. */
 #define ACADO_NYN 4
 /** Total number of QP optimization variables. */
-#define ACADO_QP_NV 32
+#define ACADO_QP_NV 40
 /** Number of integration steps per shooting interval. */
 #define ACADO_RK_NIS 1
 /** Number of Runge-Kutta stages per integration step. */
@@ -104,38 +104,38 @@ extern "C"
 typedef struct ACADOvariables_
 {
 int dummy;
-/** Matrix of size: 17 x 4 (row major format)
+/** Matrix of size: 21 x 4 (row major format)
  * 
- *  Matrix containing 17 differential variable vectors.
+ *  Matrix containing 21 differential variable vectors.
  */
-real_t x[ 68 ];
+real_t x[ 84 ];
 
-/** Matrix of size: 16 x 2 (row major format)
+/** Matrix of size: 20 x 2 (row major format)
  * 
- *  Matrix containing 16 control variable vectors.
+ *  Matrix containing 20 control variable vectors.
  */
-real_t u[ 32 ];
+real_t u[ 40 ];
 
-/** Matrix of size: 17 x 32 (row major format)
+/** Matrix of size: 21 x 32 (row major format)
  * 
- *  Matrix containing 17 online data vectors.
+ *  Matrix containing 21 online data vectors.
  */
-real_t od[ 544 ];
+real_t od[ 672 ];
 
-/** Column vector of size: 112
+/** Column vector of size: 140
  * 
- *  Matrix containing 16 reference/measurement vectors of size 7 for first 16 nodes.
+ *  Matrix containing 20 reference/measurement vectors of size 7 for first 20 nodes.
  */
-real_t y[ 112 ];
+real_t y[ 140 ];
 
 /** Column vector of size: 4
  * 
- *  Reference/measurement vector for the 17. node.
+ *  Reference/measurement vector for the 21. node.
  */
 real_t yN[ 4 ];
 
-/** Matrix of size: 112 x 7 (row major format) */
-real_t W[ 784 ];
+/** Matrix of size: 140 x 7 (row major format) */
+real_t W[ 980 ];
 
 /** Matrix of size: 4 x 4 (row major format) */
 real_t WN[ 16 ];
@@ -160,20 +160,20 @@ typedef struct ACADOworkspace_
 /** Column vector of size: 4 */
 real_t rhs_aux[ 4 ];
 
-/** Column vector of size: 64 */
-real_t d[ 64 ];
+/** Column vector of size: 80 */
+real_t d[ 80 ];
 
-/** Column vector of size: 112 */
-real_t Dy[ 112 ];
+/** Column vector of size: 140 */
+real_t Dy[ 140 ];
 
 /** Column vector of size: 4 */
 real_t DyN[ 4 ];
 
-/** Matrix of size: 64 x 4 (row major format) */
-real_t evGx[ 256 ];
+/** Matrix of size: 80 x 4 (row major format) */
+real_t evGx[ 320 ];
 
-/** Matrix of size: 64 x 2 (row major format) */
-real_t evGu[ 128 ];
+/** Matrix of size: 80 x 2 (row major format) */
+real_t evGu[ 160 ];
 
 /** Row vector of size: 38 */
 real_t objValueIn[ 38 ];
@@ -181,17 +181,17 @@ real_t objValueIn[ 38 ];
 /** Row vector of size: 7 */
 real_t objValueOut[ 7 ];
 
-/** Matrix of size: 64 x 4 (row major format) */
-real_t Q1[ 256 ];
+/** Matrix of size: 80 x 4 (row major format) */
+real_t Q1[ 320 ];
 
-/** Matrix of size: 64 x 7 (row major format) */
-real_t Q2[ 448 ];
+/** Matrix of size: 80 x 7 (row major format) */
+real_t Q2[ 560 ];
 
-/** Matrix of size: 32 x 2 (row major format) */
-real_t R1[ 64 ];
+/** Matrix of size: 40 x 2 (row major format) */
+real_t R1[ 80 ];
 
-/** Matrix of size: 32 x 7 (row major format) */
-real_t R2[ 224 ];
+/** Matrix of size: 40 x 7 (row major format) */
+real_t R2[ 280 ];
 
 /** Matrix of size: 4 x 4 (row major format) */
 real_t QN1[ 16 ];
@@ -205,38 +205,38 @@ real_t Dx0[ 4 ];
 /** Matrix of size: 4 x 4 (row major format) */
 real_t T[ 16 ];
 
-/** Matrix of size: 544 x 2 (row major format) */
-real_t E[ 1088 ];
+/** Matrix of size: 840 x 2 (row major format) */
+real_t E[ 1680 ];
 
-/** Matrix of size: 544 x 2 (row major format) */
-real_t QE[ 1088 ];
+/** Matrix of size: 840 x 2 (row major format) */
+real_t QE[ 1680 ];
 
-/** Column vector of size: 64 */
-real_t Qd[ 64 ];
+/** Column vector of size: 80 */
+real_t Qd[ 80 ];
 
-/** Column vector of size: 68 */
-real_t QDy[ 68 ];
+/** Column vector of size: 84 */
+real_t QDy[ 84 ];
 
-/** Matrix of size: 32 x 4 (row major format) */
-real_t H10[ 128 ];
+/** Matrix of size: 40 x 4 (row major format) */
+real_t H10[ 160 ];
 
-/** Matrix of size: 32 x 32 (row major format) */
-real_t H[ 1024 ];
+/** Matrix of size: 40 x 40 (row major format) */
+real_t H[ 1600 ];
 
-/** Column vector of size: 32 */
-real_t g[ 32 ];
+/** Column vector of size: 40 */
+real_t g[ 40 ];
 
-/** Column vector of size: 32 */
-real_t lb[ 32 ];
+/** Column vector of size: 40 */
+real_t lb[ 40 ];
 
-/** Column vector of size: 32 */
-real_t ub[ 32 ];
+/** Column vector of size: 40 */
+real_t ub[ 40 ];
 
-/** Column vector of size: 32 */
-real_t x[ 32 ];
+/** Column vector of size: 40 */
+real_t x[ 40 ];
 
-/** Column vector of size: 32 */
-real_t y[ 32 ];
+/** Column vector of size: 40 */
+real_t y[ 40 ];
 
 
 } ACADOworkspace;
@@ -293,7 +293,7 @@ void acado_initializeNodesByForwardSimulation(  );
 
 /** Shift differential variables vector by one interval.
  *
- *  \param strategy Shifting strategy: 1. Initialize node 17 with xEnd. 2. Initialize node 17 by forward simulation.
+ *  \param strategy Shifting strategy: 1. Initialize node 21 with xEnd. 2. Initialize node 21 by forward simulation.
  *  \param xEnd Value for the x vector on the last node. If =0 the old value is used.
  *  \param uEnd Value for the u vector on the second to last node. If =0 the old value is used.
  */

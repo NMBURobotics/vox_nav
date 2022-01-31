@@ -128,7 +128,7 @@ int main(int argc, char ** argv)
     obs_expression = obs_expression.getPowInt(4);
     obs_expression = exp(1.0 / obs_expression);
 
-    //obstacle_cost += obs_expression;
+    obstacle_cost += obs_expression;
     obstacles.push_back(obs);
   }
 
@@ -146,11 +146,11 @@ int main(int argc, char ** argv)
   ocp.subjectTo(min_df_dv <= df_dv <= max_df_dv);
 
   // obstacle constraints
-  /*for (auto && i : obstacles) {
+  for (auto && i : obstacles) {
     ocp.subjectTo(
       pow((x_dv - i.h), 2) / pow(i.a, 2) +
       pow((y_dv - i.k), 2) / pow(i.b, 2) - (robot_radius + 1.0) >= 0.0);
-  }*/
+  }
 
   // Provide defined weighting matrices:
   ACADO::BMatrix W = ACADO::eye<bool>(rf.getDim());

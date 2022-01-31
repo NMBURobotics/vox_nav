@@ -126,9 +126,11 @@ namespace vox_nav_control
     {
 
       double curr_robot_speed = 0.0;
-      if (!previous_robot_pose_.header.stamp.sec || !previous_time_.seconds()) {
-        RCLCPP_INFO(parent_->get_logger(), "Recieved initial compute control command");
-        curr_robot_speed = 0.0;
+      if (vox_nav_utilities::getEuclidianDistBetweenPoses(
+          curr_robot_pose,
+          reference_traj_.poses.back()) > global_plan_look_ahead_distance_)
+      {
+        curr_robot_speed = mpc_parameters_.V_MAX * 0.5;
       } else {
         double dt = (parent_->get_clock()->now() - previous_time_).seconds();
         double dist = vox_nav_utilities::getEuclidianDistBetweenPoses(
@@ -454,10 +456,11 @@ namespace vox_nav_control
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 5] = w_df;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 6] = w_obs;
       }
-      acadoVariables.WN[(ACADO_NYN + 1) * 0] = w_x;
-      acadoVariables.WN[(ACADO_NYN + 1) * 1] = w_y;
-      acadoVariables.WN[(ACADO_NYN + 1) * 2] = w_yaw;
-      acadoVariables.WN[(ACADO_NYN + 1) * 3] = w_vel;
+
+      acadoVariables.WN[0 + ACADO_NYN * 0] = w_x;
+      acadoVariables.WN[1 + ACADO_NYN * 1] = w_y;
+      acadoVariables.WN[2 + ACADO_NYN * 2] = w_yaw;
+      acadoVariables.WN[3 + ACADO_NYN * 3] = w_vel;
     }
 
     void MPCControllerAcadoROS::setRefrenceStates(
