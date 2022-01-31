@@ -313,6 +313,18 @@ namespace vox_nav_control
       std::vector<T> vec(first, last);
       return vec;
     }
+
+    static float dot(Eigen::Vector3f a, Eigen::Vector3f b)
+    {
+      float value = a.x() * b.x() + a.y() * b.y() + a.z() * b.z();
+      return value;
+    }
+
+    static float mag(Eigen::Vector3f a)
+    {
+      return std::sqrt(a.x() * a.x() + a.y() * a.y() + a.z() * a.z());
+    }
+
   }  //   namespace common
 
 }  // namespace vox_nav_control

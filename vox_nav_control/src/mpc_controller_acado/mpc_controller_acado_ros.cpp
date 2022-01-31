@@ -125,6 +125,16 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
+      /* Eigen::Vector3f
+       Vec3 v1, v2;
+       v1.x = 203;
+       v1.y = 355;
+       v1.z = 922;
+       v2.x = 6;
+       v2.y = 13;
+       v2.z = 198;
+       float angle = std::acos(dot(v1, v2) / (mag(v1) * mag(v2)));*/
+
       double curr_robot_speed = 0.0;
       if (vox_nav_utilities::getEuclidianDistBetweenPoses(
           curr_robot_pose,
@@ -194,10 +204,12 @@ namespace vox_nav_control
       // now lets retrieve computed controls and apply
       std::vector<vox_nav_control::common::ControlInput> computed_controls =
         getPredictedControlsFromAcado();
-      std::vector<vox_nav_control::common::States> computed_states = getPredictedStatesFromAcado();
+      std::vector<vox_nav_control::common::States> computed_states =
+        getPredictedStatesFromAcado();
 
       // Check if the computed control are nonsense, if so , reset the acado and re-init
-      if (std::isnan(computed_controls.begin()->acc) || std::isnan(computed_controls.begin()->df) ||
+      if (std::isnan(computed_controls.begin()->acc) ||
+        std::isnan(computed_controls.begin()->df) ||
         std::abs(computed_controls.begin()->acc) > 2 * mpc_parameters_.A_MAX ||
         std::abs(computed_controls.begin()->df) > 2 * mpc_parameters_.DF_MAX)
       {
@@ -287,7 +299,7 @@ namespace vox_nav_control
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
       curr_states.psi = robot_psi;
-      curr_states.v = curr_robot_speed; // ????
+      curr_states.v = curr_robot_speed;   // ????
 
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
         getLocalInterpolatedReferenceStates(
@@ -318,10 +330,12 @@ namespace vox_nav_control
 
       std::vector<vox_nav_control::common::ControlInput> computed_controls =
         getPredictedControlsFromAcado();
-      std::vector<vox_nav_control::common::States> computed_states = getPredictedStatesFromAcado();
+      std::vector<vox_nav_control::common::States> computed_states =
+        getPredictedStatesFromAcado();
 
       // Check if the computed control are nonsense, if so , reset the acado and re-init
-      if (std::isnan(computed_controls.begin()->acc) || std::isnan(computed_controls.begin()->df) ||
+      if (std::isnan(computed_controls.begin()->acc) ||
+        std::isnan(computed_controls.begin()->df) ||
         std::abs(computed_controls.begin()->acc) > 2 * mpc_parameters_.A_MAX ||
         std::abs(computed_controls.begin()->df) > 2 * mpc_parameters_.DF_MAX)
       {
