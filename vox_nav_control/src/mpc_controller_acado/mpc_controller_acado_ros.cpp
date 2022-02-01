@@ -102,7 +102,7 @@ namespace vox_nav_control
       initAcadoStuff();
 
       // use parameters in mpc_parameters_.Q and mpc_parameters_.R
-      initAcadoWeights();
+      initAcadoWeights(false);
 
       // This is used to interpolate local refernce states
       std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
@@ -125,15 +125,41 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
-      /* Eigen::Vector3f
-       Vec3 v1, v2;
-       v1.x = 203;
-       v1.y = 355;
-       v1.z = 922;
-       v2.x = 6;
-       v2.y = 13;
-       v2.z = 198;
-       float angle = std::acos(dot(v1, v2) / (mag(v1) * mag(v2)));*/
+      double robot_roll, robot_pitch, robot_psi;
+      vox_nav_utilities::getRPYfromMsgQuaternion(
+        curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
+
+      // We use dynamic weigthig matrix,
+      // If the given goal is behind robots current heading, adjust parameters so that we take best maneuver
+      Eigen::Vector3f curr_robot_vec(
+        curr_robot_pose.pose.position.x,
+        curr_robot_pose.pose.position.y,
+        curr_robot_pose.pose.position.z);
+      Eigen::Vector3f goal_vec(
+        reference_traj_.poses.back().pose.position.x,
+        reference_traj_.poses.back().pose.position.y,
+        reference_traj_.poses.back().pose.position.z);
+      Eigen::Vector3f curr_robot_heading_vec(
+        curr_robot_vec.x() + 1.0 * std::cos(robot_psi),
+        curr_robot_vec.y() + 1.0 * std::sin(robot_psi),
+        curr_robot_vec.z());
+
+      float heading_to_goal_angle =
+        std::acos(
+        vox_nav_control::common::dot(
+          curr_robot_vec - curr_robot_heading_vec,
+          curr_robot_vec - goal_vec) /
+        (vox_nav_control::common::mag(curr_robot_vec - curr_robot_heading_vec) *
+        vox_nav_control::common::mag(curr_robot_vec - goal_vec)));
+
+      if (heading_to_goal_angle > M_PI_2) {
+        // Goal is quite deviated from the current heading
+        // Then set weighing matrix accordingly
+        initAcadoWeights(true);
+      } else {
+        // Oh ok, goal is already withing view of current robot heading
+        initAcadoWeights(false);
+      }
 
       double curr_robot_speed = 0.0;
       if (vox_nav_utilities::getEuclidianDistBetweenPoses(
@@ -155,10 +181,6 @@ namespace vox_nav_control
             computed_velocity_.linear.x = mpc_parameters_.V_MIN;
           }
         };
-
-      double robot_roll, robot_pitch, robot_psi;
-      vox_nav_utilities::getRPYfromMsgQuaternion(
-        curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
 
       vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
@@ -219,7 +241,7 @@ namespace vox_nav_control
         memset(&acadoWorkspace, 0, sizeof( acadoWorkspace ));
         memset(&acadoVariables, 0, sizeof( acadoVariables ));
         initAcadoStuff();
-        initAcadoWeights();
+        initAcadoWeights(false);
         // reset all control inputs as they are invalid
         std::fill(
           computed_controls.begin(),
@@ -345,7 +367,7 @@ namespace vox_nav_control
         memset(&acadoWorkspace, 0, sizeof( acadoWorkspace ));
         memset(&acadoVariables, 0, sizeof( acadoVariables ));
         initAcadoStuff();
-        initAcadoWeights();
+        initAcadoWeights(false);
         // reset all control inputs as they are invalid
         std::fill(
           computed_controls.begin(),
@@ -356,7 +378,7 @@ namespace vox_nav_control
 
       //  The control output is acceleration but we need to publish speed
       //computed_velocity_.linear.x += computed_controls.begin()->acc * (mpc_parameters_.DT);
-      computed_velocity_.linear.x = 0.0;
+      computed_velocity_.linear.x = 0.1;
 
       //  The control output is steeering angle but we need to publish angular velocity
       computed_velocity_.angular.z = computed_controls.begin()->df;
@@ -449,7 +471,7 @@ namespace vox_nav_control
       acado_preparationStep();
     }
 
-    void MPCControllerAcadoROS::initAcadoWeights()
+    void MPCControllerAcadoROS::initAcadoWeights(bool is_goal_behind_robot)
     {
       double w_x = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kX];
       double w_y = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kY];
@@ -459,22 +481,32 @@ namespace vox_nav_control
       double w_acc = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kacc];
       double w_df = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kdf];
 
-      double coeff = 1.0;
+      if (is_goal_behind_robot) {
+        acadoVariables.WN[0 + ACADO_NYN * 0] = 0.0;
+        acadoVariables.WN[1 + ACADO_NYN * 1] = 0.0;
+        acadoVariables.WN[2 + ACADO_NYN * 2] = 0.0;
+        acadoVariables.WN[3 + ACADO_NYN * 3] = 0.0;
+        w_x *= 10.0;
+        w_y *= 10.0;
+      } else {
+        acadoVariables.WN[0 + ACADO_NYN * 0] = w_x;
+        acadoVariables.WN[1 + ACADO_NYN * 1] = w_y;
+        acadoVariables.WN[2 + ACADO_NYN * 2] = w_yaw;
+        acadoVariables.WN[3 + ACADO_NYN * 3] = w_vel;
+        w_acc *= 10.0;
+        w_df *= 10.0;
+      }
+
       for (int i = 0; i < ACADO_N; i++) {
         // Setup diagonal entries
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 0] = w_x * coeff;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 1] = w_y * coeff;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 2] = w_yaw * coeff;
-        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 3] = w_vel * coeff;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 0] = w_x;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 1] = w_y;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 2] = w_yaw;
+        acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 3] = w_vel;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 4] = w_acc;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 5] = w_df;
         acadoVariables.W[ACADO_NY * ACADO_NY * i + (ACADO_NY + 1) * 6] = w_obs;
       }
-
-      acadoVariables.WN[0 + ACADO_NYN * 0] = w_x;
-      acadoVariables.WN[1 + ACADO_NYN * 1] = w_y;
-      acadoVariables.WN[2 + ACADO_NYN * 2] = w_yaw;
-      acadoVariables.WN[3 + ACADO_NYN * 3] = w_vel;
     }
 
     void MPCControllerAcadoROS::setRefrenceStates(

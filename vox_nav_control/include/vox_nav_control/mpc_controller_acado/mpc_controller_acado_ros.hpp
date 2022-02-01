@@ -127,8 +127,9 @@ namespace vox_nav_control
       /**
        * @brief Sets the weight matrixes W and WN, values are set from yamls file
        *
+       * @param is_goal_behind_robot
        */
-      void initAcadoWeights();
+      void initAcadoWeights(bool is_goal_behind_robot);
 
       /**
        * @brief Set the Refrence States object
