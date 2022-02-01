@@ -274,7 +274,7 @@ namespace vox_nav_map_server
         preprocess_params_.remove_outlier_mean_K,
         preprocess_params_.remove_outlier_stddev_threshold,
         vox_nav_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
-      pcd_map_pointcloud_ = vox_nav_utilities::remove_nans<pcl::PointXYZRGB>(pcd_map_pointcloud_);
+      pcd_map_pointcloud_ = vox_nav_utilities::removeNans<pcl::PointXYZRGB>(pcd_map_pointcloud_);
 
       /*pcd_map_pointcloud_ = vox_nav_utilities::removeOutliersFromInputCloud(
         pcd_map_pointcloud_,
@@ -311,7 +311,7 @@ namespace vox_nav_map_server
       vox_nav_utilities::get_non_traversable_points(pcd_map_pointcloud_);
 
     // uniformly sample nodes on top of traversable cloud
-    auto uniformly_sampled_nodes = vox_nav_utilities::uniformly_sample_cloud<pcl::PointXYZRGB>(
+    auto uniformly_sampled_nodes = vox_nav_utilities::uniformlySampleCloud<pcl::PointXYZRGB>(
       pure_traversable_pcl,
       cost_params_.cell_radius);
 

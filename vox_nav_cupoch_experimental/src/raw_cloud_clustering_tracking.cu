@@ -189,7 +189,7 @@ void RawCloudClusteringTracking::cloudCallback(
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
   pcl::fromROSMsg(*cloud, *pcl_curr);
 
-  pcl_curr = vox_nav_utilities::crop_box<pcl::PointXYZRGB>(
+  pcl_curr = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
     pcl_curr,
     Eigen::Vector4f(
       -clustering_params_.x_bound,
@@ -209,7 +209,7 @@ void RawCloudClusteringTracking::cloudCallback(
 
   pcl_ros::transformPointCloud("map", *pcl_curr, *pcl_curr, *buffer_);
 
-  auto clusters = vox_nav_utilities::euclidean_clustering<pcl::PointXYZRGB>(
+  auto clusters = vox_nav_utilities::euclideanClustering<pcl::PointXYZRGB>(
     pcl_curr,
     clustering_params_.clustering_min_points,
     clustering_params_.clustering_max_points,
