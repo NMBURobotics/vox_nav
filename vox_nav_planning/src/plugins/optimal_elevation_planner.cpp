@@ -367,6 +367,14 @@ namespace vox_nav_planning
 
     int num_visited_nodes = 0;
     try {
+
+      if (supervoxel_clusters_.empty()) {
+        RCLCPP_WARN(
+          logger_, "Empty supervoxel clusters!,%s failed to find a valid path!",
+          graph_search_method_.c_str());
+        return plan_poses;
+      }
+
       auto heuristic =
         distance_heuristic<GraphT, Cost, SuperVoxelClusters *>(
         &supervoxel_clusters_, goal_vertex, g);

@@ -39,13 +39,13 @@ vox_nav_planner_server_rclcpp_node:
       plugin: "vox_nav_planning::OptimalElevationPlanner"    # Bases on Astar on SuperVoxelClustering
       graph_search_method: "astar"                           # Other options: astar , dijkstra
       supervoxel_disable_transform: false                    # set true for organized point clouds
-      supervoxel_resolution: 0.7
-      supervoxel_seed_resolution: 0.9
+      supervoxel_resolution: 0.5
+      supervoxel_seed_resolution: 0.6
       supervoxel_color_importance: 0.2
       supervoxel_spatial_importance: 0.4
       supervoxel_normal_importance: 1.0
-      distance_penalty_weight: 0.8
-      elevation_penalty_weight: 0.2
+      distance_penalty_weight: 0.7
+      elevation_penalty_weight: 0.3
       state_space_boundries:
         minx: -50.0
         maxx: 50.0
@@ -57,13 +57,13 @@ vox_nav_planner_server_rclcpp_node:
 vox_nav_controller_server_rclcpp_node:
    ros__parameters:
       controller_plugin: "MPCControllerAcadoROS"                             # other options: non
-      controller_frequency: 30.0                                              # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
+      controller_frequency: 100.0                                              # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
       goal_tolerance_distance: 0.4                                            # in meters, once smaller than this one controller tries to minimize orientation error
       goal_tolerance_orientation: 0.1                                         # in radians, once smaller than this value,controller exits with success
       transform_timeout: 0.01                                                 # seconds, this is used to regulate lookUpTransfrom calls from tf2
       global_plan_look_ahead_distance: 4.0                                    # look this amount of meters from current robot pose to remaining global path
       ref_traj_se2_space: "REEDS"                                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
-      rho: 2.5                                                                # Curve radius form reeds and dubins only
+      rho: 3.0                                                                # Curve radius form reeds and dubins only
       robot_radius: 0.94                                                             
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
@@ -98,7 +98,7 @@ vox_nav_controller_server_rclcpp_node:
          A_MAX: 0.5
          DF_MIN: -0.9                                                         # min / max front steer angle constraint(rad)
          DF_MAX: 0.9
-         Q: [100.0, 100.0, 0.1, 0.0, 0.01]                                        # weights on x, y, psi, and v, obstacle_cost.
+         Q: [10.0, 10.0, 0.1, 0.0, 0.01]                                        # weights on x, y, psi, and v, obstacle_cost.
          R: [1.0, 1.0]                                                        # weights on input acc and df, acceleration and steering angle
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
@@ -125,7 +125,8 @@ vox_nav_map_server_rclcpp_node:
     remove_outlier_radius_search: 0.6
     remove_outlier_min_neighbors_in_radius: 5
     # COST REGRESSION CRITICS AND PARAMS
-    cell_radius: 0.6                                                         # Works as resolution of cost regression onto map
+    uniform_sample_radius: 0.2
+    surfel_radius: 0.6                                                       # Works as resolution of cost regression onto map
     max_allowed_tilt: 0.15                                                   # 1st Cost critic Any angle(radians) higher than this is marked as NON-traversable
     max_allowed_point_deviation: 0.20                                        # 2nd Cost critic Point deviation from plane, this could be viewed as roughness of each cell 
     max_allowed_energy_gap: 0.5                                              # 3rd Cost critic Max Energy in each cell, this is detemined by max height differnce between edge points of cell

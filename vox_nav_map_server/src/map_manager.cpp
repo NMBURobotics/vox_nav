@@ -67,7 +67,8 @@ namespace vox_nav_map_server
     declare_parameter("remove_outlier_stddev_threshold", 1.0);
     declare_parameter("remove_outlier_radius_search", 0.1);
     declare_parameter("remove_outlier_min_neighbors_in_radius", 1);
-    declare_parameter("cell_radius", 0.8);
+    declare_parameter("uniform_sample_radius", 0.2);
+    declare_parameter("surfel_radius", 0.8);
     declare_parameter("max_allowed_tilt", 40.0);
     declare_parameter("max_allowed_point_deviation", 0.2);
     declare_parameter("max_allowed_energy_gap", 0.2);
@@ -99,7 +100,8 @@ namespace vox_nav_map_server
     get_parameter("pcd_map_transform.rotation.r", pcd_map_transform_matrix_.rpyIntrinsic_.x());
     get_parameter("pcd_map_transform.rotation.p", pcd_map_transform_matrix_.rpyIntrinsic_.y());
     get_parameter("pcd_map_transform.rotation.y", pcd_map_transform_matrix_.rpyIntrinsic_.z());
-    get_parameter("cell_radius", cost_params_.cell_radius);
+    get_parameter("uniform_sample_radius", cost_params_.uniform_sample_radius);
+    get_parameter("surfel_radius", cost_params_.surfel_radius);
     get_parameter("max_allowed_tilt", cost_params_.max_allowed_tilt);
     get_parameter("max_allowed_point_deviation", cost_params_.max_allowed_point_deviation);
     get_parameter("max_allowed_energy_gap", cost_params_.max_allowed_energy_gap);
@@ -313,14 +315,14 @@ namespace vox_nav_map_server
     // uniformly sample nodes on top of traversable cloud
     auto uniformly_sampled_nodes = vox_nav_utilities::uniformlySampleCloud<pcl::PointXYZRGB>(
       pure_traversable_pcl,
-      cost_params_.cell_radius);
+      cost_params_.uniform_sample_radius);
 
     // This is basically vector of cloud segments, each segments includes points representing a cell
     // The first element of pair is surfel_center_point while the second is pointcloud itself
     auto surfels = vox_nav_utilities::surfelize_traversability_cloud(
       pure_traversable_pcl,
       uniformly_sampled_nodes,
-      cost_params_.cell_radius);
+      cost_params_.surfel_radius);
 
     // this is acquired by merging all surfels
     pcl::PointCloud<pcl::PointXYZRGB> cost_regressed_cloud;

@@ -95,7 +95,8 @@ namespace vox_nav_map_server
 
     struct CostRegressionParams
     {
-      double cell_radius;
+      double uniform_sample_radius;
+      double surfel_radius;
       double max_allowed_tilt;
       double max_allowed_point_deviation;
       double max_allowed_energy_gap;
@@ -106,7 +107,8 @@ namespace vox_nav_map_server
       double max_color_range;
       std::vector<double> cost_critic_weights;
       CostRegressionParams()
-      : cell_radius(0.1),
+      : uniform_sample_radius(0.2),
+        surfel_radius(0.1),
         max_allowed_tilt(10),
         max_allowed_point_deviation(0.1),
         max_allowed_energy_gap(0.1),
