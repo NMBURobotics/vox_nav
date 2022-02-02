@@ -43,6 +43,7 @@ namespace vox_nav_control
       parent->declare_parameter("global_plan_look_ahead_distance", 2.5);
       parent->declare_parameter("ref_traj_se2_space", "REEDS");
       parent->declare_parameter("rho", 2.5);
+      parent->declare_parameter("robot_radius", 0.5);
       parent->declare_parameter(plugin_name + ".N", 10);
       parent->declare_parameter(plugin_name + ".DT", 0.1);
       parent->declare_parameter(plugin_name + ".L_F", 0.66);
@@ -66,6 +67,7 @@ namespace vox_nav_control
       parent->get_parameter("global_plan_look_ahead_distance", global_plan_look_ahead_distance_);
       parent->get_parameter("ref_traj_se2_space", selected_se2_space_name_);
       parent->get_parameter("rho", rho_);
+      parent->get_parameter("robot_radius", mpc_parameters_.robot_radius);
       parent->get_parameter(plugin_name + ".N", mpc_parameters_.N);
       parent->get_parameter(plugin_name + ".DT", mpc_parameters_.DT);
       parent->get_parameter(plugin_name + ".L_F", mpc_parameters_.L_F);
@@ -198,7 +200,8 @@ namespace vox_nav_control
       // There will be always a fixed amount of obstacles
       // If there is no obstacles at all just fill with ghost obstacles(all zeros)
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
-      vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles = *trimObstaclesToN(
+      vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles =
+        *vox_nav_control::common::trimObstaclesToN(
         obstacle_tracks_,
         curr_robot_pose,
         mpc_parameters_.max_obstacles);
@@ -238,8 +241,8 @@ namespace vox_nav_control
         RCLCPP_WARN(parent_->get_logger(), "NAN or Invalid Control outputs from Acado!");
         // Reset The Controller
         // Reset all solver memory
-        memset(&acadoWorkspace, 0, sizeof( acadoWorkspace ));
-        memset(&acadoVariables, 0, sizeof( acadoVariables ));
+        memset(&acadoWorkspace, 0, sizeof(acadoWorkspace));
+        memset(&acadoVariables, 0, sizeof(acadoVariables));
         initAcadoStuff();
         initAcadoWeights(false);
         // reset all control inputs as they are invalid
@@ -247,8 +250,18 @@ namespace vox_nav_control
           computed_controls.begin(),
           computed_controls.end(),
           vox_nav_control::common::ControlInput());
-
         computed_velocity_ = geometry_msgs::msg::Twist();
+        vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles =
+          *vox_nav_control::common::trimObstaclesToN(
+          obstacle_tracks_, curr_robot_pose, mpc_parameters_.max_obstacles);
+        std::fill(
+          local_interpolated_reference_states.begin(),
+          local_interpolated_reference_states.end(), curr_states);
+        setRefrenceStates(
+          local_interpolated_reference_states, trimmed_N_obstacles, computed_controls);
+        updateCurrentStates(curr_states);
+        acado_preparationStep();
+        acado_feedbackStep();
       }
 
       //  The control output is acceleration but we need to publish speed
@@ -329,7 +342,8 @@ namespace vox_nav_control
         global_plan_look_ahead_distance_, state_space_information_);
 
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
-      vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles = *trimObstaclesToN(
+      vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles =
+        *vox_nav_control::common::trimObstaclesToN(
         obstacle_tracks_,
         curr_robot_pose,
         mpc_parameters_.max_obstacles);
@@ -364,8 +378,8 @@ namespace vox_nav_control
         RCLCPP_WARN(parent_->get_logger(), "NAN or Invalid Control outputs from Acado!");
         // Reset The Controller
         // Reset all solver memory
-        memset(&acadoWorkspace, 0, sizeof( acadoWorkspace ));
-        memset(&acadoVariables, 0, sizeof( acadoVariables ));
+        memset(&acadoWorkspace, 0, sizeof(acadoWorkspace));
+        memset(&acadoVariables, 0, sizeof(acadoVariables));
         initAcadoStuff();
         initAcadoWeights(false);
         // reset all control inputs as they are invalid
@@ -374,6 +388,17 @@ namespace vox_nav_control
           computed_controls.end(),
           vox_nav_control::common::ControlInput());
         computed_velocity_ = geometry_msgs::msg::Twist();
+        vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles =
+          *vox_nav_control::common::trimObstaclesToN(
+          obstacle_tracks_, curr_robot_pose, mpc_parameters_.max_obstacles);
+        std::fill(
+          local_interpolated_reference_states.begin(),
+          local_interpolated_reference_states.end(), curr_states);
+        setRefrenceStates(
+          local_interpolated_reference_states, trimmed_N_obstacles, computed_controls);
+        updateCurrentStates(curr_states);
+        acado_preparationStep();
+        acado_feedbackStep();
       }
 
       //  The control output is acceleration but we need to publish speed
@@ -620,68 +645,6 @@ namespace vox_nav_control
       return computed_states;
     }
 
-    vox_nav_msgs::msg::ObjectArray::SharedPtr MPCControllerAcadoROS::trimObstaclesToN(
-      const vox_nav_msgs::msg::ObjectArray & obstacle_tracks,
-      const geometry_msgs::msg::PoseStamped & curr_robot_pose,
-      int N)
-    {
-      auto trimmed_N_obstacles =
-        std::make_shared<vox_nav_msgs::msg::ObjectArray>(obstacle_tracks);
-
-      if (obstacle_tracks.objects.size() < N) {
-
-        if (mpc_parameters_.debug_mode) {
-          RCLCPP_INFO(
-            parent_->get_logger(),
-            "Detected less number of obstacles than params_.max_obstacles, actual obstacles are %d "
-            " while params_.max_obstacles(N) is %d", obstacle_tracks.objects.size(), N);
-
-          RCLCPP_INFO(
-            parent_->get_logger(),
-            "Gonna create %d ghost obstacles",
-            N - obstacle_tracks.objects.size());
-        }
-
-        for (size_t i = 0; i < N - obstacle_tracks.objects.size(); i++) {
-          vox_nav_msgs::msg::Object ghost_obstacle;
-          ghost_obstacle.world_pose.point.x = 20000.0;
-          ghost_obstacle.world_pose.point.y = 20000.0;
-          ghost_obstacle.world_pose.point.z = 20000.0;
-          ghost_obstacle.length = 0.1;
-          ghost_obstacle.width = 0.1;
-          ghost_obstacle.height = 0.1;
-          trimmed_N_obstacles->objects.push_back(ghost_obstacle);
-        }
-      } else {
-        trimmed_N_obstacles->objects.clear();
-        trimmed_N_obstacles->objects.resize(N);
-
-        std::vector<double> distances;
-        for (auto && obs : obstacle_tracks.objects) {
-          double dist = vox_nav_utilities::getEuclidianDistBetweenPoints(
-            obs.world_pose.point,
-            curr_robot_pose.pose.position);
-          distances.push_back(dist);
-        }
-
-        std::vector<int> sorted_indices(distances.size());
-        std::iota(sorted_indices.begin(), sorted_indices.end(), 0);
-        auto comparator = [&distances](int a, int b) {return distances[a] < distances[b];};
-        std::sort(sorted_indices.begin(), sorted_indices.end(), comparator);
-
-        for (size_t i = 0; i < N; i++) {
-          trimmed_N_obstacles->objects[i] = obstacle_tracks.objects[sorted_indices[i]];
-        }
-      }
-
-      if (mpc_parameters_.debug_mode) {
-        RCLCPP_INFO(
-          parent_->get_logger(),
-          "Feeding exactly %d obstacles to MPC solver", trimmed_N_obstacles->objects.size());
-      }
-
-      return trimmed_N_obstacles;
-    }
 
   }   // namespace mpc_controller_acado
   PLUGINLIB_EXPORT_CLASS(

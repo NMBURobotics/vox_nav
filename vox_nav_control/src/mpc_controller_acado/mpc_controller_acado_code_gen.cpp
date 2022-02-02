@@ -144,12 +144,20 @@ int main(int argc, char ** argv)
   ocp.subjectTo(min_acc_dv <= acc_dv <= max_acc_dv);
   ocp.subjectTo(min_df_dv <= df_dv <= max_df_dv);
 
+
+  std::stringstream x_dv_print, y_dv_print;
+  x_dv_print << x_dv.print(std::cout).rdbuf();
+  y_dv_print << y_dv.print(std::cout).rdbuf();
+
+  RCLCPP_INFO_STREAM(node->get_logger(), "x_dv_print " << x_dv_print.str());
+  RCLCPP_INFO_STREAM(node->get_logger(), "y_dv_print " << y_dv_print.str());
+
   // obstacle constraints
-  /* for (auto && i : obstacles) {
-     ocp.subjectTo(
-       pow((x_dv - i.h), 2) / pow(i.a, 2) +
-       pow((y_dv - i.k), 2) / pow(i.b, 2) - (robot_radius + 1.0) >= 0.0);
-   }*/
+  for (auto && i : obstacles) {
+    //ocp.subjectTo(
+    //pow((x_dv - i.h), 2) / pow(i.a, 2) +
+    //pow((y_dv - i.k), 2) / pow(i.b, 2) >= (robot_radius + 1.0));
+  }
 
   // Provide defined weighting matrices:
   ACADO::BMatrix W = ACADO::eye<bool>(rf.getDim());

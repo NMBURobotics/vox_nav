@@ -114,6 +114,13 @@ namespace vox_nav_control
       void updateReferences(std::vector<vox_nav_control::common::States> reference_states);
 
       /**
+       * @brief update current obstacles in horizon
+       *
+       * @param obstacles
+       */
+      void updateObstacles(std::vector<vox_nav_control::common::Ellipsoid> obstacles);
+
+      /**
        * @brief update previous control input
        *
        * @param previous_control_input
@@ -199,18 +206,11 @@ namespace vox_nav_control
       // this will be updated through the constructor.
       vox_nav_control::common::Parameters params_;
 
-      casadi::MX z_static_obs_;
-      casadi::MX x_static_obs_;
-      casadi::MX y_static_obs_;
-      casadi::MX a_static_obs_;
-      casadi::MX b_static_obs_;
-
-      casadi::MX z_dynamic_obs_;
-      casadi::MX x_dynamic_obs_;
-      casadi::MX y_dynamic_obs_;
-      casadi::MX a_dynamic_obs_;
-      casadi::MX b_dynamic_obs_;
-      casadi::MX yaw_dynamic_obs_;
+      casadi::MX z_obs_;
+      casadi::MX i_obs_;
+      casadi::MX h_obs_;
+      casadi::MX a_obs_;
+      casadi::MX b_obs_;
 
     };
   } // namespace mpc_controller_casadi

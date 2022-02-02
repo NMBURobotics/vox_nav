@@ -56,7 +56,7 @@ vox_nav_planner_server_rclcpp_node:
 
 vox_nav_controller_server_rclcpp_node:
    ros__parameters:
-      controller_plugin: "MPCControllerAcadoROS"                             # other options: non
+      controller_plugin: "MPCControllerCasadiROS"                             # other options: non
       controller_frequency: 100.0                                              # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
       goal_tolerance_distance: 0.4                                            # in meters, once smaller than this one controller tries to minimize orientation error
       goal_tolerance_orientation: 0.1                                         # in radians, once smaller than this value,controller exits with success
@@ -67,24 +67,25 @@ vox_nav_controller_server_rclcpp_node:
       robot_radius: 0.94                                                             
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
-         N: 8                                                                 # timesteps in MPC Horizon
+         N: 20                                                                 # timesteps in MPC Horizon
          DT: 0.2                                                              # discretization time between timesteps(s)
          L_F: 0.66                                                            # distance from CoG to front axle(m)
          L_R: 0.66                                                            # distance from CoG to rear axle(m)
-         V_MIN: -1.5                                                          # min / max velocity constraint(m / s)
-         V_MAX: 1.5
-         A_MIN: -1.5                                                          # min / max acceleration constraint(m / s ^ 2)
-         A_MAX: 1.5
-         DF_MIN: -0.4                                                         # min / max front steer angle constraint(rad)
-         DF_MAX: 0.4
+         V_MIN: -1.0                                                          # min / max velocity constraint(m / s)
+         V_MAX: 1.0
+         A_MIN: -0.5                                                          # min / max acceleration constraint(m / s ^ 2)
+         A_MAX: 0.5
+         DF_MIN: -0.6                                                         # min / max front steer angle constraint(rad)
+         DF_MAX: 0.6
          A_DOT_MIN: -1.0                                                      # min / max jerk constraint(m / s ^ 3)
          A_DOT_MAX: 1.0
          DF_DOT_MIN: -0.8                                                     # min / max front steer angle rate constraint(rad / s)
          DF_DOT_MAX: 0.8
-         Q: [10.0, 10.0, 0.1, 0.1]                                            # weights on x, y, psi, v.
-         R: [10.0, 100.0]                                                     # weights on jerk and slew rate(steering angle derivative)
+         Q: [100.0, 100.0, 0.1, 0.0]                                            # weights on x, y, psi, v.
+         R: [1.0, 1.0]                                                     # weights on jerk and slew rate(steering angle derivative)
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
+         obstacle_cost: 10.0
       MPCControllerAcadoROS:
          plugin: "mpc_controller_acado::MPCControllerAcadoROS"
          N: 20                                                                # timesteps in MPC Horizon
@@ -98,7 +99,7 @@ vox_nav_controller_server_rclcpp_node:
          A_MAX: 0.5
          DF_MIN: -0.9                                                         # min / max front steer angle constraint(rad)
          DF_MAX: 0.9
-         Q: [10.0, 10.0, 0.1, 0.0, 0.01]                                        # weights on x, y, psi, and v, obstacle_cost.
+         Q: [10.0, 10.0, 0.1, 0.0, 0.01]                                     # weights on x, y, psi, and v, obstacle_cost.
          R: [1.0, 1.0]                                                        # weights on input acc and df, acceleration and steering angle
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True

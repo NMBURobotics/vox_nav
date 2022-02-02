@@ -39,6 +39,7 @@ namespace vox_nav_control
       parent->declare_parameter("global_plan_look_ahead_distance", 2.5);
       parent->declare_parameter("ref_traj_se2_space", "REEDS");
       parent->declare_parameter("rho", 2.5);
+      parent->declare_parameter("robot_radius", 0.5);
       parent->declare_parameter(plugin_name + ".N", 10);
       parent->declare_parameter(plugin_name + ".DT", 0.1);
       parent->declare_parameter(plugin_name + ".L_F", 0.66);
@@ -57,10 +58,14 @@ namespace vox_nav_control
       parent->declare_parameter(plugin_name + ".R", std::vector<double>({10.0, 100.0}));
       parent->declare_parameter(plugin_name + ".debug_mode", false);
       parent->declare_parameter(plugin_name + ".params_configured", false);
+      parent->declare_parameter(plugin_name + ".max_obstacles", 1);
+      parent->declare_parameter(plugin_name + ".obstacle_cost", 1.0);
+
 
       parent->get_parameter("global_plan_look_ahead_distance", global_plan_look_ahead_distance_);
       parent->get_parameter("ref_traj_se2_space", selected_se2_space_name_);
       parent->get_parameter("rho", rho_);
+      parent->get_parameter("robot_radius", mpc_parameters_.robot_radius);
       parent->get_parameter(plugin_name + ".N", mpc_parameters_.N);
       parent->get_parameter(plugin_name + ".DT", mpc_parameters_.DT);
       parent->get_parameter(plugin_name + ".L_F", mpc_parameters_.L_F);
@@ -79,6 +84,9 @@ namespace vox_nav_control
       parent->get_parameter(plugin_name + ".R", mpc_parameters_.R);
       parent->get_parameter(plugin_name + ".debug_mode", mpc_parameters_.debug_mode);
       parent->get_parameter(plugin_name + ".params_configured", mpc_parameters_.params_configured);
+      parent->get_parameter(plugin_name + ".max_obstacles", mpc_parameters_.max_obstacles);
+      parent->get_parameter(plugin_name + ".obstacle_cost", mpc_parameters_.obstacle_cost);
+
 
       interpolated_local_reference_traj_publisher_ =
         parent->create_publisher<visualization_msgs::msg::MarkerArray>(
@@ -144,10 +152,22 @@ namespace vox_nav_control
         curr_robot_pose, mpc_parameters_, reference_traj_,
         global_plan_look_ahead_distance_, state_space_information_);
 
+      // There is a limit of number of obstacles we can handle,
+      // There will be always a fixed amount of obstacles
+      // If there is no obstacles at all just fill with ghost obstacles(all zeros)
+      std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
+      vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles =
+        *vox_nav_control::common::trimObstaclesToN(
+        obstacle_tracks_,
+        curr_robot_pose,
+        mpc_parameters_.max_obstacles);
+
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
-      auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
+      auto obstacles = trackMsg2Ellipsoids(trimmed_N_obstacles);
+      mpc_controller_->updateObstacles(obstacles);
+
       MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
 
       //  The control output is acceleration but we need to publish speed

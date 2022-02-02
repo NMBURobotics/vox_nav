@@ -45,6 +45,13 @@ namespace vox_nav_control
       psi_ref_ = z_ref_(slice_all_, 2);
       v_ref_ = z_ref_(slice_all_, 3);
 
+      // obstacles
+      z_obs_ = opti_->parameter(params_.max_obstacles, 4);
+      i_obs_ = z_obs_(slice_all_, 0);
+      h_obs_ = z_obs_(slice_all_, 1);
+      a_obs_ = z_obs_(slice_all_, 2);
+      b_obs_ = z_obs_(slice_all_, 3);
+
       // Decision vars
       z_dv_ = opti_->variable(params_.N + 1, 4);
       x_dv_ = z_dv_(slice_all_, 0);
@@ -69,6 +76,12 @@ namespace vox_nav_control
       // Kind of a test , set all current states to zero
       vox_nav_control::common::States curr_states;
       updateCurrentStates(curr_states);
+
+      // Kind of a test, set test obstacles
+      vox_nav_control::common::Ellipsoid mock_obstacle;
+      std::vector<vox_nav_control::common::Ellipsoid> mock_obstacles(params_.max_obstacles,
+        mock_obstacle);
+      updateObstacles(mock_obstacles);
 
       // Kind of a test, set reference states in horizon to zeros
       vox_nav_control::common::States mock_reference_state;
@@ -216,6 +229,19 @@ namespace vox_nav_control
       }
       // slack cost
       cost += (casadi::MX::sum1(sl_df_dv_) + casadi::MX::sum1(sl_acc_dv_));
+
+      // obstacle costs
+      for (int i = 0; i < params_.max_obstacles; i++) {
+        auto obs_exprerssion =
+          casadi::MX::pow(x_dv_(slice_all_) - casadi::MX(i_obs_(i)), 2) /
+          casadi::MX::pow(a_obs_(i), 2) +
+          casadi::MX::pow(y_dv_(slice_all_) - casadi::MX(h_obs_(i)), 2) /
+          casadi::MX::pow(b_obs_(i), 2);
+
+        cost += params_.obstacle_cost *
+          casadi::MX::sum1(casadi::MX::exp(1.0 / (obs_exprerssion - (1.0 + params_.robot_radius))));
+      }
+
       // minimize ojective function
       opti_->minimize(cost);
     }
@@ -224,19 +250,6 @@ namespace vox_nav_control
       const std::vector<vox_nav_control::common::Ellipsoid> & obstacles)
     {
       auto opti = std::make_shared<casadi::Opti>(*opti_);
-      casadi::MX pow_squared = 2;
-
-      casadi::Slice slice(static_cast<int>(params_.N / 2), params_.N);
-
-      for (auto && obs : obstacles) {
-        if (obs.is_dynamic) {
-          opti->subject_to(
-            2.25 <
-            casadi::MX::sqrt(
-              casadi::MX::pow(x_dv_(slice) - casadi::MX(obs.center.x()), pow_squared) +
-              casadi::MX::pow(y_dv_(slice) - casadi::MX(obs.center.y()), pow_squared)));
-        }
-      }
 
       // Initial state constraints
       opti->subject_to(x_dv_(0) == z_curr_(0));
@@ -320,6 +333,22 @@ namespace vox_nav_control
       opti_->set_value(y_ref_, y_ref);
       opti_->set_value(psi_ref_, psi_ref);
       opti_->set_value(v_ref_, v_ref);
+    }
+
+    void MPCControllerCasadiCore::updateObstacles(
+      std::vector<vox_nav_control::common::Ellipsoid> obstacles)
+    {
+      std::vector<double> i, h, a, b;
+      for (int o = 0; o < obstacles.size(); o++) {
+        i.push_back(obstacles[o].center.x());
+        h.push_back(obstacles[o].center.y());
+        a.push_back(obstacles[o].axes.x());
+        b.push_back(obstacles[o].axes.y());
+      }
+      opti_->set_value(i_obs_, i);
+      opti_->set_value(h_obs_, h);
+      opti_->set_value(a_obs_, a);
+      opti_->set_value(b_obs_, b);
     }
 
     void MPCControllerCasadiCore::updatePreviousControlInput(
