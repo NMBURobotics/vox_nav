@@ -125,7 +125,6 @@ int main(int argc, char ** argv)
       pow((x_dv - obs.h), 2) / pow(obs.a, 2) +
       pow((y_dv - obs.k), 2) / pow(obs.b, 2);
 
-    obs_expression = obs_expression.getPowInt(2);
     obs_expression = exp(1.0 / obs_expression);
 
     obstacle_cost += obs_expression;

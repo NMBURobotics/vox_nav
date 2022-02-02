@@ -881,13 +881,13 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
 
     double track_yaw_angle = 0.0;
     // Fill in arrow information
-    if (track.hist.historic_positions.size() > 3) {
+    if (track.hist.historic_positions.size() > 10) {
 
       int num_elements = track.hist.historic_positions.size();
       double dy = track.hist.historic_positions.back().y() -
-        track.hist.historic_positions[num_elements - 3].y();
+        track.hist.historic_positions[num_elements - 10].y();
       double dx = track.hist.historic_positions.back().x() -
-        track.hist.historic_positions[num_elements - 3].x();
+        track.hist.historic_positions[num_elements - 10].x();
       track_yaw_angle = std::atan2(dy, dx);
 
       viz_obj.arr.action = visualization_msgs::msg::Marker::ADD;
@@ -906,6 +906,7 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
       arr_end.x = track.hist.historic_positions.back().x() + dx;
       arr_end.y = track.hist.historic_positions.back().y() + dy;
       arr_end.z = track.hist.historic_positions.back().z();
+
       viz_obj.arr.points.push_back(arr_start);
       viz_obj.arr.points.push_back(arr_end);
       std_msgs::msg::ColorRGBA color;
@@ -917,7 +918,8 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
       viz_obj.arr.colors.push_back(color);
       viz_obj.arr.color = color;
 
-      // lets predict where the objct will be clustering_params_.N horizons later
+
+      // lets predict where the object will be clustering_params_.N horizons later
       auto track_position_after_N_horizons = track_msg.world_pose.point;
       for (int h = 0; h < clustering_params_.N; h++) {
         track_position_after_N_horizons.x += clustering_params_.dt *
@@ -925,22 +927,32 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
         track_position_after_N_horizons.y += clustering_params_.dt *
           (track_msg.velocity * std::sin(track_yaw_angle));
       }
+
       if (std::abs(track_msg.velocity) > 0.4) {
         viz_obj.cyl.pose.orientation =
           vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, track_yaw_angle);
         auto dist_to_after_N_horizon_pose =
           vox_nav_utilities::getEuclidianDistBetweenPoints(
           track_position_after_N_horizons, track_msg.world_pose.point);
+
         viz_obj.cyl.scale.x = dist_to_after_N_horizon_pose;
         track_msg.is_dynamic = true;
         track_msg.orientation = track_yaw_angle;
         track_msg.heading = track_yaw_angle;
-        viz_obj.cyl.scale.x *= 1.4;
-        viz_obj.cyl.scale.y *= 1.4;
-        viz_obj.cyl.scale.z *= 1.4;
+
+        viz_obj.cyl.scale.x *= 1.6;
+        viz_obj.cyl.scale.y *= 1.6;
+        viz_obj.cyl.scale.z *= 1.6;
         track_msg.length = viz_obj.cyl.scale.x;
         track_msg.width = viz_obj.cyl.scale.y;
         track_msg.height = viz_obj.cyl.scale.z;
+
+        geometry_msgs::msg::Point dynamic_obj_shifted_position;
+        dynamic_obj_shifted_position.x = (arr_start.x + arr_end.x) / 2.0;
+        dynamic_obj_shifted_position.y = (arr_start.y + arr_end.y) / 2.0;
+        dynamic_obj_shifted_position.z = (arr_start.z + arr_end.z) / 2.0;
+        track_msg.world_pose.point = dynamic_obj_shifted_position;
+        viz_obj.cyl.pose.position = dynamic_obj_shifted_position;
       }
     }
 
