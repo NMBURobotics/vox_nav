@@ -12,6 +12,7 @@ raw_cloud_clustering_tracking:
       sacle_up_objects: 1.0
       N: 20 # dynamic object horizon
       dt: 0.2 # dynamic object horizon time step
+      min_cluster_height: 0.4
     data_association:
       ped:
         dist:

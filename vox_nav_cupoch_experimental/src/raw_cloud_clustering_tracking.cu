@@ -76,6 +76,8 @@ RawCloudClusteringTracking::RawCloudClusteringTracking()
   declare_parameter("clustering.sacle_up_objects", clustering_params_.sacle_up_objects);
   declare_parameter("clustering.N", clustering_params_.N);
   declare_parameter("clustering.dt", clustering_params_.dt);
+  declare_parameter("clustering.min_cluster_height", clustering_params_.min_cluster_height);
+
 
   get_parameter("data_association.ped.dist.position", params_.da_ped_dist_pos);
   get_parameter("data_association.ped.dist.form", params_.da_ped_dist_form);
@@ -110,6 +112,8 @@ RawCloudClusteringTracking::RawCloudClusteringTracking()
   get_parameter("clustering.sacle_up_objects", clustering_params_.sacle_up_objects);
   get_parameter("clustering.N", clustering_params_.N);
   get_parameter("clustering.dt", clustering_params_.dt);
+  get_parameter("clustering.min_cluster_height", clustering_params_.min_cluster_height);
+
 
   // Print parameters
   RCLCPP_INFO_STREAM(get_logger(), "da_ped_dist_pos " << params_.da_ped_dist_pos);
@@ -149,6 +153,8 @@ RawCloudClusteringTracking::RawCloudClusteringTracking()
   RCLCPP_INFO_STREAM(get_logger(), "sacle_up_objects " << clustering_params_.sacle_up_objects);
   RCLCPP_INFO_STREAM(get_logger(), "N " << clustering_params_.N);
   RCLCPP_INFO_STREAM(get_logger(), "dt " << clustering_params_.dt);
+  RCLCPP_INFO_STREAM(get_logger(), "min_cluster_height " << clustering_params_.min_cluster_height);
+
 
   buffer_ = std::make_shared<tf2_ros::Buffer>(get_clock());
   transform_listener_ = std::make_shared<tf2_ros::TransformListener>(*buffer_);
@@ -268,6 +274,12 @@ void RawCloudClusteringTracking::cloudCallback(
       std::abs(mvbb_corners_geometry_msgs.second.y() - mvbb_corners_geometry_msgs.first.y());
     object.length = clustering_params_.sacle_up_objects *
       std::abs(mvbb_corners_geometry_msgs.second.x() - mvbb_corners_geometry_msgs.first.x());
+
+    if (object.height < clustering_params_.min_cluster_height) {
+      // Doe not add too short clusters as they are most probably noise
+      continue;
+    }
+
     object.id = i;
     object.semantic_id = 0;     // assume that we dont know
     object.is_new_track = true;
