@@ -85,7 +85,9 @@ vox_nav_controller_server_rclcpp_node:
          R: [1.0, 1.0]                                                     # weights on jerk and slew rate(steering angle derivative)
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
-         obstacle_cost: 10.0
+         obstacle_cost: 100.0
+         max_obstacles: 8
+
       MPCControllerAcadoROS:
          plugin: "mpc_controller_acado::MPCControllerAcadoROS"
          N: 20                                                                # timesteps in MPC Horizon

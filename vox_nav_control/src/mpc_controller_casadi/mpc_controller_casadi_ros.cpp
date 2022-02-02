@@ -119,6 +119,8 @@ namespace vox_nav_control
       }
       state_space_information_ = std::make_shared<ompl::base::SpaceInformation>(state_space_);
 
+      solved_at_least_once_ = false;
+
     }
 
     geometry_msgs::msg::Twist MPCControllerCasadiROS::computeVelocityCommands(
@@ -167,8 +169,8 @@ namespace vox_nav_control
       mpc_controller_->updatePreviousControlInput(previous_control_);
       auto obstacles = trackMsg2Ellipsoids(trimmed_N_obstacles);
       mpc_controller_->updateObstacles(obstacles);
-
       MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
+
 
       //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x += res.control_input.acc * (dt);
@@ -191,6 +193,7 @@ namespace vox_nav_control
         mpc_computed_traj_publisher_);
 
       previous_control_ = res.control_input;
+
       return computed_velocity_;
     }
 

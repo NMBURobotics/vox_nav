@@ -19,6 +19,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <std_msgs/msg/color_rgba.hpp>
 #include <nav_msgs/msg/path.hpp>
+#include <geometry_msgs/msg/point.hpp>
 
 #include <Eigen/Eigen>
 #include <ompl/geometric/PathGeometric.h>
@@ -62,6 +63,11 @@ namespace vox_nav_control
       Eigen::Vector2f axes;
       bool is_dynamic;
       double heading;
+      Ellipsoid()
+      : center(1000.0, 1000.0),
+        axes(0.1, 0.1),
+        is_dynamic(false),
+        heading(0.0) {}
     };
 
     /**
@@ -374,6 +380,42 @@ namespace vox_nav_control
 
       return trimmed_N_obstacles;
     }
+
+    static geometry_msgs::msg::Point solve(Ellipsoid e, geometry_msgs::msg::Point p)
+    {
+
+      auto px = std::abs(p.x - e.center.x());
+      auto py = std::abs(p.y - e.center.y());
+      auto t = M_PI_4;
+      auto a = e.axes.x();
+      auto b = e.axes.y();
+      double x, y;
+
+      for (int i = 0; i < 3; i++) {
+        x = a * std::cos(t);
+        y = b * std::sin(t);
+        auto ex = (a * a - b * b) * std::pow(std::cos(t), 3) / a;
+        auto ey = (b * b - a * a) * std::pow(std::sin(t), 3) / b;
+        auto rx = x - ex;
+        auto ry = y - ey;
+        auto qx = px - ex;
+        auto qy = py - ey;
+        auto r = std::hypot(ry, rx);
+        auto q = std::hypot(qy, qx);
+        auto delta_c = r * std::asin((rx * qy - ry * qx) / (r * q));
+        auto delta_t = delta_c / std::sqrt(a * a + b * b - x * x - y * y);
+        t += delta_t;
+        t = std::min(M_PI_2, std::max(0.0, t));
+      }
+
+      geometry_msgs::msg::Point at;
+      at.x = std::copysign(x, p.x);
+      at.y = std::copysign(y, p.y);
+      at.z = 0;
+
+      return at;
+    }
+
 
   }  //   namespace common
 

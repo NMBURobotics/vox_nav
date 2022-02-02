@@ -127,6 +127,8 @@ namespace vox_nav_control
         std::cout << "Initial States z_curr_: \n" << opti_->debug().value(z_curr_) << std::endl;
         std::cout << "Initial Refernce Traj states z_ref_: \n" << opti_->debug().value(z_ref_) <<
           std::endl;
+        std::cout << "Initial Obstacles z_obs_: \n" << opti_->debug().value(z_obs_) <<
+          std::endl;
         std::cout << "Initial Actual Traj states z_dv_: \n" << opti_->debug().value(z_dv_) <<
           std::endl;
         std::cout << "Initial Control inputs u_dv_: \n" << opti_->debug().value(u_dv_) << std::endl;
@@ -230,20 +232,35 @@ namespace vox_nav_control
       // slack cost
       cost += (casadi::MX::sum1(sl_df_dv_) + casadi::MX::sum1(sl_acc_dv_));
 
-      // obstacle costs
-      for (int i = 0; i < params_.max_obstacles; i++) {
-        auto obs_exprerssion =
-          casadi::MX::pow(x_dv_(slice_all_) - casadi::MX(i_obs_(i)), 2) /
-          casadi::MX::pow(a_obs_(i), 2) +
-          casadi::MX::pow(y_dv_(slice_all_) - casadi::MX(h_obs_(i)), 2) /
-          casadi::MX::pow(b_obs_(i), 2);
+      auto casadi_hypot = [](casadi::MX & a, casadi::MX & b) {
+          return casadi::MX::sqrt(casadi::MX::pow(a, 2) + casadi::MX::pow(b, 2));
+        };
 
-        cost += params_.obstacle_cost *
-          casadi::MX::sum1(casadi::MX::exp(1.0 / (obs_exprerssion - (1.0 + params_.robot_radius))));
+      auto casadi_min = [](casadi::MX & a, casadi::MX & b) {
+          return casadi::MX::if_else((a < b), a, b);
+        };
+
+      auto casadi_max = [](casadi::MX & a, casadi::MX & b) {
+          return casadi::MX::if_else((a > b), a, b);
+        };
+
+      // obstacle costs
+      casadi::MX obstacle_cost = 0.0;
+
+      for (int i = 0; i < params_.max_obstacles; i++) {
+        auto obs =
+          casadi::MX::pow(x_dv_ - i_obs_(i), 2) / casadi::MX::pow(a_obs_(i), 2) +
+          casadi::MX::pow(y_dv_ - h_obs_(i), 2) / casadi::MX::pow(b_obs_(i), 2);
+
+        casadi::MX keep_out = 0.01;
+        obs = casadi::MX::if_else(obs < 1.1, keep_out, obs);
+        obstacle_cost += casadi::MX::exp(1.0 / obs);
       }
+      cost += params_.obstacle_cost * casadi::MX::sum1(obstacle_cost);
 
       // minimize ojective function
       opti_->minimize(cost);
+
     }
 
     MPCControllerCasadiCore::SolutionResult MPCControllerCasadiCore::solve(
@@ -301,7 +318,8 @@ namespace vox_nav_control
 
       if (params_.debug_mode) {
         std::cout << "Current States z_curr_: \n " << opti->debug().value(z_curr_) << std::endl;
-        std::cout << "Refernce Traj states z_ref_: \n" << opti->debug().value(z_ref_) << std::endl;
+        std::cout << "Refernce Traj states z_ref_: \n" << opti->debug().value(z_ref_) <<
+          std::endl;
         std::cout << "Actual Traj states z_dv_: \n" << opti->debug().value(z_dv_) << std::endl;
         std::cout << "Control inputs u_dv_: \n" << opti->debug().value(u_dv_) << std::endl;
         std::cout << "Previous Control inputs u_prev_: \n" << opti->debug().value(u_prev_) <<
@@ -397,5 +415,5 @@ namespace vox_nav_control
       opti_->set_initial(v_dv_, v_dv);
     }
 
-  } // namespace mpc_controller_casadi
-}  // namespace vox_nav_control
+  }   // namespace mpc_controller_casadi
+}   // namespace vox_nav_control
