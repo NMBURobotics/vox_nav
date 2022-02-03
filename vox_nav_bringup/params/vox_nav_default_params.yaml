@@ -83,9 +83,9 @@ vox_nav_controller_server_rclcpp_node:
          DF_DOT_MAX: 0.5
          Q: [10.0, 10.0, 0.1, 0.1]                                            # weights on x, y, psi, v.
          R: [10.0, 100.0]                                                     # weights on jerk and slew rate(steering angle derivative)
-         debug_mode: True                                                    # enable/disable debug messages
+         debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
-         obstacle_cost: 0.1
+         obstacle_cost: 100.0
          max_obstacles: 8
 
       MPCControllerAcadoROS:

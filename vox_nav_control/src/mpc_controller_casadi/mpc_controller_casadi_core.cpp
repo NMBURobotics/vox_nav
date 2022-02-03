@@ -114,6 +114,7 @@ namespace vox_nav_control
       // set print level to zeros.
       casadi::Dict opts = {
         {"ipopt.print_level", 0},
+        {"ipopt.max_cpu_time", 1.0},
         {"expand", true},
         {"print_time", false}};
 
@@ -241,6 +242,18 @@ namespace vox_nav_control
       // slack cost
       cost += (casadi::MX::sum1(sl_df_dv_) + casadi::MX::sum1(sl_acc_dv_));
 
+      auto casadi_hypot = [](casadi::MX & a, casadi::MX & b) {
+          return casadi::MX::sqrt(casadi::MX::pow(a, 2) + casadi::MX::pow(b, 2));
+        };
+
+      auto casadi_min = [](casadi::MX & a, casadi::MX & b) {
+          return casadi::MX::if_else((a < b), a, b);
+        };
+
+      auto casadi_max = [](casadi::MX & a, casadi::MX & b) {
+          return casadi::MX::if_else((a > b), a, b);
+        };
+
 
       // obstacle costs
       casadi::MX obstacle_cost;
@@ -266,21 +279,10 @@ namespace vox_nav_control
           casadi::MX::pow(i - x_dv_, 2.0) +
           casadi::MX::pow(h - y_dv_, 2.0));
 
-        casadi::MX zero_cost = 0.0;
-        casadi::MX creazy_cost = 0.01;
-        casadi::MX range_cost = 0;
-
-        auto curr_range =
-          casadi::MX::if_else(
-          dist_to_traj < (r + params_.robot_radius),
-          dist_to_traj * creazy_cost,
-          dist_to_traj - (r + params_.robot_radius)
-          );
-
         auto curr_cost = casadi::MX::if_else(
-          curr_range > 1.0,
-          curr_range * 0.0,
-          casadi::MX::exp(1.0 / curr_range)
+          dist_to_traj > (r + 2 * params_.robot_radius),
+          casadi::MX(0.0),
+          casadi::MX::exp(1.0 / 0.125)
         );
 
         if (o == 0) {
