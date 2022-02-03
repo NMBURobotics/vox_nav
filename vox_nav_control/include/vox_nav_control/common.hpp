@@ -63,11 +63,13 @@ namespace vox_nav_control
       Eigen::Vector2f axes;
       bool is_dynamic;
       double heading;
+      double heading_to_robot_angle;
       Ellipsoid()
       : center(1000.0, 1000.0),
         axes(0.1, 0.1),
         is_dynamic(false),
-        heading(0.0) {}
+        heading(0.0),
+        heading_to_robot_angle(0.0) {}
     };
 
     /**

@@ -211,6 +211,7 @@ namespace vox_nav_control
       casadi::MX h_obs_;
       casadi::MX a_obs_;
       casadi::MX b_obs_;
+      casadi::MX angle_obs_;
 
     };
   } // namespace mpc_controller_casadi

@@ -126,6 +126,9 @@ namespace vox_nav_control
     geometry_msgs::msg::Twist MPCControllerCasadiROS::computeVelocityCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
+      double robot_roll, robot_pitch, robot_psi;
+      vox_nav_utilities::getRPYfromMsgQuaternion(
+        curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
 
       auto regulate_max_speed = [this]() {
           if (computed_velocity_.linear.x > mpc_parameters_.V_MAX) {
@@ -139,14 +142,10 @@ namespace vox_nav_control
       // distance from rear to front axle(m)
       double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
 
-      double roll, pitch, psi;
-      vox_nav_utilities::getRPYfromMsgQuaternion(
-        curr_robot_pose.pose.orientation, roll, pitch, psi);
-
       vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
-      curr_states.psi = psi;
+      curr_states.psi = robot_psi;
       curr_states.v = 0.0;
 
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
@@ -158,6 +157,7 @@ namespace vox_nav_control
       // There will be always a fixed amount of obstacles
       // If there is no obstacles at all just fill with ghost obstacles(all zeros)
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
+
       vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles =
         *vox_nav_control::common::trimObstaclesToN(
         obstacle_tracks_,
@@ -167,10 +167,9 @@ namespace vox_nav_control
       mpc_controller_->updateCurrentStates(curr_states);
       mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
-      auto obstacles = trackMsg2Ellipsoids(trimmed_N_obstacles);
+      auto obstacles = trackMsg2Ellipsoids(trimmed_N_obstacles, curr_robot_pose);
       mpc_controller_->updateObstacles(obstacles);
       MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
-
 
       //  The control output is acceleration but we need to publish speed
       computed_velocity_.linear.x += res.control_input.acc * (dt);
@@ -223,12 +222,14 @@ namespace vox_nav_control
       mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
 
+
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
-      auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_);
+      auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_, curr_robot_pose);
       MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
 
       computed_velocity_.linear.x = 0;
       computed_velocity_.angular.z += res.control_input.df * (dt);
+
       previous_control_ = res.control_input;
 
       return computed_velocity_;
@@ -250,12 +251,43 @@ namespace vox_nav_control
     }
 
     std::vector<vox_nav_control::common::Ellipsoid> MPCControllerCasadiROS::trackMsg2Ellipsoids(
-      const vox_nav_msgs::msg::ObjectArray & tracks)
+      const vox_nav_msgs::msg::ObjectArray & tracks,
+      const geometry_msgs::msg::PoseStamped & curr_robot_pose)
     {
+
+      double robot_roll, robot_pitch, robot_psi;
+      vox_nav_utilities::getRPYfromMsgQuaternion(
+        curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
+
       std::vector<vox_nav_control::common::Ellipsoid> ellipsoids;
       for (auto && i : tracks.objects) {
-        /*
 
+        // We use dynamic weigthig matrix,
+        // If the given goal is behind robots current heading, adjust parameters so that we take best maneuver
+        Eigen::Vector3f curr_robot_vec(
+          curr_robot_pose.pose.position.x,
+          curr_robot_pose.pose.position.y,
+          curr_robot_pose.pose.position.z);
+
+        Eigen::Vector3f obstacle_center_vec(
+          i.world_pose.point.x,
+          i.world_pose.point.y,
+          i.world_pose.point.z);
+
+        Eigen::Vector3f obstacle_head_vec(
+          i.world_pose.point.x + i.length / 2.0,
+          i.world_pose.point.y,
+          i.world_pose.point.z);
+
+        float heading_to_robot_angle =
+          std::acos(
+          vox_nav_control::common::dot(
+            obstacle_center_vec - obstacle_head_vec,
+            obstacle_center_vec - curr_robot_vec) /
+          (vox_nav_control::common::mag(obstacle_center_vec - obstacle_head_vec) *
+          vox_nav_control::common::mag(obstacle_center_vec - curr_robot_vec)));
+
+        /*
         https://math.stackexchange.com/questions/426150/what-is-the-general-equation-of-the-ellipse-that-is-not-in-the-origin-and-rotate
 
         std::pow(
@@ -273,6 +305,7 @@ namespace vox_nav_control
         e.is_dynamic = i.is_dynamic;
         e.center = center;
         e.axes = Eigen::Vector2f(a, b);
+        e.heading_to_robot_angle = heading_to_robot_angle;
         ellipsoids.push_back(e);
       }
 
