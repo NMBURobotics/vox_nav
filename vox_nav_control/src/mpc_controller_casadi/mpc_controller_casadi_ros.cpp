@@ -298,14 +298,14 @@ namespace vox_nav_control
           2) / std::pow(b, 2) = 1;
         */
         Eigen::Vector2f center(i.world_pose.point.x, i.world_pose.point.y);
-        double a = i.length;
-        double b = i.width;
+        double a = i.width;
+        double b = i.length;
         vox_nav_control::common::Ellipsoid e;
         e.heading = i.heading;
         e.is_dynamic = i.is_dynamic;
         e.center = center;
         e.axes = Eigen::Vector2f(a, b);
-        e.heading_to_robot_angle = heading_to_robot_angle;
+        e.heading_to_robot_angle = heading_to_robot_angle - M_PI_2;
         ellipsoids.push_back(e);
       }
 

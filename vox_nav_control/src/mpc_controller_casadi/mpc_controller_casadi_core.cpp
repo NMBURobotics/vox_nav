@@ -154,10 +154,6 @@ namespace vox_nav_control
       //  State Bound Constraints
       opti_->subject_to(opti_->bounded(params_.V_MIN, v_dv_, params_.V_MAX));
 
-      opti_->subject_to(x_dv_(0) == z_curr_(0));
-      opti_->subject_to(y_dv_(0) == z_curr_(1));
-      opti_->subject_to(psi_dv_(0) == z_curr_(2));
-      opti_->subject_to(v_dv_(0) == z_curr_(3));
 
       // state dynamics constraints
       // see here for the equtions: https://github.com/MPC-Berkeley/barc/wiki/Car-Model
@@ -187,6 +183,11 @@ namespace vox_nav_control
       //  Input Bound Constraints
       opti_->subject_to(opti_->bounded(params_.A_MIN, acc_dv_, params_.A_MAX));
       opti_->subject_to(opti_->bounded(params_.DF_MIN, df_dv_, params_.DF_MAX));
+
+      opti_->subject_to(x_dv_(0) == z_curr_(0));
+      opti_->subject_to(y_dv_(0) == z_curr_(1));
+      opti_->subject_to(psi_dv_(0) == z_curr_(2));
+      opti_->subject_to(v_dv_(0) == z_curr_(3));
 
       //  Input Rate Bound Constraints
       opti_->subject_to(
@@ -219,28 +220,6 @@ namespace vox_nav_control
       opti_->subject_to(0 <= sl_df_dv_);
       opti_->subject_to(0 <= sl_acc_dv_);
 
-      // obstacle constraints
-      for (int o = 0; o < params_.max_obstacles; o++) {
-        casadi::MX pow_two = 2.0;
-        auto a = a_obs_(o) / 2.0;
-        auto b = b_obs_(o) / 2.0;
-        auto i = i_obs_(o);
-        auto h = h_obs_(o);
-        auto theta = angle_obs_(o);
-
-        auto r = a * b /
-          casadi::MX::sqrt(
-          casadi::MX::pow(b * casadi::MX::cos(theta), 2.0) +
-          casadi::MX::pow(a * casadi::MX::sin(theta), 2.0)
-          );
-
-        auto dist_to_traj =
-          casadi::MX::sqrt(
-          casadi::MX::pow(i - x_dv_, 2.0) +
-          casadi::MX::pow(h - y_dv_, 2.0));
-
-        opti_->subject_to(dist_to_traj >= (r + 2 * params_.robot_radius));
-      }
     }
 
     void MPCControllerCasadiCore::addCost()
@@ -261,6 +240,58 @@ namespace vox_nav_control
       }
       // slack cost
       cost += (casadi::MX::sum1(sl_df_dv_) + casadi::MX::sum1(sl_acc_dv_));
+
+
+      // obstacle costs
+      casadi::MX obstacle_cost;
+      for (int o = 0; o < params_.max_obstacles; o++) {
+
+        // confusing but it is what it is
+        // https://en.wikipedia.org/wiki/Ellipse
+        // polar form
+        auto a = a_obs_(o) / 2.0;
+        auto b = b_obs_(o) / 2.0;
+        auto i = i_obs_(o);
+        auto h = h_obs_(o);
+        auto theta = angle_obs_(o);
+
+        auto r = a * b /
+          casadi::MX::sqrt(
+          casadi::MX::pow(b * casadi::MX::cos(theta), 2.0) +
+          casadi::MX::pow(a * casadi::MX::sin(theta), 2.0)
+          );
+
+        auto dist_to_traj =
+          casadi::MX::sqrt(
+          casadi::MX::pow(i - x_dv_, 2.0) +
+          casadi::MX::pow(h - y_dv_, 2.0));
+
+        casadi::MX zero_cost = 0.0;
+        casadi::MX creazy_cost = 0.01;
+        casadi::MX range_cost = 0;
+
+        auto curr_range =
+          casadi::MX::if_else(
+          dist_to_traj < (r + params_.robot_radius),
+          dist_to_traj * creazy_cost,
+          dist_to_traj - (r + params_.robot_radius)
+          );
+
+        auto curr_cost = casadi::MX::if_else(
+          curr_range > 1.0,
+          curr_range * 0.0,
+          casadi::MX::exp(1.0 / curr_range)
+        );
+
+        if (o == 0) {
+          obstacle_cost = curr_cost;
+        } else {
+          obstacle_cost += curr_cost;
+        }
+
+      }
+
+      cost += params_.obstacle_cost * casadi::MX::sum1(obstacle_cost);
 
       // minimize ojective function
       opti_->minimize(cost);

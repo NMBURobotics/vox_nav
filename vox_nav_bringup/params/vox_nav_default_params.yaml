@@ -67,26 +67,26 @@ vox_nav_controller_server_rclcpp_node:
       robot_radius: 0.94                                                             
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
-         N: 12                                                                 # timesteps in MPC Horizon
+         N: 20                                                                 # timesteps in MPC Horizon
          DT: 0.2                                                              # discretization time between timesteps(s)
          L_F: 0.66                                                            # distance from CoG to front axle(m)
          L_R: 0.66                                                            # distance from CoG to rear axle(m)
          V_MIN: -1.5                                                          # min / max velocity constraint(m / s)
          V_MAX: 1.5
-         A_MIN: -1.5                                                          # min / max acceleration constraint(m / s ^ 2)
-         A_MAX: 1.5
+         A_MIN: -1.0                                                          # min / max acceleration constraint(m / s ^ 2)
+         A_MAX: 1.0
          DF_MIN: -0.8                                                         # min / max front steer angle constraint(rad)
          DF_MAX: 0.8
-         A_DOT_MIN: -1.0                                                      # min / max jerk constraint(m / s ^ 3)
-         A_DOT_MAX: 1.0
-         DF_DOT_MIN: -0.8                                                     # min / max front steer angle rate constraint(rad / s)
-         DF_DOT_MAX: 0.8
+         A_DOT_MIN: -0.5                                                      # min / max jerk constraint(m / s ^ 3)
+         A_DOT_MAX: 0.5
+         DF_DOT_MIN: -0.5                                                     # min / max front steer angle rate constraint(rad / s)
+         DF_DOT_MAX: 0.5
          Q: [10.0, 10.0, 0.1, 0.1]                                            # weights on x, y, psi, v.
          R: [10.0, 100.0]                                                     # weights on jerk and slew rate(steering angle derivative)
          debug_mode: True                                                    # enable/disable debug messages
          params_configured: True
          obstacle_cost: 0.1
-         max_obstacles: 4
+         max_obstacles: 8
 
       MPCControllerAcadoROS:
          plugin: "mpc_controller_acado::MPCControllerAcadoROS"
