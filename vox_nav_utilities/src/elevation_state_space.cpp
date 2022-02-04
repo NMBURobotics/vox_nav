@@ -248,13 +248,13 @@ void OctoCellValidStateSampler::updateSearchArea(
   auto search_point_surfel = vox_nav_utilities::poseMsg2PCLSurfel(search_point_pose);
 
   search_area_surfels_ =
-    vox_nav_utilities::get_subcloud_within_radius<pcl::PointSurfel>(
+    vox_nav_utilities::getSubCloudWithinRadius<pcl::PointSurfel>(
     workspace_surfels_, search_point_surfel,
     radius);
 
   RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
 
-  search_area_surfels_ = vox_nav_utilities::uniformly_sample_cloud<pcl::PointSurfel>(
+  search_area_surfels_ = vox_nav_utilities::uniformlySampleCloud<pcl::PointSurfel>(
     search_area_surfels_, 1.2);
 
   RCLCPP_INFO(

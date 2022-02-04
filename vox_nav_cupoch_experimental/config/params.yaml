@@ -9,9 +9,10 @@ raw_cloud_clustering_tracking:
       clustering_min_points: 10.0
       clustering_max_points: 10000.0
       clustering_max_step_size: 0.5
-      sacle_up_objects: 1.25
-      N: 10 # dynamic object horizon
+      sacle_up_objects: 1.0
+      N: 20 # dynamic object horizon
       dt: 0.2 # dynamic object horizon time step
+      min_cluster_height: 0.4
     data_association:
       ped:
         dist:

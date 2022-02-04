@@ -107,7 +107,7 @@ void SemanticCloudClustering::cloudOdomCallback(
   pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZI>());
   pcl::fromROSMsg(*cloud, *pcl_curr);
 
-  pcl_curr = vox_nav_utilities::crop_box<pcl::PointXYZI>(
+  pcl_curr = vox_nav_utilities::cropBox<pcl::PointXYZI>(
     pcl_curr,
     Eigen::Vector4f(-15, -15, -2, 1),
     Eigen::Vector4f(15, 15, 2, 1));
@@ -148,10 +148,10 @@ void SemanticCloudClustering::cloudOdomCallback(
   }
 
   dynamic_points_pcl =
-    vox_nav_utilities::remove_points_within_ground_plane_of_other_cloud<pcl::PointXYZRGB>(
+    vox_nav_utilities::removePointsWithinGroundPlaneofOtherCloud<pcl::PointXYZRGB>(
     dynamic_points_pcl, ground_points_pcl, 0.4);
 
-  dynamic_points_pcl = vox_nav_utilities::denoise_segmented_cloud<pcl::PointXYZRGB>(
+  dynamic_points_pcl = vox_nav_utilities::denoiseSegmentedCloud<pcl::PointXYZRGB>(
     dynamic_points_pcl,
     static_points_pcl, 0.2, 2);
 

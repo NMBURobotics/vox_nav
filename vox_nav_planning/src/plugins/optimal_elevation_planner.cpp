@@ -152,7 +152,7 @@ namespace vox_nav_planning
     // we determined a search point and radius, now with this info lets get
     // a sub point cloud that falls within boundries
     auto search_area_surfels =
-      vox_nav_utilities::get_subcloud_within_radius<pcl::PointSurfel>(
+      vox_nav_utilities::getSubCloudWithinRadius<pcl::PointSurfel>(
       elevated_surfel_cloud_,
       search_point_surfel,
       radius);
@@ -170,7 +170,7 @@ namespace vox_nav_planning
       search_area_rgba_pointcloud->points.push_back(point);
     }
 
-    auto super = vox_nav_utilities::super_voxelize_cloud<pcl::PointXYZRGBA>(
+    auto super = vox_nav_utilities::supervoxelizeCloud<pcl::PointXYZRGBA>(
       search_area_rgba_pointcloud,
       supervoxel_disable_transform_,
       supervoxel_resolution_,
@@ -367,6 +367,14 @@ namespace vox_nav_planning
 
     int num_visited_nodes = 0;
     try {
+
+      if (supervoxel_clusters_.empty()) {
+        RCLCPP_WARN(
+          logger_, "Empty supervoxel clusters!,%s failed to find a valid path!",
+          graph_search_method_.c_str());
+        return plan_poses;
+      }
+
       auto heuristic =
         distance_heuristic<GraphT, Cost, SuperVoxelClusters *>(
         &supervoxel_clusters_, goal_vertex, g);

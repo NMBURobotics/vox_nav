@@ -109,7 +109,8 @@ namespace vox_nav_control
        * @return std::vector<Ellipsoid>
        */
       std::vector<vox_nav_control::common::Ellipsoid> trackMsg2Ellipsoids(
-        const vox_nav_msgs::msg::ObjectArray & tracks);
+        const vox_nav_msgs::msg::ObjectArray & tracks,
+        const geometry_msgs::msg::PoseStamped & curr_robot_pose);
 
     private:
       // Given refernce traj to follow, this is set got from planner
@@ -141,6 +142,8 @@ namespace vox_nav_control
       // curve radius for reeds and dubins only
       double rho_;
       ompl::base::SpaceInformationPtr state_space_information_;
+
+      bool solved_at_least_once_;
     };
 
   } // namespace mpc_controller_casadi

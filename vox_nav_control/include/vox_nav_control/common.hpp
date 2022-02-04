@@ -19,6 +19,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <std_msgs/msg/color_rgba.hpp>
 #include <nav_msgs/msg/path.hpp>
+#include <geometry_msgs/msg/point.hpp>
 
 #include <Eigen/Eigen>
 #include <ompl/geometric/PathGeometric.h>
@@ -29,6 +30,7 @@
 #include <ompl/base/ScopedState.h>
 
 #include <vox_nav_utilities/tf_helpers.hpp>
+#include <vox_nav_msgs/msg/object_array.hpp>
 
 namespace vox_nav_control
 {
@@ -61,6 +63,13 @@ namespace vox_nav_control
       Eigen::Vector2f axes;
       bool is_dynamic;
       double heading;
+      double heading_to_robot_angle;
+      Ellipsoid()
+      : center(1000.0, 1000.0),
+        axes(0.1, 0.1),
+        is_dynamic(false),
+        heading(0.0),
+        heading_to_robot_angle(0.0) {}
     };
 
     /**
@@ -133,6 +142,8 @@ namespace vox_nav_control
       bool params_configured;
 
       int max_obstacles;
+      double robot_radius;
+      double obstacle_cost;
 
       // Assign meaningful default values to this parameters
       Parameters()
@@ -154,7 +165,9 @@ namespace vox_nav_control
         R({10.0, 10.0}),
         debug_mode(true),
         params_configured(false),
-        max_obstacles(1) {}
+        max_obstacles(1),
+        robot_radius(0.5),
+        obstacle_cost(1.0) {}
     };
 
     static int nearestStateIndex(
@@ -313,6 +326,99 @@ namespace vox_nav_control
       std::vector<T> vec(first, last);
       return vec;
     }
+
+    static float dot(Eigen::Vector3f a, Eigen::Vector3f b)
+    {
+      float value = a.x() * b.x() + a.y() * b.y() + a.z() * b.z();
+      return value;
+    }
+
+    static float mag(Eigen::Vector3f a)
+    {
+      return std::sqrt(a.x() * a.x() + a.y() * a.y() + a.z() * a.z());
+    }
+
+    static vox_nav_msgs::msg::ObjectArray::SharedPtr  trimObstaclesToN(
+      const vox_nav_msgs::msg::ObjectArray & obstacle_tracks,
+      const geometry_msgs::msg::PoseStamped & curr_robot_pose,
+      int N)
+    {
+      auto trimmed_N_obstacles =
+        std::make_shared<vox_nav_msgs::msg::ObjectArray>(obstacle_tracks);
+
+      if (obstacle_tracks.objects.size() < N) {
+
+        for (size_t i = 0; i < N - obstacle_tracks.objects.size(); i++) {
+          vox_nav_msgs::msg::Object ghost_obstacle;
+          ghost_obstacle.world_pose.point.x = 20000.0;
+          ghost_obstacle.world_pose.point.y = 20000.0;
+          ghost_obstacle.world_pose.point.z = 20000.0;
+          ghost_obstacle.length = 0.1;
+          ghost_obstacle.width = 0.1;
+          ghost_obstacle.height = 0.1;
+          trimmed_N_obstacles->objects.push_back(ghost_obstacle);
+        }
+      } else {
+        trimmed_N_obstacles->objects.clear();
+        trimmed_N_obstacles->objects.resize(N);
+
+        std::vector<double> distances;
+        for (auto && obs : obstacle_tracks.objects) {
+          double dist = vox_nav_utilities::getEuclidianDistBetweenPoints(
+            obs.world_pose.point,
+            curr_robot_pose.pose.position);
+          distances.push_back(dist);
+        }
+
+        std::vector<int> sorted_indices(distances.size());
+        std::iota(sorted_indices.begin(), sorted_indices.end(), 0);
+        auto comparator = [&distances](int a, int b) {return distances[a] < distances[b];};
+        std::sort(sorted_indices.begin(), sorted_indices.end(), comparator);
+
+        for (size_t i = 0; i < N; i++) {
+          trimmed_N_obstacles->objects[i] = obstacle_tracks.objects[sorted_indices[i]];
+        }
+      }
+
+      return trimmed_N_obstacles;
+    }
+
+    static geometry_msgs::msg::Point solve(Ellipsoid e, geometry_msgs::msg::Point p)
+    {
+
+      auto px = std::abs(p.x - e.center.x());
+      auto py = std::abs(p.y - e.center.y());
+      auto t = M_PI_4;
+      auto a = e.axes.x();
+      auto b = e.axes.y();
+      double x, y;
+
+      for (int i = 0; i < 3; i++) {
+        x = a * std::cos(t);
+        y = b * std::sin(t);
+        auto ex = (a * a - b * b) * std::pow(std::cos(t), 3) / a;
+        auto ey = (b * b - a * a) * std::pow(std::sin(t), 3) / b;
+        auto rx = x - ex;
+        auto ry = y - ey;
+        auto qx = px - ex;
+        auto qy = py - ey;
+        auto r = std::hypot(ry, rx);
+        auto q = std::hypot(qy, qx);
+        auto delta_c = r * std::asin((rx * qy - ry * qx) / (r * q));
+        auto delta_t = delta_c / std::sqrt(a * a + b * b - x * x - y * y);
+        t += delta_t;
+        t = std::min(M_PI_2, std::max(0.0, t));
+      }
+
+      geometry_msgs::msg::Point at;
+      at.x = std::copysign(x, p.x);
+      at.y = std::copysign(y, p.y);
+      at.z = 0;
+
+      return at;
+    }
+
+
   }  //   namespace common
 
 }  // namespace vox_nav_control

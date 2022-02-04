@@ -45,6 +45,14 @@ namespace vox_nav_control
       psi_ref_ = z_ref_(slice_all_, 2);
       v_ref_ = z_ref_(slice_all_, 3);
 
+      // obstacles
+      z_obs_ = opti_->parameter(params_.max_obstacles, 5);
+      i_obs_ = z_obs_(slice_all_, 0);
+      h_obs_ = z_obs_(slice_all_, 1);
+      a_obs_ = z_obs_(slice_all_, 2);
+      b_obs_ = z_obs_(slice_all_, 3);
+      angle_obs_ = z_obs_(slice_all_, 4);
+
       // Decision vars
       z_dv_ = opti_->variable(params_.N + 1, 4);
       x_dv_ = z_dv_(slice_all_, 0);
@@ -69,6 +77,12 @@ namespace vox_nav_control
       // Kind of a test , set all current states to zero
       vox_nav_control::common::States curr_states;
       updateCurrentStates(curr_states);
+
+      // Kind of a test, set test obstacles
+      vox_nav_control::common::Ellipsoid mock_obstacle;
+      std::vector<vox_nav_control::common::Ellipsoid> mock_obstacles(params_.max_obstacles,
+        mock_obstacle);
+      updateObstacles(mock_obstacles);
 
       // Kind of a test, set reference states in horizon to zeros
       vox_nav_control::common::States mock_reference_state;
@@ -100,6 +114,7 @@ namespace vox_nav_control
       // set print level to zeros.
       casadi::Dict opts = {
         {"ipopt.print_level", 0},
+        {"ipopt.max_cpu_time", 1.0},
         {"expand", true},
         {"print_time", false}};
 
@@ -113,6 +128,8 @@ namespace vox_nav_control
         std::cout << "Control Weight Matrix R: \n" << R << std::endl;
         std::cout << "Initial States z_curr_: \n" << opti_->debug().value(z_curr_) << std::endl;
         std::cout << "Initial Refernce Traj states z_ref_: \n" << opti_->debug().value(z_ref_) <<
+          std::endl;
+        std::cout << "Initial Obstacles z_obs_: \n" << opti_->debug().value(z_obs_) <<
           std::endl;
         std::cout << "Initial Actual Traj states z_dv_: \n" << opti_->debug().value(z_dv_) <<
           std::endl;
@@ -138,15 +155,17 @@ namespace vox_nav_control
       //  State Bound Constraints
       opti_->subject_to(opti_->bounded(params_.V_MIN, v_dv_, params_.V_MAX));
 
+
       // state dynamics constraints
       // see here for the equtions: https://github.com/MPC-Berkeley/barc/wiki/Car-Model
       for (int i = 0; i < params_.N; i++) {
         // Slip angle
+
+        //FULL ACKERMAN MODEL
         auto beta =
           casadi::MX::atan(
           params_.L_R / (params_.L_F + params_.L_R) *
           casadi::MX::tan(df_dv_(i)));
-
         opti_->subject_to(
           x_dv_(i + 1) ==
           x_dv_(i) + params_.DT * (v_dv_(i) * casadi::MX::cos(psi_dv_(i) + beta)));
@@ -159,11 +178,17 @@ namespace vox_nav_control
         opti_->subject_to(
           v_dv_(i + 1) ==
           v_dv_(i) + params_.DT * acc_dv_(i));
+
       }
 
       //  Input Bound Constraints
       opti_->subject_to(opti_->bounded(params_.A_MIN, acc_dv_, params_.A_MAX));
       opti_->subject_to(opti_->bounded(params_.DF_MIN, df_dv_, params_.DF_MAX));
+
+      opti_->subject_to(x_dv_(0) == z_curr_(0));
+      opti_->subject_to(y_dv_(0) == z_curr_(1));
+      opti_->subject_to(psi_dv_(0) == z_curr_(2));
+      opti_->subject_to(v_dv_(0) == z_curr_(3));
 
       //  Input Rate Bound Constraints
       opti_->subject_to(
@@ -216,39 +241,73 @@ namespace vox_nav_control
       }
       // slack cost
       cost += (casadi::MX::sum1(sl_df_dv_) + casadi::MX::sum1(sl_acc_dv_));
+
+      auto casadi_hypot = [](casadi::MX & a, casadi::MX & b) {
+          return casadi::MX::sqrt(casadi::MX::pow(a, 2) + casadi::MX::pow(b, 2));
+        };
+
+      auto casadi_min = [](casadi::MX & a, casadi::MX & b) {
+          return casadi::MX::if_else((a < b), a, b);
+        };
+
+      auto casadi_max = [](casadi::MX & a, casadi::MX & b) {
+          return casadi::MX::if_else((a > b), a, b);
+        };
+
+
+      // obstacle costs
+      casadi::MX obstacle_cost;
+      for (int o = 0; o < params_.max_obstacles; o++) {
+
+        // confusing but it is what it is
+        // https://en.wikipedia.org/wiki/Ellipse
+        // polar form
+        auto a = a_obs_(o) / 2.0;
+        auto b = b_obs_(o) / 2.0;
+        auto i = i_obs_(o);
+        auto h = h_obs_(o);
+        auto theta = angle_obs_(o);
+
+        auto r = a * b /
+          casadi::MX::sqrt(
+          casadi::MX::pow(b * casadi::MX::cos(theta), 2.0) +
+          casadi::MX::pow(a * casadi::MX::sin(theta), 2.0)
+          );
+
+        auto dist_to_traj =
+          casadi::MX::sqrt(
+          casadi::MX::pow(i - x_dv_, 2.0) +
+          casadi::MX::pow(h - y_dv_, 2.0));
+
+        auto curr_cost = casadi::MX::if_else(
+          dist_to_traj > (r + 2 * params_.robot_radius),
+          casadi::MX(0.0),
+          casadi::MX::exp(1.0 / 0.125)
+        );
+
+        if (o == 0) {
+          obstacle_cost = curr_cost;
+        } else {
+          obstacle_cost += curr_cost;
+        }
+
+      }
+
+      cost += params_.obstacle_cost * casadi::MX::sum1(obstacle_cost);
+
       // minimize ojective function
       opti_->minimize(cost);
+
     }
 
     MPCControllerCasadiCore::SolutionResult MPCControllerCasadiCore::solve(
       const std::vector<vox_nav_control::common::Ellipsoid> & obstacles)
     {
-      auto opti = std::make_shared<casadi::Opti>(*opti_);
-      casadi::MX pow_squared = 2;
-
-      casadi::Slice slice(static_cast<int>(params_.N / 2), params_.N);
-
-      for (auto && obs : obstacles) {
-        if (obs.is_dynamic) {
-          opti->subject_to(
-            2.25 <
-            casadi::MX::sqrt(
-              casadi::MX::pow(x_dv_(slice) - casadi::MX(obs.center.x()), pow_squared) +
-              casadi::MX::pow(y_dv_(slice) - casadi::MX(obs.center.y()), pow_squared)));
-        }
-      }
-
-      // Initial state constraints
-      opti->subject_to(x_dv_(0) == z_curr_(0));
-      opti->subject_to(y_dv_(0) == z_curr_(1));
-      opti->subject_to(psi_dv_(0) == z_curr_(2));
-      opti->subject_to(v_dv_(0) == z_curr_(3));
-
       bool is_solution_optimal(false);
       auto start = std::chrono::high_resolution_clock::now();
       casadi::native_DM u_mpc, z_mpc, sl_mpc, z_ref;
       try {
-        auto sol = opti->solve();
+        auto sol = opti_->solve();
         u_mpc = sol.value(u_dv_);
         z_mpc = sol.value(z_dv_);
         sl_mpc = sol.value(sl_dv_);
@@ -256,10 +315,10 @@ namespace vox_nav_control
         is_solution_optimal = true;
       } catch (const std::exception & e) {
         std::cerr << "MPC CONTROL: NON OPTIMAL SOLUTION FOUND!" << '\n';
-        u_mpc = opti->debug().value(u_dv_);
-        z_mpc = opti->debug().value(z_dv_);
-        sl_mpc = opti->debug().value(sl_dv_);
-        z_ref = opti->debug().value(z_ref_);
+        u_mpc = opti_->debug().value(u_dv_);
+        z_mpc = opti_->debug().value(z_dv_);
+        sl_mpc = opti_->debug().value(sl_dv_);
+        z_ref = opti_->debug().value(z_ref_);
       }
       auto end = std::chrono::high_resolution_clock::now();
       auto execution_time =
@@ -287,11 +346,12 @@ namespace vox_nav_control
       result.actual_computed_states = actual_computed_states;
 
       if (params_.debug_mode) {
-        std::cout << "Current States z_curr_: \n " << opti->debug().value(z_curr_) << std::endl;
-        std::cout << "Refernce Traj states z_ref_: \n" << opti->debug().value(z_ref_) << std::endl;
-        std::cout << "Actual Traj states z_dv_: \n" << opti->debug().value(z_dv_) << std::endl;
-        std::cout << "Control inputs u_dv_: \n" << opti->debug().value(u_dv_) << std::endl;
-        std::cout << "Previous Control inputs u_prev_: \n" << opti->debug().value(u_prev_) <<
+        std::cout << "Current States z_curr_: \n " << opti_->debug().value(z_curr_) << std::endl;
+        std::cout << "Refernce Traj states z_ref_: \n" << opti_->debug().value(z_ref_) <<
+          std::endl;
+        std::cout << "Actual Traj states z_dv_: \n" << opti_->debug().value(z_dv_) << std::endl;
+        std::cout << "Control inputs u_dv_: \n" << opti_->debug().value(u_dv_) << std::endl;
+        std::cout << "Previous Control inputs u_prev_: \n" << opti_->debug().value(u_prev_) <<
           std::endl;
         std::cout << "Solve took: " << execution_time << " ms" << std::endl;
         std::cout << "acceleration cmd " << result.control_input.acc << std::endl;
@@ -320,6 +380,25 @@ namespace vox_nav_control
       opti_->set_value(y_ref_, y_ref);
       opti_->set_value(psi_ref_, psi_ref);
       opti_->set_value(v_ref_, v_ref);
+    }
+
+    void MPCControllerCasadiCore::updateObstacles(
+      std::vector<vox_nav_control::common::Ellipsoid> obstacles)
+    {
+      std::vector<double> i, h, a, b, angle;
+      for (int o = 0; o < obstacles.size(); o++) {
+        i.push_back(obstacles[o].center.x());
+        h.push_back(obstacles[o].center.y());
+        a.push_back(obstacles[o].axes.x());
+        b.push_back(obstacles[o].axes.y());
+        angle.push_back(obstacles[o].heading_to_robot_angle);
+
+      }
+      opti_->set_value(i_obs_, i);
+      opti_->set_value(h_obs_, h);
+      opti_->set_value(a_obs_, a);
+      opti_->set_value(b_obs_, b);
+      opti_->set_value(angle_obs_, angle);
     }
 
     void MPCControllerCasadiCore::updatePreviousControlInput(
@@ -368,5 +447,5 @@ namespace vox_nav_control
       opti_->set_initial(v_dv_, v_dv);
     }
 
-  } // namespace mpc_controller_casadi
-}  // namespace vox_nav_control
+  }   // namespace mpc_controller_casadi
+}   // namespace vox_nav_control

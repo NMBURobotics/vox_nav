@@ -76,6 +76,7 @@ namespace vox_nav_cupoch_experimental
     float sacle_up_objects;
     int N;
     float dt;
+    float min_cluster_height;
   };
   struct Parameter
   {

@@ -127,8 +127,9 @@ namespace vox_nav_control
       /**
        * @brief Sets the weight matrixes W and WN, values are set from yamls file
        *
+       * @param is_goal_behind_robot
        */
-      void initAcadoWeights();
+      void initAcadoWeights(bool is_goal_behind_robot);
 
       /**
        * @brief Set the Refrence States object
@@ -162,21 +163,6 @@ namespace vox_nav_control
        * @return std::vector<States>
        */
       std::vector<vox_nav_control::common::States> getPredictedStatesFromAcado();
-
-      /**
-       * @brief Makes number of Obstacles exactly N,
-       * this is required as OnlineData of ACADO is fixed
-       * N will be equal to params_.max_obstacles
-       *
-       * @param obstacle_tracks
-       * @param N
-       * @param curr_robot_pose
-       * @return vox_nav_msgs::msg::ObjectArray::SharedPtr
-       */
-      vox_nav_msgs::msg::ObjectArray::SharedPtr trimObstaclesToN(
-        const vox_nav_msgs::msg::ObjectArray & obstacle_tracks,
-        const geometry_msgs::msg::PoseStamped & curr_robot_pose,
-        int N);
 
     private:
       // Given refernce traj to follow, this is set got from planner

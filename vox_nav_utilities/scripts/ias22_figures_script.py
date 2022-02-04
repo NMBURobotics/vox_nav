@@ -821,7 +821,7 @@ def plot_ztest_length():
     planners = np.asarray(planners)
 
     # significance
-    a = 0.01
+    a = 0.05
 
     M = []
     M_binary = []
@@ -873,10 +873,10 @@ def plot_ztest_length():
                          columns=[i for i in score_with_planner])
 
     f, ax = plt.subplots(figsize=(7, 7))
-    sn.heatmap(df_cm, annot=False, robust=True,)
+    sn.heatmap(df_cm, annot=True, robust=True,)
 
-    ax.set_title(
-        "A matrix representing whether a planner's p-value was above significance value of " + str(a) + " in comparasion to other planner", fontsize=18)
+    # ax.set_title(
+    #    "A matrix representing whether a planner's p-value was above significance value of " + str(a) + " in comparasion to other planner", fontsize=18)
     ax.set_ylabel("Planner", fontsize=18)
     ax.set_xlabel(" ", fontsize=18)
 

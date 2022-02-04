@@ -198,7 +198,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::PointCloud<P>::Ptr uniformly_sample_cloud(
+  typename pcl::PointCloud<P>::Ptr uniformlySampleCloud(
     const typename pcl::PointCloud<P>::Ptr cloud,
     const double radius)
   {
@@ -213,7 +213,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::SupervoxelClustering<P> super_voxelize_cloud(
+  typename pcl::SupervoxelClustering<P> supervoxelizeCloud(
     const typename pcl::PointCloud<P>::Ptr cloud,
     const bool disable_transform,
     const double voxel_resolution,
@@ -237,7 +237,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::PointCloud<P>::Ptr get_subcloud_within_radius(
+  typename pcl::PointCloud<P>::Ptr getSubCloudWithinRadius(
     const typename pcl::PointCloud<P>::Ptr cloud,
     const P & search_point,
     const double radius)
@@ -264,7 +264,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::PointCloud<P>::Ptr remove_nans(
+  typename pcl::PointCloud<P>::Ptr removeNans(
     const typename pcl::PointCloud<P>::Ptr cloud)
   {
     typename pcl::PointCloud<P>::Ptr nans_removed_cloud(
@@ -320,7 +320,7 @@ namespace vox_nav_utilities
   }
 
   template<typename KeyType, typename ValueType>
-  std::pair<KeyType, ValueType> get_max(const std::map<KeyType, ValueType> & x)
+  std::pair<KeyType, ValueType> getMax(const std::map<KeyType, ValueType> & x)
   {
     using pairtype = std::pair<KeyType, ValueType>;
     return *std::max_element(
@@ -330,7 +330,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::PointCloud<P>::Ptr denoise_segmented_cloud(
+  typename pcl::PointCloud<P>::Ptr denoiseSegmentedCloud(
     const typename pcl::PointCloud<P>::Ptr cloud, double radius,
     double tolerated_divergence_rate, int min_num_neighbours)
   {
@@ -379,7 +379,7 @@ namespace vox_nav_utilities
           }
         }
 
-        auto max = get_max<int, int>(M);
+        auto max = getMax<int, int>(M);
         int num_search_point_neigbours_same_class;
         auto search_point_neigbours_same_class = M.find(serach_point_key);
         if (search_point_neigbours_same_class == M.end()) {
@@ -407,7 +407,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::PointCloud<P>::Ptr denoise_segmented_cloud(
+  typename pcl::PointCloud<P>::Ptr denoiseSegmentedCloud(
     const typename pcl::PointCloud<P>::Ptr dynamic_points_pcl,
     const typename pcl::PointCloud<P>::Ptr static_points_pcl,
     double radius,
@@ -440,7 +440,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::PointCloud<P>::Ptr crop_box(
+  typename pcl::PointCloud<P>::Ptr cropBox(
     const typename pcl::PointCloud<P>::Ptr cloud,
     Eigen::Vector4f min,
     Eigen::Vector4f max)
@@ -468,7 +468,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::PointCloud<P>::Ptr region_growing_rgb(
+  typename pcl::PointCloud<P>::Ptr regionGrowingRGB(
     const typename pcl::PointCloud<P>::Ptr cloud,
     double dist_thres = 10,
     double point_color_thres = 6,
@@ -503,7 +503,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::PointCloud<P>::Ptr region_growing_normal(
+  typename pcl::PointCloud<P>::Ptr regionGrowingNormal(
     const typename pcl::PointCloud<P>::Ptr cloud,
     double filter_limit_min = 0.0,
     double filter_limit_max = 1.0,
@@ -549,7 +549,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  std::vector<typename pcl::PointCloud<P>::Ptr> euclidean_clustering(
+  std::vector<typename pcl::PointCloud<P>::Ptr> euclideanClustering(
     const typename pcl::PointCloud<P>::Ptr cloud,
     int min_cluster_size = 50,
     int max_cluster_size = 1000000,
@@ -591,7 +591,7 @@ namespace vox_nav_utilities
   }
 
   template<typename P>
-  typename pcl::PointCloud<P>::Ptr remove_points_within_ground_plane_of_other_cloud(
+  typename pcl::PointCloud<P>::Ptr removePointsWithinGroundPlaneofOtherCloud(
     typename pcl::PointCloud<P>::Ptr cloud,
     const typename pcl::PointCloud<P>::Ptr ground_cloud,
     double distance_thres)

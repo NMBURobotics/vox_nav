@@ -122,13 +122,13 @@ int main(int argc, char ** argv)
   for (size_t i = 0; i < max_obstacles; i++) {
     Obstacle obs;
     auto obs_expression =
-      ((pow((x_dv - obs.h), 2) / pow(obs.a, 2) +
-      pow((y_dv - obs.k), 2) / pow(obs.b, 2) - 1.0));
+      pow((x_dv - obs.h), 2) / pow(obs.a, 2) +
+      pow((y_dv - obs.k), 2) / pow(obs.b, 2);
 
-    obs_expression = obs_expression.getPowInt(4);
-    obs_expression = exp(1.0 / obs_expression);
 
-    //obstacle_cost += obs_expression;
+    obs_expression = exp((1.0 + robot_radius) / obs_expression);
+
+    obstacle_cost += obs_expression;
     obstacles.push_back(obs);
   }
 
@@ -145,12 +145,20 @@ int main(int argc, char ** argv)
   ocp.subjectTo(min_acc_dv <= acc_dv <= max_acc_dv);
   ocp.subjectTo(min_df_dv <= df_dv <= max_df_dv);
 
+
+  std::stringstream x_dv_print, y_dv_print;
+  x_dv_print << x_dv.print(std::cout).rdbuf();
+  y_dv_print << y_dv.print(std::cout).rdbuf();
+
+  RCLCPP_INFO_STREAM(node->get_logger(), "x_dv_print " << x_dv_print.str());
+  RCLCPP_INFO_STREAM(node->get_logger(), "y_dv_print " << y_dv_print.str());
+
   // obstacle constraints
-  /*for (auto && i : obstacles) {
-    ocp.subjectTo(
-      pow((x_dv - i.h), 2) / pow(i.a, 2) +
-      pow((y_dv - i.k), 2) / pow(i.b, 2) - (robot_radius + 1.0) >= 0.0);
-  }*/
+  for (auto && i : obstacles) {
+    //ocp.subjectTo(
+    //pow((x_dv - i.h), 2) / pow(i.a, 2) +
+    //pow((y_dv - i.k), 2) / pow(i.b, 2) >= (robot_radius + 1.0));
+  }
 
   // Provide defined weighting matrices:
   ACADO::BMatrix W = ACADO::eye<bool>(rf.getDim());
