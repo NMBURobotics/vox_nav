@@ -35,7 +35,7 @@ raw_cloud_clustering_tracking:
         yaw_rate: 0.314
       lambda: 2.0
       aging:
-        bad: 2
+        bad: 20
       occlusion_factor: 2.0
       min_dist_between_tracks: 0.3
     track:
