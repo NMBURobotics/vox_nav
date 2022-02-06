@@ -32,7 +32,6 @@
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_msgs/msg/object_array.hpp>
 
-using namespace Eigen;
 namespace vox_nav_control
 {
   namespace common
@@ -419,33 +418,41 @@ namespace vox_nav_control
       return at;
     }
 
-
-    static double dist(
-      const Vector2d & posEllipse,
-      const Vector3d & utt,
-      const Vector2d & pos)
+    static double sdEllipse(Eigen::Vector2f p, Eigen::Vector2f e)
     {
-      double a = utt.x();
-      double b = utt.y();
-      double phi = utt.z();
+      Eigen::Vector2f pAbs = p - e;
+      pAbs = pAbs.cwiseAbs();
 
-      Vector2d pRot = Rotation2Dd(-phi).toRotationMatrix() * (pos - posEllipse);
-      Array2d pAbs = pRot.cwiseAbs().array();
-      Array2d t(0.707f, 0.707f);
-      Array2d s(a, b);
-      double ss = (s.square()).x() - (s.square()).y();
-      Array2d eFac(ss, -ss);
-      Array2d xy;
+      auto ei = Eigen::Vector2f(1.0 / e.x(), 1.0 / e.y());
+      auto e2 = e * e;
+      auto ve = ei * Eigen::Vector2f(e2.x() - e2.y(), e2.y() - e2.x());
+      auto t = Eigen::Vector2f(0.70710678118654752, 0.70710678118654752);
+
       for (int i = 0; i < 3; i++) {
-        xy = s * t;
-        Array2d e = eFac * t.pow(3.f) / s;
-        Array2d q = pAbs - e;
-        double rq = Vector2d(xy - e).norm() / Vector2d(q).norm();
-        t = (q * rq + e) / s;
-        t /= Vector2d(t).norm();
+        Eigen::Vector2f v = ve * t * t * t;
+        Eigen::Vector2f fuck = pAbs - v;
+        fuck.normalize();
+
+        Eigen::Vector2f u = fuck * (t * e - v).norm();
+        auto w = ei * (v + u);
+
+        t = Eigen::Vector2f(
+          std::clamp<float>(w.x(), 0.0, 1.0),
+          std::clamp<float>(w.y(), 0.0, 1.0));
+        t.normalize();
       }
-      Vector2d pEdge(std::copysign(xy.x(), pRot.x()), std::copysign(xy.y(), pRot.y()));
-      return (pEdge - pRot).norm();
+
+      auto nearestAbs = t * e;
+      float dist = (pAbs - nearestAbs).norm();
+
+      float pAbsdot =
+        pAbs.x() * pAbs.x() +
+        pAbs.y() * pAbs.y();
+      float
+        nearestAbsdot = nearestAbs.x() * nearestAbs.x() +
+        nearestAbs.y() * nearestAbs.y();
+
+      return pAbsdot < nearestAbsdot ? -dist : dist;
     }
 
 

@@ -55,8 +55,8 @@ vox_nav_planner_server_rclcpp_node:
         maxz: 12.0
 
 vox_nav_controller_server_rclcpp_node:
-   ros__parameters:
-      controller_plugin: "MPCControllerCasadiROS"                             # other options: non
+   ros__parameters: 
+      controller_plugin: "MPCControllerCasadiROS"                               # other options: non
       controller_frequency: 100.0                                              # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
       goal_tolerance_distance: 0.4                                            # in meters, once smaller than this one controller tries to minimize orientation error
       goal_tolerance_orientation: 0.1                                         # in radians, once smaller than this value,controller exits with success
@@ -67,8 +67,8 @@ vox_nav_controller_server_rclcpp_node:
       robot_radius: 0.94                                                             
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
-         N: 20                                                                 # timesteps in MPC Horizon
-         DT: 0.2                                                              # discretization time between timesteps(s)
+         N: 8                                                                 # timesteps in MPC Horizon
+         DT: 0.5                                                              # discretization time between timesteps(s)
          L_F: 0.66                                                            # distance from CoG to front axle(m)
          L_R: 0.66                                                            # distance from CoG to rear axle(m)
          V_MIN: -1.5                                                          # min / max velocity constraint(m / s)
@@ -86,7 +86,7 @@ vox_nav_controller_server_rclcpp_node:
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
          obstacle_cost: 100.0
-         max_obstacles: 8
+         max_obstacles: 4
 
       MPCControllerAcadoROS:
          plugin: "mpc_controller_acado::MPCControllerAcadoROS"

@@ -28,6 +28,8 @@ namespace vox_nav_control
 
     MPCControllerCasadiCore::MPCControllerCasadiCore(vox_nav_control::common::Parameters params)
     {
+
+      initial_solution_found_ = false;
       params_ = params;
       opti_ = std::make_shared<casadi::Opti>();
 
@@ -119,6 +121,7 @@ namespace vox_nav_control
         {"print_time", false}};
 
       opti_->solver("ipopt", opts);
+
       // This needs to be called at least once , then we can retrieve opti->debug() information
       std::vector<vox_nav_control::common::Ellipsoid> no_obstackles;
       solve(no_obstackles);
@@ -221,6 +224,7 @@ namespace vox_nav_control
       opti_->subject_to(0 <= sl_df_dv_);
       opti_->subject_to(0 <= sl_acc_dv_);
 
+
     }
 
     void MPCControllerCasadiCore::addCost()
@@ -254,56 +258,31 @@ namespace vox_nav_control
           return casadi::MX::if_else((a > b), a, b);
         };
 
-
-      // obstacle costs
-      casadi::MX obstacle_cost;
+      casadi::MX obstacle_cost = 0.0;
       for (int o = 0; o < params_.max_obstacles; o++) {
-
-        // confusing but it is what it is
-        // https://en.wikipedia.org/wiki/Ellipse
-        // polar form
         auto a = a_obs_(o) / 2.0;
         auto b = b_obs_(o) / 2.0;
         auto i = i_obs_(o);
         auto h = h_obs_(o);
-        auto theta = angle_obs_(o);
 
-        auto r = a * b /
-          casadi::MX::sqrt(
-          casadi::MX::pow(b * casadi::MX::cos(theta), 2.0) +
-          casadi::MX::pow(a * casadi::MX::sin(theta), 2.0)
-          );
+        auto is_inside =
+          casadi::MX::pow((x_dv_ - i), 2) / casadi::MX::pow(a + params_.robot_radius, 2) +
+          casadi::MX::pow((y_dv_ - h), 2) / casadi::MX::pow(b + params_.robot_radius, 2);
 
-        auto dist_to_traj =
-          casadi::MX::sqrt(
-          casadi::MX::pow(i - x_dv_, 2.0) +
-          casadi::MX::pow(h - y_dv_, 2.0));
-
-        auto curr_cost = casadi::MX::if_else(
-          dist_to_traj > (r + 2 * params_.robot_radius),
-          casadi::MX(0.0),
-          casadi::MX::exp(1.0 / 0.125)
-        );
-
-        if (o == 0) {
-          obstacle_cost = curr_cost;
-        } else {
-          obstacle_cost += curr_cost;
-        }
+        obstacle_cost += casadi::MX::sum1(casadi::MX::exp(1.0 / is_inside));
 
       }
+      cost += params_.obstacle_cost * obstacle_cost;
 
-      cost += params_.obstacle_cost * casadi::MX::sum1(obstacle_cost);
-
-      // minimize ojective function
       opti_->minimize(cost);
-
     }
+
 
     MPCControllerCasadiCore::SolutionResult MPCControllerCasadiCore::solve(
       const std::vector<vox_nav_control::common::Ellipsoid> & obstacles)
     {
       bool is_solution_optimal(false);
+
       auto start = std::chrono::high_resolution_clock::now();
       casadi::native_DM u_mpc, z_mpc, sl_mpc, z_ref;
       try {
@@ -313,6 +292,7 @@ namespace vox_nav_control
         sl_mpc = sol.value(sl_dv_);
         z_ref = sol.value(z_ref_);
         is_solution_optimal = true;
+        initial_solution_found_ = true;
       } catch (const std::exception & e) {
         std::cerr << "MPC CONTROL: NON OPTIMAL SOLUTION FOUND!" << '\n';
         u_mpc = opti_->debug().value(u_dv_);

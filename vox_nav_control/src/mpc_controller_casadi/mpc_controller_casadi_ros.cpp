@@ -298,8 +298,8 @@ namespace vox_nav_control
           2) / std::pow(b, 2) = 1;
         */
         Eigen::Vector2f center(i.world_pose.point.x, i.world_pose.point.y);
-        double a = i.width;
-        double b = i.length;
+        double a = i.length;
+        double b = i.width;
         vox_nav_control::common::Ellipsoid e;
         e.heading = i.heading;
         e.is_dynamic = i.is_dynamic;
