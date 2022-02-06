@@ -97,7 +97,9 @@ namespace vox_nav_control
        * @brief objective function and cost is defined with this function
        *
        */
-      void addCost();
+      void addCost(
+        const std::vector<double> & Q,
+        const std::vector<double> & R);
 
       /**
        * @brief update the current states
@@ -165,8 +167,8 @@ namespace vox_nav_control
       std::shared_ptr<casadi::Opti> opti_;
       // used to slice casadi matrixes
       casadi::Slice slice_all_;
-      casadi::Matrix<double> Q;
-      casadi::Matrix<double> R;
+      casadi::Matrix<double> Q_;
+      casadi::Matrix<double> R_;
 
       casadi::MX u_prev_; // previous input: [u_{acc, -1}, u_{df, -1}]
       casadi::MX z_curr_; // current state:  [x_0, y_0, psi_0, v_0]

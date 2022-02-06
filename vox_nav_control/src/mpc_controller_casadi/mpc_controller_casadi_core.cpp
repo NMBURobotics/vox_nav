@@ -33,9 +33,6 @@ namespace vox_nav_control
       params_ = params;
       opti_ = std::make_shared<casadi::Opti>();
 
-      // make weight matrixes diagonal
-      Q = Q.diag(params_.Q);
-      R = R.diag(params_.R);
 
       u_prev_ = opti_->parameter(2);
       z_curr_ = opti_->parameter(4);
@@ -74,7 +71,7 @@ namespace vox_nav_control
 
       // Add cost and constraints to optimal control problem
       addConstraints();
-      addCost();
+      addCost(params_.Q, params_.R);
 
       // Kind of a test , set all current states to zero
       vox_nav_control::common::States curr_states;
@@ -127,8 +124,8 @@ namespace vox_nav_control
       solve(no_obstackles);
 
       if (params_.debug_mode) {
-        std::cout << "State Weight Matrix Q: \n" << Q << std::endl;
-        std::cout << "Control Weight Matrix R: \n" << R << std::endl;
+        std::cout << "State Weight Matrix Q_: \n" << Q_ << std::endl;
+        std::cout << "Control Weight Matrix R_: \n" << R_ << std::endl;
         std::cout << "Initial States z_curr_: \n" << opti_->debug().value(z_curr_) << std::endl;
         std::cout << "Initial Refernce Traj states z_ref_: \n" << opti_->debug().value(z_ref_) <<
           std::endl;
@@ -227,8 +224,15 @@ namespace vox_nav_control
 
     }
 
-    void MPCControllerCasadiCore::addCost()
+    void MPCControllerCasadiCore::addCost(
+      const std::vector<double> & Q,
+      const std::vector<double> & R)
     {
+
+      // make weight matrixes diagonal
+      Q_ = Q_.diag(Q);
+      R_ = R_.diag(R);
+
       auto quad_form = [](casadi::MX z, casadi::Matrix<double> P)
         {
           return casadi::MX::mtimes(z, casadi::MX::mtimes(P, z.T()));
@@ -237,26 +241,14 @@ namespace vox_nav_control
 
       // tracking cost cost
       for (int i = 0; i < params_.N; i++) {
-        cost += quad_form(z_dv_(i + 1, slice_all_) - z_ref_(i, slice_all_), Q);
+        cost += quad_form(z_dv_(i + 1, slice_all_) - z_ref_(i, slice_all_), Q_);
       }
       // input derivative cost
       for (int i = 0; i < params_.N - 1; i++) {
-        cost += quad_form(u_dv_(i + 1, slice_all_) - u_dv_(i, slice_all_), R);
+        cost += quad_form(u_dv_(i + 1, slice_all_) - u_dv_(i, slice_all_), R_);
       }
       // slack cost
       cost += (casadi::MX::sum1(sl_df_dv_) + casadi::MX::sum1(sl_acc_dv_));
-
-      auto casadi_hypot = [](casadi::MX & a, casadi::MX & b) {
-          return casadi::MX::sqrt(casadi::MX::pow(a, 2) + casadi::MX::pow(b, 2));
-        };
-
-      auto casadi_min = [](casadi::MX & a, casadi::MX & b) {
-          return casadi::MX::if_else((a < b), a, b);
-        };
-
-      auto casadi_max = [](casadi::MX & a, casadi::MX & b) {
-          return casadi::MX::if_else((a > b), a, b);
-        };
 
       casadi::MX obstacle_cost = 0.0;
       for (int o = 0; o < params_.max_obstacles; o++) {

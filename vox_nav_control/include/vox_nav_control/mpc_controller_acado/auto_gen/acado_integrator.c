@@ -25,13 +25,13 @@ real_t rk_dim8_swap;
 /** Column vector of size: 8 */
 real_t rk_dim8_bPerm[ 8 ];
 
-/** Column vector of size: 4 */
-real_t auxVar[ 4 ];
+/** Column vector of size: 17 */
+real_t auxVar[ 17 ];
 
 real_t rk_ttt;
 
-/** Row vector of size: 38 */
-real_t rk_xxx[ 38 ];
+/** Row vector of size: 30 */
+real_t rk_xxx[ 30 ];
 
 /** Matrix of size: 4 x 2 (row major format) */
 real_t rk_kkk[ 8 ];
@@ -63,17 +63,20 @@ void acado_rhs(const real_t* in, real_t* out)
 {
 const real_t* xd = in;
 const real_t* u = in + 4;
-/* Vector of auxiliary variables; number of elements: 2. */
+/* Vector of auxiliary variables; number of elements: 5. */
 real_t* a = auxVar;
 
 /* Compute intermediate quantities: */
-a[0] = (cos(xd[2]));
-a[1] = (sin(xd[2]));
+a[0] = (tan(u[1]));
+a[1] = (atan(((real_t)(5.0000000000000000e-01)*a[0])));
+a[2] = (cos((xd[2]+a[1])));
+a[3] = (sin((xd[2]+a[1])));
+a[4] = (sin(a[1]));
 
 /* Compute outputs: */
-out[0] = (xd[3]*a[0]);
-out[1] = (xd[3]*a[1]);
-out[2] = u[1];
+out[0] = (xd[3]*a[2]);
+out[1] = (xd[3]*a[3]);
+out[2] = ((xd[3]/(real_t)(6.7000000000000004e-01))*a[4]);
 out[3] = u[0];
 }
 
@@ -82,34 +85,48 @@ out[3] = u[0];
 void acado_diffs(const real_t* in, real_t* out)
 {
 const real_t* xd = in;
-/* Vector of auxiliary variables; number of elements: 4. */
+const real_t* u = in + 4;
+/* Vector of auxiliary variables; number of elements: 17. */
 real_t* a = auxVar;
 
 /* Compute intermediate quantities: */
-a[0] = ((real_t)(-1.0000000000000000e+00)*(sin(xd[2])));
-a[1] = (cos(xd[2]));
-a[2] = (cos(xd[2]));
-a[3] = (sin(xd[2]));
+a[0] = (tan(u[1]));
+a[1] = (atan(((real_t)(5.0000000000000000e-01)*a[0])));
+a[2] = ((real_t)(-1.0000000000000000e+00)*(sin((xd[2]+a[1]))));
+a[3] = (cos((xd[2]+a[1])));
+a[4] = ((real_t)(1.0000000000000000e+00)/(pow((cos(u[1])),2)));
+a[5] = ((real_t)(1.0000000000000000e+00)/((real_t)(1.0000000000000000e+00)+(pow(((real_t)(5.0000000000000000e-01)*a[0]),2))));
+a[6] = (((real_t)(5.0000000000000000e-01)*a[4])*a[5]);
+a[7] = (a[6]*a[2]);
+a[8] = (cos((xd[2]+a[1])));
+a[9] = (sin((xd[2]+a[1])));
+a[10] = (((real_t)(5.0000000000000000e-01)*a[4])*a[5]);
+a[11] = (a[10]*a[8]);
+a[12] = ((real_t)(1.0000000000000000e+00)/(real_t)(6.7000000000000004e-01));
+a[13] = (sin(a[1]));
+a[14] = (((real_t)(5.0000000000000000e-01)*a[4])*a[5]);
+a[15] = (cos(a[1]));
+a[16] = (a[14]*a[15]);
 
 /* Compute outputs: */
 out[0] = (real_t)(0.0000000000000000e+00);
 out[1] = (real_t)(0.0000000000000000e+00);
-out[2] = (xd[3]*a[0]);
-out[3] = a[1];
+out[2] = (xd[3]*a[2]);
+out[3] = a[3];
 out[4] = (real_t)(0.0000000000000000e+00);
-out[5] = (real_t)(0.0000000000000000e+00);
+out[5] = (xd[3]*a[7]);
 out[6] = (real_t)(0.0000000000000000e+00);
 out[7] = (real_t)(0.0000000000000000e+00);
-out[8] = (xd[3]*a[2]);
-out[9] = a[3];
+out[8] = (xd[3]*a[8]);
+out[9] = a[9];
 out[10] = (real_t)(0.0000000000000000e+00);
-out[11] = (real_t)(0.0000000000000000e+00);
+out[11] = (xd[3]*a[11]);
 out[12] = (real_t)(0.0000000000000000e+00);
 out[13] = (real_t)(0.0000000000000000e+00);
 out[14] = (real_t)(0.0000000000000000e+00);
-out[15] = (real_t)(0.0000000000000000e+00);
+out[15] = (a[12]*a[13]);
 out[16] = (real_t)(0.0000000000000000e+00);
-out[17] = (real_t)(1.0000000000000000e+00);
+out[17] = ((xd[3]/(real_t)(6.7000000000000004e-01))*a[16]);
 out[18] = (real_t)(0.0000000000000000e+00);
 out[19] = (real_t)(0.0000000000000000e+00);
 out[20] = (real_t)(0.0000000000000000e+00);
@@ -329,14 +346,6 @@ rk_xxx[26] = rk_eta[50];
 rk_xxx[27] = rk_eta[51];
 rk_xxx[28] = rk_eta[52];
 rk_xxx[29] = rk_eta[53];
-rk_xxx[30] = rk_eta[54];
-rk_xxx[31] = rk_eta[55];
-rk_xxx[32] = rk_eta[56];
-rk_xxx[33] = rk_eta[57];
-rk_xxx[34] = rk_eta[58];
-rk_xxx[35] = rk_eta[59];
-rk_xxx[36] = rk_eta[60];
-rk_xxx[37] = rk_eta[61];
 
 for (run = 0; run < 1; ++run)
 {

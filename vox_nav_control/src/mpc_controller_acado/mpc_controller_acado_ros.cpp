@@ -63,6 +63,7 @@ namespace vox_nav_control
       parent->declare_parameter(plugin_name + ".debug_mode", false);
       parent->declare_parameter(plugin_name + ".params_configured", false);
       parent->declare_parameter(plugin_name + ".max_obstacles", 1);
+      parent->declare_parameter(plugin_name + ".full_ackerman", false);
 
       parent->get_parameter("global_plan_look_ahead_distance", global_plan_look_ahead_distance_);
       parent->get_parameter("ref_traj_se2_space", selected_se2_space_name_);
@@ -87,6 +88,7 @@ namespace vox_nav_control
       parent->get_parameter(plugin_name + ".debug_mode", mpc_parameters_.debug_mode);
       parent->get_parameter(plugin_name + ".params_configured", mpc_parameters_.params_configured);
       parent->get_parameter(plugin_name + ".max_obstacles", mpc_parameters_.max_obstacles);
+      parent->get_parameter(plugin_name + ".full_ackerman", mpc_parameters_.full_ackerman);
 
       interpolated_local_reference_traj_publisher_ =
         parent->create_publisher<visualization_msgs::msg::MarkerArray>(
@@ -168,7 +170,7 @@ namespace vox_nav_control
           curr_robot_pose,
           reference_traj_.poses.back()) > global_plan_look_ahead_distance_)
       {
-        curr_robot_speed = mpc_parameters_.V_MAX * 0.5;
+        curr_robot_speed = mpc_parameters_.V_MAX * 0.1;
       } else {
         double dt = (parent_->get_clock()->now() - previous_time_).seconds();
         double dist = vox_nav_utilities::getEuclidianDistBetweenPoses(
@@ -269,11 +271,14 @@ namespace vox_nav_control
       computed_velocity_.linear.x += computed_controls.begin()->acc * (mpc_parameters_.DT);
 
       //  The control output is steeering angle but we need to publish angular velocity
-      computed_velocity_.angular.z = computed_controls.begin()->df;
-      // swtich to this in case of a full ackermann model
+      if (mpc_parameters_.full_ackerman) {
+        computed_velocity_.angular.z =
+          (computed_velocity_.linear.x * computed_controls.begin()->df) /
+          (mpc_parameters_.L_R + mpc_parameters_.L_F);
+      } else {
+        computed_velocity_.angular.z = computed_controls.begin()->df;
+      }
 
-      /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
-        (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
 
       regulate_max_speed();
 
@@ -405,12 +410,13 @@ namespace vox_nav_control
       //computed_velocity_.linear.x += computed_controls.begin()->acc * (mpc_parameters_.DT);
       computed_velocity_.linear.x = 0.1;
 
-      //  The control output is steeering angle but we need to publish angular velocity
-      computed_velocity_.angular.z = computed_controls.begin()->df;
-      // swtich to this in case of a full ackermann model
-
-      /*computed_velocity_.angular.z = (computed_velocity_.linear.x * computed_controls.begin()->df) /
-        (mpc_parameters_.L_R + mpc_parameters_.L_F);*/
+      if (mpc_parameters_.full_ackerman) {
+        computed_velocity_.angular.z =
+          (computed_velocity_.linear.x * computed_controls.begin()->df) /
+          (mpc_parameters_.L_R + mpc_parameters_.L_F);
+      } else {
+        computed_velocity_.angular.z = computed_controls.begin()->df;
+      }
 
       regulate_max_speed();
 

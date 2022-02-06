@@ -36,6 +36,7 @@ int main(int argc, char ** argv)
   double min_df_dv;
   double max_df_dv;
   double robot_radius;
+  bool full_ackerman;
 
   auto node = std::make_shared<rclcpp::Node>("vox_nav_controller_server_rclcpp_node");
 
@@ -53,6 +54,7 @@ int main(int argc, char ** argv)
   node->declare_parameter(plugin_name + ".A_MAX", 1.0);
   node->declare_parameter(plugin_name + ".DF_MIN", -0.5);
   node->declare_parameter(plugin_name + ".DF_MAX", 0.5);
+  node->declare_parameter(plugin_name + ".full_ackerman", true);
 
   node->get_parameter("robot_radius", robot_radius);
   node->get_parameter(plugin_name + ".N", N);
@@ -65,6 +67,8 @@ int main(int argc, char ** argv)
   node->get_parameter(plugin_name + ".A_MAX", max_acc_dv);
   node->get_parameter(plugin_name + ".DF_MIN", min_df_dv);
   node->get_parameter(plugin_name + ".DF_MAX", max_df_dv);
+  node->get_parameter(plugin_name + ".full_ackerman", full_ackerman);
+
 
   RCLCPP_INFO(node->get_logger(), "Generating acado code with following parameters");
 
@@ -79,6 +83,8 @@ int main(int argc, char ** argv)
   RCLCPP_INFO_STREAM(node->get_logger(), "A_MAX " << max_acc_dv);
   RCLCPP_INFO_STREAM(node->get_logger(), "DF_MIN " << min_df_dv);
   RCLCPP_INFO_STREAM(node->get_logger(), "DF_MAX " << max_df_dv);
+  RCLCPP_INFO_STREAM(node->get_logger(), "full_ackerman " << full_ackerman);
+
 
   // INTRODUCE THE VARIABLES (acadoVariables.x):
   // -------------------------
@@ -95,17 +101,20 @@ int main(int argc, char ** argv)
   ACADO::DifferentialEquation f;
 
   // FULL ACKERMAN MODEL
-  /*auto beta = atan(L_R / (L_R + L_F) * tan(df_dv));
-  f << dot(x_dv) == v_dv * cos(psi_dv + beta);
-  f << dot(y_dv) == v_dv * sin(psi_dv + beta);
-  f << dot(psi_dv) == (v_dv / L_R * sin(beta));
-  f << dot(v_dv) == acc_dv;*/
 
-  // Simlistic model for acceleration and angular speed control
-  f << dot(x_dv) == v_dv * cos(psi_dv);
-  f << dot(y_dv) == v_dv * sin(psi_dv);
-  f << dot(psi_dv) == df_dv;  // and angular speed
-  f << dot(v_dv) == acc_dv;   // control acceleration and
+  if (full_ackerman) {
+    auto beta = atan(L_R / (L_R + L_F) * tan(df_dv));
+    f << dot(x_dv) == v_dv * cos(psi_dv + beta);
+    f << dot(y_dv) == v_dv * sin(psi_dv + beta);
+    f << dot(psi_dv) == (v_dv / L_R * sin(beta));
+    f << dot(v_dv) == acc_dv;
+  } else {
+    // Simlistic model for acceleration and angular speed control
+    f << dot(x_dv) == v_dv * cos(psi_dv);
+    f << dot(y_dv) == v_dv * sin(psi_dv);
+    f << dot(psi_dv) == df_dv;  // and angular speed
+    f << dot(v_dv) == acc_dv;   // control acceleration and
+  }
 
   struct Obstacle // Defined by ellipses TODO(jediofgever), ellipses
   {
@@ -143,13 +152,6 @@ int main(int argc, char ** argv)
   ocp.subjectTo(min_acc_dv <= acc_dv <= max_acc_dv);
   ocp.subjectTo(min_df_dv <= df_dv <= max_df_dv);
 
-
-  std::stringstream x_dv_print, y_dv_print;
-  x_dv_print << x_dv.print(std::cout).rdbuf();
-  y_dv_print << y_dv.print(std::cout).rdbuf();
-
-  RCLCPP_INFO_STREAM(node->get_logger(), "x_dv_print " << x_dv_print.str());
-  RCLCPP_INFO_STREAM(node->get_logger(), "y_dv_print " << y_dv_print.str());
 
   // obstacle constraints
   for (auto && i : obstacles) {

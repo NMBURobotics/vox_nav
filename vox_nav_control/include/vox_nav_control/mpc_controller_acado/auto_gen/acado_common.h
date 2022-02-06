@@ -64,7 +64,7 @@ extern "C"
 /** Number of control/estimation intervals. */
 #define ACADO_N 20
 /** Number of online data values. */
-#define ACADO_NOD 32
+#define ACADO_NOD 24
 /** Number of path constraints. */
 #define ACADO_NPAC 0
 /** Number of control variables. */
@@ -116,11 +116,11 @@ real_t x[ 84 ];
  */
 real_t u[ 40 ];
 
-/** Matrix of size: 21 x 32 (row major format)
+/** Matrix of size: 21 x 24 (row major format)
  * 
  *  Matrix containing 21 online data vectors.
  */
-real_t od[ 672 ];
+real_t od[ 504 ];
 
 /** Column vector of size: 140
  * 
@@ -157,8 +157,8 @@ real_t x0[ 4 ];
  */
 typedef struct ACADOworkspace_
 {
-/** Column vector of size: 4 */
-real_t rhs_aux[ 4 ];
+/** Column vector of size: 17 */
+real_t rhs_aux[ 17 ];
 
 /** Column vector of size: 80 */
 real_t d[ 80 ];
@@ -175,11 +175,11 @@ real_t evGx[ 320 ];
 /** Matrix of size: 80 x 2 (row major format) */
 real_t evGu[ 160 ];
 
-/** Column vector of size: 112 */
-real_t objAuxVar[ 112 ];
+/** Column vector of size: 84 */
+real_t objAuxVar[ 84 ];
 
-/** Row vector of size: 38 */
-real_t objValueIn[ 38 ];
+/** Row vector of size: 30 */
+real_t objValueIn[ 30 ];
 
 /** Row vector of size: 35 */
 real_t objValueOut[ 35 ];
@@ -251,7 +251,7 @@ real_t y[ 40 ];
 
 /** Performs the integration and sensitivity propagation for one shooting interval.
  *
- *  \param rk_eta Working array of size 38 to pass the input values and return the results.
+ *  \param rk_eta Working array of size 30 to pass the input values and return the results.
  *  \param resetIntegrator The internal memory of the integrator can be reset.
  *
  *  \return Status code of the integrator.

@@ -126,6 +126,7 @@ namespace vox_nav_control
     geometry_msgs::msg::Twist MPCControllerCasadiROS::computeVelocityCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
+
       double robot_roll, robot_pitch, robot_psi;
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
@@ -137,10 +138,6 @@ namespace vox_nav_control
             computed_velocity_.linear.x = mpc_parameters_.V_MIN;
           }
         };
-
-      double dt = mpc_parameters_.DT;
-      // distance from rear to front axle(m)
-      double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
 
       vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
@@ -171,8 +168,10 @@ namespace vox_nav_control
       mpc_controller_->updateObstacles(obstacles);
       MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
 
+      // distance from rear to front axle(m)
+      double rear_axle_tofront_dist = mpc_parameters_.L_R + mpc_parameters_.L_F;
       //  The control output is acceleration but we need to publish speed
-      computed_velocity_.linear.x += res.control_input.acc * (dt);
+      computed_velocity_.linear.x += res.control_input.acc * (mpc_parameters_.DT);
       //  The control output is steeering angle but we need to publish angular velocity
       computed_velocity_.angular.z = (computed_velocity_.linear.x * res.control_input.df) /
         rear_axle_tofront_dist;

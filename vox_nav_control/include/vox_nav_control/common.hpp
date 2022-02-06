@@ -145,6 +145,7 @@ namespace vox_nav_control
       int max_obstacles;
       double robot_radius;
       double obstacle_cost;
+      bool full_ackerman;
 
       // Assign meaningful default values to this parameters
       Parameters()
@@ -168,7 +169,8 @@ namespace vox_nav_control
         params_configured(false),
         max_obstacles(1),
         robot_radius(0.5),
-        obstacle_cost(1.0) {}
+        obstacle_cost(1.0),
+        full_ackerman(false) {}
     };
 
     static int nearestStateIndex(
