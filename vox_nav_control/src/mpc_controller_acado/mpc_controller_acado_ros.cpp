@@ -106,7 +106,7 @@ namespace vox_nav_control
       initAcadoStuff();
 
       // use parameters in mpc_parameters_.Q and mpc_parameters_.R
-      initAcadoWeights(false);
+      initAcadoWeights();
 
       // This is used to interpolate local refernce states
       std::shared_ptr<ompl::base::RealVectorBounds> state_space_bounds =
@@ -133,38 +133,6 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
 
-      // We use dynamic weigthig matrix,
-      // If the given goal is behind robots current heading, adjust parameters so that we take best maneuver
-      Eigen::Vector3f curr_robot_vec(
-        curr_robot_pose.pose.position.x,
-        curr_robot_pose.pose.position.y,
-        curr_robot_pose.pose.position.z);
-      Eigen::Vector3f goal_vec(
-        reference_traj_.poses.back().pose.position.x,
-        reference_traj_.poses.back().pose.position.y,
-        reference_traj_.poses.back().pose.position.z);
-      Eigen::Vector3f curr_robot_heading_vec(
-        curr_robot_vec.x() + 1.0 * std::cos(robot_psi),
-        curr_robot_vec.y() + 1.0 * std::sin(robot_psi),
-        curr_robot_vec.z());
-
-      float heading_to_goal_angle =
-        std::acos(
-        vox_nav_control::common::dot(
-          curr_robot_vec - curr_robot_heading_vec,
-          curr_robot_vec - goal_vec) /
-        (vox_nav_control::common::mag(curr_robot_vec - curr_robot_heading_vec) *
-        vox_nav_control::common::mag(curr_robot_vec - goal_vec)));
-
-      if (heading_to_goal_angle > M_PI_2) {
-        // Goal is quite deviated from the current heading
-        // Then set weighing matrix accordingly
-        initAcadoWeights(true);
-      } else {
-        // Oh ok, goal is already withing view of current robot heading
-        initAcadoWeights(false);
-      }
-
       double curr_robot_speed = 0.0;
       if (vox_nav_utilities::getEuclidianDistBetweenPoses(
           curr_robot_pose,
@@ -177,14 +145,6 @@ namespace vox_nav_control
           curr_robot_pose, previous_robot_pose_);
         curr_robot_speed = dist / dt;
       }
-
-      auto regulate_max_speed = [this]() {
-          if (computed_velocity_.linear.x > mpc_parameters_.V_MAX) {
-            computed_velocity_.linear.x = mpc_parameters_.V_MAX;
-          } else if (computed_velocity_.linear.x < mpc_parameters_.V_MIN) {
-            computed_velocity_.linear.x = mpc_parameters_.V_MIN;
-          }
-        };
 
       vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
@@ -246,7 +206,7 @@ namespace vox_nav_control
         memset(&acadoWorkspace, 0, sizeof(acadoWorkspace));
         memset(&acadoVariables, 0, sizeof(acadoVariables));
         initAcadoStuff();
-        initAcadoWeights(false);
+        initAcadoWeights();
         // reset all control inputs as they are invalid
         std::fill(
           computed_controls.begin(),
@@ -279,8 +239,7 @@ namespace vox_nav_control
         computed_velocity_.angular.z = computed_controls.begin()->df;
       }
 
-
-      regulate_max_speed();
+      vox_nav_control::common::regulateMaxSpeed(computed_velocity_, mpc_parameters_);
 
       std_msgs::msg::ColorRGBA red_color, blue_color;
       red_color.r = 1.0;
@@ -310,13 +269,6 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
-      auto regulate_max_speed = [this]() {
-          if (computed_velocity_.linear.x > mpc_parameters_.V_MAX) {
-            computed_velocity_.linear.x = mpc_parameters_.V_MAX;
-          } else if (computed_velocity_.linear.x < mpc_parameters_.V_MIN) {
-            computed_velocity_.linear.x = mpc_parameters_.V_MIN;
-          }
-        };
 
       double curr_robot_speed = 0.0;
       if (!previous_robot_pose_.header.stamp.sec || !previous_time_.seconds()) {
@@ -386,7 +338,7 @@ namespace vox_nav_control
         memset(&acadoWorkspace, 0, sizeof(acadoWorkspace));
         memset(&acadoVariables, 0, sizeof(acadoVariables));
         initAcadoStuff();
-        initAcadoWeights(false);
+        initAcadoWeights();
         // reset all control inputs as they are invalid
         std::fill(
           computed_controls.begin(),
@@ -418,7 +370,7 @@ namespace vox_nav_control
         computed_velocity_.angular.z = computed_controls.begin()->df;
       }
 
-      regulate_max_speed();
+      vox_nav_control::common::regulateMaxSpeed(computed_velocity_, mpc_parameters_);
 
       previous_control_ = computed_controls;
       previous_time_ = parent_->get_clock()->now();
@@ -502,7 +454,7 @@ namespace vox_nav_control
       acado_preparationStep();
     }
 
-    void MPCControllerAcadoROS::initAcadoWeights(bool is_goal_behind_robot)
+    void MPCControllerAcadoROS::initAcadoWeights()
     {
       double w_x = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kX];
       double w_y = mpc_parameters_.Q[vox_nav_control::common::STATE_ENUM::kY];
@@ -512,21 +464,10 @@ namespace vox_nav_control
       double w_acc = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kacc];
       double w_df = mpc_parameters_.R[vox_nav_control::common::INPUT_ENUM::kdf];
 
-      if (is_goal_behind_robot) {
-        acadoVariables.WN[0 + ACADO_NYN * 0] = 0.0;
-        acadoVariables.WN[1 + ACADO_NYN * 1] = 0.0;
-        acadoVariables.WN[2 + ACADO_NYN * 2] = 0.0;
-        acadoVariables.WN[3 + ACADO_NYN * 3] = 0.0;
-        w_x *= 10.0;
-        w_y *= 10.0;
-      } else {
-        acadoVariables.WN[0 + ACADO_NYN * 0] = w_x;
-        acadoVariables.WN[1 + ACADO_NYN * 1] = w_y;
-        acadoVariables.WN[2 + ACADO_NYN * 2] = w_yaw;
-        acadoVariables.WN[3 + ACADO_NYN * 3] = w_vel;
-        w_acc *= 10.0;
-        w_df *= 10.0;
-      }
+      acadoVariables.WN[0 + ACADO_NYN * 0] = w_x;
+      acadoVariables.WN[1 + ACADO_NYN * 1] = w_y;
+      acadoVariables.WN[2 + ACADO_NYN * 2] = w_yaw;
+      acadoVariables.WN[3 + ACADO_NYN * 3] = w_vel;
 
       for (int i = 0; i < ACADO_N; i++) {
         // Setup diagonal entries

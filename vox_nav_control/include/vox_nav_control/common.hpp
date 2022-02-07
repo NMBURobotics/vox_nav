@@ -20,6 +20,7 @@
 #include <std_msgs/msg/color_rgba.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 
 #include <Eigen/Eigen>
 #include <ompl/geometric/PathGeometric.h>
@@ -386,7 +387,7 @@ namespace vox_nav_control
       return trimmed_N_obstacles;
     }
 
-    static geometry_msgs::msg::Point solve(Ellipsoid e, geometry_msgs::msg::Point p)
+    static geometry_msgs::msg::Point distToEllipse(Ellipsoid e, geometry_msgs::msg::Point p)
     {
 
       auto px = std::abs(p.x - e.center.x());
@@ -422,7 +423,7 @@ namespace vox_nav_control
     }
 
 
-    static double dist(
+    static double distToEllipse(
       const Vector2d & posEllipse,
       const Vector3d & utt,
       const Vector2d & pos)
@@ -448,6 +449,17 @@ namespace vox_nav_control
       }
       Vector2d pEdge(std::copysign(xy.x(), pRot.x()), std::copysign(xy.y(), pRot.y()));
       return (pEdge - pRot).norm();
+    }
+
+    static void regulateMaxSpeed(
+      geometry_msgs::msg::Twist & computed_velocity,
+      const Parameters & mpc_parameters)
+    {
+      if (computed_velocity.linear.x > mpc_parameters.V_MAX) {
+        computed_velocity.linear.x = mpc_parameters.V_MAX;
+      } else if (computed_velocity.linear.x < mpc_parameters.V_MIN) {
+        computed_velocity.linear.x = mpc_parameters.V_MIN;
+      }
     }
 
 

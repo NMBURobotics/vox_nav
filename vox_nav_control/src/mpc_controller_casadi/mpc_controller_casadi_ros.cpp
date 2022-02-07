@@ -131,14 +131,6 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
 
-      auto regulate_max_speed = [this]() {
-          if (computed_velocity_.linear.x > mpc_parameters_.V_MAX) {
-            computed_velocity_.linear.x = mpc_parameters_.V_MAX;
-          } else if (computed_velocity_.linear.x < mpc_parameters_.V_MIN) {
-            computed_velocity_.linear.x = mpc_parameters_.V_MIN;
-          }
-        };
-
       vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
@@ -176,7 +168,7 @@ namespace vox_nav_control
       computed_velocity_.angular.z = (computed_velocity_.linear.x * res.control_input.df) /
         rear_axle_tofront_dist;
 
-      regulate_max_speed();
+      vox_nav_control::common::regulateMaxSpeed(computed_velocity_, mpc_parameters_);
 
       std_msgs::msg::ColorRGBA red_color, blue_color;
       red_color.r = 1.0;
@@ -199,17 +191,16 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
-      double dt = mpc_parameters_.DT;
 
       // we dont really need roll and pitch here
-      double nan, psi;
+      double nan, robot_psi;
       vox_nav_utilities::getRPYfromMsgQuaternion(
-        curr_robot_pose.pose.orientation, nan, nan, psi);
+        curr_robot_pose.pose.orientation, nan, nan, robot_psi);
 
       vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
       curr_states.y = curr_robot_pose.pose.position.y;
-      curr_states.psi = psi;
+      curr_states.psi = robot_psi;
       curr_states.v = 0.0;
 
       std::vector<vox_nav_control::common::States> local_interpolated_reference_states =
@@ -221,13 +212,14 @@ namespace vox_nav_control
       mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
 
-
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_, curr_robot_pose);
       MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
 
       computed_velocity_.linear.x = 0;
-      computed_velocity_.angular.z += res.control_input.df * (dt);
+      computed_velocity_.angular.z += res.control_input.df * (mpc_parameters_.DT);
+
+      vox_nav_control::common::regulateMaxSpeed(computed_velocity_, mpc_parameters_);
 
       previous_control_ = res.control_input;
 
@@ -245,8 +237,6 @@ namespace vox_nav_control
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
       obstacle_tracks_ = *msg;
 
-      /*RCLCPP_INFO(
-        parent_->get_logger(), "Recieved Tracks [%d]", int(obstacle_tracks_.objects.size()));*/
     }
 
     std::vector<vox_nav_control::common::Ellipsoid> MPCControllerCasadiROS::trackMsg2Ellipsoids(
