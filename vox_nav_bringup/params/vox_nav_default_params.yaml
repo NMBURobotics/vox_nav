@@ -101,7 +101,7 @@ vox_nav_controller_server_rclcpp_node:
          A_MAX: 0.5
          DF_MIN: -0.6                                                         # min / max front steer angle constraint(rad)
          DF_MAX: 0.6
-         Q: [1.0, 1.0, 0.0, 0.0, 0.1]                                         # weights on x, y, psi, and v, obstacle_cost.
+         Q: [1.0, 1.0, 0.0, 0.0, 0.15]                                        # weights on x, y, psi, and v, obstacle_cost.
          R: [10.0, 10.0]                                                      # weights on input acc and df, acceleration and steering angle
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
