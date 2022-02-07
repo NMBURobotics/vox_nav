@@ -180,6 +180,11 @@ namespace vox_nav_planning
     float elevation_penalty_weight_;
 
     std::string graph_search_method_; // astar ? , diskstra ?
+
+    std::string selected_se2_space_name_;
+    ompl::base::ElevationStateSpace::SE2StateType se2_space_type_;
+    // curve radius for reeds and dubins only
+    double rho_;
   };
 
   // euclidean distance heuristic
@@ -224,8 +229,7 @@ namespace vox_nav_planning
     void examine_vertex(Vertex u, Graph & g)
     {
       ++(*num_visits_);
-      if (u == goal_vertex_)
-      {
+      if (u == goal_vertex_) {
         throw FoundGoal();
       }
     }

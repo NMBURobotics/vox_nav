@@ -57,6 +57,9 @@ namespace vox_nav_planning
     parent->declare_parameter(plugin_name + ".distance_penalty_weight", 1.0);
     parent->declare_parameter(plugin_name + ".elevation_penalty_weight", 1.0);
     parent->declare_parameter(plugin_name + ".graph_search_method", "astar");
+    parent->declare_parameter(plugin_name + ".se2_space", "REEDS");
+    parent->declare_parameter(plugin_name + ".rho", 1.5);
+
 
     parent->get_parameter("interpolation_parameter", interpolation_parameter_);
     parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
@@ -75,6 +78,16 @@ namespace vox_nav_planning
     parent->get_parameter(plugin_name + ".distance_penalty_weight", distance_penalty_weight_);
     parent->get_parameter(plugin_name + ".elevation_penalty_weight", elevation_penalty_weight_);
     parent->get_parameter(plugin_name + ".graph_search_method", graph_search_method_);
+    parent->get_parameter(plugin_name + ".se2_space", selected_se2_space_name_);
+    parent->get_parameter(plugin_name + ".rho", rho_);
+
+    if (selected_se2_space_name_ == "SE2") {
+      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::SE2;
+    } else if (selected_se2_space_name_ == "DUBINS") {
+      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::DUBINS;
+    } else {
+      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::REDDSSHEEP;
+    }
 
     se2_bounds_->setLow(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minx").as_double());
@@ -117,12 +130,13 @@ namespace vox_nav_planning
       logger_,
       "Selected planner is: %s optimal planner, this dos not bases on OMPL ",
       graph_search_method_.c_str());
+
     setupMap();
 
-    // WARN elevated_surfel_poses_msg_ needs to be populated by  setupMap();
+    // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
     state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
-      ompl::base::ElevationStateSpace::SE2,
-      elevated_surfel_poses_msg_);
+      se2_space_type_, elevated_surfel_poses_msg_,
+      rho_ /*only valid for duins or reeds*/, false /*only valid for dubins*/);
 
     state_space_->as<ompl::base::ElevationStateSpace>()->setBounds(
       *se2_bounds_,
@@ -427,15 +441,17 @@ namespace vox_nav_planning
         auto * compound_elevation_state =
           solution_state->as<ompl::base::ElevationStateSpace::StateType>();
         compound_elevation_state->setSE2(
-          solution_state_position.x, solution_state_position.y,
+          solution_state_position.x,
+          solution_state_position.y,
           0 /*assume a 0 yaw here*/);
         compound_elevation_state->setZ(solution_state_position.z);
         solution_path->append(compound_elevation_state);
       }
 
-      //solution_path->interpolate(interpolation_parameter_);    /*WARN TAKES A LOT OF TIME*/
+      solution_path->interpolate(interpolation_parameter_);    /*WARN TAKES A LOT OF TIME*/
       path_simlifier->smoothBSpline(*solution_path, 3, 0.2);   /*WARN TAKES A LOT OF TIME*/
 
+      // from OMPL to geometry_msgs
       for (std::size_t path_idx = 0; path_idx < solution_path->getStateCount(); path_idx++) {
         const auto * compound_elevation_state =
           solution_path->getState(path_idx)->as<ompl::base::ElevationStateSpace::StateType>();
@@ -459,8 +475,8 @@ namespace vox_nav_planning
       double roll, pitch, yaw;
       yaw = std::atan2(dy, dx);
       pitch = -std::atan2(dz, std::sqrt(dx * dx + dy * dy));
-      roll = 0;
       plan_poses[i].pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(roll, pitch, yaw);
+      roll = 0;
     }
 
     RCLCPP_INFO(
