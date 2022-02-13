@@ -18,7 +18,7 @@ def generate_launch_description():
                                 #prefix=['xterm -e gdb -ex run --args'],
                                 remappings=[('points', '/ouster/points'),
                                             ('odom', '/odometry/global'),
-                                            ('imu', '/xsens/imu')],
+                                            ('imu', '/imu/data')],
                                 parameters=[{'sequence_horizon': 2},
                                             {'dt': 1.5},
                                             {'sensor_height': -1.9}])
