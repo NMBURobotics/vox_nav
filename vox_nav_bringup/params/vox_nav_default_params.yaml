@@ -97,8 +97,8 @@ vox_nav_controller_server_rclcpp_node:
          DT: 0.2                                                              # discretization time between timesteps(s)
          L_F: 0.67                                                            # distance from CoG to front axle(m)
          L_R: 0.67                                                            # distance from CoG to rear axle(m)
-         V_MIN: -0.4                                                          # min / max velocity constraint(m / s)
-         V_MAX: 1.0
+         V_MIN: -0.2                                                          # min / max velocity constraint(m / s)
+         V_MAX: 0.4
          A_MIN: -0.1                                                          # min / max acceleration constraint(m / s ^ 2)
          A_MAX: 0.5
          DF_MIN: -0.6                                                         # min / max front steer angle constraint(rad)
@@ -155,9 +155,12 @@ vox_nav_map_server_rclcpp_node:
                                                                              # just before you start to build the map. See for example 
       latitude: 59.66424233333333
       longitude: 10.76279866666667
-      altitude: 0.9
+      altitude: 111.0
+      #latitude: 59.66597883333333
+      #longitude: 10.777659
+      #altitude: 136.93
       quaternion:
         x: 0.0
         y: 0.0
-        z: 0.0
-        w: 1.0
+        z: 0.98
+        w: -0.14

@@ -3,9 +3,9 @@ raw_cloud_clustering_tracking:
     clustering:
       x_bound: 15.0
       y_bound: 15.0
-      z_bound: 2.0
+      z_bound: 5.0
       downsample_voxel_size: 0.05
-      remove_ground_plane_thres: 0.6
+      remove_ground_plane_thres: 0.5
       clustering_min_points: 10.0
       clustering_max_points: 10000.0
       clustering_max_step_size: 0.5
