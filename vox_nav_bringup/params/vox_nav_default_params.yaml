@@ -162,5 +162,5 @@ vox_nav_map_server_rclcpp_node:
       quaternion:
         x: 0.0
         y: 0.0
-        z: 0.98
-        w: -0.14
+        z: 0.0
+        w: 1.0
