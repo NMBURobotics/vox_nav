@@ -78,14 +78,16 @@ def generate_launch_description():
     ekf_local_filter_node = Node(package='robot_localization',
                                  executable='ekf_node',
                                  name='ekf_local_filter_node',
-                                 output='screen',
+                                 #output='screen',
+                                 output={'both': 'log'},
                                  parameters=[localization_params],
                                  remappings=[('odometry/filtered', 'odometry/local')])
 
     ekf_global_filter_node = Node(package='robot_localization',
                                   executable='ekf_node',
                                   name='ekf_global_filter_node',
-                                  output='screen',
+                                  #output='screen',
+                                  output={'both': 'log'},
                                   parameters=[localization_params],
                                   remappings=[('odometry/filtered', 'odometry/global')])
 
@@ -96,7 +98,7 @@ def generate_launch_description():
                                  #output={'both': 'log'},
                                  output='screen',
                                  parameters=[localization_params],
-                                 remappings=[('imu', 'imu/data'),
+                                 remappings=[('imu', 'imu/absolute'),
                                              ('gps/fix', 'fix'),
                                              ('gps/filtered', 'gps/filtered'),
                                              ('odometry/gps', 'odometry/gps'),
