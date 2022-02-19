@@ -73,7 +73,7 @@ void SimpleICP::cloudCallback(
         Eigen::Vector4f(-20, -20, -5, 1),
         Eigen::Vector4f(20, 20, 5, 1));
 
-    pcl_ros::transformPointCloud("base_link", *croppped_live_cloud, *croppped_live_cloud, *buffer_);
+    pcl_ros::transformPointCloud("base_link", *croppped_live_cloud, *croppped_live_cloud, *tf_buffer_);
 
     geometry_msgs::msg::PoseStamped curr_robot_pose;
 
