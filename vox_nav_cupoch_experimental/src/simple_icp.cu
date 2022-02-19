@@ -128,8 +128,23 @@ void SimpleICP::cloudCallback(
     {
       pcl::PointXYZRGB p; 
       p.x = i.x();
+      p.y = i.y();
+      p.z = i.z();
+      p.r = 255;
+      p.a= 200;
+      transfromed->points.push_back(p);
     }
-    
+
+        RCLCPP_INFO(get_logger(), "transfromed Cloud with %d points...", transfromed->points.size());
+
+        sensor_msgs::msg::PointCloud2 transfromed_msg;
+
+        pcl::toROSMsg(*transfromed, transfromed_msg);
+
+        transfromed_msg.header = cloud->header;
+        transfromed_msg.header.frame_id = "base_link";
+
+    transformed_cloud_pub_->publish(transfromed_msg);
 
     std::cout << res.transformation_ << std::endl;
   }
