@@ -90,20 +90,22 @@ namespace vox_nav_cupoch_experimental
     void cloudCallback(
       const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
 
-     /**
-     * @brief Processing done in this func.
-     *
-     * @param cloud
-     * @param poses
-     */
-    void map
-    mapCloudCallback(
+    /**
+    * @brief Processing done in this func.
+    *
+    * @param cloud
+    * @param poses
+    */
+    void mapCloudCallback(
       const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
 
   private:
-
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_subscriber_;
+
+    bool is_map_recived_;
+
+    std::once_flag get_map_cloud_once_;
 
   };
 

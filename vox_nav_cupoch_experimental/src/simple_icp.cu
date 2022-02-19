@@ -22,24 +22,23 @@ Credits to author: Simon Appel, https://github.com/appinho
 using namespace vox_nav_cupoch_experimental;
 
 SimpleICP::SimpleICP()
-: Node("cloud_clustering_rclcpp_node")
+    : Node("cloud_clustering_rclcpp_node")
 {
-  
+
   cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "/ouster/points",
-    rclcpp::SensorDataQoS(),
-    std::bind(
-      &SimpleICP::cloudCallback,  this, std::placeholders::_1));
+      "/ouster/points",
+      rclcpp::SensorDataQoS(),
+      std::bind(
+          &SimpleICP::cloudCallback, this, std::placeholders::_1));
 
   map_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-    "/map/points",
-    rclcpp::SensorDataQoS(),
-    std::bind(
-      &SimpleICP::mapCloudCallback,  this, std::placeholders::_1));
+      "/map/points",
+      rclcpp::SensorDataQoS(),
+      std::bind(
+          &SimpleICP::mapCloudCallback, this, std::placeholders::_1));
 
   /*cloud_clusters_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "/vox_nav/detection/clusters", rclcpp::SystemDefaultsQoS());*/
-
 
   RCLCPP_INFO(get_logger(), "Creating...");
 }
@@ -49,7 +48,17 @@ SimpleICP::~SimpleICP()
   RCLCPP_INFO(get_logger(), "Destroying...");
 }
 
-int main(int argc, char const * argv[])
+void SimpleICP::cloudCallback(
+    const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
+{
+}
+
+void SimpleICP::mapCloudCallback(
+    const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
+{
+}
+
+int main(int argc, char const *argv[])
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<SimpleICP>();
