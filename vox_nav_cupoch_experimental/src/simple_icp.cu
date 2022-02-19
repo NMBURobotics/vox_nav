@@ -85,6 +85,27 @@ void SimpleICP::cloudCallback(
 
         Eigen::Vector4f(20 + curr_robot_pose.pose.position.x,
                         20 + curr_robot_pose.pose.position.y, 5, 1));
+
+    thrust::host_vector<Eigen::Vector3f> map_points, live_points;
+
+    for (int i = 0; i < croppped_map_cloud->points.size(); ++i)
+    {
+      auto p = croppped_map_cloud->points[i];
+      Eigen::Vector3f point_eig(p.x, p.y, p.z);
+      map_points.push_back(point_eig);
+    }
+
+    for (int i = 0; i < croppped_live_cloud->points.size(); ++i)
+    {
+      auto p = croppped_live_cloud->points[i];
+      Eigen::Vector3f point_eig(p.x, p.y, p.z);
+      live_points.push_back(point_eig);
+    }
+
+    auto map_points_cupoch = std::make_shared<cupoch::geometry::PointCloud>();
+    auto live_points_cupoch = std::make_shared<cupoch::geometry::PointCloud>();
+    map_points_cupoch->SetPoints(map_points);
+    live_points_cupoch->SetPoints(live_points);
   }
 }
 
