@@ -58,7 +58,14 @@ void SimpleICP::cloudCallback(
 {
   if (map_configured_)
   {
-    
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
+    pcl::fromROSMsg(*cloud, *pcl_curr);
+
+    pcl_curr = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
+        pcl_curr,
+        Eigen::Vector4f(-20, -20, -5, 1),
+        Eigen::Vector4f(20, 20, 5, 1));
   }
 }
 
@@ -66,7 +73,7 @@ void SimpleICP::mapCloudCallback(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   std::call_once(
-      get_map_cloud_once_, [this]()
+      get_map_cloud_once_, [this, map_configured_, map_]()
       {
         pcl::fromROSMsg(*cloud, map_);
         map_configured_ = true; });
