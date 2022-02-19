@@ -19,9 +19,9 @@ You can download videos and see capablities of project. See all available videos
 
 * ![Full Navigation REEDSPEEP space](docs/assets/navigation_se2_control_planner.mp4)
 
-* [![Thorvald Navigation with vox_nav](https://img.youtube.com/vi/16H4n_H7RzI/0.jpg)](https://www.youtube.com/watch?v=16H4n_H7RzI)
+* A video with a litlle btter resolution [Thorvald Navigation with vox_nav](https://www.youtube.com/watch?v=16H4n_H7RzI) 
 
- 
+
 ### Related Publications
 
 If using vox_nav for scientific publications, please consider citing the following paper.
