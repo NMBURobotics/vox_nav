@@ -45,6 +45,10 @@ SimpleICP::SimpleICP()
   /*cloud_clusters_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "/vox_nav/detection/clusters", rclcpp::SystemDefaultsQoS());*/
 
+  // setup TF buffer and listerner to read transforms
+  tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+  tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
   RCLCPP_INFO(get_logger(), "Creating...");
 }
 
@@ -66,6 +70,11 @@ void SimpleICP::cloudCallback(
         pcl_curr,
         Eigen::Vector4f(-20, -20, -5, 1),
         Eigen::Vector4f(20, 20, 5, 1));
+
+    geometry_msgs::msg::PoseStamped curr_robot_pose;
+
+    vox_nav_utilities::getCurrentPose(
+        curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1);
   }
 }
 
