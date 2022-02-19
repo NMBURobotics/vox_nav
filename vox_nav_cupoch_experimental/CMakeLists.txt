@@ -87,9 +87,16 @@ target_include_directories(raw_cloud_clustering_tracking PUBLIC ${CUPOCH_INCLUDE
 target_link_directories(raw_cloud_clustering_tracking PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(raw_cloud_clustering_tracking ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
+cuda_add_executable(simple_icp src/simple_icp.cu)
+ament_target_dependencies(simple_icp ${dependencies})
+target_include_directories(simple_icp PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(simple_icp PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(simple_icp ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+
 install(TARGETS ros2bag_kitti_bin
                 semantic_cloud_clustering
                 raw_cloud_clustering_tracking
+                simple_icp
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
