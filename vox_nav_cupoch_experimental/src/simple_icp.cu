@@ -42,8 +42,8 @@ SimpleICP::SimpleICP()
       std::bind(
           &SimpleICP::mapCloudCallback, this, std::placeholders::_1));
 
-  /*cloud_clusters_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-    "/vox_nav/detection/clusters", rclcpp::SystemDefaultsQoS());*/
+  transformed_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+      "/vox_nav/transfromed", rclcpp::SystemDefaultsQoS());
 
   // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -119,7 +119,17 @@ void SimpleICP::cloudCallback(
     criteria.max_iteration_ = 100;
     auto res = cupoch::registration::RegistrationICP(*live_points_cupoch, *map_points_cupoch, 3.0, eye,
                                                      point_to_point, criteria);
-    // source->Transform(res.transformation_);
+
+    live_points_cupoch->Transform(res.transformation_);
+
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr transfromed(new pcl::PointCloud<pcl::PointXYZRGB>());
+
+    for (auto &&i : live_points_cupoch->GetPoints())
+    {
+      pcl::PointXYZRGB p; 
+      p.x = i.x();
+    }
+    
 
     std::cout << res.transformation_ << std::endl;
   }
