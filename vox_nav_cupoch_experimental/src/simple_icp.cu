@@ -108,6 +108,8 @@ void SimpleICP::cloudCallback(
     auto live_points_cupoch = std::make_shared<cupoch::geometry::PointCloud>();
     map_points_cupoch->SetPoints(map_points);
     live_points_cupoch->SetPoints(live_points);
+
+
   }
 }
 
@@ -119,7 +121,7 @@ void SimpleICP::mapCloudCallback(
       {
         pcl::fromROSMsg(*cloud, map_);
         map_configured_ = true; 
-            RCLCPP_INFO(get_logger(), "Map Cloud with %d points...", map_->points.size()); });
+            RCLCPP_INFO(get_logger(), "Map Cloud with %d points...", map_.points.size()); });
 }
 
 int main(int argc, char const *argv[])
