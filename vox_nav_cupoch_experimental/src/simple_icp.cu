@@ -109,7 +109,15 @@ void SimpleICP::cloudCallback(
     map_points_cupoch->SetPoints(map_points);
     live_points_cupoch->SetPoints(live_points);
 
-
+    // ICP
+    Eigen::Matrix4f eye = Eigen::Matrix4f::Identity();
+    auto point_to_point =
+        cupoch::registration::TransformationEstimationPointToPoint();
+    cupoch::registration::ICPConvergenceCriteria criteria;
+    criteria.max_iteration_ = 100;
+    auto res = cupoch::registration::RegistrationICP(*live_points_cupoch, *map_points_cupoch, 3.0, eye,
+                                                     point_to_point, criteria);
+    //source->Transform(res.transformation_);
   }
 }
 
