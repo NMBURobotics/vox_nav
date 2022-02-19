@@ -73,7 +73,7 @@ void SimpleICP::mapCloudCallback(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   std::call_once(
-      get_map_cloud_once_, [this, map_configured_, map_]()
+      get_map_cloud_once_, [&]()
       {
         pcl::fromROSMsg(*cloud, map_);
         map_configured_ = true; });
