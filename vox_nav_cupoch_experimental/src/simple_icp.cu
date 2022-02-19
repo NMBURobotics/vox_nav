@@ -37,7 +37,7 @@ SimpleICP::SimpleICP()
           &SimpleICP::cloudCallback, this, std::placeholders::_1));
 
   map_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-      "/map/points",
+      "vox_nav/map_server/octomap_pointcloud",
       rclcpp::SensorDataQoS(),
       std::bind(
           &SimpleICP::mapCloudCallback, this, std::placeholders::_1));
@@ -65,6 +65,8 @@ void SimpleICP::cloudCallback(
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
+
+    RCLCPP_INFO(get_logger(), "Live Cloud with %d points...", pcl_curr->points.size());
 
     auto croppped_live_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
         pcl_curr,
@@ -116,7 +118,8 @@ void SimpleICP::mapCloudCallback(
       get_map_cloud_once_, [&]()
       {
         pcl::fromROSMsg(*cloud, map_);
-        map_configured_ = true; });
+        map_configured_ = true; 
+            RCLCPP_INFO(get_logger(), "Map Cloud with %d points...", map_->points.size()); });
 }
 
 int main(int argc, char const *argv[])
