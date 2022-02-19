@@ -17,12 +17,9 @@ You can download videos and see capablities of project. See all available videos
 
 * ![Full Navigation REEDSPEEP space](docs/assets/navigation_se2_control_planner.mp4)
 
+* ![Thorvald Navigation with vox_nav](docs/assets/real_robot_demos.mp4)
+
 [![Thorvald Navigation with vox_nav](https://img.youtube.com/vi/16H4n_H7RzI/0.jpg)](https://www.youtube.com/watch?v=16H4n_H7RzI)
-
-
-
-https://user-images.githubusercontent.com/18460336/154820741-d1efb193-5277-417c-b2f4-7f44a7144963.mp4
-
 
 
 ### Related Publications
