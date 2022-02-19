@@ -66,7 +66,7 @@ void SimpleICP::cloudCallback(
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
 
-    pcl_curr = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
+    auto croppped_live_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
         pcl_curr,
         Eigen::Vector4f(-20, -20, -5, 1),
         Eigen::Vector4f(20, 20, 5, 1));
@@ -75,6 +75,14 @@ void SimpleICP::cloudCallback(
 
     vox_nav_utilities::getCurrentPose(
         curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1);
+
+    auto croppped_map_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
+        std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>(map_),
+        Eigen::Vector4f(-20 + curr_robot_pose.pose.postion.x,
+                        -20 + curr_robot_pose.pose.postion.y, -5, 1),
+
+        Eigen::Vector4f(20 + curr_robot_pose.pose.postion.x,
+                        20 + curr_robot_pose.pose.postion.y, 5, 1));
   }
 }
 
