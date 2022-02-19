@@ -76,13 +76,15 @@ void SimpleICP::cloudCallback(
     vox_nav_utilities::getCurrentPose(
         curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1);
 
-    auto croppped_map_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
-        std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>(map_),
-        Eigen::Vector4f(-20 + curr_robot_pose.pose.postion.x,
-                        -20 + curr_robot_pose.pose.postion.y, -5, 1),
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr map(new pcl::PointCloud<pcl::PointXYZRGB>(map_));
 
-        Eigen::Vector4f(20 + curr_robot_pose.pose.postion.x,
-                        20 + curr_robot_pose.pose.postion.y, 5, 1));
+    auto croppped_map_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
+        map,
+        Eigen::Vector4f(-20 + curr_robot_pose.pose.position.x,
+                        -20 + curr_robot_pose.pose.position.y, -5, 1),
+
+        Eigen::Vector4f(20 + curr_robot_pose.pose.position.x,
+                        20 + curr_robot_pose.pose.position.y, 5, 1));
   }
 }
 
