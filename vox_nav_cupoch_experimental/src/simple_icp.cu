@@ -117,7 +117,9 @@ void SimpleICP::cloudCallback(
     criteria.max_iteration_ = 100;
     auto res = cupoch::registration::RegistrationICP(*live_points_cupoch, *map_points_cupoch, 3.0, eye,
                                                      point_to_point, criteria);
-    //source->Transform(res.transformation_);
+    // source->Transform(res.transformation_);
+
+    std::cout << res.transformation_ << std::endl;
   }
 }
 
