@@ -19,6 +19,10 @@ You can download videos and see capablities of project. See all available videos
 
 * ![Thorvald Navigation with vox_nav](docs/assets/real_robot_demos.mp4)
 
+<video width="640" height="480" controls>
+  <source src="docs/assets/real_robot_demos.mp4" type="video/mp4">
+</video>
+
 [![Thorvald Navigation with vox_nav](https://img.youtube.com/vi/16H4n_H7RzI/0.jpg)](https://www.youtube.com/watch?v=16H4n_H7RzI)
 
  
