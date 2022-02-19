@@ -7,6 +7,8 @@ Documentation is here ; https://vox-nav.readthedocs.io/en/latest/
 
 You can download videos and see capablities of project. See all available videos under docs/assets.
 
+* ![Thorvald Navigation with vox_nav](docs/assets/real_robot_demos.gif)
+ 
 * ![MPC following a Trajectory](docs/assets/mpc_3.mp4)
 
 * ![Full Navigation using Behaviour Trees](docs/assets/navigation_in_action.mp4)
@@ -17,16 +19,9 @@ You can download videos and see capablities of project. See all available videos
 
 * ![Full Navigation REEDSPEEP space](docs/assets/navigation_se2_control_planner.mp4)
 
-* ![Thorvald Navigation with vox_nav](docs/assets/real_robot_demos.mp4)
-
-<video width="640" height="480" controls>
-  <source src="docs/assets/real_robot_demos.mp4" type="video/mp4">
-</video>
-
-[![Thorvald Navigation with vox_nav](https://img.youtube.com/vi/16H4n_H7RzI/0.jpg)](https://www.youtube.com/watch?v=16H4n_H7RzI)
+* [![Thorvald Navigation with vox_nav](https://img.youtube.com/vi/16H4n_H7RzI/0.jpg)](https://www.youtube.com/watch?v=16H4n_H7RzI)
 
  
-
 ### Related Publications
 
 If using vox_nav for scientific publications, please consider citing the following paper.
