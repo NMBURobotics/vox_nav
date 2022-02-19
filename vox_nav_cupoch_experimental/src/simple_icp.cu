@@ -19,6 +19,11 @@ Credits to author: Simon Appel, https://github.com/appinho
 
 #include "vox_nav_cupoch_experimental/simple_icp.hpp"
 
+#include <string>
+#include <vector>
+#include <memory>
+#include <algorithm>
+
 using namespace vox_nav_cupoch_experimental;
 
 SimpleICP::SimpleICP()
@@ -51,11 +56,20 @@ SimpleICP::~SimpleICP()
 void SimpleICP::cloudCallback(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
+  if (map_configured_)
+  {
+    
+  }
 }
 
 void SimpleICP::mapCloudCallback(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
+  std::call_once(
+      get_map_cloud_once_, [this]()
+      {
+        pcl::fromROSMsg(*cloud, map_);
+        map_configured_ = true; });
 }
 
 int main(int argc, char const *argv[])

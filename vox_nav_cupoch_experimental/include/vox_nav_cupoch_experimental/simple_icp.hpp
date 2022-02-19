@@ -103,9 +103,10 @@ namespace vox_nav_cupoch_experimental
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_subscriber_;
 
-    bool is_map_recived_;
-
+    bool map_configured_;
     std::once_flag get_map_cloud_once_;
+
+     pcl::PointCloud<pcl::PointXYZRGB> map_;
 
   };
 
