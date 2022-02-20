@@ -96,12 +96,12 @@ void SimpleICP::cloudCallback(
     auto croppped_map_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
       map,
       Eigen::Vector4f(
-        -20 + curr_robot_pose.pose.position.x,
-        -20 + curr_robot_pose.pose.position.y, -5, 1),
+        -10 + curr_robot_pose.pose.position.x,
+        -10 + curr_robot_pose.pose.position.y, -5, 1),
 
       Eigen::Vector4f(
-        20 + curr_robot_pose.pose.position.x,
-        20 + curr_robot_pose.pose.position.y, 5, 1));
+        10 + curr_robot_pose.pose.position.x,
+        10 + curr_robot_pose.pose.position.y, 5, 1));
 
     croppped_map_cloud->header.stamp = pcl_curr->header.stamp;
     croppped_map_cloud->header.seq = pcl_curr->header.seq;
@@ -134,54 +134,19 @@ void SimpleICP::cloudCallback(
     auto point_to_point =
       cupoch::registration::TransformationEstimationPointToPoint();
     cupoch::registration::ICPConvergenceCriteria criteria;
-    criteria.max_iteration_ = 100;
+    criteria.max_iteration_ = 30;
     auto res = cupoch::registration::RegistrationICP(
       *live_points_cupoch, *map_points_cupoch, 3.0, eye,
       point_to_point, criteria);
     live_points_cupoch->Transform(res.transformation_);
 
-    RCLCPP_INFO(
-      get_logger(), "robot pose before ICP %.2f %.2f ",
-      curr_robot_pose.pose.position.x,
-      curr_robot_pose.pose.position.y);
-
     Eigen::Affine3f T;
     T.matrix() = res.transformation_;
     Eigen::Affine3d T_d = T.cast<double>();
-
-    geometry_msgs::msg::PoseArray icp_robot_poses;
-    icp_robot_poses.header.frame_id = "map";
-    icp_robot_poses.header.stamp = now();
-
-    // original
-    icp_robot_poses.poses.push_back(curr_robot_pose.pose);
-
     auto transformation = tf2::eigenToTransform(T_d);
-    geometry_msgs::msg::PoseStamped out, out_inv;
-    tf2::doTransform(curr_robot_pose, out, transformation);
-    // icp
-    icp_robot_poses.poses.push_back(out.pose);
-
-    auto T_d_inv = T_d.inverse();
-    auto transformation_inv = tf2::eigenToTransform(T_d_inv);
-    tf2::doTransform(curr_robot_pose, out_inv, transformation_inv);
-    // inv icp
-    icp_robot_poses.poses.push_back(out_inv.pose);
-
-
-    RCLCPP_INFO(
-      get_logger(), "robot pose after ICP %.2f %.2f ",
-      out.pose.position.x,
-      out.pose.position.y);
-
-    RCLCPP_INFO(
-      get_logger(), "robot pose after inv ICP %.2f %.2f ",
-      out_inv.pose.position.x,
-      out_inv.pose.position.y);
 
     geometry_msgs::msg::PoseStamped a, b;
     tf2::doTransform(a, b, transformation);
-    icp_robot_poses.poses.push_back(b.pose);
 
     b.header.frame_id = "base_link";
     b.header.stamp = curr_robot_pose.header.stamp;
@@ -190,25 +155,20 @@ void SimpleICP::cloudCallback(
     rclcpp::Duration transform_tolerance(0, 500);
 
     auto result = vox_nav_utilities::transformPose(
-      tf_buffer_,
-      "map",
-      b,
-      a,
-      transform_tolerance);
+      tf_buffer_, "map", b, a, transform_tolerance);
 
+    geometry_msgs::msg::PoseArray icp_robot_poses;
+    icp_robot_poses.header.frame_id = "map";
+    icp_robot_poses.header.stamp = now();
+    icp_robot_poses.poses.push_back(curr_robot_pose.pose);
     icp_robot_poses.poses.push_back(a.pose);
-
     new_robot_pose_publisher_->publish(icp_robot_poses);
 
-    RCLCPP_INFO(
-      get_logger(), "robot b after b ICP %.2f %.2f ",
-      b.pose.position.x,
-      b.pose.position.y);
-
-    RCLCPP_INFO(
-      get_logger(), "robot a after a ICP %.2f %.2f ",
-      a.pose.position.x,
-      a.pose.position.y);
+    geometry_msgs::msg::PoseWithCovarianceStamped icp_pose;
+    icp_pose.header.stamp = curr_robot_pose.header.stamp;
+    icp_pose.header.frame_id = "map";
+    icp_pose.pose.pose = a.pose;
+    base_to_map_pose_pub_->publish(icp_pose);
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr live_cloud_crop(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr map_cloud_crop(new pcl::PointCloud<pcl::PointXYZRGB>());
@@ -233,18 +193,10 @@ void SimpleICP::cloudCallback(
       map_cloud_crop->points.push_back(p);
     }
 
-    RCLCPP_INFO(
-      get_logger(), "live_cloud_crop Cloud with %d points...",
-      live_cloud_crop->points.size());
-    RCLCPP_INFO(
-      get_logger(), "map_cloud_crop Cloud with %d points...",
-      map_cloud_crop->points.size());
-
     sensor_msgs::msg::PointCloud2 live_cloud_crop_msg, map_cloud_crop_msg;
 
     pcl::toROSMsg(*live_cloud_crop, live_cloud_crop_msg);
     pcl::toROSMsg(*map_cloud_crop, map_cloud_crop_msg);
-
     live_cloud_crop_msg.header = cloud->header;
     live_cloud_crop_msg.header.frame_id = "base_link";
     map_cloud_crop_msg.header = cloud->header;

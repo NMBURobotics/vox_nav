@@ -10,7 +10,7 @@ def generate_launch_description():
                                 output='screen',
                                 #prefix=['xterm -e gdb -ex run --args'],
                                 #prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no'],
-                                remappings=[('/ouster/points', '/velodyne_points'),
+                                remappings=[('/ouster/points', '/ouster/points'),
                                             ('vox_nav/map_server/octomap_pointcloud', 'vox_nav/map_server/octomap_pointcloud')],
                                 parameters=[{'sequence_horizon': 2},
                                             {'dt': 0.01},
