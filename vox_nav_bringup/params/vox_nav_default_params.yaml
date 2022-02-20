@@ -155,7 +155,9 @@ vox_nav_map_server_rclcpp_node:
                                                                              # just before you start to build the map. See for example 
       latitude: 59.66424233333333
       longitude: 10.76279866666667
-      altitude: 111.0
+      #altitude: 111.0
+      altitude: 0.9
+
       #latitude: 59.66597883333333
       #longitude: 10.777659
       #altitude: 136.93

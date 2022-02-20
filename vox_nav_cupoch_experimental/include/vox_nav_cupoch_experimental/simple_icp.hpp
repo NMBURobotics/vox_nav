@@ -104,7 +104,15 @@ namespace vox_nav_cupoch_experimental
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_subscriber_;
 
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr transformed_cloud_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_pub_;
+
+    //Publish base to map after ICP correction
+    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
+      base_to_map_pose_pub_;
+
+    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr
+      new_robot_pose_publisher_;
 
     // tf buffer to get access to transfroms
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
@@ -113,7 +121,7 @@ namespace vox_nav_cupoch_experimental
     bool map_configured_;
     std::once_flag get_map_cloud_once_;
 
-     pcl::PointCloud<pcl::PointXYZRGB> map_;
+    pcl::PointCloud<pcl::PointXYZRGB> map_;
 
   };
 
