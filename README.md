@@ -1,4 +1,7 @@
 # vox_nav
+
+A navigation framework for outdoor robotics in rough uneven terrains.
+
 ![foxy](https://github.com/jediofgever/vox_nav/workflows/foxy/badge.svg)  
 
 Documentation is here ; https://vox-nav.readthedocs.io/en/latest/
