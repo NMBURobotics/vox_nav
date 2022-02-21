@@ -159,8 +159,38 @@ void PCLCPUNDT::liveCloudCallback(
       vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
       croppped_live_cloud, params_.downsample_voxel_size);
 
-    /*thrust::host_vector<Eigen::Vector3f> map_points, live_points;
+    pcl::NormalDistributionsTransform<pcl::PointXYZRGB, pcl::PointXYZRGB> ndt;
+    // Setting scale dependent NDT parameters
+    // Setting minimum transformation difference for termination condition.
+    ndt.setTransformationEpsilon(0.01);
+    // Setting maximum step size for More-Thuente line search.
+    ndt.setStepSize(0.1);
+    //Setting Resolution of NDT grid structure (VoxelGridCovariance).
+    ndt.setResolution(2.0);
 
+    // Setting max number of registration iterations.
+    ndt.setMaximumIterations(40);
+
+    // Setting point cloud to be aligned.
+    ndt.setInputSource(croppped_live_cloud);
+    // Setting point cloud to be aligned to.
+    ndt.setInputTarget(croppped_map_cloud);
+
+    // Set initial alignment estimate found using robot odometry.
+    Eigen::AngleAxisf init_rotation(0.0, Eigen::Vector3f::UnitZ());
+    Eigen::Translation3f init_translation(0.0, 0.0, 0.0);
+    Eigen::Matrix4f init_guess = (init_translation * init_rotation).matrix();
+
+    // Calculating required rigid transform to align the input cloud to the target cloud.
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    ndt.align(*output_cloud, init_guess);
+
+    std::cout << "Normal Distributions Transform has converged:" << ndt.hasConverged() <<
+      " score: " << ndt.getFitnessScore() << std::endl;
+
+    std::cout << "Resulting transfrom: \n:" << ndt.getFinalTransformation() << std::endl;
+
+    /*thrust::host_vector<Eigen::Vector3f> map_points, live_points;
     for (int i = 0; i < croppped_map_cloud->points.size(); ++i) {
       auto p = croppped_map_cloud->points[i];
       Eigen::Vector3f point_eig(p.x, p.y, p.z);
