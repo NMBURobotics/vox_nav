@@ -48,17 +48,17 @@ CupochGPUICP::CupochGPUICP()
     std::bind(&CupochGPUICP::gpsOdomCallback, this, std::placeholders::_1));
 
   live_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-    "/vox_nav/live_cloud_crop", rclcpp::SystemDefaultsQoS());
+    "/vox_nav/cupoch/live_cloud_crop", rclcpp::SystemDefaultsQoS());
 
   map_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-    "/vox_nav/map_cloud_crop", rclcpp::SystemDefaultsQoS());
+    "/vox_nav/cupoch/map_cloud_crop", rclcpp::SystemDefaultsQoS());
 
   base_to_map_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "/vox_nav/icp", rclcpp::SystemDefaultsQoS());
+    "/vox_nav/cupoch/icp_base_to_map_pose", rclcpp::SystemDefaultsQoS());
 
   new_robot_pose_publisher_ =
     this->create_publisher<geometry_msgs::msg::PoseArray>(
-    "/vox_nav/robot_pose_icp", rclcpp::SystemDefaultsQoS());
+    "/vox_nav/cupoch/icp_robot_pose", rclcpp::SystemDefaultsQoS());
 
   // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
