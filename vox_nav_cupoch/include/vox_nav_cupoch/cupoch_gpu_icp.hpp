@@ -62,6 +62,17 @@
 namespace vox_nav_cupoch
 {
 
+  struct ICPParameters
+  {
+    float x_bound;
+    float y_bound;
+    float z_bound;
+    float downsample_voxel_size;
+    int max_icp_iter;
+    float max_correspondence_distance;
+    bool debug;
+  };
+
 /**
  * @brief Given a raw point cloud,
  * clusterize it and use UKF to track clusters. Publish vis of tracks in RVIZ
@@ -136,6 +147,8 @@ namespace vox_nav_cupoch
     nav_msgs::msg::Odometry::SharedPtr latest_gps_odom_;
 
     std::mutex latest_gps_odom_mutex_;
+
+    ICPParameters params_;
 
   };
 

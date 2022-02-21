@@ -67,6 +67,34 @@ CupochGPUICP::CupochGPUICP()
   latest_gps_odom_ = std::make_shared<nav_msgs::msg::Odometry>();
   map_cloud_ = pcl::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
 
+
+  // Define parameters
+  declare_parameter("x_bound", params_.x_bound);
+  declare_parameter("y_bound", params_.y_bound);
+  declare_parameter("z_bound", params_.z_bound);
+  declare_parameter("downsample_voxel_size", params_.downsample_voxel_size);
+  declare_parameter("max_icp_iter", params_.max_icp_iter);
+  declare_parameter("max_correspondence_distance", params_.max_correspondence_distance);
+  declare_parameter("debug", params_.debug);
+
+  get_parameter("x_bound", params_.x_bound);
+  get_parameter("y_bound", params_.y_bound);
+  get_parameter("z_bound", params_.z_bound);
+  get_parameter("downsample_voxel_size", params_.downsample_voxel_size);
+  get_parameter("max_icp_iter", params_.max_icp_iter);
+  get_parameter("max_correspondence_distance", params_.max_correspondence_distance);
+  get_parameter("debug", params_.debug);
+
+  // Print parameters
+  RCLCPP_INFO_STREAM(get_logger(), "x_bound " << params_.x_bound);
+  RCLCPP_INFO_STREAM(get_logger(), "y_bound " << params_.y_bound);
+  RCLCPP_INFO_STREAM(get_logger(), "z_bound " << params_.z_bound);
+  RCLCPP_INFO_STREAM(get_logger(), "downsample_voxel_size " << params_.downsample_voxel_size);
+  RCLCPP_INFO_STREAM(get_logger(), "max_icp_iter " << params_.max_icp_iter);
+  RCLCPP_INFO_STREAM(
+    get_logger(), "max_correspondence_distance " << params_.max_correspondence_distance);
+  RCLCPP_INFO_STREAM(get_logger(), "debug " << params_.debug);
+
   RCLCPP_INFO(get_logger(), "Creating...");
 }
 
@@ -91,12 +119,11 @@ void CupochGPUICP::liveCloudCallback(
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
 
-    RCLCPP_INFO(get_logger(), "Live Cloud with %d points...", pcl_curr->points.size());
 
     auto croppped_live_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
       pcl_curr,
-      Eigen::Vector4f(-10, -10, -5, 1),
-      Eigen::Vector4f(10, 10, 5, 1));
+      Eigen::Vector4f(-params_.x_bound, -params_.y_bound, -params_.z_bound, 1),
+      Eigen::Vector4f(params_.x_bound, params_.y_bound, params_.z_bound, 1));
 
     pcl_ros::transformPointCloud(
       "base_link", *croppped_live_cloud, *croppped_live_cloud, *tf_buffer_);
@@ -110,24 +137,27 @@ void CupochGPUICP::liveCloudCallback(
     auto croppped_map_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
       map_cloud_,
       Eigen::Vector4f(
-        -10 + curr_robot_pose.pose.position.x,
-        -10 + curr_robot_pose.pose.position.y, -5, 1),
+        -params_.x_bound + curr_robot_pose.pose.position.x,
+        -params_.y_bound + curr_robot_pose.pose.position.y,
+        -params_.z_bound + curr_robot_pose.pose.position.z, 1),
 
       Eigen::Vector4f(
-        10 + curr_robot_pose.pose.position.x,
-        10 + curr_robot_pose.pose.position.y, 5, 1));
+        params_.x_bound + curr_robot_pose.pose.position.x,
+        params_.y_bound + curr_robot_pose.pose.position.y,
+        params_.z_bound + curr_robot_pose.pose.position.z, 1));
 
     croppped_map_cloud->header.stamp = pcl_curr->header.stamp;
     croppped_map_cloud->header.seq = pcl_curr->header.seq;
 
     pcl_ros::transformPointCloud(
-      "base_link", *croppped_map_cloud, *croppped_map_cloud,
-      *tf_buffer_);
+      "base_link", *croppped_map_cloud, *croppped_map_cloud, *tf_buffer_);
 
     croppped_map_cloud =
-      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(croppped_map_cloud, 0.1);
+      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+      croppped_map_cloud, params_.downsample_voxel_size);
     croppped_live_cloud =
-      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(croppped_live_cloud, 0.1);
+      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+      croppped_live_cloud, params_.downsample_voxel_size);
 
     thrust::host_vector<Eigen::Vector3f> map_points, live_points;
 
@@ -153,9 +183,9 @@ void CupochGPUICP::liveCloudCallback(
     auto point_to_point =
       cupoch::registration::TransformationEstimationPointToPoint();
     cupoch::registration::ICPConvergenceCriteria criteria;
-    criteria.max_iteration_ = 30;
+    criteria.max_iteration_ = params_.max_icp_iter;
     auto res = cupoch::registration::RegistrationICP(
-      *live_points_cupoch, *map_points_cupoch, 3.0, eye,
+      *live_points_cupoch, *map_points_cupoch, params_.max_correspondence_distance, eye,
       point_to_point, criteria);
     live_points_cupoch->Transform(res.transformation_);
 
@@ -224,7 +254,14 @@ void CupochGPUICP::liveCloudCallback(
     live_cloud_pub_->publish(live_cloud_crop_msg);
     map_cloud_pub_->publish(map_cloud_crop_msg);
 
-    std::cout << res.transformation_ << std::endl;
+    if (params_.debug) {
+      RCLCPP_INFO(
+        get_logger(), "Did ICP with Live Cloud of %d points...", live_cloud_crop->points.size());
+      RCLCPP_INFO(
+        get_logger(), "Did ICP with Map Cloud of %d points...", map_cloud_crop->points.size());
+      std::cout << "Resulting transfrom: \n" << res.transformation_ << std::endl;
+    }
+
   }
 }
 

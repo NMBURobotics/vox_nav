@@ -14,7 +14,8 @@ def generate_launch_description():
 
     decleare_params = DeclareLaunchArgument(
         'params',
-        default_value=os.path.join(share_dir, 'config', 'params.yaml'),
+        default_value=os.path.join(
+            share_dir, 'config', 'raw_cloud_clustering_tracking_params.yaml'),
         description='Path to the vox_nav parameters file.')
 
     node = Node(
