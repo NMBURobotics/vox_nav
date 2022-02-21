@@ -30,7 +30,7 @@ CupochGPUICP::CupochGPUICP()
 : Node("cloud_clustering_rclcpp_node")
 {
 
-  cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+  live_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "/ouster/points",
     rclcpp::SensorDataQoS(),
     std::bind(
