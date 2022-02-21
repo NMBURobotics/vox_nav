@@ -17,7 +17,7 @@ DISCLAIMER: some parts of code has been taken from; https://github.com/appinho/S
 Credits to author: Simon Appel, https://github.com/appinho
 */
 
-#include "vox_nav_cupoch/cupoch_gpu_icp.hpp"
+#include "vox_nav_cupoch/pcl_cpu_ndt.hpp"
 
 #include <string>
 #include <vector>
@@ -26,26 +26,26 @@ Credits to author: Simon Appel, https://github.com/appinho
 
 using namespace vox_nav_cupoch;
 
-CupochGPUICP::CupochGPUICP()
-: Node("cupoch_gpu_icp_rclcpp_node")
+PCLCPUNDT::PCLCPUNDT()
+: Node("pcl_cpu_ndt_rclcpp_node")
 {
 
   live_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "/ouster/points",
     rclcpp::SensorDataQoS(),
     std::bind(
-      &CupochGPUICP::liveCloudCallback, this, std::placeholders::_1));
+      &PCLCPUNDT::liveCloudCallback, this, std::placeholders::_1));
 
   map_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "vox_nav/map_server/octomap_pointcloud",
     rclcpp::SensorDataQoS(),
     std::bind(
-      &CupochGPUICP::mapCloudCallback, this, std::placeholders::_1));
+      &PCLCPUNDT::mapCloudCallback, this, std::placeholders::_1));
 
   gps_odom_subscriber_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "odometry/gps",
     rclcpp::SensorDataQoS(),
-    std::bind(&CupochGPUICP::gpsOdomCallback, this, std::placeholders::_1));
+    std::bind(&PCLCPUNDT::gpsOdomCallback, this, std::placeholders::_1));
 
   live_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "vox_nav/cupoch/live_cloud_crop", rclcpp::SystemDefaultsQoS());
@@ -98,19 +98,19 @@ CupochGPUICP::CupochGPUICP()
   RCLCPP_INFO(get_logger(), "Creating...");
 }
 
-CupochGPUICP::~CupochGPUICP()
+PCLCPUNDT::~PCLCPUNDT()
 {
   RCLCPP_INFO(get_logger(), "Destroying...");
 }
 
-void CupochGPUICP::gpsOdomCallback(
+void PCLCPUNDT::gpsOdomCallback(
   const nav_msgs::msg::Odometry::ConstSharedPtr odom)
 {
   std::lock_guard<std::mutex> guard(latest_gps_odom_mutex_);
   latest_gps_odom_ = std::make_shared<nav_msgs::msg::Odometry>(*odom);
 }
 
-void CupochGPUICP::liveCloudCallback(
+void PCLCPUNDT::liveCloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   if (map_configured_) {
@@ -159,7 +159,7 @@ void CupochGPUICP::liveCloudCallback(
       vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
       croppped_live_cloud, params_.downsample_voxel_size);
 
-    thrust::host_vector<Eigen::Vector3f> map_points, live_points;
+    /*thrust::host_vector<Eigen::Vector3f> map_points, live_points;
 
     for (int i = 0; i < croppped_map_cloud->points.size(); ++i) {
       auto p = croppped_map_cloud->points[i];
@@ -260,12 +260,12 @@ void CupochGPUICP::liveCloudCallback(
       RCLCPP_INFO(
         get_logger(), "Did ICP with Map Cloud of %d points...", map_cloud_crop->points.size());
       std::cout << "Resulting transfrom: \n" << res.transformation_ << std::endl;
-    }
+    }*/
 
   }
 }
 
-void CupochGPUICP::mapCloudCallback(
+void PCLCPUNDT::mapCloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   std::call_once(
@@ -280,7 +280,7 @@ void CupochGPUICP::mapCloudCallback(
 int main(int argc, char const * argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<CupochGPUICP>();
+  auto node = std::make_shared<PCLCPUNDT>();
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;

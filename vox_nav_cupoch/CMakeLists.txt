@@ -93,10 +93,17 @@ target_include_directories(cupoch_gpu_icp PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST
 target_link_directories(cupoch_gpu_icp PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(cupoch_gpu_icp ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
+add_executable(pcl_cpu_ndt src/pcl_cpu_ndt.cpp)
+ament_target_dependencies(pcl_cpu_ndt ${dependencies})
+target_include_directories(pcl_cpu_ndt PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(pcl_cpu_ndt PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(pcl_cpu_ndt ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+
 install(TARGETS ros2bag_kitti_bin
                 semantic_cloud_clustering
                 raw_cloud_clustering_tracking
                 cupoch_gpu_icp
+                pcl_cpu_ndt
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
