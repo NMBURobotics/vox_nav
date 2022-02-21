@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/*
-DISCLAIMER: some parts of code has been taken from; https://github.com/appinho/SARosPerceptionKitti
-Credits to author: Simon Appel, https://github.com/appinho
-*/
 
 #include "vox_nav_cupoch/cupoch_gpu_icp.hpp"
 

@@ -12,36 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-#include "vox_nav_cupoch/pcl_cpu_ndt.hpp"
+#include "vox_nav_cupoch/fast_gicp_client.hpp"
 
 #include <string>
 #include <vector>
 #include <memory>
 #include <algorithm>
 
+
 using namespace vox_nav_cupoch;
 
-PCLCPUNDT::PCLCPUNDT()
-: Node("pcl_cpu_ndt_rclcpp_node")
+FastGICPClient::FastGICPClient()
+: Node("fast_gicp_client_rclcpp_node")
 {
 
   live_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "/ouster/points",
     rclcpp::SensorDataQoS(),
     std::bind(
-      &PCLCPUNDT::liveCloudCallback, this, std::placeholders::_1));
+      &FastGICPClient::liveCloudCallback, this, std::placeholders::_1));
 
   map_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "vox_nav/map_server/octomap_pointcloud",
     rclcpp::SensorDataQoS(),
     std::bind(
-      &PCLCPUNDT::mapCloudCallback, this, std::placeholders::_1));
+      &FastGICPClient::mapCloudCallback, this, std::placeholders::_1));
 
   gps_odom_subscriber_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "odometry/gps",
     rclcpp::SensorDataQoS(),
-    std::bind(&PCLCPUNDT::gpsOdomCallback, this, std::placeholders::_1));
+    std::bind(&FastGICPClient::gpsOdomCallback, this, std::placeholders::_1));
 
   live_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "vox_nav/cupoch/live_cloud_crop", rclcpp::SystemDefaultsQoS());
@@ -61,7 +61,7 @@ PCLCPUNDT::PCLCPUNDT()
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   latest_gps_odom_ = std::make_shared<nav_msgs::msg::Odometry>();
-  map_cloud_ = pcl::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
+  map_cloud_ = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
 
 
   // Define parameters
@@ -70,10 +70,9 @@ PCLCPUNDT::PCLCPUNDT()
   declare_parameter("z_bound", params_.z_bound);
   declare_parameter("downsample_voxel_size", params_.downsample_voxel_size);
   declare_parameter("max_icp_iter", params_.max_icp_iter);
-  declare_parameter("transformation_epsilon", params_.transformation_epsilon);
-  declare_parameter("step_size", params_.step_size);
-  declare_parameter("resolution", params_.resolution);
   declare_parameter("max_correspondence_distance", params_.max_correspondence_distance);
+  declare_parameter("method", params_.method);
+  declare_parameter("num_threads", params_.num_threads);
   declare_parameter("debug", params_.debug);
 
   get_parameter("x_bound", params_.x_bound);
@@ -81,10 +80,9 @@ PCLCPUNDT::PCLCPUNDT()
   get_parameter("z_bound", params_.z_bound);
   get_parameter("downsample_voxel_size", params_.downsample_voxel_size);
   get_parameter("max_icp_iter", params_.max_icp_iter);
-  get_parameter("transformation_epsilon", params_.transformation_epsilon);
-  get_parameter("step_size", params_.step_size);
-  get_parameter("resolution", params_.resolution);
   get_parameter("max_correspondence_distance", params_.max_correspondence_distance);
+  get_parameter("method", params_.method);
+  get_parameter("num_threads", params_.num_threads);
   get_parameter("debug", params_.debug);
 
   // Print parameters
@@ -93,42 +91,38 @@ PCLCPUNDT::PCLCPUNDT()
   RCLCPP_INFO_STREAM(get_logger(), "z_bound " << params_.z_bound);
   RCLCPP_INFO_STREAM(get_logger(), "downsample_voxel_size " << params_.downsample_voxel_size);
   RCLCPP_INFO_STREAM(get_logger(), "max_icp_iter " << params_.max_icp_iter);
-  RCLCPP_INFO_STREAM(get_logger(), "transformation_epsilon " << params_.transformation_epsilon);
-  RCLCPP_INFO_STREAM(get_logger(), "step_size " << params_.step_size);
-  RCLCPP_INFO_STREAM(get_logger(), "resolution " << params_.resolution);
-
   RCLCPP_INFO_STREAM(
     get_logger(), "max_correspondence_distance " << params_.max_correspondence_distance);
+  RCLCPP_INFO_STREAM(get_logger(), "method " << params_.method);
+  RCLCPP_INFO_STREAM(get_logger(), "num_threads " << params_.num_threads);
   RCLCPP_INFO_STREAM(get_logger(), "debug " << params_.debug);
-
-  last_transform_estimate_ = Eigen::Matrix4f::Identity();
 
   RCLCPP_INFO(get_logger(), "Creating...");
 }
 
-PCLCPUNDT::~PCLCPUNDT()
+FastGICPClient::~FastGICPClient()
 {
   RCLCPP_INFO(get_logger(), "Destroying...");
 }
 
-void PCLCPUNDT::gpsOdomCallback(
+void FastGICPClient::gpsOdomCallback(
   const nav_msgs::msg::Odometry::ConstSharedPtr odom)
 {
   std::lock_guard<std::mutex> guard(latest_gps_odom_mutex_);
   latest_gps_odom_ = std::make_shared<nav_msgs::msg::Odometry>(*odom);
 }
 
-void PCLCPUNDT::liveCloudCallback(
+void FastGICPClient::liveCloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   if (map_configured_) {
     std::lock_guard<std::mutex> guard(latest_gps_odom_mutex_);
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZ>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
 
 
-    auto croppped_live_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
+    auto croppped_live_cloud = vox_nav_utilities::cropBox<pcl::PointXYZ>(
       pcl_curr,
       Eigen::Vector4f(-params_.x_bound, -params_.y_bound, -params_.z_bound, 1),
       Eigen::Vector4f(params_.x_bound, params_.y_bound, params_.z_bound, 1));
@@ -142,7 +136,7 @@ void PCLCPUNDT::liveCloudCallback(
     curr_robot_pose.header.stamp = cloud->header.stamp;
     curr_robot_pose.pose = latest_gps_odom_->pose.pose;
 
-    auto croppped_map_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
+    auto croppped_map_cloud = vox_nav_utilities::cropBox<pcl::PointXYZ>(
       map_cloud_,
       Eigen::Vector4f(
         -params_.x_bound + curr_robot_pose.pose.position.x,
@@ -161,35 +155,29 @@ void PCLCPUNDT::liveCloudCallback(
       "base_link", *croppped_map_cloud, *croppped_map_cloud, *tf_buffer_);
 
     croppped_map_cloud =
-      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZ>(
       croppped_map_cloud, params_.downsample_voxel_size);
     croppped_live_cloud =
-      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZ>(
       croppped_live_cloud, params_.downsample_voxel_size);
 
-    pcl::NormalDistributionsTransform<pcl::PointXYZRGB, pcl::PointXYZRGB> ndt;
-    // Setting scale dependent NDT parameters
-    // Setting minimum transformation difference for termination condition.
-    ndt.setTransformationEpsilon(params_.transformation_epsilon);
-    // Setting maximum step size for More-Thuente line search.
-    ndt.setStepSize(params_.step_size);
-    //Setting Resolution of NDT grid structure (VoxelGridCovariance).
-    ndt.setResolution(params_.resolution);
+    auto aligned = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
 
-    // Setting max number of registration iterations.
-    ndt.setMaximumIterations(params_.max_icp_iter);
-
-    // Setting point cloud to be aligned.
-    ndt.setInputSource(croppped_live_cloud);
-    // Setting point cloud to be aligned to.
-    ndt.setInputTarget(croppped_map_cloud);
-
-    // Calculating required rigid transform to align the input cloud to the target cloud.
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    ndt.align(*output_cloud, Eigen::Matrix4f::Identity());
+    pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr reg = createRegistration(
+      params_.method,
+      params_.num_threads);
+    if (reg == nullptr) {
+      return;
+    }
+    reg->setMaxCorrespondenceDistance(params_.max_correspondence_distance);
+    reg->setMaximumIterations(params_.max_icp_iter);
+    reg->setInputTarget(croppped_live_cloud);
+    swap_source_and_target(reg); // source:target, target:source
+    reg->setInputTarget(croppped_map_cloud);
+    reg->align(*aligned);
 
     Eigen::Affine3f T;
-    T.matrix() = ndt.getFinalTransformation();
+    T.matrix() = reg->getFinalTransformation();
     Eigen::Affine3d T_d = T.cast<double>();
     auto transformation = tf2::eigenToTransform(T_d);
 
@@ -220,7 +208,7 @@ void PCLCPUNDT::liveCloudCallback(
 
     sensor_msgs::msg::PointCloud2 live_cloud_crop_msg, map_cloud_crop_msg;
 
-    pcl::toROSMsg(*output_cloud, live_cloud_crop_msg);
+    pcl::toROSMsg(*aligned, live_cloud_crop_msg);
     pcl::toROSMsg(*croppped_map_cloud, map_cloud_crop_msg);
     live_cloud_crop_msg.header = cloud->header;
     live_cloud_crop_msg.header.frame_id = "base_link";
@@ -230,21 +218,22 @@ void PCLCPUNDT::liveCloudCallback(
     live_cloud_pub_->publish(live_cloud_crop_msg);
     map_cloud_pub_->publish(map_cloud_crop_msg);
 
-    last_transform_estimate_ = ndt.getFinalTransformation();
+    last_transform_estimate_ = reg->getFinalTransformation();
 
     if (params_.debug) {
       RCLCPP_INFO(
-        get_logger(), "Did NDT with Live Cloud of %d points...", output_cloud->points.size());
+        get_logger(), "Did %s with Live Cloud of %d points...",
+        params_.method.c_str(), aligned->points.size());
       RCLCPP_INFO(
-        get_logger(), "Did NDT with Map Cloud of %d points...", croppped_map_cloud->points.size());
-      std::cout << "Normal Distributions Transform has converged:" << ndt.hasConverged() <<
-        " score: " << ndt.getFitnessScore() << std::endl;
-      std::cout << "Resulting transfrom: \n:" << ndt.getFinalTransformation() << std::endl;
+        get_logger(), "Did %s with Map Cloud of %d points...",
+        params_.method.c_str(), croppped_map_cloud->points.size());
+      std::cout << "Resulting transfrom: \n" << reg->getFinalTransformation() << std::endl;
     }
+
   }
 }
 
-void PCLCPUNDT::mapCloudCallback(
+void FastGICPClient::mapCloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   std::call_once(
@@ -256,10 +245,55 @@ void PCLCPUNDT::mapCloudCallback(
     });
 }
 
+pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr FastGICPClient::createRegistration(
+  std::string method,
+  int num_threads)
+{
+  if (method == "GICP") {
+    auto gicp = pcl::make_shared<fast_gicp::FastGICP<pcl::PointXYZ, pcl::PointXYZ>>();
+    gicp->setNumThreads(num_threads);
+    gicp->swapSourceAndTarget();
+    return gicp;
+  } else if (method == "VGICP") {
+    auto vgicp = pcl::make_shared<fast_gicp::FastVGICP<pcl::PointXYZ, pcl::PointXYZ>>();
+    vgicp->setNumThreads(num_threads);
+    return vgicp;
+  } else if (method == "VGICP_CUDA") {
+#ifdef USE_VGICP_CUDA
+    auto vgicp =
+      pcl::make_shared<fast_gicp::FastVGICPCuda<pcl::PointXYZ, pcl::PointXYZ>>();
+    return vgicp;
+#endif
+    return nullptr;
+  } else if (method == "NDT_CUDA") {
+#ifdef USE_VGICP_CUDA
+    auto ndt = pcl::make_shared<fast_gicp::NDTCuda<pcl::PointXYZ, pcl::PointXYZ>>();
+    return ndt;
+#endif
+    return nullptr;
+  }
+  std::cerr << "unknown registration method:" << method << std::endl;
+  return nullptr;
+}
+
+void FastGICPClient::swap_source_and_target(
+  pcl::Registration<pcl::PointXYZ,
+  pcl::PointXYZ>::Ptr reg)
+{
+  fast_gicp::LsqRegistration<pcl::PointXYZ, pcl::PointXYZ> * lsq_reg =
+    dynamic_cast<fast_gicp::LsqRegistration<pcl::PointXYZ, pcl::PointXYZ> *>(reg.get());
+  if (lsq_reg != nullptr) {
+    lsq_reg->swapSourceAndTarget();
+    return;
+  }
+
+  std::cerr << "failed to swap source and target" << std::endl;
+}
+
 int main(int argc, char const * argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<PCLCPUNDT>();
+  auto node = std::make_shared<FastGICPClient>();
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;

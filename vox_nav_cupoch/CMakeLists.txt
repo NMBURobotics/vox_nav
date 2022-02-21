@@ -38,7 +38,8 @@ include_directories(include
         ${PCL_INCLUDE_DIRS}
         ${THRUST_INCLUDE_DIR}
         ${CUPOCH_INCLUDE_DIRS}
-        ${CUDA_INCLUDE_DIRS})
+        ${CUDA_INCLUDE_DIRS}
+        ${fast_gicp_INCLUDE_DIRS})
 
 set(dependencies
         rclcpp
@@ -57,6 +58,7 @@ set(dependencies
         vox_nav_msgs
         vox_nav_utilities
         cupoch_conversions
+        fast_gicp
         )
 
 add_definitions(${PCL_DEFINITIONS})
@@ -64,8 +66,7 @@ add_definitions(${PCL_DEFINITIONS})
 set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "")
 APPEND_TARGET_ARCH_FLAGS()
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
-        ${CUPOCH_NVCC_FLAGS}
-        )
+        ${CUPOCH_NVCC_FLAGS}   )
 add_definitions(${CUPOCH_DEFINITIONS})
 message("zs: ${CMAKE_PROJECT_NAME} CUDA_NVCC_FLAGS = " ${CUDA_NVCC_FLAGS})
 include(GATest)
@@ -100,11 +101,18 @@ target_include_directories(pcl_cpu_ndt PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_IN
 target_link_directories(pcl_cpu_ndt PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(pcl_cpu_ndt ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
+cuda_add_executable(fast_gicp_client src/fast_gicp_client.cpp)
+ament_target_dependencies(fast_gicp_client ${dependencies})
+target_include_directories(fast_gicp_client PUBLIC $ ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${fast_gicp_INCLUDE_DIRS})
+target_link_directories(fast_gicp_client PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(fast_gicp_client ${PCL_LIBRARIES} ${CUDA_LIBRARIES} ${fast_gicp_LIBRARIES} OpenMP::OpenMP_CXX)
+
 install(TARGETS ros2bag_kitti_bin
                 semantic_cloud_clustering
                 raw_cloud_clustering_tracking
                 cupoch_gpu_icp
                 pcl_cpu_ndt
+                fast_gicp_client
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
