@@ -60,8 +60,10 @@ set(dependencies
         cupoch_conversions
         fast_gicp
         )
-
+        
+option(BUILD_VGICP_CUDA "Build GPU-powered VGICP" ON)
 add_definitions(${PCL_DEFINITIONS})
+add_definitions(-BUILD_VGICP_CUDA)
 
 set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "")
 APPEND_TARGET_ARCH_FLAGS()
@@ -100,6 +102,7 @@ ament_target_dependencies(pcl_cpu_ndt ${dependencies})
 target_include_directories(pcl_cpu_ndt PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
 target_link_directories(pcl_cpu_ndt PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(pcl_cpu_ndt ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+
 
 cuda_add_executable(fast_gicp_client src/fast_gicp_client.cpp)
 ament_target_dependencies(fast_gicp_client ${dependencies})

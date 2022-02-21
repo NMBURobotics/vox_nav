@@ -167,6 +167,7 @@ void FastGICPClient::liveCloudCallback(
       params_.method,
       params_.num_threads);
     if (reg == nullptr) {
+      std::cerr << " registration method is null!, is CUDA available ?" << std::endl;
       return;
     }
     reg->setMaxCorrespondenceDistance(params_.max_correspondence_distance);
@@ -259,18 +260,12 @@ pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr FastGICPClient::createRegis
     vgicp->setNumThreads(num_threads);
     return vgicp;
   } else if (method == "VGICP_CUDA") {
-#ifdef USE_VGICP_CUDA
     auto vgicp =
       pcl::make_shared<fast_gicp::FastVGICPCuda<pcl::PointXYZ, pcl::PointXYZ>>();
     return vgicp;
-#endif
-    return nullptr;
   } else if (method == "NDT_CUDA") {
-#ifdef USE_VGICP_CUDA
     auto ndt = pcl::make_shared<fast_gicp::NDTCuda<pcl::PointXYZ, pcl::PointXYZ>>();
     return ndt;
-#endif
-    return nullptr;
   }
   std::cerr << "unknown registration method:" << method << std::endl;
   return nullptr;
