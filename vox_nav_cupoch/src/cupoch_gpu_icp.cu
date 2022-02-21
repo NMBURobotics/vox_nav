@@ -179,13 +179,13 @@ void CupochGPUICP::liveCloudCallback(
     live_points_cupoch->SetPoints(live_points);
 
     // ICP
-    Eigen::Matrix4f eye = Eigen::Matrix4f::Identity();
     auto point_to_point =
       cupoch::registration::TransformationEstimationPointToPoint();
     cupoch::registration::ICPConvergenceCriteria criteria;
     criteria.max_iteration_ = params_.max_icp_iter;
     auto res = cupoch::registration::RegistrationICP(
-      *live_points_cupoch, *map_points_cupoch, params_.max_correspondence_distance, eye,
+      *live_points_cupoch, *map_points_cupoch, params_.max_correspondence_distance,
+      Eigen::Matrix4f::Identity(),
       point_to_point, criteria);
     live_points_cupoch->Transform(res.transformation_);
 
@@ -253,6 +253,8 @@ void CupochGPUICP::liveCloudCallback(
 
     live_cloud_pub_->publish(live_cloud_crop_msg);
     map_cloud_pub_->publish(map_cloud_crop_msg);
+
+    last_transform_estimate_ = res.transformation_;
 
     if (params_.debug) {
       RCLCPP_INFO(
