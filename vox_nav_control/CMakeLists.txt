@@ -32,7 +32,7 @@ find_package(pcl_ros REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(vox_nav_msgs REQUIRED)
 find_package(vox_nav_utilities REQUIRED)
-
+ 
 find_package(casadi REQUIRED)
 find_package(ACADO REQUIRED)
 
