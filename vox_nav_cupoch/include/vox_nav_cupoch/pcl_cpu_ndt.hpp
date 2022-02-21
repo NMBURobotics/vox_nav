@@ -65,6 +65,9 @@ namespace vox_nav_cupoch
     float z_bound;
     float downsample_voxel_size;
     int max_icp_iter;
+    float transformation_epsilon;
+    float step_size;
+    float resolution;
     float max_correspondence_distance;
     bool debug;
   };

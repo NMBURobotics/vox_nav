@@ -74,6 +74,9 @@ PCLCPUNDT::PCLCPUNDT()
   declare_parameter("z_bound", params_.z_bound);
   declare_parameter("downsample_voxel_size", params_.downsample_voxel_size);
   declare_parameter("max_icp_iter", params_.max_icp_iter);
+  declare_parameter("transformation_epsilon", params_.transformation_epsilon);
+  declare_parameter("step_size", params_.step_size);
+  declare_parameter("resolution", params_.resolution);
   declare_parameter("max_correspondence_distance", params_.max_correspondence_distance);
   declare_parameter("debug", params_.debug);
 
@@ -82,6 +85,9 @@ PCLCPUNDT::PCLCPUNDT()
   get_parameter("z_bound", params_.z_bound);
   get_parameter("downsample_voxel_size", params_.downsample_voxel_size);
   get_parameter("max_icp_iter", params_.max_icp_iter);
+  get_parameter("transformation_epsilon", params_.transformation_epsilon);
+  get_parameter("step_size", params_.step_size);
+  get_parameter("resolution", params_.resolution);
   get_parameter("max_correspondence_distance", params_.max_correspondence_distance);
   get_parameter("debug", params_.debug);
 
@@ -91,6 +97,10 @@ PCLCPUNDT::PCLCPUNDT()
   RCLCPP_INFO_STREAM(get_logger(), "z_bound " << params_.z_bound);
   RCLCPP_INFO_STREAM(get_logger(), "downsample_voxel_size " << params_.downsample_voxel_size);
   RCLCPP_INFO_STREAM(get_logger(), "max_icp_iter " << params_.max_icp_iter);
+  RCLCPP_INFO_STREAM(get_logger(), "transformation_epsilon " << params_.transformation_epsilon);
+  RCLCPP_INFO_STREAM(get_logger(), "step_size " << params_.step_size);
+  RCLCPP_INFO_STREAM(get_logger(), "resolution " << params_.resolution);
+
   RCLCPP_INFO_STREAM(
     get_logger(), "max_correspondence_distance " << params_.max_correspondence_distance);
   RCLCPP_INFO_STREAM(get_logger(), "debug " << params_.debug);
@@ -162,14 +172,14 @@ void PCLCPUNDT::liveCloudCallback(
     pcl::NormalDistributionsTransform<pcl::PointXYZRGB, pcl::PointXYZRGB> ndt;
     // Setting scale dependent NDT parameters
     // Setting minimum transformation difference for termination condition.
-    ndt.setTransformationEpsilon(0.01);
+    ndt.setTransformationEpsilon(params_.transformation_epsilon);
     // Setting maximum step size for More-Thuente line search.
-    ndt.setStepSize(0.1);
+    ndt.setStepSize(params_.step_size);
     //Setting Resolution of NDT grid structure (VoxelGridCovariance).
-    ndt.setResolution(2.0);
+    ndt.setResolution(params_.resolution);
 
     // Setting max number of registration iterations.
-    ndt.setMaximumIterations(40);
+    ndt.setMaximumIterations(params_.max_icp_iter);
 
     // Setting point cloud to be aligned.
     ndt.setInputSource(croppped_live_cloud);
@@ -185,42 +195,9 @@ void PCLCPUNDT::liveCloudCallback(
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     ndt.align(*output_cloud, init_guess);
 
-    std::cout << "Normal Distributions Transform has converged:" << ndt.hasConverged() <<
-      " score: " << ndt.getFitnessScore() << std::endl;
-
-    std::cout << "Resulting transfrom: \n:" << ndt.getFinalTransformation() << std::endl;
-
-    /*thrust::host_vector<Eigen::Vector3f> map_points, live_points;
-    for (int i = 0; i < croppped_map_cloud->points.size(); ++i) {
-      auto p = croppped_map_cloud->points[i];
-      Eigen::Vector3f point_eig(p.x, p.y, p.z);
-      map_points.push_back(point_eig);
-    }
-
-    for (int i = 0; i < croppped_live_cloud->points.size(); ++i) {
-      auto p = croppped_live_cloud->points[i];
-      Eigen::Vector3f point_eig(p.x, p.y, p.z);
-      live_points.push_back(point_eig);
-    }
-
-    auto map_points_cupoch = std::make_shared<cupoch::geometry::PointCloud>();
-    auto live_points_cupoch = std::make_shared<cupoch::geometry::PointCloud>();
-    map_points_cupoch->SetPoints(map_points);
-    live_points_cupoch->SetPoints(live_points);
-
-    // ICP
-    Eigen::Matrix4f eye = Eigen::Matrix4f::Identity();
-    auto point_to_point =
-      cupoch::registration::TransformationEstimationPointToPoint();
-    cupoch::registration::ICPConvergenceCriteria criteria;
-    criteria.max_iteration_ = params_.max_icp_iter;
-    auto res = cupoch::registration::RegistrationICP(
-      *live_points_cupoch, *map_points_cupoch, params_.max_correspondence_distance, eye,
-      point_to_point, criteria);
-    live_points_cupoch->Transform(res.transformation_);
 
     Eigen::Affine3f T;
-    T.matrix() = res.transformation_;
+    T.matrix() = ndt.getFinalTransformation();
     Eigen::Affine3d T_d = T.cast<double>();
     auto transformation = tf2::eigenToTransform(T_d);
 
@@ -249,33 +226,10 @@ void PCLCPUNDT::liveCloudCallback(
     icp_pose.pose.pose = a.pose;
     base_to_map_pose_pub_->publish(icp_pose);
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr live_cloud_crop(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr map_cloud_crop(new pcl::PointCloud<pcl::PointXYZRGB>());
-
-    for (auto && i : live_points_cupoch->GetPoints()) {
-      pcl::PointXYZRGB p;
-      p.x = i.x();
-      p.y = i.y();
-      p.z = i.z();
-      p.r = 255;
-      p.a = 200;
-      live_cloud_crop->points.push_back(p);
-    }
-
-    for (auto && i : map_points_cupoch->GetPoints()) {
-      pcl::PointXYZRGB p;
-      p.x = i.x();
-      p.y = i.y();
-      p.z = i.z();
-      p.b = 255;
-      p.a = 200;
-      map_cloud_crop->points.push_back(p);
-    }
-
     sensor_msgs::msg::PointCloud2 live_cloud_crop_msg, map_cloud_crop_msg;
 
-    pcl::toROSMsg(*live_cloud_crop, live_cloud_crop_msg);
-    pcl::toROSMsg(*map_cloud_crop, map_cloud_crop_msg);
+    pcl::toROSMsg(*output_cloud, live_cloud_crop_msg);
+    pcl::toROSMsg(*croppped_map_cloud, map_cloud_crop_msg);
     live_cloud_crop_msg.header = cloud->header;
     live_cloud_crop_msg.header.frame_id = "base_link";
     map_cloud_crop_msg.header = cloud->header;
@@ -286,12 +240,13 @@ void PCLCPUNDT::liveCloudCallback(
 
     if (params_.debug) {
       RCLCPP_INFO(
-        get_logger(), "Did ICP with Live Cloud of %d points...", live_cloud_crop->points.size());
+        get_logger(), "Did ICP with Live Cloud of %d points...", output_cloud->points.size());
       RCLCPP_INFO(
-        get_logger(), "Did ICP with Map Cloud of %d points...", map_cloud_crop->points.size());
-      std::cout << "Resulting transfrom: \n" << res.transformation_ << std::endl;
-    }*/
-
+        get_logger(), "Did ICP with Map Cloud of %d points...", croppped_map_cloud->points.size());
+      std::cout << "Normal Distributions Transform has converged:" << ndt.hasConverged() <<
+        " score: " << ndt.getFitnessScore() << std::endl;
+      std::cout << "Resulting transfrom: \n:" << ndt.getFinalTransformation() << std::endl;
+    }
   }
 }
 
