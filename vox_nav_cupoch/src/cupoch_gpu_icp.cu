@@ -34,7 +34,7 @@ CupochGPUICP::CupochGPUICP()
     "/ouster/points",
     rclcpp::SensorDataQoS(),
     std::bind(
-      &CupochGPUICP::cloudCallback, this, std::placeholders::_1));
+      &CupochGPUICP::liveCloudCallback, this, std::placeholders::_1));
 
   map_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "vox_nav/map_server/octomap_pointcloud",
@@ -48,17 +48,17 @@ CupochGPUICP::CupochGPUICP()
     std::bind(&CupochGPUICP::gpsOdomCallback, this, std::placeholders::_1));
 
   live_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-    "/vox_nav/cupoch/live_cloud_crop", rclcpp::SystemDefaultsQoS());
+    "vox_nav/cupoch/live_cloud_crop", rclcpp::SystemDefaultsQoS());
 
   map_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-    "/vox_nav/cupoch/map_cloud_crop", rclcpp::SystemDefaultsQoS());
+    "vox_nav/cupoch/map_cloud_crop", rclcpp::SystemDefaultsQoS());
 
   base_to_map_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>(
-    "/vox_nav/cupoch/icp_base_to_map_pose", rclcpp::SystemDefaultsQoS());
+    "vox_nav/cupoch/icp_base_to_map_pose", rclcpp::SystemDefaultsQoS());
 
   new_robot_pose_publisher_ =
     this->create_publisher<geometry_msgs::msg::PoseArray>(
-    "/vox_nav/cupoch/icp_robot_pose", rclcpp::SystemDefaultsQoS());
+    "vox_nav/cupoch/icp_robot_pose", rclcpp::SystemDefaultsQoS());
 
   // setup TF buffer and listerner to read transforms
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -81,7 +81,7 @@ void CupochGPUICP::gpsOdomCallback(
 
 }
 
-void CupochGPUICP::cloudCallback(
+void CupochGPUICP::liveCloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   if (map_configured_) {

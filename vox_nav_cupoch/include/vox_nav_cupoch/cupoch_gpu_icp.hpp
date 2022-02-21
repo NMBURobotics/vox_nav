@@ -89,7 +89,7 @@ namespace vox_nav_cupoch
      * @param cloud
      * @param poses
      */
-    void cloudCallback(
+    void liveCloudCallback(
       const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
 
     /**
@@ -111,7 +111,7 @@ namespace vox_nav_cupoch
       const nav_msgs::msg::Odometry::ConstSharedPtr odom);
 
   private:
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_subscriber_;
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_subscriber_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr gps_odom_subscriber_;
 
