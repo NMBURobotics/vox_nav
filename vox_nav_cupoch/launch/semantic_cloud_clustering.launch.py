@@ -4,7 +4,7 @@ import launch_ros.actions
 
 def generate_launch_description():
     return LaunchDescription([
-        launch_ros.actions.Node(package='vox_nav_cupoch_experimental',
+        launch_ros.actions.Node(package='vox_nav_cupoch',
                                 executable='semantic_cloud_clustering',
                                 name='semantic_cloud_clustering',
                                 output='screen',

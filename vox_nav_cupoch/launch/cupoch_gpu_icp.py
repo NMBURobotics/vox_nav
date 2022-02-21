@@ -4,9 +4,9 @@ import launch_ros.actions
 
 def generate_launch_description():
     return LaunchDescription([
-        launch_ros.actions.Node(package='vox_nav_cupoch_experimental',
-                                executable='simple_icp',
-                                name='simple_icp',
+        launch_ros.actions.Node(package='vox_nav_cupoch',
+                                executable='cupoch_gpu_icp',
+                                name='cupoch_gpu_icp',
                                 output='screen',
                                 #prefix=['xterm -e gdb -ex run --args'],
                                 #prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no'],

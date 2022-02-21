@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_CUPOCH_EXPERIMENTAL__SEMANTIC_CLOUD_CLUSTERING_HPP_
-#define VOX_NAV_CUPOCH_EXPERIMENTAL__SEMANTIC_CLOUD_CLUSTERING_HPP_
+#ifndef VOX_NAV_CUPOCH__SEMANTIC_CLOUD_CLUSTERING_HPP_
+#define VOX_NAV_CUPOCH__SEMANTIC_CLOUD_CLUSTERING_HPP_
 
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -52,7 +52,7 @@
 #include <map>
 #include <iomanip>
 
-namespace vox_nav_cupoch_experimental
+namespace vox_nav_cupoch
 {
   /**
    * @brief Given a semantically segmented cloud(with each point belonging to a class label
@@ -180,6 +180,6 @@ namespace vox_nav_cupoch_experimental
     nav_msgs::msg::Odometry::SharedPtr last_odom_msg_;
   };
 
-}  // namespace vox_nav_cupoch_experimental
+}  // namespace vox_nav_cupoch
 
-#endif  // VOX_NAV_CUPOCH_EXPERIMENTAL__SEMANTIC_CLOUD_CLUSTERING_HPP_
+#endif  // VOX_NAV_CUPOCH__SEMANTIC_CLOUD_CLUSTERING_HPP_

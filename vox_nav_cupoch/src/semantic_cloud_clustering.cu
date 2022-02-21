@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vox_nav_cupoch_experimental/semantic_cloud_clustering.hpp"
+#include "vox_nav_cupoch/semantic_cloud_clustering.hpp"
 
-using namespace vox_nav_cupoch_experimental;
+using namespace vox_nav_cupoch;
 
 struct denoise_cloud_functor
 {

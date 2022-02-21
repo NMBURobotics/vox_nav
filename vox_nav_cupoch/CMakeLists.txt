@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(vox_nav_cupoch_experimental)
+project(vox_nav_cupoch)
 
 # Add this repository's cmake modules to CMAKE_MODULE_PATH
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_LIST_DIR}/cmake)
@@ -87,16 +87,16 @@ target_include_directories(raw_cloud_clustering_tracking PUBLIC ${CUPOCH_INCLUDE
 target_link_directories(raw_cloud_clustering_tracking PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(raw_cloud_clustering_tracking ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
-cuda_add_executable(simple_icp src/simple_icp.cu)
-ament_target_dependencies(simple_icp ${dependencies})
-target_include_directories(simple_icp PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-target_link_directories(simple_icp PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(simple_icp ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+cuda_add_executable(cupoch_gpu_icp src/cupoch_gpu_icp.cu)
+ament_target_dependencies(cupoch_gpu_icp ${dependencies})
+target_include_directories(cupoch_gpu_icp PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(cupoch_gpu_icp PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(cupoch_gpu_icp ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
 install(TARGETS ros2bag_kitti_bin
                 semantic_cloud_clustering
                 raw_cloud_clustering_tracking
-                simple_icp
+                cupoch_gpu_icp
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

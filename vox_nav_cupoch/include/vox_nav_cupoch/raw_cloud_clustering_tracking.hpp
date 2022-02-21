@@ -17,8 +17,8 @@ DISCLAIMER: some parts of code has been taken from; https://github.com/appinho/S
 Credits to author: Simon Appel, https://github.com/appinho
 */
 
-#ifndef VOX_NAV_CUPOCH_EXPERIMENTAL__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
-#define VOX_NAV_CUPOCH_EXPERIMENTAL__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
+#ifndef VOX_NAV_CUPOCH__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
+#define VOX_NAV_CUPOCH__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/common/common.h>
@@ -61,7 +61,7 @@ Credits to author: Simon Appel, https://github.com/appinho
 
 #include <Eigen/Core>
 
-namespace vox_nav_cupoch_experimental
+namespace vox_nav_cupoch
 {
   struct ClusteringParameters
   {
@@ -231,6 +231,6 @@ namespace vox_nav_cupoch_experimental
     bool compareGoodAge(Track t1, Track t2);
   };
 
-}  // namespace vox_nav_cupoch_experimental
+}  // namespace vox_nav_cupoch
 
-#endif  // VOX_NAV_CUPOCH_EXPERIMENTAL__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
+#endif  // VOX_NAV_CUPOCH__RAW_CLOUD_CLUSTERING_TRACKING_HPP_

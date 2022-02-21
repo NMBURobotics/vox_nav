@@ -1,4 +1,4 @@
-// Copyright (c) 2021 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
 // limitations under the License.
 
 
-#ifndef VOX_NAV_CUPOCH_EXPERIMENTAL__SIMPLE_ICP_HPP_
-#define VOX_NAV_CUPOCH_EXPERIMENTAL__SIMPLE_ICP_HPP_
+#ifndef VOX_NAV_CUPOCH__CUPOCH_GPU_ICP_HPP_
+#define VOX_NAV_CUPOCH__CUPOCH_GPU_ICP_HPP_
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/common/common.h>
@@ -59,7 +59,7 @@
 
 #include <Eigen/Core>
 
-namespace vox_nav_cupoch_experimental
+namespace vox_nav_cupoch
 {
 
 /**
@@ -139,6 +139,6 @@ namespace vox_nav_cupoch_experimental
 
   };
 
-}  // namespace vox_nav_cupoch_experimental
+}  // namespace vox_nav_cupoch
 
-#endif  // VOX_NAV_CUPOCH_EXPERIMENTAL__SIMPLE_ICP_HPP_
+#endif  // VOX_NAV_CUPOCH__CUPOCH_GPU_ICP_HPP_

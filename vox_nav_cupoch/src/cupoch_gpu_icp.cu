@@ -17,14 +17,14 @@ DISCLAIMER: some parts of code has been taken from; https://github.com/appinho/S
 Credits to author: Simon Appel, https://github.com/appinho
 */
 
-#include "vox_nav_cupoch_experimental/cupoch_gpu_icp.hpp"
+#include "vox_nav_cupoch/cupoch_gpu_icp.hpp"
 
 #include <string>
 #include <vector>
 #include <memory>
 #include <algorithm>
 
-using namespace vox_nav_cupoch_experimental;
+using namespace vox_nav_cupoch;
 
 CupochGPUICP::CupochGPUICP()
 : Node("cloud_clustering_rclcpp_node")
