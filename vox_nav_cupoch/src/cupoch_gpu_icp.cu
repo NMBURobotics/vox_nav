@@ -65,6 +65,7 @@ CupochGPUICP::CupochGPUICP()
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   latest_gps_odom_ = std::make_shared<nav_msgs::msg::Odometry>();
+  map_cloud_ = pcl::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
 
   RCLCPP_INFO(get_logger(), "Creating...");
 }
@@ -124,9 +125,9 @@ void CupochGPUICP::liveCloudCallback(
       *tf_buffer_);
 
     croppped_map_cloud =
-      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(croppped_map_cloud, 0.2);
+      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(croppped_map_cloud, 0.1);
     croppped_live_cloud =
-      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(croppped_live_cloud, 0.2);
+      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(croppped_live_cloud, 0.1);
 
     thrust::host_vector<Eigen::Vector3f> map_points, live_points;
 
@@ -152,7 +153,7 @@ void CupochGPUICP::liveCloudCallback(
     auto point_to_point =
       cupoch::registration::TransformationEstimationPointToPoint();
     cupoch::registration::ICPConvergenceCriteria criteria;
-    criteria.max_iteration_ = 20;
+    criteria.max_iteration_ = 30;
     auto res = cupoch::registration::RegistrationICP(
       *live_points_cupoch, *map_points_cupoch, 3.0, eye,
       point_to_point, criteria);
