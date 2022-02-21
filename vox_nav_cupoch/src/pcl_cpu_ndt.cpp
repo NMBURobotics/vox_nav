@@ -105,6 +105,8 @@ PCLCPUNDT::PCLCPUNDT()
     get_logger(), "max_correspondence_distance " << params_.max_correspondence_distance);
   RCLCPP_INFO_STREAM(get_logger(), "debug " << params_.debug);
 
+  last_transform_estimate_ = Eigen::Matrix4f::Identity();
+
   RCLCPP_INFO(get_logger(), "Creating...");
 }
 
@@ -186,15 +188,9 @@ void PCLCPUNDT::liveCloudCallback(
     // Setting point cloud to be aligned to.
     ndt.setInputTarget(croppped_map_cloud);
 
-    // Set initial alignment estimate found using robot odometry.
-    Eigen::AngleAxisf init_rotation(0.0, Eigen::Vector3f::UnitZ());
-    Eigen::Translation3f init_translation(0.0, 0.0, 0.0);
-    Eigen::Matrix4f init_guess = (init_translation * init_rotation).matrix();
-
     // Calculating required rigid transform to align the input cloud to the target cloud.
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr output_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-    ndt.align(*output_cloud, init_guess);
-
+    ndt.align(*output_cloud, Eigen::Matrix4f::Identity());
 
     Eigen::Affine3f T;
     T.matrix() = ndt.getFinalTransformation();
@@ -238,11 +234,13 @@ void PCLCPUNDT::liveCloudCallback(
     live_cloud_pub_->publish(live_cloud_crop_msg);
     map_cloud_pub_->publish(map_cloud_crop_msg);
 
+    last_transform_estimate_ = ndt.getFinalTransformation();
+
     if (params_.debug) {
       RCLCPP_INFO(
-        get_logger(), "Did ICP with Live Cloud of %d points...", output_cloud->points.size());
+        get_logger(), "Did NDT with Live Cloud of %d points...", output_cloud->points.size());
       RCLCPP_INFO(
-        get_logger(), "Did ICP with Map Cloud of %d points...", croppped_map_cloud->points.size());
+        get_logger(), "Did NDT with Map Cloud of %d points...", croppped_map_cloud->points.size());
       std::cout << "Normal Distributions Transform has converged:" << ndt.hasConverged() <<
         " score: " << ndt.getFitnessScore() << std::endl;
       std::cout << "Resulting transfrom: \n:" << ndt.getFinalTransformation() << std::endl;
