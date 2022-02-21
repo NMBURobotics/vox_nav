@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ DISCLAIMER: some parts of code has been taken from; https://github.com/appinho/S
 Credits to author: Simon Appel, https://github.com/appinho
 */
 
-#include "vox_nav_cupoch_experimental/simple_icp.hpp"
+#include "vox_nav_cupoch_experimental/cupoch_gpu_icp.hpp"
 
 #include <string>
 #include <vector>
@@ -26,7 +26,7 @@ Credits to author: Simon Appel, https://github.com/appinho
 
 using namespace vox_nav_cupoch_experimental;
 
-SimpleICP::SimpleICP()
+CupochGPUICP::CupochGPUICP()
 : Node("cloud_clustering_rclcpp_node")
 {
 
@@ -34,18 +34,18 @@ SimpleICP::SimpleICP()
     "/ouster/points",
     rclcpp::SensorDataQoS(),
     std::bind(
-      &SimpleICP::cloudCallback, this, std::placeholders::_1));
+      &CupochGPUICP::cloudCallback, this, std::placeholders::_1));
 
   map_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     "vox_nav/map_server/octomap_pointcloud",
     rclcpp::SensorDataQoS(),
     std::bind(
-      &SimpleICP::mapCloudCallback, this, std::placeholders::_1));
+      &CupochGPUICP::mapCloudCallback, this, std::placeholders::_1));
 
   gps_odom_subscriber_ = this->create_subscription<nav_msgs::msg::Odometry>(
     "odometry/gps",
     rclcpp::SensorDataQoS(),
-    std::bind(&SimpleICP::gpsOdomCallback, this, std::placeholders::_1));
+    std::bind(&CupochGPUICP::gpsOdomCallback, this, std::placeholders::_1));
 
   live_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "/vox_nav/live_cloud_crop", rclcpp::SystemDefaultsQoS());
@@ -67,12 +67,12 @@ SimpleICP::SimpleICP()
   RCLCPP_INFO(get_logger(), "Creating...");
 }
 
-SimpleICP::~SimpleICP()
+CupochGPUICP::~CupochGPUICP()
 {
   RCLCPP_INFO(get_logger(), "Destroying...");
 }
 
-void SimpleICP::gpsOdomCallback(
+void CupochGPUICP::gpsOdomCallback(
   const nav_msgs::msg::Odometry::ConstSharedPtr odom)
 {
   std::lock_guard<std::mutex> guard(latest_gps_odom_mutex_);
@@ -81,7 +81,7 @@ void SimpleICP::gpsOdomCallback(
 
 }
 
-void SimpleICP::cloudCallback(
+void CupochGPUICP::cloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   if (map_configured_) {
@@ -98,17 +98,13 @@ void SimpleICP::cloudCallback(
       Eigen::Vector4f(10, 10, 5, 1));
 
     pcl_ros::transformPointCloud(
-      "base_link", *croppped_live_cloud, *croppped_live_cloud,
-      *tf_buffer_);
+      "base_link", *croppped_live_cloud, *croppped_live_cloud, *tf_buffer_);
 
     geometry_msgs::msg::PoseStamped curr_robot_pose;
 
     curr_robot_pose.header.frame_id = "map";
     curr_robot_pose.header.stamp = cloud->header.stamp;
     curr_robot_pose.pose = latest_gps_odom_.pose.pose;
-
-    /*vox_nav_utilities::getCurrentPose(
-      curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1);*/
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr map(new pcl::PointCloud<pcl::PointXYZRGB>(map_));
 
@@ -233,7 +229,7 @@ void SimpleICP::cloudCallback(
   }
 }
 
-void SimpleICP::mapCloudCallback(
+void CupochGPUICP::mapCloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   std::call_once(
@@ -248,7 +244,7 @@ void SimpleICP::mapCloudCallback(
 int main(int argc, char const * argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<SimpleICP>();
+  auto node = std::make_shared<CupochGPUICP>();
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;

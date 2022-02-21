@@ -68,7 +68,7 @@ namespace vox_nav_cupoch_experimental
  * and publish vox_nav_msgs::msg::ObjectArray
  *
  */
-  class SimpleICP : public rclcpp::Node
+  class CupochGPUICP : public rclcpp::Node
   {
 
   public:
@@ -76,12 +76,12 @@ namespace vox_nav_cupoch_experimental
      * @brief Construct a new Raw Cloud Clustering Tracking object
      *
      */
-    SimpleICP();
+    CupochGPUICP();
     /**
      * @brief Destroy the Raw Cloud Clustering Tracking object
      *
      */
-    ~SimpleICP();
+    ~CupochGPUICP();
 
     /**
      * @brief Processing done in this func.
