@@ -55,6 +55,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <mutex>
 
 #include <Eigen/Core>
 
@@ -100,9 +101,19 @@ namespace vox_nav_cupoch_experimental
     void mapCloudCallback(
       const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
 
+    /**
+    * @brief Processing done in this func.
+    *
+    * @param cloud
+    * @param poses
+    */
+    void gpsOdomCallback(
+      const nav_msgs::msg::Odometry::ConstSharedPtr odom);
+
   private:
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_subscriber_;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr gps_odom_subscriber_;
 
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_pub_;
@@ -122,6 +133,9 @@ namespace vox_nav_cupoch_experimental
     std::once_flag get_map_cloud_once_;
 
     pcl::PointCloud<pcl::PointXYZRGB> map_;
+    nav_msgs::msg::Odometry latest_gps_odom_;
+    std::mutex latest_gps_odom_mutex_;
+
 
   };
 

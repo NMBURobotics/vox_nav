@@ -42,6 +42,11 @@ SimpleICP::SimpleICP()
     std::bind(
       &SimpleICP::mapCloudCallback, this, std::placeholders::_1));
 
+  gps_odom_subscriber_ = this->create_subscription<nav_msgs::msg::Odometry>(
+    "odometry/gps",
+    rclcpp::SensorDataQoS(),
+    std::bind(&SimpleICP::gpsOdomCallback, this, std::placeholders::_1));
+
   live_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
     "/vox_nav/live_cloud_crop", rclcpp::SystemDefaultsQoS());
 
@@ -67,10 +72,20 @@ SimpleICP::~SimpleICP()
   RCLCPP_INFO(get_logger(), "Destroying...");
 }
 
+void SimpleICP::gpsOdomCallback(
+  const nav_msgs::msg::Odometry::ConstSharedPtr odom)
+{
+  std::lock_guard<std::mutex> guard(latest_gps_odom_mutex_);
+  latest_gps_odom_ = *odom;
+  RCLCPP_INFO(get_logger(), "odom gps");
+
+}
+
 void SimpleICP::cloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
   if (map_configured_) {
+    std::lock_guard<std::mutex> guard(latest_gps_odom_mutex_);
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
@@ -79,8 +94,8 @@ void SimpleICP::cloudCallback(
 
     auto croppped_live_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
       pcl_curr,
-      Eigen::Vector4f(-20, -20, -5, 1),
-      Eigen::Vector4f(20, 20, 5, 1));
+      Eigen::Vector4f(-10, -10, -5, 1),
+      Eigen::Vector4f(10, 10, 5, 1));
 
     pcl_ros::transformPointCloud(
       "base_link", *croppped_live_cloud, *croppped_live_cloud,
@@ -88,8 +103,12 @@ void SimpleICP::cloudCallback(
 
     geometry_msgs::msg::PoseStamped curr_robot_pose;
 
-    vox_nav_utilities::getCurrentPose(
-      curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1);
+    curr_robot_pose.header.frame_id = "map";
+    curr_robot_pose.header.stamp = cloud->header.stamp;
+    curr_robot_pose.pose = latest_gps_odom_.pose.pose;
+
+    /*vox_nav_utilities::getCurrentPose(
+      curr_robot_pose, *tf_buffer_, "map", "base_link", 0.1);*/
 
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr map(new pcl::PointCloud<pcl::PointXYZRGB>(map_));
 
@@ -109,6 +128,11 @@ void SimpleICP::cloudCallback(
     pcl_ros::transformPointCloud(
       "base_link", *croppped_map_cloud, *croppped_map_cloud,
       *tf_buffer_);
+
+    croppped_map_cloud =
+      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(croppped_map_cloud, 0.2);
+    croppped_live_cloud =
+      vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(croppped_live_cloud, 0.2);
 
     thrust::host_vector<Eigen::Vector3f> map_points, live_points;
 
@@ -134,7 +158,7 @@ void SimpleICP::cloudCallback(
     auto point_to_point =
       cupoch::registration::TransformationEstimationPointToPoint();
     cupoch::registration::ICPConvergenceCriteria criteria;
-    criteria.max_iteration_ = 30;
+    criteria.max_iteration_ = 20;
     auto res = cupoch::registration::RegistrationICP(
       *live_points_cupoch, *map_points_cupoch, 3.0, eye,
       point_to_point, criteria);
