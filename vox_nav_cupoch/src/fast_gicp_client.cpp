@@ -172,8 +172,7 @@ void FastGICPClient::liveCloudCallback(
     }
     reg->setMaxCorrespondenceDistance(params_.max_correspondence_distance);
     reg->setMaximumIterations(params_.max_icp_iter);
-    reg->setInputTarget(croppped_live_cloud);
-    swap_source_and_target(reg); // source:target, target:source
+    reg->setInputSource(croppped_live_cloud);
     reg->setInputTarget(croppped_map_cloud);
     reg->align(*aligned);
 
@@ -253,18 +252,22 @@ pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr FastGICPClient::createRegis
   if (method == "GICP") {
     auto gicp = pcl::make_shared<fast_gicp::FastGICP<pcl::PointXYZ, pcl::PointXYZ>>();
     gicp->setNumThreads(num_threads);
-    gicp->swapSourceAndTarget();
     return gicp;
   } else if (method == "VGICP") {
     auto vgicp = pcl::make_shared<fast_gicp::FastVGICP<pcl::PointXYZ, pcl::PointXYZ>>();
     vgicp->setNumThreads(num_threads);
     return vgicp;
   } else if (method == "VGICP_CUDA") {
-    auto vgicp =
+    auto vgicp_cuda =
       pcl::make_shared<fast_gicp::FastVGICPCuda<pcl::PointXYZ, pcl::PointXYZ>>();
-    return vgicp;
+    vgicp_cuda->setNearestNeighborSearchMethod(fast_gicp::NearestNeighborMethod::CPU_PARALLEL_KDTREE);
+    vgicp_cuda->setResolution(1.0);
+    return vgicp_cuda;
   } else if (method == "NDT_CUDA") {
     auto ndt = pcl::make_shared<fast_gicp::NDTCuda<pcl::PointXYZ, pcl::PointXYZ>>();
+    ndt->setResolution(1.0);
+    ndt->setDistanceMode(fast_gicp::NDTDistanceMode::P2D);
+    ndt->setNeighborSearchMethod(fast_gicp::NeighborSearchMethod::DIRECT_RADIUS, 0.8);
     return ndt;
   }
   std::cerr << "unknown registration method:" << method << std::endl;

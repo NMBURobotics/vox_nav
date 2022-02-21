@@ -6,6 +6,6 @@ fast_gicp_client:
     downsample_voxel_size: 0.05
     max_icp_iter: 30
     max_correspondence_distance: 3.0
-    method : 'NDT_CUDA' # OTHER OPTIONS' GICP, VGICP, VGICP_CUDA, NDT_CUDA
-    num_threads: 1
+    method : 'GICP' # OTHER OPTIONS' GICP, VGICP, VGICP_CUDA, NDT_CUDA
+    num_threads: 4
     debug: True
