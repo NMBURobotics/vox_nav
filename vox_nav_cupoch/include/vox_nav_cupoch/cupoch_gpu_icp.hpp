@@ -132,10 +132,10 @@ namespace vox_nav_cupoch
     bool map_configured_;
     std::once_flag get_map_cloud_once_;
 
-    pcl::PointCloud<pcl::PointXYZRGB> map_;
-    nav_msgs::msg::Odometry latest_gps_odom_;
-    std::mutex latest_gps_odom_mutex_;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr map_cloud_;
+    nav_msgs::msg::Odometry::SharedPtr latest_gps_odom_;
 
+    std::mutex latest_gps_odom_mutex_;
 
   };
 

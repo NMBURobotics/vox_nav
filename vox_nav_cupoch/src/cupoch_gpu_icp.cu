@@ -64,6 +64,8 @@ CupochGPUICP::CupochGPUICP()
   tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
+  latest_gps_odom_ = std::make_shared<nav_msgs::msg::Odometry>();
+
   RCLCPP_INFO(get_logger(), "Creating...");
 }
 
@@ -76,9 +78,7 @@ void CupochGPUICP::gpsOdomCallback(
   const nav_msgs::msg::Odometry::ConstSharedPtr odom)
 {
   std::lock_guard<std::mutex> guard(latest_gps_odom_mutex_);
-  latest_gps_odom_ = *odom;
-  RCLCPP_INFO(get_logger(), "odom gps");
-
+  latest_gps_odom_ = std::make_shared<nav_msgs::msg::Odometry>(*odom);
 }
 
 void CupochGPUICP::liveCloudCallback(
@@ -104,12 +104,10 @@ void CupochGPUICP::liveCloudCallback(
 
     curr_robot_pose.header.frame_id = "map";
     curr_robot_pose.header.stamp = cloud->header.stamp;
-    curr_robot_pose.pose = latest_gps_odom_.pose.pose;
-
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr map(new pcl::PointCloud<pcl::PointXYZRGB>(map_));
+    curr_robot_pose.pose = latest_gps_odom_->pose.pose;
 
     auto croppped_map_cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
-      map,
+      map_cloud_,
       Eigen::Vector4f(
         -10 + curr_robot_pose.pose.position.x,
         -10 + curr_robot_pose.pose.position.y, -5, 1),
@@ -235,9 +233,9 @@ void CupochGPUICP::mapCloudCallback(
   std::call_once(
     get_map_cloud_once_, [&]()
     {
-      pcl::fromROSMsg(*cloud, map_);
+      pcl::fromROSMsg(*cloud, *map_cloud_);
       map_configured_ = true;
-      RCLCPP_INFO(get_logger(), "Map Cloud with %d points...", map_.points.size());
+      RCLCPP_INFO(get_logger(), "Map Cloud with %d points...", map_cloud_->points.size());
     });
 }
 
