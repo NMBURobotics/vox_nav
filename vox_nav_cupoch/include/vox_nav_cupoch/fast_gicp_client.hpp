@@ -173,6 +173,8 @@ namespace vox_nav_cupoch
     ICPParameters params_;
 
     Eigen::Matrix4f last_transform_estimate_;
+
+    int sequence_;
   };
 
 }   // namespace vox_nav_cupoch

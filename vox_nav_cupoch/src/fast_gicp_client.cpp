@@ -97,6 +97,8 @@ FastGICPClient::FastGICPClient()
   RCLCPP_INFO_STREAM(get_logger(), "num_threads " << params_.num_threads);
   RCLCPP_INFO_STREAM(get_logger(), "debug " << params_.debug);
 
+  sequence_ = 0;
+
   RCLCPP_INFO(get_logger(), "Creating...");
 }
 
@@ -228,6 +230,12 @@ void FastGICPClient::liveCloudCallback(
         get_logger(), "Did %s with Map Cloud of %d points...",
         params_.method.c_str(), croppped_map_cloud->points.size());
       std::cout << "Resulting transfrom: \n" << reg->getFinalTransformation() << std::endl;
+
+      if (sequence_ == 0) {
+        pcl::io::savePCDFileASCII("/home/atas/target.pcd", *croppped_map_cloud);
+        pcl::io::savePCDFileASCII("/home/atas/source.pcd", *croppped_live_cloud);
+      }
+
     }
 
   }
