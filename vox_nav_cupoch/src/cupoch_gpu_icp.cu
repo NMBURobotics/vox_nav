@@ -63,7 +63,6 @@ CupochGPUICP::CupochGPUICP()
   latest_gps_odom_ = std::make_shared<nav_msgs::msg::Odometry>();
   map_cloud_ = pcl::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
 
-
   // Define parameters
   declare_parameter("x_bound", params_.x_bound);
   declare_parameter("y_bound", params_.y_bound);

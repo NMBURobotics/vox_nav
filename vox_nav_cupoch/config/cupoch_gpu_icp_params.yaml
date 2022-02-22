@@ -1,7 +1,7 @@
 cupoch_gpu_icp:
   ros__parameters:
-    x_bound: 10.0
-    y_bound: 10.0
+    x_bound: 15.0
+    y_bound: 15.0
     z_bound: 5.0
     downsample_voxel_size: 0.05
     max_icp_iter: 30
