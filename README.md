@@ -10,7 +10,7 @@ Documentation is here ; https://vox-nav.readthedocs.io/en/latest/
 
 You can download videos and see capablities of project. See all available videos under docs/assets.
 
-* ![Thorvald Navigation with vox_nav](docs/assets/real_robot_demos.gif)
+* ![Thorvald Navigation with vox_nav](docs/assets/real_robot_demos0.gif)
  
 * ![MPC following a Trajectory](docs/assets/mpc_3.mp4)
 
