@@ -32,6 +32,7 @@ namespace vox_nav_map_server
     elevated_surfel_octomap_msg_ = std::make_shared<octomap_msgs::msg::Octomap>();
     elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>();
     octomap_pointcloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    traversable_pointcloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
     elevated_surfels_pointcloud_msg_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
     original_octomap_markers_msg_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
     elevated_surfel_octomap_markers_msg_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
@@ -44,6 +45,7 @@ namespace vox_nav_map_server
     declare_parameter("octomap_voxel_size", 0.2);
     declare_parameter("octomap_publish_frequency", 10);
     declare_parameter("publish_octomap_visuals", true);
+    declare_parameter("traversable_pointcloud_publish_topic", "traversable_pointcloud");
     declare_parameter("octomap_point_cloud_publish_topic", "octomap_pointcloud");
     declare_parameter("octomap_markers_publish_topic", "octomap_markers");
     declare_parameter("map_frame_id", "map");
@@ -85,6 +87,7 @@ namespace vox_nav_map_server
     get_parameter("publish_octomap_visuals", publish_octomap_visuals_);
     get_parameter("octomap_point_cloud_publish_topic", octomap_point_cloud_publish_topic_);
     get_parameter("octomap_markers_publish_topic", octomap_markers_publish_topic_);
+    get_parameter("traversable_pointcloud_publish_topic", traversable_pointcloud_publish_topic_);
     get_parameter("map_frame_id", map_frame_id_);
     get_parameter("utm_frame_id", utm_frame_id_);
     get_parameter("map_datum.latitude", pcd_map_gps_pose_->position.latitude);
@@ -151,6 +154,9 @@ namespace vox_nav_map_server
 
     elevated_surfel_pcl_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
       "vox_nav/map_server/elevated_surfel_pointcloud", rclcpp::SystemDefaultsQoS());
+
+    traversable_pointcloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+      traversable_pointcloud_publish_topic_, rclcpp::SystemDefaultsQoS());
 
     octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       octomap_markers_publish_topic_, rclcpp::SystemDefaultsQoS());
@@ -493,12 +499,15 @@ namespace vox_nav_map_server
       pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
         pcd_map_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
     }
+    pure_traversable_pointcloud_ = vox_nav_utilities::get_traversable_points(pcd_map_pointcloud_);
+
   }
 
   void MapManager::handleOriginalOctomap()
   {
     pcl::toROSMsg(*pcd_map_pointcloud_, *octomap_pointcloud_msg_);
     pcl::toROSMsg(*elevated_surfel_pointcloud_, *elevated_surfels_pointcloud_msg_);
+    pcl::toROSMsg(*pure_traversable_pointcloud_, *traversable_pointcloud_msg_);
 
     octomap::Pointcloud octocloud;
     for (auto && i : pcd_map_pointcloud_->points) {
@@ -543,11 +552,14 @@ namespace vox_nav_map_server
       octomap_pointcloud_msg_->header.stamp = this->now();
       elevated_surfels_pointcloud_msg_->header.frame_id = map_frame_id_;
       elevated_surfels_pointcloud_msg_->header.stamp = this->now();
+      traversable_pointcloud_msg_->header.frame_id = map_frame_id_;
+      traversable_pointcloud_msg_->header.stamp = this->now();
 
       octomap_pointloud_publisher_->publish(*octomap_pointcloud_msg_);
       octomap_markers_publisher_->publish(*original_octomap_markers_msg_);
       elevated_surfel_octomap_markers_publisher_->publish(*elevated_surfel_octomap_markers_msg_);
       elevated_surfel_pcl_publisher_->publish(*elevated_surfels_pointcloud_msg_);
+      traversable_pointcloud_publisher_->publish(*traversable_pointcloud_msg_);
     }
   }
 
@@ -566,6 +578,7 @@ namespace vox_nav_map_server
     response->original_octomap = *original_octomap_msg_;
     response->elevated_surfel_octomap = *elevated_surfel_octomap_msg_;
     response->elevated_surfel_poses = *elevated_surfel_poses_msg_;
+    response->traversable_elevated_cloud = *elevated_surfels_pointcloud_msg_;
     response->is_valid = true;
   }
 }   // namespace vox_nav_map_server

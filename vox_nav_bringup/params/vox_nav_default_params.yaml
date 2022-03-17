@@ -91,7 +91,8 @@ vox_nav_controller_server_rclcpp_node:
          max_obstacles: 4
 
       MPCControllerAcadoROS:
-         plugin: "mpc_controller_acado::MPCControllerAcadoROS"
+         #plugin: "mpc_controller_acado::MPCControllerAcadoROS"
+         plugin: "mpc_controller_acado_supervoxel::MPCControllerAcadoSupervoxelROS"
          N: 20                                                                # timesteps in MPC Horizon
          Ni: 1
          DT: 0.2                                                              # discretization time between timesteps(s)
@@ -114,7 +115,7 @@ vox_nav_map_server_rclcpp_node:
   ros__parameters:
     pcd_map_filename: /home/atas/colcon_ws/src/Thorvald/thorvald_vox_nav/maps/container_office_map.pcd # Provide a PCD format map
     # PCD PREPROCESS PARAMS
-    pcd_map_downsample_voxel_size: 0.15                                       # Set to smaller if you do not want downsample pointclouds of the map
+    pcd_map_downsample_voxel_size: 0.10                                       # Set to smaller if you do not want downsample pointclouds of the map
     pcd_map_transform:                                                        # Apply an OPTIONAL rigid-body transrom to pcd file, leave to all zeros if not wished
       translation:                                                            # Unit is meters
         x: 0.0

@@ -1,12 +1,21 @@
 <class_libraries>
+
   <library path="mpc_controller_casadi">
     <class type="mpc_controller_casadi::MPCControllerCasadiROS" base_class_type="vox_nav_control::ControllerCore">
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
+
   <library path="mpc_controller_acado">
     <class type="mpc_controller_acado::MPCControllerAcadoROS" base_class_type="vox_nav_control::ControllerCore">
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
+
+  <library path="mpc_controller_acado_supervoxel">
+    <class type="mpc_controller_acado_supervoxel::MPCControllerAcadoSupervoxelROS" base_class_type="vox_nav_control::ControllerCore">
+      <description>TODO(fetullah.atas)</description>
+    </class>
+  </library>
+
 </class_libraries>

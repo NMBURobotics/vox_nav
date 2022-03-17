@@ -142,7 +142,7 @@ namespace vox_nav_utilities
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pure_traversable_points(
       new pcl::PointCloud<pcl::PointXYZRGB>);
     for (size_t i = 0; i < cloud->points.size(); i++) {
-      if (cloud->points[i].g) {
+      if (cloud->points[i].g > cloud->points[i].r) {
         pure_traversable_points->points.push_back(cloud->points[i]);
       }
     }
