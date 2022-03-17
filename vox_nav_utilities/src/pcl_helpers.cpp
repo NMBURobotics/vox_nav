@@ -183,7 +183,7 @@ namespace vox_nav_utilities
       }
       for (size_t idx = 0u; idx < clusters_array[cluster_idx]->points.size(); ++idx) {
         pcl::PointXYZRGB point;
-        auto color = getColorByIndexEig(static_cast<int>(cluster_idx));
+        auto color = getColorByIndexEig(static_cast<int>(cluster_idx % 16));
         point.x = clusters_array[cluster_idx]->points[idx].x;
         point.y = clusters_array[cluster_idx]->points[idx].y;
         point.z = clusters_array[cluster_idx]->points[idx].z;

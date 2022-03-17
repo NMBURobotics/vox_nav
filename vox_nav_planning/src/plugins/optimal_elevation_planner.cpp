@@ -39,6 +39,8 @@ namespace vox_nav_planning
     z_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
     elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
       new pcl::PointCloud<pcl::PointSurfel>);
+    elevated_traversable_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(
+      new pcl::PointCloud<pcl::PointXYZRGB>);
 
     // declare only planner specific parameters here
     // common parameters are declared in server
@@ -126,6 +128,9 @@ namespace vox_nav_planning
       parent->create_publisher<visualization_msgs::msg::MarkerArray>(
       "vox_nav/supervoxel_adjacency_markers", rclcpp::SystemDefaultsQoS());
 
+    cloud_clusters_pub_ = parent->create_publisher<sensor_msgs::msg::PointCloud2>(
+      "/vox_nav/supervoxel_clusters", rclcpp::SystemDefaultsQoS());
+
     RCLCPP_INFO(
       logger_,
       "Selected planner is: %s optimal planner, this dos not bases on OMPL ",
@@ -160,15 +165,20 @@ namespace vox_nav_planning
     }
 
     double radius = vox_nav_utilities::getEuclidianDistBetweenPoses(goal, start) / 2.0;
+    radius *= 2.0;
+
     auto search_point_pose = vox_nav_utilities::getLinearInterpolatedPose(goal, start);
-    auto search_point_surfel = vox_nav_utilities::poseMsg2PCLSurfel(search_point_pose);
+    pcl::PointXYZRGB search_point_xyzrgb;
+    search_point_xyzrgb.x = search_point_pose.pose.position.x;
+    search_point_xyzrgb.y = search_point_pose.pose.position.y;
+    search_point_xyzrgb.z = search_point_pose.pose.position.z;
 
     // we determined a search point and radius, now with this info lets get
     // a sub point cloud that falls within boundries
     auto search_area_surfels =
-      vox_nav_utilities::getSubCloudWithinRadius<pcl::PointSurfel>(
-      elevated_surfel_cloud_,
-      search_point_surfel,
+      vox_nav_utilities::getSubCloudWithinRadius<pcl::PointXYZRGB>(
+      elevated_traversable_cloud_,
+      search_point_xyzrgb,
       radius);
 
     auto search_area_rgba_pointcloud =
@@ -209,6 +219,26 @@ namespace vox_nav_planning
     super_voxel_adjacency_marker_pub_->publish(marker_array);
     /*vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
       supervoxel_clusters_, supervoxel_adjacency, header, marker_array);*/
+
+    auto supervoxel_cloud = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(
+      new pcl::PointCloud<pcl::PointXYZRGB>);
+    for (auto && i : super.getLabeledVoxelCloud()->points) {
+      auto color = vox_nav_utilities::getColorByIndexEig(static_cast<int>(i.label % 16));
+      pcl::PointXYZRGB point;
+      point.x = i.x;
+      point.y = i.y;
+      point.z = i.z;
+      point.r = color.x() * 255.0;
+      point.g = color.y() * 255.0;
+      point.b = color.z() * 255.0;
+      point.a = 255;
+      supervoxel_cloud->points.push_back(point);
+    }
+    auto cloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*supervoxel_cloud, *cloud);
+    cloud->header.frame_id = "map";
+    cloud->header.stamp = rclcpp::Clock().now();
+    cloud_clusters_pub_->publish(*cloud);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // CAREFUL , GONNA BE FUNCTIONIZED
@@ -629,6 +659,8 @@ namespace vox_nav_planning
         surfel.normal_z = y;
         elevated_surfel_cloud_->points.push_back(surfel);
       }
+
+      pcl::fromROSMsg(response->traversable_elevated_cloud, *elevated_traversable_cloud_);
 
       RCLCPP_INFO(
         logger_,

@@ -152,6 +152,7 @@ namespace vox_nav_planning
     // elevated_surfel_poses_msg_
     geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
     pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr elevated_traversable_cloud_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
     std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
@@ -168,6 +169,9 @@ namespace vox_nav_planning
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
       super_voxel_adjacency_marker_pub_;
     SuperVoxelClusters supervoxel_clusters_;
+
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_clusters_pub_;
+
 
     bool supervoxel_disable_transform_;
     float supervoxel_resolution_;

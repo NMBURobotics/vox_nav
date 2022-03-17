@@ -93,12 +93,7 @@ if(ACADO_CODE_IS_READY)
   ament_target_dependencies(mpc_controller_acado ${dependencies})
   target_link_libraries(mpc_controller_acado ompl ${ACADO_SHARED_LIBRARIES} mpc_solver_acado)
 
-  add_library(mpc_controller_acado_supervoxel SHARED  src/mpc_controller_acado/mpc_controller_acado_supervoxel_ros.cpp)
-  ament_target_dependencies(mpc_controller_acado_supervoxel ${dependencies})
-  target_link_libraries(mpc_controller_acado_supervoxel ompl ${ACADO_SHARED_LIBRARIES} mpc_solver_acado)
-
   install(TARGETS mpc_controller_acado
-                  mpc_controller_acado_supervoxel
                   mpc_solver_acado
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -106,7 +101,6 @@ if(ACADO_CODE_IS_READY)
 
   ament_export_libraries(mpc_controller_acado)
   ament_export_libraries(mpc_solver_acado)
-  ament_export_libraries(mpc_controller_acado_supervoxel)
 
 endif(ACADO_CODE_IS_READY)
 

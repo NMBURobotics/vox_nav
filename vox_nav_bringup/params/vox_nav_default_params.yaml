@@ -41,10 +41,10 @@ vox_nav_planner_server_rclcpp_node:
       rho: 2.0
       graph_search_method: "astar"                           # Other options: astar , dijkstra
       supervoxel_disable_transform: false                    # set true for organized point clouds
-      supervoxel_resolution: 0.5
-      supervoxel_seed_resolution: 0.6
-      supervoxel_color_importance: 0.2
-      supervoxel_spatial_importance: 0.4
+      supervoxel_resolution: 0.4
+      supervoxel_seed_resolution: 2.0
+      supervoxel_color_importance: 0.0
+      supervoxel_spatial_importance: 1.0
       supervoxel_normal_importance: 1.0
       distance_penalty_weight: 0.7
       elevation_penalty_weight: 0.3
@@ -91,8 +91,7 @@ vox_nav_controller_server_rclcpp_node:
          max_obstacles: 4
 
       MPCControllerAcadoROS:
-         #plugin: "mpc_controller_acado::MPCControllerAcadoROS"
-         plugin: "mpc_controller_acado_supervoxel::MPCControllerAcadoSupervoxelROS"
+         plugin: "mpc_controller_acado::MPCControllerAcadoROS"
          N: 20                                                                # timesteps in MPC Horizon
          Ni: 1
          DT: 0.2                                                              # discretization time between timesteps(s)

@@ -7,9 +7,8 @@ Panels:
         - /Global Odometry1/Shape1
         - /OpenVSLAM Odometry1/Shape1
         - /OctoMap PointCloud21/Topic1
-        - /PointCloud21
       Splitter Ratio: 0.5133614540100098
-    Tree Height: 251
+    Tree Height: 561
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -84,6 +83,46 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        camera_bottom_screw_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_color_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_color_optical_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_depth_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_depth_optical_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_left_ir_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_left_ir_optical_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_right_ir_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        camera_right_ir_optical_frame:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         corner0:
           Alpha: 1
           Show Axes: false
@@ -212,10 +251,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        lidar_sensor_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         pipe0_1:
           Alpha: 1
           Show Axes: false
@@ -286,6 +321,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        velodyne_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         wheel0_link:
           Alpha: 1
           Show Axes: false
@@ -306,6 +345,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        wide_angle_camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Name: RobotModel
       TF Prefix: ""
       Update Interval: 0
@@ -323,6 +366,26 @@ Visualization Manager:
         bat0:
           Value: true
         bat1:
+          Value: true
+        camera_bottom_screw_frame:
+          Value: true
+        camera_color_frame:
+          Value: true
+        camera_color_optical_frame:
+          Value: true
+        camera_depth_frame:
+          Value: true
+        camera_depth_optical_frame:
+          Value: true
+        camera_left_ir_frame:
+          Value: true
+        camera_left_ir_optical_frame:
+          Value: true
+        camera_link:
+          Value: true
+        camera_right_ir_frame:
+          Value: true
+        camera_right_ir_optical_frame:
           Value: true
         corner0:
           Value: true
@@ -375,12 +438,6 @@ Visualization Manager:
         leg2:
           Value: true
         leg3:
-          Value: true
-        lidar_data_link:
-          Value: true
-        lidar_imu_link:
-          Value: true
-        lidar_sensor_link:
           Value: true
         map:
           Value: true
@@ -418,6 +475,8 @@ Visualization Manager:
           Value: true
         utm:
           Value: true
+        velodyne_link:
+          Value: true
         wheel0_link:
           Value: true
         wheel1_link:
@@ -426,110 +485,127 @@ Visualization Manager:
           Value: true
         wheel3_link:
           Value: true
+        wide_angle_camera_link:
+          Value: true
       Marker Scale: 2
       Name: TF
       Show Arrows: false
       Show Axes: true
       Show Names: true
       Tree:
-        map:
-          odom:
-            base_link:
-              base_sensor_link:
-                gps_link:
+        utm:
+          map:
+            odom:
+              base_link:
+                base_sensor_link:
+                  camera_bottom_screw_frame:
+                    camera_link:
+                      camera_depth_frame:
+                        camera_color_frame:
+                          camera_color_optical_frame:
+                            {}
+                        camera_depth_optical_frame:
+                          {}
+                        camera_left_ir_frame:
+                          camera_left_ir_optical_frame:
+                            {}
+                        camera_right_ir_frame:
+                          camera_right_ir_optical_frame:
+                            {}
+                  gps_link:
+                    {}
+                  imu_link:
+                    {}
+                  velodyne_link:
+                    {}
+                  wide_angle_camera_link:
+                    {}
+                bat0:
                   {}
-                imu_link:
+                bat1:
                   {}
-                lidar_sensor_link:
+                corner0:
+                  corner0_1:
+                    {}
+                  corner0_2:
+                    {}
+                  corner0_3:
+                    {}
+                  corner0_4:
+                    {}
+                corner1:
+                  corner1_1:
+                    {}
+                  corner1_2:
+                    {}
+                  corner1_3:
+                    {}
+                  corner1_4:
+                    {}
+                corner2:
+                  corner2_1:
+                    {}
+                  corner2_2:
+                    {}
+                  corner2_3:
+                    {}
+                  corner2_4:
+                    {}
+                corner3:
+                  corner3_1:
+                    {}
+                  corner3_2:
+                    {}
+                  corner3_3:
+                    {}
+                  corner3_4:
+                    {}
+                leg0:
+                  wheel0_link:
+                    {}
+                leg1:
+                  wheel1_link:
+                    {}
+                leg2:
+                  wheel2_link:
+                    {}
+                leg3:
+                  wheel3_link:
+                    {}
+                pipe0_1:
                   {}
-              bat0:
-                {}
-              bat1:
-                {}
-              corner0:
-                corner0_1:
+                pipe0_2:
                   {}
-                corner0_2:
+                pipe1_1:
                   {}
-                corner0_3:
+                pipe1_2:
                   {}
-                corner0_4:
+                pipe2_1:
                   {}
-              corner1:
-                corner1_1:
+                pipe2_2:
                   {}
-                corner1_2:
+                pipe3_1:
                   {}
-                corner1_3:
+                pipe3_2:
                   {}
-                corner1_4:
+                pipe4_1:
                   {}
-              corner2:
-                corner2_1:
+                pipe4_2:
                   {}
-                corner2_2:
+                top0:
                   {}
-                corner2_3:
+                top1:
                   {}
-                corner2_4:
+                top2:
                   {}
-              corner3:
-                corner3_1:
+                top3:
                   {}
-                corner3_2:
-                  {}
-                corner3_3:
-                  {}
-                corner3_4:
-                  {}
-              leg0:
-                wheel0_link:
-                  {}
-              leg1:
-                wheel1_link:
-                  {}
-              leg2:
-                wheel2_link:
-                  {}
-              leg3:
-                wheel3_link:
-                  {}
-              pipe0_1:
-                {}
-              pipe0_2:
-                {}
-              pipe1_1:
-                {}
-              pipe1_2:
-                {}
-              pipe2_1:
-                {}
-              pipe2_2:
-                {}
-              pipe3_1:
-                {}
-              pipe3_2:
-                {}
-              pipe4_1:
-                {}
-              pipe4_2:
-                {}
-              top0:
-                {}
-              top1:
-                {}
-              top2:
-                {}
-              top3:
-                {}
-          static_map:
-            {}
-          utm:
-            {}
+            static_map:
+              {}
       Update Interval: 0
       Value: true
     - Class: rviz_default_plugins/Image
-      Enabled: true
+      Enabled: false
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -541,7 +617,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /camera/color/image_raw
-      Value: true
+      Value: false
     - Angle Tolerance: 0.10000000149011612
       Class: rviz_default_plugins/Odometry
       Covariance:
@@ -657,17 +733,17 @@ Visualization Manager:
         Value: /odometry/local
       Value: false
     - Class: rviz_default_plugins/MarkerArray
-      Enabled: false
+      Enabled: true
       Name: SuperVoxelVisuals
       Namespaces:
-        {}
+        supervoxel_markers_ns: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /vox_nav/supervoxel_adjacency_markers
-      Value: false
+      Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -816,7 +892,7 @@ Visualization Manager:
       Enabled: true
       Name: MPC Refernece Trajectory
       Namespaces:
-        {}
+        ref_traj: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -828,7 +904,7 @@ Visualization Manager:
       Enabled: true
       Name: MPC Actual Trajectory
       Namespaces:
-        {}
+        actual_traj: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -840,7 +916,7 @@ Visualization Manager:
       Enabled: true
       Name: Global Plan
       Namespaces:
-        {}
+        path: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -881,6 +957,39 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 3937
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.10000000149011612
+      Style: Flat Squares
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /vox_nav/supervoxel_clusters
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -915,25 +1024,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 34.75750732421875
+      Distance: 42.37824630737305
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -7.148046493530273
-        Y: -1.328630805015564
-        Z: 0
+        X: 12.562825202941895
+        Y: 2.603724718093872
+        Z: -2.4921073418227024e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2747962474822998
+      Pitch: 1.4647963047027588
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.187387704849243
+      Yaw: 2.4023871421813965
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016
@@ -958,20 +1067,20 @@ Visualization Manager:
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 704
+  Height: 1043
   Hide Left Dock: false
   Hide Right Dock: true
   Image:
     collapsed: false
   Navigation 2:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001ab00000266fc020000000dfb0000001200530065006c0065006300740069006f006e000000003d000000830000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d00000138000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000018004e0061007600690067006100740069006f006e0020003200000001c70000014e000000a400fffffffb0000001e005200650061006c00730065006e0073006500430061006d00650072006100000002c6000000c10000000000000000fb0000000a0049006d00610067006500000002b7000000f00000000000000000fb0000000a00560069006500770073010000017b000000a4000000a400fffffffb0000000a0049006d00610067006501000002250000007e0000002800ffffff000000010000010f0000039efc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d00650100000000000004500000000000000000000003570000026600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001ab000003b9fc020000000dfb0000001200530065006c0065006300740069006f006e000000003d000000830000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000026e000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000018004e0061007600690067006100740069006f006e0020003200000001c70000014e000000a400fffffffb0000001e005200650061006c00730065006e0073006500430061006d00650072006100000002c6000000c10000000000000000fb0000000a0049006d00610067006500000002b7000000f00000002800fffffffb0000000a0056006900650077007301000002b100000145000000a400fffffffb0000000a0049006d00610067006501000002250000007e0000000000000000000000010000010f0000039efc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d00650100000000000004500000000000000000000005cf000003b900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Tool Properties:
     collapsed: false
   Views:
     collapsed: false
-  Width: 1288
-  X: 72
-  Y: 27
+  Width: 1920
+  X: 0
+  Y: 0

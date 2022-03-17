@@ -736,7 +736,7 @@ Visualization Manager:
       Enabled: true
       Name: SuperVoxelVisuals
       Namespaces:
-        supervoxel_markers_ns: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -991,25 +991,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 46.55893325805664
+      Distance: 58.403526306152344
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 2.8239707946777344
-        Y: 0.5763468742370605
+        X: -4.350892543792725
+        Y: -3.7276318073272705
         Z: -3.8018783925508615e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.4347962141036987
+      Pitch: 1.3847965002059937
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.267387628555298
+      Yaw: 3.2473857402801514
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016
