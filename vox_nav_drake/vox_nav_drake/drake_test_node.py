@@ -57,34 +57,32 @@ class PointTrackingController(VectorSystem):
     ):
 
         kLAMBDA = 0.0
-        k = 0.05
+        kK = 0.05
+        kPULL = 10
 
         # upack state of the robot x,y,theta
         x, y, theta = cartesian_state
 
-        robot_r = 0.3
-        obstacle_r = 1.0
-        obs_x, obs_y = 0, 0
-        euc = self.euclidean_dist(x, y, obs_x, obs_y)
-        d = robot_r + obstacle_r
-        beta = 10*euc
+        target_x, target_y = 0, 0
+        dist = self.euclidean_dist(x, y, target_x, target_y)
+        beta = kPULL*dist
 
         if x >= 0.0:
-            f_x = 3 * (x**2) * (beta**(1.0/k)) + (y**2)*(beta**(1.0/k)) + kLAMBDA * (theta**2) * (beta**(1.0/k)) + \
-                (x*(x - obs_x)*(x**2 + y**2 + kLAMBDA*(theta**2)) * (beta **
-                 ((-k+1.0)/k))) / k * numpy.sqrt((x-obs_x)**2 + (y - obs_y)**2)
+            f_x = 3 * (x**2) * (beta**(1.0/kK)) + (y**2)*(beta**(1.0/kK)) + kLAMBDA * (theta**2) * (beta**(1.0/kK)) + \
+                (x*(x - target_x)*(x**2 + y**2 + kLAMBDA*(theta**2)) * (beta **
+                 ((-kK+1.0)/kK))) / kK * numpy.sqrt((x-target_x)**2 + (y - target_y)**2)
 
-            f_y = x * (((y - obs_y)*(x**2 + y**2 + kLAMBDA*(theta**2)) * (beta**((-k+1.0)/k))
-                        ) / k * numpy.sqrt((x-obs_x)**2 + (y - obs_y)**2) + 2 * y * (beta**(1.0/k)))
-            f_theta = 2 * kLAMBDA * theta * (beta**(1.0/k))
+            f_y = x * (((y - target_y)*(x**2 + y**2 + kLAMBDA*(theta**2)) * (beta**((-kK+1.0)/kK))
+                        ) / kK * numpy.sqrt((x-target_x)**2 + (y - target_y)**2) + 2 * y * (beta**(1.0/kK)))
+            f_theta = 2 * kLAMBDA * theta * (beta**(1.0/kK))
         else:
-            f_x = -3 * (x**2) * (beta**(1/k)) - (y**2)*(beta**(1/k)) - kLAMBDA * (theta**2) * (beta**(1.0/k)) - \
-                (x*(x - obs_x)*(x**2 + y**2 + kLAMBDA*(theta**2)) * (beta **
-                 ((-k+1.0)/k))) / k * numpy.sqrt((x-obs_x)**2 + (y - obs_y)**2)
+            f_x = -3 * (x**2) * (beta**(1/kK)) - (y**2)*(beta**(1/kK)) - kLAMBDA * (theta**2) * (beta**(1.0/kK)) - \
+                (x*(x - target_x)*(x**2 + y**2 + kLAMBDA*(theta**2)) * (beta **
+                 ((-kK+1.0)/kK))) / kK * numpy.sqrt((x-target_x)**2 + (y - target_y)**2)
 
-            f_y = -x * (((y - obs_y)*(x**2 + y**2 + kLAMBDA*(theta**2)) * (beta**((-k+1)/k))) /
-                        k * numpy.sqrt((x-obs_x)**2 + (y - obs_y)**2) + 2 * y * (beta**(1.0/k)))
-            f_theta = - 2 * kLAMBDA * theta * (beta**(1.0/k))
+            f_y = -x * (((y - target_y)*(x**2 + y**2 + kLAMBDA*(theta**2)) * (beta**((-kK+1)/kK))) /
+                        kK * numpy.sqrt((x-target_x)**2 + (y - target_y)**2) + 2 * y * (beta**(1.0/kK)))
+            f_theta = - 2 * kLAMBDA * theta * (beta**(1.0/kK))
 
         theta_d = numpy.arctan2(-numpy.copysign(1, x)*f_y,
                                 -numpy.copysign(1, x)*f_x)
