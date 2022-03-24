@@ -11,6 +11,9 @@ find_package(drake CONFIG REQUIRED PATHS /opt/drake)
 find_package(rclcpp REQUIRED)
 find_package(drake_ros_core REQUIRED)
 find_package(test_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 
 include_directories(
   include
@@ -20,7 +23,11 @@ set(dependencies
     rclcpp
     drake 
     drake_ros_core
-    test_msgs)
+    sensor_msgs
+    geometry_msgs
+    nav_msgs
+    test_msgs
+    )
 
 add_executable(drake_ros_node src/drake_ros_node.cc)
 ament_target_dependencies(drake_ros_node ${dependencies})
