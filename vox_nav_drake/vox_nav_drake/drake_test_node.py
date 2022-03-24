@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+from nav_msgs.msg import Odometry
 import math
+from time import sleep
 from geometry_msgs.msg import TransformStamped
 from tf2_ros.transform_listener import TransformListener
 from tf2_ros import TransformException
@@ -60,6 +62,15 @@ class PointTrackingController(VectorSystem):
 
         return -self.clip(u1, -0.5, 0.5), -self.clip(u2, -0.6, 0.6)
 
+    def lyapunov_controller_ddf(self, x1, x2, x3):
+
+        u1 = - x1 * cos(x3)
+        u2 = x3+(x3+x2)*cos(x3)*sin(x3) / x3
+        if x1 < 0.1:
+            u1, u2 = 0, 0
+
+        return self.clip(u1, -0.4, 0.4), self.clip(u2, -0.3, 0.3)
+
     def DoCalcVectorOutput(
         self,
         context,           # not used
@@ -75,7 +86,7 @@ class PointTrackingController(VectorSystem):
         # upack state of the robot x,y,theta
         x, y, theta = cartesian_state
 
-        target_x, target_y = 25, -20
+        target_x, target_y = 10, -10
         dist = self.euclidean_dist(x, y, target_x, target_y)
         beta = kPULL*dist
 
@@ -100,7 +111,17 @@ class PointTrackingController(VectorSystem):
                                 -numpy.copysign(1, x)*f_x)
 
         # evaluate the function below and return the robot's input
-        input[:] = self.lyapunov_controller(f_x, f_y, theta, f_theta, theta_d)
+        # input[:] = self.lyapunov_controller(f_x, f_y, theta, f_theta, theta_d)
+        # upack state of the robot
+        z1, z2, z3 = cartesian_state
+
+        # state in polar coordinates
+        x1 = numpy.sqrt((z1-target_x)**2 + (z2-target_y)
+                        ** 2)  # radial coordinate
+        x2 = numpy.arctan2((z2-target_y), (z1-target_x)
+                           )     # angular coordinate
+        x3 = x2 - z3
+        input[:] = self.lyapunov_controller_ddf(x1, x2, x3)
 
 
 class RosNode(rclpy.node.Node, VectorSystem):
@@ -112,15 +133,14 @@ class RosNode(rclpy.node.Node, VectorSystem):
         VectorSystem.__init__(self, 2, 3)
 
         self.get_logger().info("Starting rosnode")
-
         self.create_subscription(
-            PoseWithCovarianceStamped, "/vox_nav/cupoch/icp_base_to_map_pose",
-            self.robot_pose_callback, rclpy.qos.qos_profile_sensor_data)
+            Odometry, "/odometry/base_raw",
+            self.robot_pose_callback, 1)
 
         self.twist_pub = self.create_publisher(
             Twist, "vox_nav/cmd_vel", rclpy.qos.qos_profile_sensor_data)
 
-        self.latest_robot_states = PoseWithCovarianceStamped()
+        self.latest_robot_states = Odometry()
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -130,7 +150,7 @@ class RosNode(rclpy.node.Node, VectorSystem):
         self.twist_pub.publish(Twist())
 
     def robot_pose_callback(self, msg):
-        self.get_logger().info("recieved pose %s" % str(msg.pose.pose))
+        self.get_logger().info("recieved pose %s" % str(msg))
         self.latest_robot_states = msg
 
     def euler_from_quaternion(self, x, y, z, w):
@@ -165,7 +185,7 @@ class RosNode(rclpy.node.Node, VectorSystem):
         try:
             now = rclpy.time.Time()
             trans = self.tf_buffer.lookup_transform(
-                "map",
+                "odom",
                 "base_link",
                 now)
 
@@ -176,7 +196,8 @@ class RosNode(rclpy.node.Node, VectorSystem):
 
         except TransformException as ex:
             self.get_logger().info('"Failed to get current robot pose"')
-            return PoseStamped()
+            curr_robot_pose.pose.orientation.w = 1.0
+            return None
 
         return curr_robot_pose
 
@@ -187,17 +208,18 @@ class RosNode(rclpy.node.Node, VectorSystem):
         controller_state,   # not used
         states              # output of the robot
     ):
+        #curr = self.get_curr_robot_pose()
+        curr = self.latest_robot_states.pose
+        theta = self.euler_from_quaternion(
+            curr.pose.orientation.x, curr.pose.orientation.y, curr.pose.orientation.z, curr.pose.orientation.w)[2]
+
+        states[:] = curr.pose.position.x, curr.pose.position.y, theta
+
         v, w = control_commands
         msg = Twist()
         msg.linear.x = v
         msg.angular.z = w
         self.twist_pub.publish(msg)
-
-        curr = self.get_curr_robot_pose()
-        theta = self.euler_from_quaternion(
-            curr.pose.orientation.x, curr.pose.orientation.y, curr.pose.orientation.z, curr.pose.orientation.w)[2]
-
-        states[:] = curr.pose.position.x, curr.pose.position.y, theta
 
 
 def main():
@@ -207,12 +229,17 @@ def main():
 
     rclpy.init()
     robot = RosNode()
+    executor = MultiThreadedExecutor()
+    executor.add_node(robot)
 
     # construction site for our closed-loop system
     builder = DiagramBuilder()
 
-    filter = builder.AddSystem(FirstOrderLowPassFilter(
-        time_constant=0.1, size=3))
+    zoh = builder.AddSystem(ZeroOrderHold(0.001, 3))
+    zoh.set_name("zoh")
+
+    # filter = builder.AddSystem(FirstOrderLowPassFilter(
+    #    time_constant=100.0, size=3))
 
     # add the robot to the diagram
     # the method .AddSystem() simply returns a pointer to the system
@@ -223,8 +250,8 @@ def main():
     controller = builder.AddSystem(PointTrackingController())
 
     # wire the controller with the system
-    builder.Connect(robot.get_output_port(0), filter.get_input_port(0))
-    builder.Connect(filter.get_output_port(0), controller.get_input_port(0))
+    builder.Connect(robot.get_output_port(0), zoh.get_input_port(0))
+    builder.Connect(zoh.get_output_port(0), controller.get_input_port(0))
     builder.Connect(controller.get_output_port(0), robot.get_input_port(0))
 
     # complete the construction of the diagram
@@ -232,15 +259,7 @@ def main():
 
     # set up a simulation environment
     simulator = Simulator(diagram)
-
-    # set the initial cartesian state to a random initial position
-    # try initial_state = np.random.randn(3) for a random initial state
-    initial_state = [0, 0, 0]
-    context = simulator.get_mutable_context()
-    context.SetContinuousState(initial_state)
-
-    # simulate from zero to sim_time
-    # the trajectory will be stored in the logger
+    '''
     integrator = simulator.get_mutable_integrator()
     target_accuracy = 1E-4
     integrator.set_target_accuracy(target_accuracy)
@@ -250,14 +269,35 @@ def main():
     integrator.set_requested_minimum_step_size(minimum_step_size)
     integrator.set_throw_on_minimum_step_size_violation(True)
     integrator.set_fixed_step_mode(True)
+    '''
     simulator.set_target_realtime_rate(1.0)
+    simulator.Initialize()
 
-    executor = MultiThreadedExecutor()
-    executor.add_node(robot)
+    # set the initial cartesian state to a random initial position
+    # try initial_state = np.random.randn(3) for a random initial state
+    curr = robot.get_curr_robot_pose()
+    while curr == None:
+        executor.spin_once(0.05)
+        robot.get_logger().info("waiting")
+        sleep(0.2)
+        curr = robot.get_curr_robot_pose()
+
+    theta = robot.euler_from_quaternion(
+        curr.pose.orientation.x,
+        curr.pose.orientation.y,
+        curr.pose.orientation.z,
+        curr.pose.orientation.w)[2]
+
+    initial_state = [curr.pose.position.x, curr.pose.position.y, theta]
+    context = simulator.get_mutable_context()
+    context.SetDiscreteState(initial_state)
+
+    # simulate from zero to sim_time
+    # the trajectory will be stored in the logger
 
     while True:
-        executor.spin_once(0.01)
-        simulator.AdvanceTo(context.get_time() + 0.05)
+        executor.spin_once(0.)
+        simulator.AdvanceTo(context.get_time() + 0.25)
         robot.get_logger().info("Another step, time is: %s" % str(context.get_time()))
 
 
