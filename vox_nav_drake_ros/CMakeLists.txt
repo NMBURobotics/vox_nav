@@ -14,6 +14,8 @@ find_package(test_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 include_directories(
   include
@@ -27,12 +29,18 @@ set(dependencies
     geometry_msgs
     nav_msgs
     test_msgs
+    tf2_ros
+    tf2_geometry_msgs
     )
 
 add_executable(drake_ros_node src/drake_ros_node.cc)
 ament_target_dependencies(drake_ros_node ${dependencies})
 
+add_executable(lyapanuv_control src/lyapanuv_control.cc)
+ament_target_dependencies(lyapanuv_control ${dependencies})
+
 install(TARGETS drake_ros_node
+                lyapanuv_control
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

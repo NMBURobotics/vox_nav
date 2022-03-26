@@ -31,10 +31,12 @@ int main(int argc, char const * argv[])
 
   auto system_ros = builder.AddSystem<RosInterfaceSystem>(
     std::make_unique<DrakeRos>("pub_to_sub"));
+
   auto system_sub_in =
     builder.AddSystem(
     RosSubscriberSystem::Make<test_msgs::msg::BasicTypes>(
       "in", qos, system_ros->get_ros_interface()));
+
   auto system_pub_out =
     builder.AddSystem(
     RosPublisherSystem::Make<test_msgs::msg::BasicTypes>(
