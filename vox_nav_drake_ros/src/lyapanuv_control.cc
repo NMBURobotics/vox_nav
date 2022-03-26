@@ -82,10 +82,8 @@ public:
     DeclareAbstractInputPort("controls", *drake::AbstractValue::Make(geometry_msgs::msg::Twist()));
     DeclareAbstractOutputPort(
       "states", &Robot::calc_output_value);
-
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
-
     cmd_vel_publisher_ =
       this->create_publisher<geometry_msgs::msg::Twist>("vox_nav/cmd_vel", 10);
   }
@@ -210,7 +208,6 @@ int main(int argc, char const * argv[])
   auto robot = builder.AddSystem<Robot>();
   robot->set_name("robot");
 
-
   auto sys_memory = builder.AddSystem<Memory<geometry_msgs::msg::Pose>>(geometry_msgs::msg::Pose());
 
   builder.Connect(robot->GetOutputPort("states"), sys_memory->get_input_port(0));
@@ -229,9 +226,7 @@ int main(int argc, char const * argv[])
 
   while (true) {
     rclcpp::spin_some(robot->get_node_base_interface());
-    simulator->AdvanceTo(simulator_context.get_time() + 0.05);
-
-
+    simulator->AdvanceTo(simulator_context.get_time() + 0.025);
   }
 
   return 0;
