@@ -39,25 +39,27 @@ public:
     const drake::systems::Context<double> & context,
     geometry_msgs::msg::Twist * control) const
   {
-    auto target_x = 15.0;
+    auto target_x = 10.0;
     auto target_y = -15.0;
     const auto curr_pose = GetInputPort("states").Eval<geometry_msgs::msg::Pose>(context);
     // Extract yaw from quat
     tf2::Quaternion q;
     tf2::fromMsg(curr_pose.orientation, q);
     tf2::Matrix3x3 m(q);
+
     double roll, pitch, yaw;
     m.getRPY(roll, pitch, yaw);
     auto z1 = curr_pose.position.x;
     auto z2 = curr_pose.position.y;
     auto z3 = yaw;
+
     // state in polar coordinates
     auto x1 = std::sqrt(std::pow((z1 - target_x), 2) + std::pow((z2 - target_y), 2));
     auto x2 = std::atan2((z2 - target_y), (z1 - target_x));
     auto x3 = x2 - z3;
 
     auto k1 = 1.0;
-    auto k2 = 0.1;
+    auto k2 = 2.0;
 
     auto u1 = k1 * (-x1 * std::cos(x3));
     auto u2 = k2 * (x3 + (x3 + x2) * std::cos(x3) * std::sin(x3) / x3);
@@ -65,8 +67,8 @@ public:
       u1 = 0.0;
       u2 = 0.0;
     }
-    control->linear.x = std::clamp<double>(u1, -0.4, 0.4);
-    control->angular.z = std::clamp<double>(u2, -0.3, 0.3);
+    control->linear.x = std::clamp<double>(u1, -1.0, 1.0);
+    control->angular.z = std::clamp<double>(u2, -0.5, 0.5);
   }
 
 private:
