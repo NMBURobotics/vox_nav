@@ -16,6 +16,7 @@ find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(ament_index_cpp REQUIRED)
 
 include_directories(
   include
@@ -31,6 +32,7 @@ set(dependencies
     test_msgs
     tf2_ros
     tf2_geometry_msgs
+    ament_index_cpp
     )
 
 add_executable(drake_ros_node src/drake_ros_node.cc)
@@ -39,14 +41,22 @@ ament_target_dependencies(drake_ros_node ${dependencies})
 add_executable(lyapanuv_control src/lyapanuv_control.cc)
 ament_target_dependencies(lyapanuv_control ${dependencies})
 
+add_executable(sos_lyapunov_test src/sos_lyapunov_test.cc)
+ament_target_dependencies(sos_lyapunov_test ${dependencies})
+
+add_executable(read_modelurdf src/read_modelurdf.cc)
+ament_target_dependencies(read_modelurdf ${dependencies})
+
 install(TARGETS drake_ros_node
                 lyapanuv_control
+                sos_lyapunov_test
+                read_modelurdf
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
   DESTINATION include/)
 
-install(DIRECTORY launch 
+install(DIRECTORY launch urdf meshes
 DESTINATION share/${PROJECT_NAME})
 
 ament_export_include_directories(include)

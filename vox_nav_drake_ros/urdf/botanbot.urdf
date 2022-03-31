@@ -1,0 +1,221 @@
+<?xml version="1.0"?>
+<robot name="botanbot" xmlns:xacro="http://ros.org/wiki/xacro">
+    <!-- BEGIN LINKS                      -->
+    <!-- BEGIN LINKS RELATED TO ROBOT BODY-->
+    <link name="base_link">
+        <visual>
+            <origin xyz="-0.019375 0.005287 0.340756" rpy="0 0 0" />
+            <geometry>
+                <mesh filename="/home/atas/colcon_ws/install/vox_nav_drake_ros/share/vox_nav_drake_ros/meshes/base_simplified.obj" />
+            </geometry>
+            <material name="Cyan">
+                <color rgba="0 1.0 1.0 1.0" />
+            </material>
+        </visual>
+
+        <inertial>
+            <mass value="1326.0" />
+            <inertia ixx="2581.13354740" ixy="0" ixz="0" iyy="591.30846112" iyz="0" izz="2681.9500862" />
+        </inertial>
+    </link>
+
+    <link name='steering_wheel'>
+        <visual name='visual'>
+            <origin xyz="0 0 0" rpy="1.57 0 0" />
+            <geometry>
+                <mesh filename="/home/atas/colcon_ws/install/vox_nav_drake_ros/share/vox_nav_drake_ros/meshes/wheel_simplified.obj" scale="0.5 0.5 0.5" />
+            </geometry>
+            <material name="Red">
+                <color rgba="1.0 0 0 0.6" />
+            </material>
+        </visual>
+
+        <inertial>
+            <mass value="1" />
+            <inertia ixx="0.14583300" ixy="0" ixz="0" iyy="0.14583300" iyz="0" izz="0.12500000" />
+        </inertial>
+    </link>
+    <link name='front_left_wheel'>
+        <visual name='visual'>
+            <origin xyz="0 0 0" rpy="0 0 1.57" />
+            <geometry>
+                <mesh filename="/home/atas/colcon_ws/install/vox_nav_drake_ros/share/vox_nav_drake_ros/meshes/wheel_simplified.obj" scale="1 1 1" />
+            </geometry>
+            <material name="Red">
+                <color rgba="1.0 0 0 0.6" />
+            </material>
+        </visual>
+
+        <inertial>
+            <mass value="1" />
+            <inertia ixx="0.14583300" ixy="0" ixz="0" iyy="0.14583300" iyz="0" izz="0.12500000" />
+        </inertial>
+    </link>
+    <link name='front_right_wheel'>
+        <visual name='visual'>
+            <origin xyz="0 0 0" rpy="0 0 1.57" />
+            <geometry>
+                <mesh filename="/home/atas/colcon_ws/install/vox_nav_drake_ros/share/vox_nav_drake_ros/meshes/wheel_simplified.obj" scale="1 1 1" />
+            </geometry>
+            <material name="Red">
+                <color rgba="1.0 0 0 0.6" />
+            </material>
+        </visual>
+
+        <inertial>
+            <mass value="1" />
+            <inertia ixx="0.14583300" ixy="0" ixz="0" iyy="0.14583300" iyz="0" izz="0.12500000" />
+        </inertial>
+    </link>
+    <link name='rear_left_wheel'>
+        <visual name='visual'>
+            <origin xyz="0 0 0" rpy="0 0 1.57" />
+            <geometry>
+                <mesh filename="/home/atas/colcon_ws/install/vox_nav_drake_ros/share/vox_nav_drake_ros/meshes/wheel_simplified.obj" scale="1 1 1" />
+            </geometry>
+            <material name="Red">
+                <color rgba="1.0 0 0 0.6" />
+            </material>
+        </visual>
+
+        <inertial>
+            <mass value="1" />
+            <inertia ixx="0.14583300" ixy="0" ixz="0" iyy="0.14583300" iyz="0" izz="0.12500000" />
+        </inertial>
+    </link>
+    <link name='rear_right_wheel'>
+        <visual name='visual'>
+            <origin xyz="0 0 0" rpy="0 0 1.57" />
+            <geometry>
+                <mesh filename="/home/atas/colcon_ws/install/vox_nav_drake_ros/share/vox_nav_drake_ros/meshes/wheel_simplified.obj" scale="1 1 1" />
+            </geometry>
+            <material name="Red">
+                <color rgba="1.0 0 0 0.6" />
+            </material>
+        </visual>
+
+        <inertial>
+            <mass value="1" />
+            <inertia ixx="0.14583300" ixy="0" ixz="0" iyy="0.14583300" iyz="0" izz="0.12500000" />
+        </inertial>
+    </link>
+    <link name='rear_axle'>
+        <visual name='visual'>
+            <origin xyz="0 0 0" rpy="1.57 -0 1.57" />
+            <geometry>
+                <cylinder radius="0.043346" length="0.694281" />
+            </geometry>
+            <material name="Cyan">
+                <color rgba="0 1.0 1.0 1.0" />
+            </material>
+        </visual>
+
+        <inertial>
+            <mass value="1" />
+            <inertia ixx="0.14583300" ixy="0" ixz="0" iyy="0.14583300" iyz="0" izz="0.12500000" />
+        </inertial>
+    </link>
+    <!-- END LINKS RELATED TO ROBOT BODY-->
+    <!--////////////////////////////////-->
+    <!-- END LINKS       
+                       -->
+    <!--////////////////////////////////////-->
+    <!-- BEGIN JOINTS                       -->
+    <!-- BEGIN JOINTS RELATED TO ROBOT BODY -->
+
+    <link name="base_footprint">
+        <inertial>
+            <mass value="1.0" />
+            <origin xyz="0 0 0" />
+            <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01" />
+        </inertial>
+        <visual>
+            <origin rpy="0 0 0" xyz="0 0 0" />
+            <geometry>
+                <box size="0.01 0.01 0.01" />
+            </geometry>
+            <material name="Cyan">
+                <color rgba="0 1.0 1.0 1.0" />
+            </material>
+        </visual>
+    </link>
+
+    <joint name="base_footprint_joint" type="fixed">
+        <origin rpy="0 0 0" xyz="0 0 0.051" />
+        <child link="base_link" />
+        <parent link="base_footprint" />
+    </joint>
+
+
+    <link name="base_link_0" />
+    <link name="base_link_1" />
+    <!-- RigidBodyTree only supports fixed or unactuated joints to the
+         world.  Prismatic joints with a transmission don't work
+         correctly. -->
+    <link name="base_link_for_rbt_compat" />
+    <joint name="world_joint_for_rbt_compat" type="fixed">
+        <parent link="world" />
+        <child link="base_link_for_rbt_compat" />
+    </joint>
+    <joint name="x" type="prismatic">
+        <parent link="base_link_for_rbt_compat" />
+        <child link="base_link_0" />
+        <axis xyz="1 0 0" />
+    </joint>
+    <joint name="y" type="prismatic">
+        <parent link="base_link_0" />
+        <child link="base_link_1" />
+        <axis xyz="0 1 0" />
+    </joint>
+    <joint name="theta" type="revolute">
+        <parent link="base_link_1" />
+        <child link="base_footprint" />
+        <axis xyz="0 0 1" />
+        <limit effort="100" lower="-3.14" upper="3.14" velocity="100" />
+    </joint>
+
+
+    <joint name='front_left_combined_joint' type='continuous'>
+        <parent link="base_link" />
+        <child link="front_left_wheel" />
+        <origin xyz="0.653624 0.496194 -0.084805" rpy="0 -0 1.5706" />
+        <axis xyz="0 0 1" />
+    </joint>
+    <joint name='front_right_combined_joint' type='continuous'>
+        <parent link="base_link" />
+        <child link="front_right_wheel" />
+        <origin xyz="0.666123 -0.495391 -0.085288" rpy="0 0 1.5706" />
+        <axis xyz="0 0 1" />
+    </joint>
+    <joint name='rear_axle_joint' type='continuous'>
+        <parent link="base_link" />
+        <child link="rear_axle" />
+        <origin xyz="-0.656403 0.001088 -0.085593" rpy="0 0 1.57" />
+        <dynamics damping="2000.0" friction="0.0" />
+        <limit effort="0" velocity="0.0" lower="-0.05" upper="0.05" />
+        <axis xyz="0 1 0" />
+    </joint>
+    <joint name='rear_left_joint' type='continuous'>
+        <parent link="base_link" />
+        <child link="rear_left_wheel" />
+        <origin xyz="-0.656583 0.492236 -0.085593" rpy="0 -0 1.5706" />
+        <axis xyz="1 0 0" />
+    </joint>
+    <joint name='rear_right_joint' type='continuous'>
+        <parent link="base_link" />
+        <child link="rear_right_wheel" />
+        <origin xyz="-0.644212 -0.499228 -0.085214" rpy="0 -0 1.5706" />
+        <axis xyz="1 0 0" />
+    </joint>
+    <joint name='steering_joint' type='continuous'>
+        <parent link="base_link" />
+        <child link="steering_wheel" />
+        <origin xyz="0.400132 9.3e-05 0.399996" rpy="0 -1.57 0" />
+        <axis xyz="0 0 1" />
+    </joint>
+    <!-- END JOINTS RELATED TO ROBOT BODY -->
+    <!--//////////////////////////////////-->
+    <!-- END JOINTS                       -->
+
+
+</robot>
