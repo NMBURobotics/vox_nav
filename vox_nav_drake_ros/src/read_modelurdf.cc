@@ -4,10 +4,10 @@
 
 #include <drake/systems/analysis/simulator.h>
 #include <drake/systems/framework/diagram_builder.h>
+#include <drake/systems/primitives/constant_vector_source.h>
 #include <drake/multibody/plant/multibody_plant.h>
 #include "drake/multibody/tree/prismatic_joint.h"
 #include "drake/multibody/tree/revolute_joint.h"
-
 #include "drake/common/find_resource.h"
 #include "drake/multibody/parsing/parser.h"
 #include <drake/lcm/drake_lcm.h>
@@ -15,13 +15,12 @@
 #include <drake/common/symbolic_latex.h>
 #include "drake/geometry/meshcat_visualizer.h"
 #include "drake/geometry/meshcat.h"
-
+#include "drake/solvers/mathematical_program.h"
+#include "drake/solvers/solve.h"
 
 #include <rclcpp/rclcpp.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
-#include "drake/solvers/mathematical_program.h"
-#include "drake/solvers/solve.h"
 
 using drake::symbolic::Expression;
 using drake::symbolic::Monomial;
@@ -57,7 +56,6 @@ public:
   }
 };
 
-
 class MeshcatSliders : public drake::systems::LeafSystem<double>
 {
 public:
@@ -89,6 +87,7 @@ private:
   }
 };
 
+
 int main(int argc, char const * argv[])
 {
 
@@ -102,9 +101,19 @@ int main(int argc, char const * argv[])
   const std::string & pathname = vox_nav_drake_ros_package_path + "/urdf/botanbot.urdf";
   drake::multibody::Parser parser(&plant);
   parser.AddModelFromFile(pathname);
+
+  const drake::multibody::PrismaticJoint<double> & bot_x =
+    plant.GetJointByName<drake::multibody::PrismaticJoint>("x");
+  const drake::multibody::PrismaticJoint<double> & bot_y =
+    plant.GetJointByName<drake::multibody::PrismaticJoint>("y");
+  const drake::multibody::RevoluteJoint<double> & bot_theta =
+    plant.GetJointByName<drake::multibody::RevoluteJoint>("theta");
+
   plant.Finalize();
 
-  std::cout << plant.num_actuators();
+  std::cout << plant.get_actuation_input_port().size() << std::endl;
+  std::cout << plant.get_actuation_input_port().get_data_type() << std::endl;
+  std::cout << plant.get_actuation_input_port().size() << std::endl;
 
 
   drake::geometry::SceneGraph<double> * scene_graph_{};
@@ -125,54 +134,40 @@ int main(int argc, char const * argv[])
   auto robot = builder.AddSystem<Robot>();
   robot->set_name("robot");
 
-  /* builder.Connect(
-     input_system_meshcat->GetOutputPort("controls_meshcat"),
-     robot->get_input_port(0));*/
 
-  /*builder.Connect(
-    scene_graph.get_query_output_port(), plant.get_geometry_query_input_port());*/
+  auto zero_torque =
+    builder.AddSystem<drake::systems::ConstantVectorSource<double>>(
+    Eigen::VectorXd::Zero(3));
 
-  auto source_id = plant.get_source_id();
-
-  /*builder.Connect(
-    plant.get_geometry_poses_output_port(),
-    scene_graph.get_source_pose_port(source_id.value()));*/
-
-  /*builder.Connect(
-    plant.get_geometry_poses_output_port(),
-    scene_graph.get_source_pose_port(plant.get_source_id().value()));*/
+  builder.Connect(
+    zero_torque->get_output_port(),
+    plant.get_actuation_input_port());
 
 
   auto diagram = builder.Build();
-  auto context = diagram->CreateDefaultContext();
 
 
-  drake::systems::Simulator<double> simulator(plant);
+  std::cout << zero_torque->get_output_port().size() << std::endl;
+  std::cout << zero_torque->get_output_port().get_data_type() << std::endl;
+
 
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(3);
   // Set the initial conditions (x, y, theta)
+  auto context = diagram->CreateDefaultContext();
   context->SetContinuousState(x0);
 
   drake::systems::Context<double> & plant_context =
     diagram->GetMutableSubsystemContext(plant, context.get());
 
-  const drake::multibody::PrismaticJoint<double> & bot_x =
-    plant.GetJointByName<drake::multibody::PrismaticJoint>("x");
-  const drake::multibody::PrismaticJoint<double> & bot_y =
-    plant.GetJointByName<drake::multibody::PrismaticJoint>("y");
+  drake::systems::Simulator<double> simulator(plant);
 
-  const drake::multibody::RevoluteJoint<double> & bot_theta =
-    plant.GetJointByName<drake::multibody::RevoluteJoint>("theta");
-
-
-  bot_x.set_translation(&plant_context, 0.0);
-
+  simulator.Initialize();
   while (1) {
-    diagram->Publish(*context);
+    //diagram->Publish(*context);
     simulator.AdvanceTo(simulator.get_context().get_time() + 0.1);
-    bot_x.set_translation(&plant_context, meshcat_->GetSliderValue("v"));
+    /*bot_x.set_translation(&plant_context, meshcat_->GetSliderValue("v"));
     bot_y.set_translation(&plant_context, simulator.get_context().get_time() * 0.001);
-    bot_theta.set_angle(&plant_context, meshcat_->GetSliderValue("phi"));
+    bot_theta.set_angle(&plant_context, meshcat_->GetSliderValue("phi"));*/
   }
 
   return 0;
