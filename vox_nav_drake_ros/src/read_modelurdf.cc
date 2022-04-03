@@ -101,14 +101,14 @@ int main(int argc, char const * argv[])
     ament_index_cpp::get_package_share_directory("vox_nav_drake_ros");
 
   auto [plant, scene_graph] =
-    drake::multibody::AddMultibodyPlantSceneGraph(&builder, 0.001 /* time_step */);
+    drake::multibody::AddMultibodyPlantSceneGraph(&builder, 0.0001 /* time_step */);
   const std::string & pathname = vox_nav_drake_ros_package_path + "/urdf/botanbot.urdf";
   drake::multibody::Parser parser(&plant);
   parser.AddModelFromFile(pathname);
 
   plant.Finalize();
   drake::geometry::MeshcatVisualizerParams params;
-  params.publish_period = 10;
+  params.publish_period = 1000;
 
   auto visualizer = &drake::geometry::MeshcatVisualizer<double>::AddToBuilder(
     &builder, scene_graph, meshcat_, std::move(params));
