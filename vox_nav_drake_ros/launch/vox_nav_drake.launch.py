@@ -24,10 +24,10 @@ def generate_launch_description():
     # Declare node actions
     drake_ros_node = Node(
         package='vox_nav_drake_ros',
-        executable='drake_ros_node',
+        executable='read_modelurdf',
         name='drake_ros_node',
         output='screen',
-        #prefix=['xterm -e gdb -ex run --args'],
+        prefix=['xterm -e gdb -ex run --args'],
         parameters=[],
         remappings=[('drake_test_node/cmd_vel', 'vox_nav/cmd_vel')])
 

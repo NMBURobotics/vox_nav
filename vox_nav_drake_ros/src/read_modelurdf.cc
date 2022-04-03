@@ -34,9 +34,9 @@ class Robot : public drake::systems::LeafSystem<double>
 public:
   Robot()
   {
-    DeclareVectorInputPort("controls", 2);
+    DeclareVectorInputPort("robot_input_control", 2);
     auto state_index = this->DeclareContinuousState(3);
-    DeclareStateOutputPort("states", state_index);
+    DeclareStateOutputPort("robot_output_states", state_index);
   }
   virtual ~Robot() = default;
 // Compute the actual physics.
@@ -66,7 +66,7 @@ public:
     slider_names_(slider_names)
   {
     DeclareVectorOutputPort(
-      "controls_meshcat", 2, &MeshcatSliders::calc_output_value,
+      "mesh_sliders_output_controls", 2, &MeshcatSliders::calc_output_value,
       {all_state_ticket()});
   }
 
@@ -91,10 +91,24 @@ private:
 int main(int argc, char const * argv[])
 {
 
+  drake::systems::DiagramBuilder<double> builder;
+  auto meshcat_ = std::make_shared<drake::geometry::Meshcat>();
+  std::vector<std::string> slider_names = {"v", "phi"};
+  meshcat_->AddSlider("v", -5, 5, 0.1, 0.0);
+  meshcat_->AddSlider("phi", -1, 1, 0.05, 0.0);
+
+  auto robot = builder.AddSystem<Robot>();
+  robot->set_name("robot");
+
+  auto teleop = builder.AddSystem<MeshcatSliders>(meshcat_, slider_names);
+  teleop->set_name("teleop");
+
+  builder.Connect(
+    teleop->GetOutputPort("mesh_sliders_output_controls"),
+    robot->GetInputPort("robot_input_control"));
+
   std::string vox_nav_drake_ros_package_path =
     ament_index_cpp::get_package_share_directory("vox_nav_drake_ros");
-
-  drake::systems::DiagramBuilder<double> builder;
 
   auto [plant, scene_graph] =
     drake::multibody::AddMultibodyPlantSceneGraph(&builder, 0.001 /* time_step */);
@@ -102,72 +116,33 @@ int main(int argc, char const * argv[])
   drake::multibody::Parser parser(&plant);
   parser.AddModelFromFile(pathname);
 
-  const drake::multibody::PrismaticJoint<double> & bot_x =
-    plant.GetJointByName<drake::multibody::PrismaticJoint>("x");
-  const drake::multibody::PrismaticJoint<double> & bot_y =
-    plant.GetJointByName<drake::multibody::PrismaticJoint>("y");
-  const drake::multibody::RevoluteJoint<double> & bot_theta =
-    plant.GetJointByName<drake::multibody::RevoluteJoint>("theta");
-
   plant.Finalize();
-
-  std::cout << plant.get_actuation_input_port().size() << std::endl;
-  std::cout << plant.get_actuation_input_port().get_data_type() << std::endl;
-  std::cout << plant.get_actuation_input_port().size() << std::endl;
-
-
-  drake::geometry::SceneGraph<double> * scene_graph_{};
-  auto meshcat_ = std::make_shared<drake::geometry::Meshcat>();
-  drake::geometry::MeshcatVisualizerParams params = {};
-  scene_graph_ = &scene_graph;
-
+  drake::geometry::MeshcatVisualizerParams params;
+  params.publish_period = 10;
 
   auto visualizer = &drake::geometry::MeshcatVisualizer<double>::AddToBuilder(
     &builder, scene_graph, meshcat_, std::move(params));
-
-  meshcat_->AddSlider("v", -5, 5, 0.1, 0.0);
-  meshcat_->AddSlider("phi", -1, 1, 0.05, 0.0);
-  std::vector<std::string> slider_names = {"v", "phi"};
-
-  auto input_system_meshcat = builder.AddSystem<MeshcatSliders>(meshcat_, slider_names);
-
-  auto robot = builder.AddSystem<Robot>();
-  robot->set_name("robot");
-
-
-  auto zero_torque =
-    builder.AddSystem<drake::systems::ConstantVectorSource<double>>(
-    Eigen::VectorXd::Zero(3));
-
-  builder.Connect(
-    zero_torque->get_output_port(),
-    plant.get_actuation_input_port());
-
-
   auto diagram = builder.Build();
-
-
-  std::cout << zero_torque->get_output_port().size() << std::endl;
-  std::cout << zero_torque->get_output_port().get_data_type() << std::endl;
-
-
-  Eigen::VectorXd x0 = Eigen::VectorXd::Zero(3);
-  // Set the initial conditions (x, y, theta)
   auto context = diagram->CreateDefaultContext();
-  context->SetContinuousState(x0);
 
   drake::systems::Context<double> & plant_context =
     diagram->GetMutableSubsystemContext(plant, context.get());
-
-  drake::systems::Simulator<double> simulator(plant);
-
+  drake::systems::Simulator<double> simulator(*diagram);
+  auto & simulator_context = simulator.get_mutable_context();
   simulator.Initialize();
+
   while (1) {
-    //diagram->Publish(*context);
-    simulator.AdvanceTo(simulator.get_context().get_time() + 0.1);
-    /*bot_x.set_translation(&plant_context, meshcat_->GetSliderValue("v"));
-    bot_y.set_translation(&plant_context, simulator.get_context().get_time() * 0.001);
-    bot_theta.set_angle(&plant_context, meshcat_->GetSliderValue("phi"));*/
+    const drake::systems::ContinuousState<double> & state =
+      simulator_context.get_continuous_state();
+    const drake::VectorX<double> & curr_pose = state.CopyToVector();
+    drake::math::RollPitchYawd rpy(0, 0, curr_pose.z());
+    drake::Vector3<double> xyz(curr_pose.x(), curr_pose.y(), 0);
+    drake::math::RigidTransformd X_WB(rpy, xyz);
+    plant.SetFreeBodyPoseInWorldFrame(
+      &plant_context, plant.GetBodyByName(
+        "base_link"), X_WB);
+    simulator.AdvanceTo(simulator_context.get_time() + 0.01);
+    diagram->Publish(*context);
   }
 
   return 0;
