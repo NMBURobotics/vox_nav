@@ -35,9 +35,6 @@ set(dependencies
     ament_index_cpp
     )
 
-add_executable(drake_ros_node src/drake_ros_node.cc)
-ament_target_dependencies(drake_ros_node ${dependencies})
-
 add_executable(lyapanuv_control src/lyapanuv_control.cc)
 ament_target_dependencies(lyapanuv_control ${dependencies})
 
@@ -47,8 +44,7 @@ ament_target_dependencies(sos_lyapunov_test ${dependencies})
 add_executable(read_modelurdf src/read_modelurdf.cc)
 ament_target_dependencies(read_modelurdf ${dependencies})
 
-install(TARGETS drake_ros_node
-                lyapanuv_control
+install(TARGETS lyapanuv_control
                 sos_lyapunov_test
                 read_modelurdf
   RUNTIME DESTINATION lib/${PROJECT_NAME})
