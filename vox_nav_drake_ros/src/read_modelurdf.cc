@@ -21,14 +21,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
 
-
-using drake::symbolic::Expression;
-using drake::symbolic::Monomial;
-using drake::symbolic::Variable;
-using drake::symbolic::Variables;
-using drake::symbolic::internal::DegreeType;
-
-
 class Robot : public drake::systems::LeafSystem<double>
 {
 public:
@@ -69,13 +61,11 @@ public:
       "mesh_sliders_output_controls", 2, &MeshcatSliders::calc_output_value,
       {all_state_ticket()});
   }
-
   virtual ~MeshcatSliders() = default;
 
 private:
   std::shared_ptr<drake::geometry::Meshcat> meshcat_;
   std::vector<std::string> slider_names_;
-
   void
   calc_output_value(
     const drake::systems::Context<double> & context,
@@ -94,7 +84,7 @@ int main(int argc, char const * argv[])
   drake::systems::DiagramBuilder<double> builder;
   auto meshcat_ = std::make_shared<drake::geometry::Meshcat>();
   std::vector<std::string> slider_names = {"v", "phi"};
-  meshcat_->AddSlider("v", -5, 5, 0.1, 0.0);
+  meshcat_->AddSlider("v", -1, 1, 0.05, 0.0);
   meshcat_->AddSlider("phi", -1, 1, 0.05, 0.0);
 
   auto robot = builder.AddSystem<Robot>();
