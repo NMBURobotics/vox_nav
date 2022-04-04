@@ -121,6 +121,11 @@ int main(int argc, char const * argv[])
   auto & simulator_context = simulator.get_mutable_context();
   simulator.Initialize();
 
+  const drake::multibody::RevoluteJoint<double> & front_left_combined_joint =
+    plant.GetJointByName<drake::multibody::RevoluteJoint>("front_left_combined_joint");
+  const drake::multibody::RevoluteJoint<double> & front_right_combined_joint =
+    plant.GetJointByName<drake::multibody::RevoluteJoint>("front_right_combined_joint");
+
   while (1) {
     const drake::systems::ContinuousState<double> & state =
       simulator_context.get_continuous_state();
@@ -131,6 +136,8 @@ int main(int argc, char const * argv[])
     plant.SetFreeBodyPoseInWorldFrame(
       &plant_context, plant.GetBodyByName(
         "base_link"), X_WB);
+    front_left_combined_joint.set_angle(&plant_context, meshcat_->GetSliderValue("phi"));
+    front_right_combined_joint.set_angle(&plant_context, meshcat_->GetSliderValue("phi"));
     simulator.AdvanceTo(simulator_context.get_time() + 0.01);
     diagram->Publish(*context);
   }

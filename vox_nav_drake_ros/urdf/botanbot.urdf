@@ -123,13 +123,13 @@
     <!-- BEGIN JOINTS                       -->
     <!-- BEGIN JOINTS RELATED TO ROBOT BODY -->
 
-    <joint name='front_left_combined_joint' type='continuous'>
+    <joint name='front_left_combined_joint' type='revolute'>
         <parent link="base_link" />
         <child link="front_left_wheel" />
         <origin xyz="0.653624 0.496194 -0.084805" rpy="0 -0 1.5706" />
         <axis xyz="0 0 1" />
     </joint>
-    <joint name='front_right_combined_joint' type='continuous'>
+    <joint name='front_right_combined_joint' type='revolute'>
         <parent link="base_link" />
         <child link="front_right_wheel" />
         <origin xyz="0.666123 -0.495391 -0.085288" rpy="0 0 1.5706" />
