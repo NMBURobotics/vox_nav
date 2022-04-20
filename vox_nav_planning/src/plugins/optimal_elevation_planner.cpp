@@ -478,8 +478,10 @@ namespace vox_nav_planning
         solution_path->append(compound_elevation_state);
       }
 
-      solution_path->interpolate(interpolation_parameter_);    /*WARN TAKES A LOT OF TIME*/
-      path_simlifier->smoothBSpline(*solution_path, 3, 0.2);   /*WARN TAKES A LOT OF TIME*/
+      if (interpolation_parameter_) {
+        solution_path->interpolate(interpolation_parameter_);  /*WARN TAKES A LOT OF TIME*/
+        path_simlifier->smoothBSpline(*solution_path, 3, 0.2); /*WARN TAKES A LOT OF TIME*/
+      }
 
       // from OMPL to geometry_msgs
       for (std::size_t path_idx = 0; path_idx < solution_path->getStateCount(); path_idx++) {

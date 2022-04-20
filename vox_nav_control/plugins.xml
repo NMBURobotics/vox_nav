@@ -12,4 +12,10 @@
     </class>
   </library>
 
+  <library path="lyapunov_controller">
+    <class type="lyapunov_controller::LyapunovControllerROS" base_class_type="vox_nav_control::ControllerCore">
+      <description>TODO(fetullah.atas)</description>
+    </class>
+  </library>
+
 </class_libraries>

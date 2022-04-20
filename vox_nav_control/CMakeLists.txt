@@ -75,6 +75,10 @@ add_library(mpc_controller_casadi SHARED               src/mpc_controller_casadi
 ament_target_dependencies(mpc_controller_casadi ${dependencies})
 target_link_libraries(mpc_controller_casadi ompl casadi)
 
+add_library(lyapunov_controller SHARED                 src/lyapunov_controller/lyapunov_controller_ros.cpp)
+ament_target_dependencies(lyapunov_controller ${dependencies})
+target_link_libraries(lyapunov_controller ompl casadi)
+
 option(ACADO_CODE_IS_READY "Whether Acado code has been generated" ON)
 
 if(ACADO_CODE_IS_READY)
@@ -105,6 +109,7 @@ if(ACADO_CODE_IS_READY)
 endif(ACADO_CODE_IS_READY)
 
 install(TARGETS mpc_controller_casadi
+                lyapunov_controller
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
@@ -126,5 +131,6 @@ endif()
 
 ament_export_include_directories(include)
 ament_export_libraries(mpc_controller_casadi)
+ament_export_libraries(lyapunov_controller)
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 ament_package()
