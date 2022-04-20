@@ -66,6 +66,7 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_yaw);
 
+
       auto nearest_state_index = common::nearestStateIndex(reference_traj_, curr_robot_pose);
       nearest_state_index += 1;
 
@@ -74,6 +75,10 @@ namespace vox_nav_control
       }
 
       auto curr_goal = reference_traj_.poses[nearest_state_index].pose;
+
+      double goal_roll, goal_pitch, goal_yaw;
+      vox_nav_utilities::getRPYfromMsgQuaternion(
+        curr_goal.orientation, goal_roll, goal_pitch, goal_yaw);
 
       auto target_x = curr_goal.position.x;
       auto target_y = curr_goal.position.y;
@@ -119,6 +124,7 @@ namespace vox_nav_control
       vox_nav_control::common::States goal_state;
       goal_state.x = target_x;
       goal_state.y = target_y;
+      goal_state.psi = goal_yaw;
       local_interpolated_reference_states.push_back(goal_state);
 
       vox_nav_control::common::publishTrajStates(
