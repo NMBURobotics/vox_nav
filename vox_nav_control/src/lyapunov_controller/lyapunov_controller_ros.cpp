@@ -69,7 +69,7 @@ namespace vox_nav_control
       auto nearest_state_index = common::nearestStateIndex(reference_traj_, curr_robot_pose);
       nearest_state_index += 1;
 
-      if (nearest_state_index = reference_traj_.poses.size()) {
+      if (nearest_state_index == reference_traj_.poses.size()) {
         nearest_state_index = reference_traj_.poses.size() - 1;
       }
 
@@ -110,6 +110,20 @@ namespace vox_nav_control
       computed_velocity_.angular.z = std::clamp<double>(
         u2, mpc_parameters_.DF_MIN,
         mpc_parameters_.DF_MAX);
+
+      std_msgs::msg::ColorRGBA red_color, blue_color;
+      red_color.r = 1.0;
+      red_color.a = 1.0;
+
+      std::vector<vox_nav_control::common::States> local_interpolated_reference_states;
+      vox_nav_control::common::States goal_state;
+      goal_state.x = target_x;
+      goal_state.y = target_y;
+      local_interpolated_reference_states.push_back(goal_state);
+
+      vox_nav_control::common::publishTrajStates(
+        local_interpolated_reference_states, red_color, "ref_traj",
+        interpolated_local_reference_traj_publisher_);
 
       return computed_velocity_;
     }
