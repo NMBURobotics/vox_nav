@@ -50,7 +50,7 @@ namespace vox_nav_control
       parent->get_parameter(plugin_name + ".k1", k1_);
       parent->get_parameter(plugin_name + ".k2", k2_);
 
-      interpolated_local_reference_traj_publisher_ =
+      curr_goal_publisher_ =
         parent->create_publisher<visualization_msgs::msg::MarkerArray>(
         "/vox_nav/controller/plan",
         1);
@@ -132,7 +132,7 @@ namespace vox_nav_control
 
       vox_nav_control::common::publishTrajStates(
         local_interpolated_reference_states, red_color, "ref_traj",
-        interpolated_local_reference_traj_publisher_);
+        curr_goal_publisher_);
 
       return computed_velocity_;
     }

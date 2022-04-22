@@ -120,29 +120,14 @@ namespace vox_nav_control
       // MPC core controller object
       // parameters struct used for MPC controller
       vox_nav_control::common::Parameters mpc_parameters_;
-      // Keep a copy of previously applied control inputs, this is neded
-      // by MPC algorithm
-      vox_nav_control::common::ControlInput previous_control_;
-      // Publish local trajecory currently being fed to controller
+      // Publish local goal controller
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
-        interpolated_local_reference_traj_publisher_;
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
-        mpc_computed_traj_publisher_;
-      // while following global plan whats the max look ahead distance ?, thats global_plan_look_ahead_distance_
-      double global_plan_look_ahead_distance_;
+        curr_goal_publisher_;
 
       rclcpp::Node * parent_;
       rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr obstacle_tracks_sub_;
       vox_nav_msgs::msg::ObjectArray obstacle_tracks_;
       std::mutex obstacle_tracks_mutex_;
-
-      ompl::base::StateSpacePtr state_space_;
-      std::string selected_se2_space_name_;
-      // curve radius for reeds and dubins only
-      double rho_;
-      ompl::base::SpaceInformationPtr state_space_information_;
-
-      bool solved_at_least_once_;
 
       double k1_;
       double k2_;
