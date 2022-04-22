@@ -143,6 +143,9 @@ namespace vox_nav_control
       ompl::base::SpaceInformationPtr state_space_information_;
 
       bool solved_at_least_once_;
+
+      double k1_;
+      double k2_;
     };
 
   } // namespace lyapunov_controller

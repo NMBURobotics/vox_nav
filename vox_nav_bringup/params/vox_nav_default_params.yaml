@@ -113,14 +113,12 @@ vox_nav_controller_server_rclcpp_node:
 
       LyapunovControllerROS:
          plugin: "lyapunov_controller::LyapunovControllerROS"
-         N: 20                                                                # timesteps in MPC Horizon
-         Ni: 1
-         DT: 0.2                                                              # discretization time between timesteps(s)
          V_MIN: -0.2                                                          # min / max velocity constraint(m / s)
          V_MAX: 0.4
          DF_MIN: -0.6                                                         # min / max front steer angle constraint(rad)
          DF_MAX: 0.6
-
+         k1: -5.0
+         k2: 15.0
 
 vox_nav_map_server_rclcpp_node:
   ros__parameters:

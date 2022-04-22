@@ -41,11 +41,14 @@ namespace vox_nav_control
       parent->declare_parameter(plugin_name + ".V_MAX", 2.0);
       parent->declare_parameter(plugin_name + ".DF_MIN", -0.5);
       parent->declare_parameter(plugin_name + ".DF_MAX", 0.5);
-
+      parent->declare_parameter(plugin_name + ".k1", -0.5);
+      parent->declare_parameter(plugin_name + ".k2", 0.5);
       parent->get_parameter(plugin_name + ".V_MIN", mpc_parameters_.V_MIN);
       parent->get_parameter(plugin_name + ".V_MAX", mpc_parameters_.V_MAX);
       parent->get_parameter(plugin_name + ".DF_MIN", mpc_parameters_.DF_MIN);
       parent->get_parameter(plugin_name + ".DF_MAX", mpc_parameters_.DF_MAX);
+      parent->get_parameter(plugin_name + ".k1", k1_);
+      parent->get_parameter(plugin_name + ".k2", k2_);
 
       interpolated_local_reference_traj_publisher_ =
         parent->create_publisher<visualization_msgs::msg::MarkerArray>(
@@ -91,8 +94,8 @@ namespace vox_nav_control
       auto e = std::sqrt(std::pow((z1 - target_x), 2) + std::pow((z2 - target_y), 2));
       auto goal_heading = std::atan2((z2 - target_y), (z1 - target_x));
 
-      auto k1 = -1.0;
-      auto k2 = 2.0;
+      auto k1 = k1_;
+      auto k2 = k2_;
 
       if ((z1 - target_x) < 0) {
         k1 = -k1;
