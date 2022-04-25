@@ -41,8 +41,8 @@ namespace vox_nav_control
       parent->declare_parameter(plugin_name + ".V_MAX", 2.0);
       parent->declare_parameter(plugin_name + ".DF_MIN", -0.5);
       parent->declare_parameter(plugin_name + ".DF_MAX", 0.5);
-      parent->declare_parameter(plugin_name + ".k1", -0.5);
-      parent->declare_parameter(plugin_name + ".k2", 0.5);
+      parent->declare_parameter(plugin_name + ".k1", -5.0);
+      parent->declare_parameter(plugin_name + ".k2", 15.0);
       parent->get_parameter(plugin_name + ".V_MIN", mpc_parameters_.V_MIN);
       parent->get_parameter(plugin_name + ".V_MAX", mpc_parameters_.V_MAX);
       parent->get_parameter(plugin_name + ".DF_MIN", mpc_parameters_.DF_MIN);
@@ -71,9 +71,9 @@ namespace vox_nav_control
 
 
       auto nearest_state_index = common::nearestStateIndex(reference_traj_, curr_robot_pose);
-      nearest_state_index += 1;
+      nearest_state_index += 2;
 
-      if (nearest_state_index == reference_traj_.poses.size()) {
+      if (nearest_state_index >= reference_traj_.poses.size()) {
         nearest_state_index = reference_traj_.poses.size() - 1;
       }
 
@@ -109,8 +109,15 @@ namespace vox_nav_control
       auto a = goal_heading - z3;
       auto tht = goal_heading;
 
-      auto u1 = k1 * (e * std::cos(a));
-      auto u2 = k2 * (a + (std::cos(a) * std::sin(a) / a)) * (a + tht);
+      double u1, u2;
+
+      if (std::abs(a) < 0.1) {
+        u1 = k1 * e * std::cos(a);
+        u2 = k2 * a + (1) * (a + tht);
+      } else {
+        u1 = k1 * e * std::cos(a);
+        u2 = k2 * a + (std::cos(a) * std::sin(a) / a) * (a + tht);
+      }
 
       computed_velocity_.linear.x = std::clamp<double>(
         u1, mpc_parameters_.V_MIN,

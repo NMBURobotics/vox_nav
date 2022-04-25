@@ -113,12 +113,12 @@ vox_nav_controller_server_rclcpp_node:
 
       LyapunovControllerROS:
          plugin: "lyapunov_controller::LyapunovControllerROS"
-         V_MIN: -0.2                                                          # min / max velocity constraint(m / s)
-         V_MAX: 0.4
-         DF_MIN: -0.6                                                         # min / max front steer angle constraint(rad)
-         DF_MAX: 0.6
-         k1: -5.0
-         k2: 15.0
+         V_MIN: -1.0                                                          # min / max velocity constraint(m / s)
+         V_MAX: 1.0
+         DF_MIN: -0.5                                                         # min / max front steer angle constraint(rad)
+         DF_MAX: 0.5
+         k1: -1.0
+         k2: 5.0
 
 vox_nav_map_server_rclcpp_node:
   ros__parameters:
