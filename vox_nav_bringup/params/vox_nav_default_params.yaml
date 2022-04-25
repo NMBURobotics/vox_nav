@@ -43,12 +43,12 @@ vox_nav_planner_server_rclcpp_node:
       graph_search_method: "astar"                           # Other options: astar , dijkstra
       supervoxel_disable_transform: false                    # set true for organized point clouds
       supervoxel_resolution: 0.4
-      supervoxel_seed_resolution: 2.0
+      supervoxel_seed_resolution: 1.5
       supervoxel_color_importance: 0.0
       supervoxel_spatial_importance: 1.0
       supervoxel_normal_importance: 1.0
-      distance_penalty_weight: 0.7
-      elevation_penalty_weight: 0.3
+      distance_penalty_weight: 0.2
+      elevation_penalty_weight: 0.8
       state_space_boundries:
         minx: -50.0
         maxx: 50.0
@@ -119,6 +119,7 @@ vox_nav_controller_server_rclcpp_node:
          DF_MAX: 0.5
          k1: -1.0
          k2: 5.0
+         lookahead_n_waypoints: 2
 
 vox_nav_map_server_rclcpp_node:
   ros__parameters:

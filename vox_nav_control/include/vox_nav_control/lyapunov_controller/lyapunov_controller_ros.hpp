@@ -131,6 +131,7 @@ namespace vox_nav_control
 
       double k1_;
       double k2_;
+      int lookahead_n_waypoints_;
     };
 
   } // namespace lyapunov_controller

@@ -37,18 +37,23 @@ namespace vox_nav_control
     {
       parent_ = parent;
 
+
       parent->declare_parameter(plugin_name + ".V_MIN", -2.0);
       parent->declare_parameter(plugin_name + ".V_MAX", 2.0);
       parent->declare_parameter(plugin_name + ".DF_MIN", -0.5);
       parent->declare_parameter(plugin_name + ".DF_MAX", 0.5);
       parent->declare_parameter(plugin_name + ".k1", -5.0);
       parent->declare_parameter(plugin_name + ".k2", 15.0);
+      parent->declare_parameter(plugin_name + ".lookahead_n_waypoints", 2);
+
       parent->get_parameter(plugin_name + ".V_MIN", mpc_parameters_.V_MIN);
       parent->get_parameter(plugin_name + ".V_MAX", mpc_parameters_.V_MAX);
       parent->get_parameter(plugin_name + ".DF_MIN", mpc_parameters_.DF_MIN);
       parent->get_parameter(plugin_name + ".DF_MAX", mpc_parameters_.DF_MAX);
       parent->get_parameter(plugin_name + ".k1", k1_);
       parent->get_parameter(plugin_name + ".k2", k2_);
+      parent->get_parameter(plugin_name + ".lookahead_n_waypoints", lookahead_n_waypoints_);
+
 
       curr_goal_publisher_ =
         parent->create_publisher<visualization_msgs::msg::MarkerArray>(
@@ -70,7 +75,7 @@ namespace vox_nav_control
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_yaw);
 
       auto nearest_state_index = common::nearestStateIndex(reference_traj_, curr_robot_pose);
-      nearest_state_index += 1;
+      nearest_state_index += lookahead_n_waypoints_;
 
       if (nearest_state_index >= reference_traj_.poses.size()) {
         nearest_state_index = reference_traj_.poses.size() - 1;
