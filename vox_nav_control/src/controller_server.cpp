@@ -212,7 +212,6 @@ namespace vox_nav_control
         while (rclcpp::ok() && !is_goal_orientation_tolerance_satisfied) {
 
           if (goal_handle->is_canceling()) {
-            goal_handle->canceled(result);
             RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
             cmd_vel_publisher_->publish(geometry_msgs::msg::Twist());
             is_goal_orientation_tolerance_satisfied = true;

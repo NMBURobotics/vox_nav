@@ -69,9 +69,8 @@ namespace vox_nav_control
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_yaw);
 
-
       auto nearest_state_index = common::nearestStateIndex(reference_traj_, curr_robot_pose);
-      nearest_state_index += 2;
+      nearest_state_index += 1;
 
       if (nearest_state_index >= reference_traj_.poses.size()) {
         nearest_state_index = reference_traj_.poses.size() - 1;
