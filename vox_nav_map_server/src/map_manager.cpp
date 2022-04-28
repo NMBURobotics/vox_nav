@@ -315,8 +315,8 @@ namespace vox_nav_map_server
   {
     // seperate traversble points from non-traversable ones
     auto pure_traversable_pcl = vox_nav_utilities::get_traversable_points(pcd_map_pointcloud_);
-    auto pure_non_traversable_pcl =
-      vox_nav_utilities::get_non_traversable_points(pcd_map_pointcloud_);
+    auto pure_non_traversable_pcl = vox_nav_utilities::get_non_traversable_points(
+      pcd_map_pointcloud_);
 
     // uniformly sample nodes on top of traversable cloud
     auto uniformly_sampled_nodes = vox_nav_utilities::uniformlySampleCloud<pcl::PointXYZRGB>(

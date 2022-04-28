@@ -124,6 +124,8 @@ vox_nav_controller_server_rclcpp_node:
 vox_nav_map_server_rclcpp_node:
   ros__parameters:
     pcd_map_filename: /home/atas/colcon_ws/src/Thorvald/thorvald_vox_nav/maps/container_office_map.pcd # Provide a PCD format map
+    #pcd_map_filename: /home/atas/colcon_ws/src/vox_nav/vox_nav_bringup/maps/uneven_world.pcd # Provide a PCD format map
+
     # PCD PREPROCESS PARAMS
     pcd_map_downsample_voxel_size: 0.10                                       # Set to smaller if you do not want downsample pointclouds of the map
     pcd_map_transform:                                                        # Apply an OPTIONAL rigid-body transrom to pcd file, leave to all zeros if not wished
@@ -164,14 +166,16 @@ vox_nav_map_server_rclcpp_node:
     map_datum:                                                               # Datum coordinates of map is used to geo-reference the map 
                                                                              # If you are building a map with a SLAM method, you need to get a reading from GPS and absolute headed IMU
                                                                              # just before you start to build the map. See for example 
-      latitude: 59.66424233333333 # #CONTAINER LAB
-      longitude: 10.76279866666667
+      #latitude: 59.66424233333333         # CONTAINER OFFICE
+      #longitude: 10.76279866666667
       #altitude: 111.0
-      #altitude: 0.9
 
-      #latitude: 59.66597883333333 #ROBOT LAB
+      #latitude: 59.66597883333333          # ROBOT LAB
       #longitude: 10.777659
       #altitude: 111.0
+
+      latitude: 59.664226426330366          # UNEVEN GAZEBO
+      longitude: 10.762822144413834
       altitude: 0.0
       quaternion:
         x: 0.0
