@@ -34,7 +34,7 @@ jobs:
                   sudo sh -c 'echo "deb [arch=amd64,arm64] http://packages.ros.org/ros2/ubuntu `lsb_release -cs` main" > /etc/apt/sources.list.d/ros2-latest.list'
                   sudo apt update
                   sudo apt install ros-foxy-desktop
-                  source /opt/ ros/foxy/setup.bash
+                  source /opt/ros/foxy/setup.bash
             - name: Create Workspace
               run: |
                   mkdir -p ~/ros2_ws/src
