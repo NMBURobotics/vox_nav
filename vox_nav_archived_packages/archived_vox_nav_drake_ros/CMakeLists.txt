@@ -35,7 +35,6 @@ set(dependencies
     ament_index_cpp
     )
 
-    
 add_executable(lyapanuv_control src/lyapanuv_control.cc)
 ament_target_dependencies(lyapanuv_control ${dependencies})
 
