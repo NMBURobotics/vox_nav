@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="2">
-  <name>vox_nav_drake_ros</name>
+  <name>archived_vox_nav_drake_ros</name>
   <version>0.0.0</version>
   <description>Todo.</description>
   <maintainer email="fetullah.atas@nmbu.no">Fetullah Atas</maintainer>

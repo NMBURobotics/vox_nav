@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-    <name>vox_nav_openvslam</name>
+    <name>archived_vox_nav_openvslam</name>
     <version>0.0.0</version>
     <description>The ROS2 package for perfroming mapping and localization based on OpenVSLAM</description>
     <maintainer email="fetullah.atas@nmbu.no">Fetullah Atas</maintainer>

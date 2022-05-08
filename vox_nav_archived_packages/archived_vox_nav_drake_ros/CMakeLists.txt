@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(vox_nav_drake_ros)
+project(archived_vox_nav_drake_ros)
 
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)

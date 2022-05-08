@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(vox_nav_openvslam LANGUAGES CXX C)
+project(archived_vox_nav_openvslam LANGUAGES CXX C)
 
 if(POLICY CMP0042)
     cmake_policy(SET CMP0042 NEW)
