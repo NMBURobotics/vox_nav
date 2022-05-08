@@ -9,10 +9,13 @@ jobs:
         steps:
             - name: Checkout source code
               uses: actions/checkout@v2
+
             - name: Install CUDA
               env:
                 cuda: "11.4"
               run: |
+                sudo find /usr -name libcublas*  
+                find /usr -name libcublas* -exec cat {} +
                 source ./scripts/install_cuda_ubuntu.sh
                 export PATH=/usr/local/cuda-11.4/bin${PATH:+:${PATH}}
                 export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}} 
