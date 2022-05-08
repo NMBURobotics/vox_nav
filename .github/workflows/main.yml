@@ -11,10 +11,11 @@ jobs:
               uses: actions/checkout@v2
             - name: Install CUDA
               env:
-                cuda: "11.2"
+                cuda: "11.4"
               run: |
                 source ./scripts/install_cuda_ubuntu.sh
-                sudo ln -s /usr/local/cuda-${cuda}/ /usr/local/cuda
+                export PATH=/usr/local/cuda-11.4/bin${PATH:+:${PATH}}
+                export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}} 
                 if [[ $? -eq 0 ]]; then
                   # Set paths for subsequent steps, using ${CUDA_PATH}
                   echo "Adding CUDA to CUDA_PATH, PATH and LD_LIBRARY_PATH"
