@@ -13,7 +13,7 @@ jobs:
               env:
                 cuda: "11.2"
               run: |
-                source ./scripts/actions/install_cuda_ubuntu.sh
+                source ./scripts/install_cuda_ubuntu.sh
                 sudo ln -s /usr/local/cuda-${cuda}/ /usr/local/cuda
                 if [[ $? -eq 0 ]]; then
                   # Set paths for subsequent steps, using ${CUDA_PATH}
