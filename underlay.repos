@@ -29,8 +29,8 @@ repositories:
       version: dynamic_points_dev  
   fast_gicp:
       type: git
-      url: https://github.com/jediofgever/fast_gicp.git 
-      version: master  
+      url: https://github.com/CezeriRobotics/fast_gicp.git 
+      version: foxy  
 
 
     

@@ -31,11 +31,11 @@ vox_nav_planner_server_rclcpp_node:
       rho: 2.0                                        # Curve radius for reeds and dubins only
       state_space_boundries:
         minx: -100.0
-        maxx: 100.0
+        maxx:  100.0
         miny: -100.0
-        maxy: 100.0
+        maxy:  100.0
         minz: -5.0
-        maxz: 10.0
+        maxz:  10.0
     OptimalElevationPlanner: 
       plugin: "vox_nav_planning::OptimalElevationPlanner"    # Bases on Astar on SuperVoxelClustering
       se2_space: "SE2"                                     # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
