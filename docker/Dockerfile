@@ -34,6 +34,7 @@ RUN . /opt/ros/foxy/setup.sh; \
  
 # Cloning repos and building
 RUN cd ~/ros2_ws && wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos && vcs import src < underlay.repos --recursive 
+RUN cd ~/ros2_ws && vcs pull src 
 
 # install CUDA
 RUN /bin/bash -c 'export cuda=11.4 ; \
@@ -42,10 +43,11 @@ RUN /bin/bash -c 'export cuda=11.4 ; \
                   echo "export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> /home/ubuntu/.bashrc;'
  
 RUN /bin/bash -c 'cd ~/ros2_ws; \
+                  source /opt/ros/foxy/setup.bash; \
                   rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy; \
                   export PATH=/usr/local/cuda-11.4/bin${PATH:+:${PATH}}; \
                   export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}; \
-                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=true --packages-select casadi ompl ACADO cupoch; \
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=true --packages-select casadi ompl ACADO cupoch fast_gicp; \
                   sudo cp ~/ros2_ws/install/ompl/lib/libompl.so* /usr/local/lib/; \
                   sudo cp ~/ros2_ws/install/casadi/lib/libcasadi.so* /usr/local/lib/;'
  
@@ -55,6 +57,7 @@ RUN /bin/bash -c '. /opt/ros/foxy/setup.bash; cd /home/ubuntu/ros2_ws; \
 
 # Building vox_nav
 RUN /bin/bash -c 'source /opt/ros/foxy/setup.bash; \
+                  source ~/ros2_ws/install/setup.bash; \
                   cd ~/ros2_ws && source build/ACADO/acado_env.sh; \
                   export PATH=/usr/local/cuda-11.4/bin${PATH:+:${PATH}}; \
                   export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}; \
