@@ -12,11 +12,7 @@ LABEL maintainer="Fetullah Atas<fetulahatas1@gmail.com>"
 
 RUN apt-get update; apt-get -y upgrade
 
-# install CUDA
-RUN /bin/bash -c 'export cuda=11.4 ; \
-                  source ./scripts/install_cuda_ubuntu.sh; \
-                  echo "export PATH=/usr/local/cuda-11.4/bin${PATH:+:${PATH}}" >> /home/ubuntu/.bashrc;  \
-                  echo "export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> /home/ubuntu/.bashrc;'
+
 
 # Creating ros2_ws
 RUN mkdir -p ~/ros2_ws/src
@@ -26,21 +22,25 @@ RUN /bin/bash -c "source /opt/ros/foxy/setup.bash && \
 
 # Installing dependecies
 RUN . /opt/ros/foxy/setup.sh; \
-    apt install python3-colcon-common-extensions && \
+    apt install -y python3-colcon-common-extensions && \
     apt install -y python3-rosdep2 xdotool psmisc gnome-terminal && \
     apt install -y ros-foxy-twist-mux ros-foxy-navigation2 && \
-    apt install -y python3-colcon-common-extensions
+    apt install -y python3-colcon-common-extensions && \
     apt install -y python3-vcstool && \
     apt install -y xdotool && \
     apt install -y coinor-libipopt-dev && \
     rosdep update && cd ~/ros2_ws && \
-    rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy && \
-    apt-get -y clean
-
+    rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy 
+ 
 # Cloning repos and building
-RUN cd ~/ros2_ws
-RUN wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos
-RUN vcs import src < underlay.repos --recursive   
+RUN cd ~/ros2_ws && wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos && vcs import src < underlay.repos --recursive 
+
+# install CUDA
+RUN /bin/bash -c 'export cuda=11.4 ; \
+                  source vox_nav/scripts/install_cuda_ubuntu.sh; \
+                  echo "export PATH=/usr/local/cuda-11.4/bin${PATH:+:${PATH}}" >> /home/ubuntu/.bashrc;  \
+                  echo "export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> /home/ubuntu/.bashrc;'
+
 RUN rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy   
 RUN colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=true --packages-select casadi ompl ACADO cupoch
 RUN sudo cp install/ompl/lib/libompl.so* /usr/local/lib/
