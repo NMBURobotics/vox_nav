@@ -37,14 +37,14 @@ RUN cd ~/ros2_ws && wget https://raw.githubusercontent.com/jediofgever/vox_nav/f
 
 # install CUDA
 RUN /bin/bash -c 'export cuda=11.4 ; \
-                  source vox_nav/scripts/install_cuda_ubuntu.sh; \
+                  source ~/ros2_ws/src/vox_nav/scripts/install_cuda_ubuntu.sh; \
                   echo "export PATH=/usr/local/cuda-11.4/bin${PATH:+:${PATH}}" >> /home/ubuntu/.bashrc;  \
                   echo "export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> /home/ubuntu/.bashrc;'
 
-RUN rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy   
-RUN colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=true --packages-select casadi ompl ACADO cupoch
-RUN sudo cp install/ompl/lib/libompl.so* /usr/local/lib/
-RUN sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/  
+RUN cd ~/ros2_ws && rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy   
+RUN cd ~/ros2_ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=true --packages-select casadi ompl ACADO cupoch
+RUN sudo cp ~/ros2_ws/install/ompl/lib/libompl.so* /usr/local/lib/
+RUN sudo cp ~/ros2_ws/install/casadi/lib/libcasadi.so* /usr/local/lib/  
  
 RUN /bin/bash -c '. /opt/ros/foxy/setup.bash; cd /home/ubuntu/ros2_ws; \
                   echo "source /home/ubuntu/ros2_ws/install/setup.bash" >> /home/ubuntu/.bashrc; \
@@ -52,9 +52,8 @@ RUN /bin/bash -c '. /opt/ros/foxy/setup.bash; cd /home/ubuntu/ros2_ws; \
 
 # Building vox_nav
 RUN source /opt/ros/foxy/setup.bash
-RUN cd ~/ros2_ws
-RUN source build/ACADO/acado_env.sh
-RUN colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON --packages-skip-regex archived --packages-skip casadi ompl ACADO cupoch
+RUN cd ~/ros2_ws && source build/ACADO/acado_env.sh
+RUN cd ~/ros2_ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON --packages-skip-regex archived --packages-skip casadi ompl ACADO cupoch
 RUN source ~/ros2_ws/install/setup.bash
 
 # export NO_AT_BRIDGE fixes an error in the rqt:
@@ -62,5 +61,4 @@ RUN source ~/ros2_ws/install/setup.bash
 # The name org.a11y.Bus was not provided by any .service files"
 
 RUN cd /tmp && curl -fOL https://github.com/cdr/code-server/releases/download/v3.12.0/code-server_3.12.0_amd64.deb && dpkg -i code-server_3.12.0_amd64.deb && rm code-server_3.12.0_amd64.deb
-
 RUN bash -c 'echo -e "[supervisord]\nredirect_stderr=true\nstopsignal=QUIT\nautorestart=true\ndirectory=/root\n\n[program:codeserver]\ndirectory=/home/ubuntu\ncommand=/usr/bin/code-server --auth none --bind-addr 0.0.0.0:8888\nuser=ubuntu\nenvironment=DISPLAY=:1,HOME=/home/ubuntu,USER=ubuntu" > /etc/supervisor/conf.d/codeserver.conf'
