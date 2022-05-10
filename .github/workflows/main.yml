@@ -56,8 +56,8 @@ jobs:
                   wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos
                   vcs import src < underlay.repos --recursive   
                   rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy  
-                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select ompl casadi
-                   sudo cp install/ompl/lib/libompl.so* /usr/local/lib/
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select ompl casadi cupoch
+                  sudo cp install/ompl/lib/libompl.so* /usr/local/lib/
                   sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/  
                   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-skip-regex archive --packages-skip vox_nav_control 
                   source /opt/ros/foxy/setup.bash
