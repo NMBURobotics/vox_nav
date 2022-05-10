@@ -26,13 +26,8 @@ find_package(PCL REQUIRED)
 find_package(vox_nav_msgs REQUIRED)
 find_package(vox_nav_utilities REQUIRED)
 find_package(thrust REQUIRED)
-find_package(cupoch_conversions REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(fast_gicp REQUIRED)
-
-message("zs: CUPOCH_INCLUDE_DIRS = " ${CUPOCH_INCLUDE_DIRS})
-message("zs: CUPOCH_LIBRARIES = " ${CUPOCH_LIBRARIES})
-message("zs: EIGEN3_INCLUDE_DIRS = " ${EIGEN3_INCLUDE_DIRS})
 
 include_directories(include
         ${PCL_INCLUDE_DIRS}
@@ -57,7 +52,6 @@ set(dependencies
         visualization_msgs
         vox_nav_msgs
         vox_nav_utilities
-        cupoch_conversions
         fast_gicp
         )
         

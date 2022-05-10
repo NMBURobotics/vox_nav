@@ -19,10 +19,6 @@ repositories:
       type: git
       url: https://github.com/acado/acado.git
       version: stable   
-  perception_cupoch:
-      type: git
-      url: https://github.com/jediofgever/perception_cupoch.git
-      version: foxy  
   cupoch:
       type: git
       url: https://github.com/jediofgever/cupoch.git

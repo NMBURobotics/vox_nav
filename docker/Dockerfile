@@ -33,7 +33,7 @@ RUN . /opt/ros/foxy/setup.sh; \
     rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy 
  
 # Cloning repos and building
-RUN cd ~/ros2_ws/src && rm -rf fast_gicp
+RUN cd ~/ros2_ws/src && rm -rf perception_cupoch
 RUN cd ~/ros2_ws && wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos && vcs import src < underlay.repos --recursive 
 RUN cd ~/ros2_ws && vcs pull src 
 

@@ -40,7 +40,6 @@
 #include "cupoch/collision/collision.h"
 #include "cupoch/cupoch.h"
 #include "cupoch/geometry/occupancygrid.h"
-#include "cupoch_conversions/cupoch_conversions.hpp"
 #include "vox_nav_utilities/map_manager_helpers.hpp"
 #include "vox_nav_utilities/pcl_helpers.hpp"
 #include "vox_nav_utilities/tf_helpers.hpp"

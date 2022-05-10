@@ -184,10 +184,10 @@ void SemanticCloudClustering::cloudOdomCallback(
     determineObjectMovements(dynamic_points_cupoch, last_dynamic_pointcloud_cupoch_, cloud->header);
 
     sensor_msgs::msg::PointCloud2 denoised_cloud_msg;
-    cupoch_conversions::cupochToRos(
+    /*cupoch_conversions::cupochToRos(
       static_and_dynamic_obstacle_cloud_ptr,
       denoised_cloud_msg,
-      cloud->header.frame_id);
+      cloud->header.frame_id);*/
     denoised_cloud_msg.header = cloud->header;
     cloud_clusters_pub_->publish(denoised_cloud_msg);
     last_recieved_msg_stamp_ = cloud->header.stamp;
