@@ -48,23 +48,20 @@ RUN /bin/bash -c 'cd ~/ros2_ws; \
                   rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy; \
                   export PATH=/usr/local/cuda-11.4/bin${PATH:+:${PATH}}; \
                   export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}; \
-                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=true --packages-select casadi ompl ACADO cupoch fast_gicp; \
-                  sudo cp ~/ros2_ws/install/ompl/lib/libompl.so* /usr/local/lib/; \
-                  sudo cp ~/ros2_ws/install/casadi/lib/libcasadi.so* /usr/local/lib/;'
- 
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select ompl casadi cupoch; \
+                  sudo cp install/ompl/lib/libompl.so* /usr/local/lib/; \
+                  sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/; \  
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-skip-regex archive --packages-skip vox_nav_control; \
+                  source /opt/ros/foxy/setup.bash; \
+                  cd ~/ros2_ws; \
+                  source build/ACADO/acado_env.sh; \
+                  source install/setup.bash ; \
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select vox_nav_control; \
+                  source ~/ros2_ws/install/setup.bash'
+                  
 RUN /bin/bash -c '. /opt/ros/foxy/setup.bash; cd /home/ubuntu/ros2_ws; \
                   echo "source /home/ubuntu/ros2_ws/install/setup.bash" >> /home/ubuntu/.bashrc; \
                   echo "export NO_AT_BRIDGE=1" >> /home/ubuntu/.bashrc'
-
-# Building vox_nav
-RUN /bin/bash -c 'source /opt/ros/foxy/setup.bash; \
-                  source ~/ros2_ws/install/setup.bash; \
-                  cd ~/ros2_ws && source build/ACADO/acado_env.sh; \
-                  export PATH=/usr/local/cuda-11.4/bin${PATH:+:${PATH}}; \
-                  export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}; \
-                  cd ~/ros2_ws && colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DUSE_VGICP_CUDA=ON --packages-skip-regex archived --packages-skip casadi ompl ACADO cupoch; \
-                  source ~/ros2_ws/install/setup.bash'
-
 # export NO_AT_BRIDGE fixes an error in the rqt:
 # "AT-SPI: Error retrieving accessibility bus address: org.freedesktop.DBus.Error.ServiceUnknown:
 # The name org.a11y.Bus was not provided by any .service files"

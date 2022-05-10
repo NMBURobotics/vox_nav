@@ -40,11 +40,9 @@ jobs:
                   sudo apt update
                   sudo apt install ros-foxy-desktop
                   source /opt/ros/foxy/setup.bash
-            - name: Create Workspace
-              run: |
-                  mkdir -p ~/ros2_ws/src
             - name: Install repos and dependencies
               run: |
+                  mkdir -p ~/ros2_ws/src
                   source /opt/ros/foxy/setup.bash
                   sudo apt install python3-colcon-common-extensions
                   sudo apt install -y python3-rosdep2
@@ -58,7 +56,8 @@ jobs:
                   rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy  
                   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select ompl casadi cupoch
                   sudo cp install/ompl/lib/libompl.so* /usr/local/lib/
-                  sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/  
+                  sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/ 
+                  source install/setup.bash  
                   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-skip-regex archive --packages-skip vox_nav_control 
                   source /opt/ros/foxy/setup.bash
                   cd ~/ros2_ws

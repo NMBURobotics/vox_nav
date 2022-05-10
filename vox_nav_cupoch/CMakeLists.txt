@@ -67,6 +67,11 @@ add_definitions(${CUPOCH_DEFINITIONS})
 message("zs: ${CMAKE_PROJECT_NAME} CUDA_NVCC_FLAGS = " ${CUDA_NVCC_FLAGS})
 include(GATest)
 
+message("CUPOCH_LIBRARY_DIRS: ${${CUPOCH_LIBRARY_DIRS}} ${CUPOCH_LIBRARY_DIRS} = " ${${CUPOCH_LIBRARY_DIRS}})
+message("CUPOCH_INCLUDE_DIRS: ${${CUPOCH_INCLUDE_DIRS}} ${CUPOCH_INCLUDE_DIRS} = " ${${CUPOCH_INCLUDE_DIRS}})
+message("CUPOCH_LIBRARIES: ${${CUPOCH_LIBRARIES}} ${CUPOCH_LIBRARIES} = " ${${CUPOCH_LIBRARIES}})
+
+
 cuda_add_executable(ros2bag_kitti_bin src/ros2bag_kitti_bin.cu)
 ament_target_dependencies(ros2bag_kitti_bin ${dependencies})
 target_include_directories(ros2bag_kitti_bin PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
