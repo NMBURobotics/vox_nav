@@ -19,7 +19,7 @@
     <depend>ompl</depend>
     <depend>vox_nav_msgs</depend>
     <depend>vox_nav_utilities</depend>
-    <depend>cupoch_conversions</depend>
+    <depend>cupoch</depend>
     <depend>fast_gicp</depend>
 
     <test_depend>ament_lint_common</test_depend>
