@@ -51,6 +51,7 @@ RUN /bin/bash -c 'cd ~/ros2_ws; \
                   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select ompl casadi cupoch; \
                   sudo cp install/ompl/lib/libompl.so* /usr/local/lib/; \
                   sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/; \  
+                  source install/setup.bash ; \
                   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-skip-regex archive --packages-skip vox_nav_control; \
                   source /opt/ros/foxy/setup.bash; \
                   cd ~/ros2_ws; \
@@ -58,7 +59,7 @@ RUN /bin/bash -c 'cd ~/ros2_ws; \
                   source install/setup.bash ; \
                   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select vox_nav_control; \
                   source ~/ros2_ws/install/setup.bash'
-                  
+
 RUN /bin/bash -c '. /opt/ros/foxy/setup.bash; cd /home/ubuntu/ros2_ws; \
                   echo "source /home/ubuntu/ros2_ws/install/setup.bash" >> /home/ubuntu/.bashrc; \
                   echo "export NO_AT_BRIDGE=1" >> /home/ubuntu/.bashrc'

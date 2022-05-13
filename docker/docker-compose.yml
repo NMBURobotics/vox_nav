@@ -8,7 +8,7 @@ services:
   vox_nav:
     build: .
     restart: unless-stopped
-    image: lcas.lincoln.ac.uk/lcas/vox_nav:docker
+    image: jediofgever/vox_nav_deps
     environment:
       RESOLUTION: 1280x720
     volumes:
