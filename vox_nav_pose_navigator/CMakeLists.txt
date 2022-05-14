@@ -57,6 +57,9 @@ list(APPEND plugin_libs follow_path_action_bt_node)
 add_library(navigate_to_pose_action_bt_node SHARED src/plugins/actions/navigate_to_pose.cpp)
 list(APPEND plugin_libs navigate_to_pose_action_bt_node)
 
+add_library(navigate_through_poses_action_bt_node SHARED src/plugins/actions/navigate_through_poses.cpp)
+list(APPEND plugin_libs navigate_through_poses_action_bt_node)
+
 foreach(bt_plugin ${plugin_libs})
   ament_target_dependencies(${bt_plugin} ${dependencies})
   target_compile_definitions(${bt_plugin} PRIVATE BT_PLUGIN_EXPORT)
@@ -70,9 +73,14 @@ add_executable(navigate_to_pose_server_node src/navigate_to_pose_action_server_n
 ament_target_dependencies(navigate_to_pose_server_node ${dependencies})
 target_link_libraries(navigate_to_pose_server_node ${library_name} ${plugin_libs})
 
+add_executable(navigate_through_poses_server_node src/navigate_through_poses_action_server_node.cpp)
+ament_target_dependencies(navigate_through_poses_server_node ${dependencies})
+target_link_libraries(navigate_through_poses_server_node ${library_name} ${plugin_libs})
+
 install(TARGETS ${library_name} 
                 ${plugin_libs} 
                 navigate_to_pose_server_node
+                navigate_through_poses_server_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}

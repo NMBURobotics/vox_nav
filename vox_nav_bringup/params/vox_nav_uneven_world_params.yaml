@@ -124,6 +124,7 @@ vox_nav_controller_server_rclcpp_node:
 vox_nav_map_server_rclcpp_node:
   ros__parameters:
     pcd_map_filename: /home/atas/colcon_ws/src/Thorvald/thorvald_vox_nav/maps/container_office_map.pcd # Provide a PCD format map
+    #pcd_map_filename: /home/atas/colcon_ws/src/vox_nav/vox_nav_bringup/maps/uneven_world.pcd # Provide a PCD format map
 
     # PCD PREPROCESS PARAMS
     pcd_map_downsample_voxel_size: 0.10                                       # Set to smaller if you do not want downsample pointclouds of the map
@@ -137,17 +138,17 @@ vox_nav_map_server_rclcpp_node:
         r: 0.0 #3.14
         p: 0.0 #1.57
         y: 0.0 #1.57
-    apply_filters: True                                                      # Optional noise removal steps to apply to map
+    apply_filters: False                                                      # Optional noise removal steps to apply to map
     remove_outlier_mean_K: 50                                                 # you can set it True and play with parameters if the map is noisy
-    remove_outlier_stddev_threshold: 0.06
-    remove_outlier_radius_search: 0.6
-    remove_outlier_min_neighbors_in_radius: 5
+    remove_outlier_stddev_threshold: 0.1
+    remove_outlier_radius_search: 0.1
+    remove_outlier_min_neighbors_in_radius: 1
     # COST REGRESSION CRITICS AND PARAMS
     uniform_sample_radius: 0.2
     surfel_radius: 0.6                                                       # Works as resolution of cost regression onto map
-    max_allowed_tilt: 0.15                                                   # 1st Cost critic Any angle(radians) higher than this is marked as NON-traversable
+    max_allowed_tilt: 0.6                                                    # 1st Cost critic Any angle(radians) higher than this is marked as NON-traversable
     max_allowed_point_deviation: 0.20                                        # 2nd Cost critic Point deviation from plane, this could be viewed as roughness of each cell 
-    max_allowed_energy_gap: 0.5                                              # 3rd Cost critic Max Energy in each cell, this is detemined by max height differnce between edge points of cell
+    max_allowed_energy_gap: 0.2                                              # 3rd Cost critic Max Energy in each cell, this is detemined by max height differnce between edge points of cell
     node_elevation_distance: 1.2                                             # According to cell_radius, cell centers are sampled from original point cloud map, they are elevated from the original cloud
     plane_fit_threshold: 0.1                                                 # when fitting a plane to each cell, a plane_fit_threshold is considered from plane fitting utility of PCL
     robot_mass: 0.1                                                          # approximate robot mass considering cell_radius, this isnt so important
@@ -165,17 +166,17 @@ vox_nav_map_server_rclcpp_node:
     map_datum:                                                               # Datum coordinates of map is used to geo-reference the map 
                                                                              # If you are building a map with a SLAM method, you need to get a reading from GPS and absolute headed IMU
                                                                              # just before you start to build the map. See for example 
-      latitude: 59.66424233333333         # CONTAINER OFFICE
-      longitude: 10.76279866666667
-      altitude: 0.9
+      #latitude: 59.66424233333333         # CONTAINER OFFICE
+      #longitude: 10.76279866666667
+      #altitude: 111.0
 
       #latitude: 59.66597883333333          # ROBOT LAB
       #longitude: 10.777659
       #altitude: 111.0
 
-      #latitude: 59.664226426330366          # UNEVEN GAZEBO
-      #longitude: 10.762822144413834
-      #altitude: 0.0
+      latitude: 59.664226426330366          # UNEVEN GAZEBO
+      longitude: 10.762822144413834
+      altitude: 0.0
       quaternion:
         x: 0.0
         y: 0.0

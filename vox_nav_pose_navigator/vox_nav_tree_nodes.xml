@@ -14,8 +14,12 @@
     </Action>
 
     <Action ID="NavigateToPose">
-      <input_port name="orientation">Orientation</input_port>
-      <input_port name="position">Position</input_port>
+      <input_port name="pose">Pose</input_port>
     </Action>
+
+    <Action ID="NavigateThroughPoses">
+      <input_port name="poses">Poses</input_port>
+    </Action>
+
   </TreeNodesModel>
 </root>

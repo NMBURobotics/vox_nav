@@ -25,6 +25,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "action/ComputePathToPose.action"
   "action/FollowPath.action"
   "action/NavigateToPose.action"
+  "action/NavigateThroughGPSPoses.action"
+  "action/NavigateThroughPoses.action"
   DEPENDENCIES 
     builtin_interfaces 
     geometry_msgs 
