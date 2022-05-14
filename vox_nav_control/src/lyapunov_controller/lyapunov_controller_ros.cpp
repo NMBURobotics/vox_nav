@@ -152,10 +152,17 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
+      auto goal_pose = reference_traj_.poses.end();
+
       // we dont really need roll and pitch here
       double nan, robot_psi;
+      double goal_psi;
+
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, nan, nan, robot_psi);
+
+      vox_nav_utilities::getRPYfromMsgQuaternion(
+        goal_pose->pose.orientation, nan, nan, goal_psi);
 
       vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
@@ -163,8 +170,8 @@ namespace vox_nav_control
       curr_states.psi = robot_psi;
       curr_states.v = 0.0;
 
-      auto u1 = 0;
-      auto u2 = 0;
+      double u1 = 0.0;
+      double u2 = 0.99 * (goal_psi - robot_psi);
 
       computed_velocity_.linear.x = std::clamp<double>(
         u1, mpc_parameters_.V_MIN,
