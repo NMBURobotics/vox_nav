@@ -34,9 +34,8 @@ namespace waypoint_nav_client
 int main(int argc, char const * argv[])
 {
   rclcpp::init(argc, argv);
-  auto map_manager_node = std::make_shared
-    <waypoint_nav_client::MapManager>();
-  rclcpp::spin(map_manager_node);
+  //auto map_manager_node = std::make_shared<waypoint_nav_client::MapManager>();
+  //rclcpp::spin(map_manager_node);
   rclcpp::shutdown();
   return 0;
 }

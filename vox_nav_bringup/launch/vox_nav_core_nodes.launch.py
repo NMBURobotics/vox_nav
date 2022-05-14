@@ -67,7 +67,7 @@ def generate_launch_description():
         parameters=[params],
     )
     navigate_to_pose_server_node = Node(
-        package='vox_nav_pose_navigator',
+        package='vox_nav_navigators',
         executable='navigate_to_pose_server_node',
         name='navigate_to_pose_server_node',
         namespace='',

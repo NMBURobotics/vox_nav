@@ -19,7 +19,7 @@
         "/home/atas/colcon_ws/src/vox_nav/vox_nav_control/include/**",
         "/home/atas/colcon_ws/src/vox_nav/vox_nav_map_server/include/**",
         "/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/include/**",
-        "/home/atas/colcon_ws/src/vox_nav/vox_nav_pose_navigator/include/**",
+        "/home/atas/colcon_ws/src/vox_nav/vox_nav_navigators/include/**",
         "/home/atas/colcon_ws/src/vox_nav/vox_nav_utilities/include/**",
         "/home/atas/colcon_ws/install/pcl_ros/include/**",
         "/home/atas/colcon_ws/install/vox_nav_msgs/include/**",

@@ -31,10 +31,10 @@ vox_nav_utilities
 
 include_directories(include)
 
-#add_executable(map_manager src/map_manager.cpp)
-#ament_target_dependencies(map_manager ${dependencies})
+add_executable(waypoint_nav_client src/waypoint_nav_client.cpp)
+ament_target_dependencies(waypoint_nav_client ${dependencies})
  
-install(TARGETS #map_manager
+install(TARGETS waypoint_nav_client
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
