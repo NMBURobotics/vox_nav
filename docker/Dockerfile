@@ -48,11 +48,11 @@ RUN /bin/bash -c 'cd ~/ros2_ws; \
                   rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy; \
                   export PATH=/usr/local/cuda-11.4/bin${PATH:+:${PATH}}; \
                   export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}; \
-                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select ompl casadi cupoch; \
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select ompl casadi; \
                   sudo cp install/ompl/lib/libompl.so* /usr/local/lib/; \
                   sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/; \  
                   source install/setup.bash ; \
-                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-skip-regex archive --packages-skip vox_nav_control; \
+                  colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-skip-regex archive --packages-skip vox_nav_control vox_nav_cupoch; \
                   source /opt/ros/foxy/setup.bash; \
                   cd ~/ros2_ws; \
                   source build/ACADO/acado_env.sh; \

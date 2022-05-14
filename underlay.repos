@@ -19,11 +19,11 @@ repositories:
       type: git
       url: https://github.com/acado/acado.git
       version: stable   
-  cupoch:
-      type: git
-      url: https://github.com/jediofgever/cupoch.git
-      version: dynamic_points_dev  
-  fast_gicp:
-      type: git
-      url: https://github.com/CezeriRobotics/fast_gicp.git 
-      version: foxy  
+  #cupoch:
+  #    type: git
+  #    url: https://github.com/jediofgever/cupoch.git
+  #    version: dynamic_points_dev  
+  #fast_gicp:
+  #    type: git
+  #    url: https://github.com/CezeriRobotics/fast_gicp.git 
+  #    version: foxy  
