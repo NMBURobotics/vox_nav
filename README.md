@@ -51,18 +51,21 @@ If using vox_nav for scientific publications, please consider citing the followi
 ### Run in Docker 
 
 Build with the image with:
-```console
-    docker build -t lcas.lincoln.ac.uk/lcas/vox_nav:docker .
+
+```bash
+docker build -t lcas.lincoln.ac.uk/lcas/vox_nav:docker .
 ```
 Run with:
-```console
-    docker-compose up
+
+```bash
+docker-compose up
 ```
 Open a browser and type: [localhost:6080](https://localhost:6080)
 
 Kill with:
-```console
-    docker-compose down
+
+```bash
+docker-compose down
 ```
 
 ### Credits
