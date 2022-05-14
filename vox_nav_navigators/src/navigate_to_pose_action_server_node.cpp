@@ -17,10 +17,10 @@
 #include <string>
 #include <set>
 
-#include "vox_nav_pose_navigator/navigate_to_pose_action_server_node.hpp"
+#include "vox_nav_navigators/navigate_to_pose_action_server_node.hpp"
 
 
-namespace vox_nav_pose_navigator
+namespace vox_nav_navigators
 {
 
 // The Behavior Tree to execute
@@ -106,15 +106,15 @@ namespace vox_nav_pose_navigator
     auto should_cancel = [goal_handle]() {return goal_handle->is_canceling();};
 
     switch (bt.execute(should_cancel)) {
-      case vox_nav_pose_navigator::BtStatus::SUCCEEDED:
+      case vox_nav_navigators::BtStatus::SUCCEEDED:
         RCLCPP_INFO(get_logger(), "Behavior Tree execution succeeded");
         goal_handle->succeed(result);
         break;
-      case vox_nav_pose_navigator::BtStatus::FAILED:
+      case vox_nav_navigators::BtStatus::FAILED:
         RCLCPP_ERROR(get_logger(), "Behavior Tree execution failed!");
         goal_handle->abort(result);
         break;
-      case vox_nav_pose_navigator::BtStatus::HALTED:
+      case vox_nav_navigators::BtStatus::HALTED:
         RCLCPP_INFO(get_logger(), "Behavior Tree halted");
         goal_handle->canceled(result);
         break;
@@ -123,7 +123,7 @@ namespace vox_nav_pose_navigator
     }
 
   }
-}  // namespace vox_nav_pose_navigator
+}  // namespace vox_nav_navigators
 
 /**
  * @brief
@@ -135,7 +135,7 @@ namespace vox_nav_pose_navigator
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<vox_nav_pose_navigator::NavigateToPoseActionServer>();
+  auto node = std::make_shared<vox_nav_navigators::NavigateToPoseActionServer>();
   rclcpp::spin(node->get_node_base_interface());
   rclcpp::shutdown();
 

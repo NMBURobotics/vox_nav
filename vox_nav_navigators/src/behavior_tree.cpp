@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vox_nav_pose_navigator/behavior_tree.hpp"
+#include "vox_nav_navigators/behavior_tree.hpp"
 
 #include <memory>
 #include <string>
@@ -22,7 +22,7 @@
 #include "behaviortree_cpp_v3/loggers/bt_cout_logger.h"
 #include "rclcpp/rclcpp.hpp"
 
-namespace vox_nav_pose_navigator
+namespace vox_nav_navigators
 {
 
   BehaviorTree::BehaviorTree(
@@ -77,4 +77,4 @@ namespace vox_nav_pose_navigator
     return (result == BT::NodeStatus::SUCCESS) ? BtStatus::SUCCEEDED : BtStatus::FAILED;
   }
 
-}  // namespace vox_nav_pose_navigator
+}  // namespace vox_nav_navigators

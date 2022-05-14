@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_POSE_NAVIGATOR__BEHAVIOR_TREE_HPP_
-#define VOX_NAV_POSE_NAVIGATOR__BEHAVIOR_TREE_HPP_
+#ifndef VOX_NAV_NAVIGATORS__BEHAVIOR_TREE_HPP_
+#define VOX_NAV_NAVIGATORS__BEHAVIOR_TREE_HPP_
 
 #include <memory>
 #include <string>
@@ -23,7 +23,7 @@
 #include "behaviortree_cpp_v3/bt_factory.h"
 #include "behaviortree_cpp_v3/xml_parsing.h"
 
-namespace vox_nav_pose_navigator
+namespace vox_nav_navigators
 {
 
 // The possible return values from the execution of a Behavior Tree
@@ -60,6 +60,6 @@ namespace vox_nav_pose_navigator
     BT::Blackboard::Ptr blackboard_;
   };
 
-}  // namespace vox_nav_pose_navigator
+}  // namespace vox_nav_navigators
 
-#endif  // VOX_NAV_POSE_NAVIGATOR__BEHAVIOR_TREE_HPP_
+#endif  // VOX_NAV_NAVIGATORS__BEHAVIOR_TREE_HPP_

@@ -14,7 +14,7 @@
 
 #include <memory>
 #include <string>
-#include "vox_nav_pose_navigator/plugins/actions/compute_path_to_pose.hpp"
+#include "vox_nav_navigators/plugins/actions/compute_path_to_pose.hpp"
 #include "behaviortree_cpp_v3/bt_factory.h"
 
 BT_REGISTER_NODES(factory)
@@ -22,10 +22,10 @@ BT_REGISTER_NODES(factory)
   BT::NodeBuilder builder =
     [](const std::string & name, const BT::NodeConfiguration & config)
     {
-      return std::make_unique<vox_nav_pose_navigator::ComputePathToPoseNode>(
+      return std::make_unique<vox_nav_navigators::ComputePathToPoseNode>(
         name, "/compute_path_to_pose", config);
     };
 
-  factory.registerBuilder<vox_nav_pose_navigator::ComputePathToPoseNode>(
+  factory.registerBuilder<vox_nav_navigators::ComputePathToPoseNode>(
     "ComputePathToPose", builder);
 }

@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_POSE_NAVIGATOR__PLUGINS__ACTIONS__COMPUTE_PATH_TO_POSE_HPP_
-#define VOX_NAV_POSE_NAVIGATOR__PLUGINS__ACTIONS__COMPUTE_PATH_TO_POSE_HPP_
+#ifndef VOX_NAV_NAVIGATORS__PLUGINS__ACTIONS__COMPUTE_PATH_TO_POSE_HPP_
+#define VOX_NAV_NAVIGATORS__PLUGINS__ACTIONS__COMPUTE_PATH_TO_POSE_HPP_
 
 #include <string>
 
 #include "nav_msgs/msg/path.h"
 #include "vox_nav_msgs/action/compute_path_to_pose.hpp"
-#include "vox_nav_pose_navigator/plugins/actions/base_action_client_node.hpp"
+#include "vox_nav_navigators/plugins/actions/base_action_client_node.hpp"
 
 
-namespace vox_nav_pose_navigator
+namespace vox_nav_navigators
 {
 
   using ComputePathToPose = vox_nav_msgs::action::ComputePathToPose;
@@ -69,7 +69,7 @@ namespace vox_nav_pose_navigator
   private:
     bool first_time_{true};
   };
-}  // namespace vox_nav_pose_navigator
+}  // namespace vox_nav_navigators
 
 
-#endif  // VOX_NAV_POSE_NAVIGATOR__PLUGINS__ACTIONS__COMPUTE_PATH_TO_POSE_HPP_
+#endif  // VOX_NAV_NAVIGATORS__PLUGINS__ACTIONS__COMPUTE_PATH_TO_POSE_HPP_

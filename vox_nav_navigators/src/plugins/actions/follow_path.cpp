@@ -15,7 +15,7 @@
 #include <memory>
 #include <string>
 
-#include "vox_nav_pose_navigator/plugins/actions/follow_path.hpp"
+#include "vox_nav_navigators/plugins/actions/follow_path.hpp"
 #include "behaviortree_cpp_v3/bt_factory.h"
 
 BT_REGISTER_NODES(factory)
@@ -23,10 +23,10 @@ BT_REGISTER_NODES(factory)
   BT::NodeBuilder builder =
     [](const std::string & name, const BT::NodeConfiguration & config)
     {
-      return std::make_unique<vox_nav_pose_navigator::FollowPathNode>(
+      return std::make_unique<vox_nav_navigators::FollowPathNode>(
         name, "follow_path", config);
     };
 
-  factory.registerBuilder<vox_nav_pose_navigator::FollowPathNode>(
+  factory.registerBuilder<vox_nav_navigators::FollowPathNode>(
     "FollowPath", builder);
 }

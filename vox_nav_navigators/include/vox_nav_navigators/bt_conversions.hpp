@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_POSE_NAVIGATOR__BT_CONVERSIONS_HPP_
-#define VOX_NAV_POSE_NAVIGATOR__BT_CONVERSIONS_HPP_
+#ifndef VOX_NAV_NAVIGATORS__BT_CONVERSIONS_HPP_
+#define VOX_NAV_NAVIGATORS__BT_CONVERSIONS_HPP_
 
 #include "behaviortree_cpp_v3/behavior_tree.h"
 #include "geometry_msgs/msg/point.hpp"
@@ -68,4 +68,4 @@ namespace BT
 
 }  // namespace BT
 
-#endif  // VOX_NAV_POSE_NAVIGATOR__BT_CONVERSIONS_HPP_
+#endif  // VOX_NAV_NAVIGATORS__BT_CONVERSIONS_HPP_

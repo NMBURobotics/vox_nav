@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_POSE_NAVIGATOR__NAVIGATE_TO_POSE_ACTION_SERVER_NODE_HPP_
-#define VOX_NAV_POSE_NAVIGATOR__NAVIGATE_TO_POSE_ACTION_SERVER_NODE_HPP_
+#ifndef VOX_NAV_NAVIGATORS__NAVIGATE_TO_POSE_ACTION_SERVER_NODE_HPP_
+#define VOX_NAV_NAVIGATORS__NAVIGATE_TO_POSE_ACTION_SERVER_NODE_HPP_
 
 #include <memory>
 #include <string>
 
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
-#include "vox_nav_pose_navigator/behavior_tree.hpp"
+#include "vox_nav_navigators/behavior_tree.hpp"
 #include "vox_nav_msgs/action/navigate_to_pose.hpp"
 
 
-namespace vox_nav_pose_navigator
+namespace vox_nav_navigators
 {
 
   class NavigateToPoseActionServer : public rclcpp::Node
@@ -59,6 +59,6 @@ namespace vox_nav_pose_navigator
     // The XML string that defines the Behavior Tree used to implement the print_message action
     static const char bt_xml_[];
   };
-}  // namespace vox_nav_pose_navigator
+}  // namespace vox_nav_navigators
 
-#endif  // VOX_NAV_POSE_NAVIGATOR__NAVIGATE_TO_POSE_ACTION_SERVER_NODE_HPP_
+#endif  // VOX_NAV_NAVIGATORS__NAVIGATE_TO_POSE_ACTION_SERVER_NODE_HPP_

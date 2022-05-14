@@ -18,10 +18,10 @@
 #include <string>
 #include <set>
 
-#include "vox_nav_pose_navigator/navigate_through_poses_action_server_node.hpp"
+#include "vox_nav_navigators/navigate_through_poses_action_server_node.hpp"
 
 
-namespace vox_nav_pose_navigator
+namespace vox_nav_navigators
 {
 
 // The Behavior Tree to execute
@@ -113,14 +113,14 @@ namespace vox_nav_pose_navigator
         };
 
       switch (bt.execute(should_cancel, on_loop)) {
-        case vox_nav_pose_navigator::BtStatus::SUCCEEDED:
+        case vox_nav_navigators::BtStatus::SUCCEEDED:
           RCLCPP_INFO(get_logger(), "Succeded a waypoint");
           continue;
-        case vox_nav_pose_navigator::BtStatus::FAILED:
+        case vox_nav_navigators::BtStatus::FAILED:
           RCLCPP_ERROR(get_logger(), "Behavior Tree execution failed!");
           goal_handle->abort(result);
           break;
-        case vox_nav_pose_navigator::BtStatus::HALTED:
+        case vox_nav_navigators::BtStatus::HALTED:
           RCLCPP_INFO(get_logger(), "Behavior Tree halted");
           goal_handle->canceled(result);
           break;
@@ -131,7 +131,7 @@ namespace vox_nav_pose_navigator
     RCLCPP_INFO(get_logger(), "Behavior Tree execution succeeded, Finished all waypoints");
     goal_handle->succeed(result);
   }
-}  // namespace vox_nav_pose_navigator
+}  // namespace vox_nav_navigators
 
 /**
  * @brief
@@ -143,7 +143,7 @@ namespace vox_nav_pose_navigator
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<vox_nav_pose_navigator::NavigateThroughPosesActionServer>();
+  auto node = std::make_shared<vox_nav_navigators::NavigateThroughPosesActionServer>();
   rclcpp::spin(node->get_node_base_interface());
   rclcpp::shutdown();
 

@@ -22,9 +22,9 @@
 #include "behaviortree_cpp_v3/action_node.h"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_action/rclcpp_action.hpp"
-#include "vox_nav_pose_navigator/bt_conversions.hpp"
+#include "vox_nav_navigators/bt_conversions.hpp"
 
-namespace vox_nav_pose_navigator
+namespace vox_nav_navigators
 {
 
   template<class ActionT>
@@ -264,6 +264,6 @@ namespace vox_nav_pose_navigator
     std::chrono::seconds server_timeout_;
   };
 
-}  // namespace vox_nav_pose_navigator
+}  // namespace vox_nav_navigators
 
 #endif  // VOX_NAV_POSE_NAVIGATOR__PLUGINS__ACTIONS__BASE_ACTION_CLIENT_NODE_HPP_
