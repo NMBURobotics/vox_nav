@@ -9,6 +9,7 @@ Getting Started
 * Install ROS2 foxy. 
 Deb installation is strongly recomended. 
 You can always find updated step to install [here](https://index.ros.org/doc/ros2/Installation/Foxy/Linux-Install-Debians/)
+
 To install ROS2 foxy desktop ;
 
 .. code-block:: bash
@@ -23,10 +24,11 @@ To install ROS2 foxy desktop ;
    sudo apt install ros-foxy-desktop
    source /opt/ros/foxy/setup.bash
 
-* A few helper packages we use for gui and installation;
+* Install all deps and vox_nav;
 
 .. code-block:: bash
 
+   mkdir -p ~/ros2_ws/src
    source /opt/ros/foxy/setup.bash
    sudo apt install python3-colcon-common-extensions
    sudo apt install -y python3-rosdep2
@@ -34,40 +36,29 @@ To install ROS2 foxy desktop ;
    sudo apt-get install xdotool
    sudo apt-get install coinor-libipopt-dev
    rosdep update
-
-* Get the project repository, source build deps and build deps first; 
-
-.. code-block:: bash
-
-   mkdir -p ~/ros2_ws/src
    cd ~/ros2_ws
-   source /opt/ros/foxy/setup.bash
    wget https://raw.githubusercontent.com/jediofgever/vox_nav/foxy/underlay.repos
-   vcs import src < underlay.repos     
-   rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy   
-   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DWITH_IPOPT=true --packages-select casadi ompl
+   vcs import src < underlay.repos --recursive   
+   rosdep install -y -r -q --from-paths src --ignore-src --rosdistro foxy  
+   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select ompl casadi; \
    sudo cp install/ompl/lib/libompl.so* /usr/local/lib/
-   sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/
-   sudo rm -rf src/ompl/
-   sudo rm -rf src/casadi/
-
-There are essentially 2-3 dependency libraries that needs source build. 
-perception_pcl ,OMPL and casadi. The above sript will build and install them and remove the source code as its not needed.
-
-* With above we only built dependencies, now lest build vox_nav itself
-
-.. code-block:: bash
-
+   sudo cp install/casadi/lib/libcasadi.so* /usr/local/lib/ 
+   source install/setup.bash  
+   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-skip-regex archive --packages-skip vox_nav_control vox_nav_cupoch; \
    source /opt/ros/foxy/setup.bash
    cd ~/ros2_ws
-   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release --packages-skip-regex archived --packages-skip ompl casadi vox_nav_openvslam
-   source ~/ros2_ws/install/setup.bash
+   source build/ACADO/acado_env.sh
+   source install/setup.bash 
+   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select vox_nav_control; \
+
+
+There are dependency libraries that needs source build perception_pcl ,OMPL and casadi etc..
+The above sript will build and install them and remove the source code as its not needed.
+
 
 .. note::
-   Pay attention that we have disabled the build of archived_ packages. Some packages(e.g vox_net_openvslam) has quite some 
-   amount of deps. If you like to use please refer to SLAM vox_net_openvslam section , there you will find instructions
-   to install vox_net_openvslam deps. After that you can remove `--packages-skip vox_net_openvslam` part from 
-   colcon build command.
+   Pay attention that we have disabled the build of archived_ packages and vox_nav_cupoch. The archived package are not in use and not needed but are kept for convenience.
+   The cupoch package is really meaty and it is used for ICP, NDT localization algos. 
 
 You can update code by vcstool, you can also us classic git pull. 
 

@@ -30,7 +30,6 @@ This branch(foxy) is aiming for ROS2 Foxy distro.
 
    getting_started/index.rst
    configuration/index.rst
-   botanbot_sim/index.rst
    running_project/index.rst
    openvslam/index.rst
    vox_nav_archived/index.rst
