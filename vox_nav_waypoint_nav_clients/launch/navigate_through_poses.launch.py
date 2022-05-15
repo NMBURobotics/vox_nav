@@ -41,7 +41,7 @@ def generate_launch_description():
                                            description='FPath to the ROS2 parameters file to use.')
 
     driver_node = LifecycleNode(package='vox_nav_waypoint_nav_clients',
-                                executable='gps_waypoint_follower_demo',
+                                executable='navigate_through_poses_client',
                                 name='navigate_through_poses_client_node',
                                 namespace='',
                                 output='screen',

@@ -45,8 +45,8 @@ def generate_launch_description():
         name='vox_nav_planner_server_rclcpp_node',
         namespace='',
         output='screen',
-        #prefix=['xterm -e gdb -ex run --args'],
-        #prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no'],
+        # prefix=['xterm -e gdb -ex run --args'],
+        # prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no'],
         parameters=[params],
     )
     controller_server_node = Node(
@@ -55,7 +55,7 @@ def generate_launch_description():
         name='vox_nav_controller_server_rclcpp_node',
         namespace='',
         output='screen',
-        #prefix=['xterm -e gdb -ex run --args'],
+        # prefix=['xterm -e gdb -ex run --args'],
         parameters=[params],
     )
     map_server_node = Node(
@@ -103,7 +103,7 @@ def generate_launch_description():
                                  executable='navsat_transform_node',
                                  name='navsat_transform_node',
                                  # change it to screen if you wanna see RVIZ output in terminal
-                                 #output={'both': 'log'},
+                                 # output={'both': 'log'},
                                  output='screen',
                                  parameters=[localization_params],
                                  remappings=[('imu', 'imu/absolute'),
@@ -122,4 +122,5 @@ def generate_launch_description():
         controller_server_node,
         map_server_node,
         navigate_to_pose_server_node,
-        navigate_through_poses_server_node])
+        navigate_through_poses_server_node
+    ])

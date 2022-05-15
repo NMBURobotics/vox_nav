@@ -35,11 +35,11 @@ namespace vox_nav_waypoint_nav_clients
       std::chrono::milliseconds(500),
       std::bind(&NavigateThroughPosesClient::startWaypointFollowing, this));
     // number of poses that robot will go throug, specified in yaml file
-    this->declare_parameter("waypoints", std::vector<std::string>({"0"}));
+    this->declare_parameter("poses", std::vector<std::string>({"0"}));
     poses_from_yaml_ = loadWaypointsFromYAML();
     RCLCPP_INFO(
       this->get_logger(),
-      "Loaded %i GPS waypoints from YAML, gonna pass them to FollowGPSWaypoints...",
+      "Loaded %i waypoints from YAML, gonna pass them to navigate_through_poses...",
       static_cast<int>(poses_from_yaml_.size()));
     RCLCPP_INFO(
       this->get_logger(),
@@ -65,11 +65,11 @@ namespace vox_nav_waypoint_nav_clients
 
     auto is_action_server_ready =
       navigate_through_poses_action_client_->wait_for_action_server(
-      std::chrono::seconds(1));
+      std::chrono::seconds(5));
     if (!is_action_server_ready) {
       RCLCPP_ERROR(
-        this->get_logger(), "FollowGPSWaypoints action server is not available."
-        " Make sure an instance of GPSWaypointFollower is up and running");
+        this->get_logger(), "navigate_through_poses action server is not available."
+        " Make sure an instance of navigate_through_poses is up and running");
       this->goal_done_ = true;
       return;
     }
