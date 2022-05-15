@@ -17,7 +17,8 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
-
+#include <vox_nav_msgs/action/navigate_through_poses.hpp>
+#include <vox_nav_utilities/tf_helpers.hpp>
 #include <vector>
 #include <string>
 #include <memory>
@@ -25,7 +26,82 @@
 
 namespace vox_nav_waypoint_nav_clients
 {
+  enum class ActionStatus
+  {
+    UNKNOWN = 0,
+    PROCESSING = 1,
+    FAILED = 2,
+    SUCCEEDED = 3
+  };
 
+/**
+ * @brief A ros node that drives robot through gievn way points from YAML file
+ *
+ */
+  class NavigateThroughPosesClient : public rclcpp::Node
+  {
+  public:
+    using ClientT = vox_nav_msgs::action::NavigateThroughPoses;
+    using NavigateThroughPosesGoalHandle = rclcpp_action::ClientGoalHandle<ClientT>;
+
+    /**
+     * @brief Construct a new WayPoint Folllower Demo object
+     *
+     */
+    NavigateThroughPosesClient();
+
+    /**
+     * @brief Destroy the Way Point Folllower Demo object
+     *
+     */
+    ~NavigateThroughPosesClient();
+
+    /**
+     * @brief send robot through each of the pose in poses vector
+     *
+     * @param poses
+     */
+    void startWaypointFollowing();
+
+    /**
+     * @brief
+     *
+     * @return true
+     * @return false
+     */
+    bool is_goal_done() const;
+
+    /**
+   * @brief given a parameter name on the yaml file, loads this parameter as geometry_msgs_msgs::msg::Pose
+   *  Note that this parameter needs to be an array of doubles
+   *
+   * @return geometry_msgs_msgs::msg::Pose
+   */
+    std::vector<geometry_msgs::msg::PoseStamped> loadWaypointsFromYAML();
+
+    void goalResponseCallback(std::shared_future<NavigateThroughPosesGoalHandle::SharedPtr> future);
+
+    void feedbackCallback(
+      NavigateThroughPosesGoalHandle::SharedPtr,
+      const std::shared_ptr<const ClientT::Feedback> feedback);
+
+    void resultCallback(const NavigateThroughPosesGoalHandle::WrappedResult & result);
+
+  protected:
+    bool goal_done_;
+    rclcpp::TimerBase::SharedPtr timer_;
+    // client to connect waypoint follower service(FollowWaypoints)
+    rclcpp_action::Client<ClientT>::SharedPtr
+      navigate_through_poses_action_client_;
+
+    // goal handler to query state of goal
+    ClientT::Goal navigate_through_poses_goal_;
+
+    NavigateThroughPosesGoalHandle::SharedPtr navigate_through_poses_goalhandle_;
+
+    std::vector<geometry_msgs::msg::PoseStamped> poses_from_yaml_;
+
+  };
 
 }  // namespace vox_nav_waypoint_nav_clients
 
