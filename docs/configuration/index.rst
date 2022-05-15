@@ -146,7 +146,8 @@ see the robot_body_dimens params for that.
 
 **2. vox_nav_controller_server_rclcpp_node**
 
-TODO
+Currently we have 2 MPC and 1 Lyapunov controller for uni-cycle robot models. 
+MPC implementations are based on (Casadi)[https://github.com/casadi/casadi] and (Acado)[https://github.com/acado/acado] while Lyapunov controller is a simple cLf.  
 
 
 **3. vox_nav_map_server_rclcpp_node**
