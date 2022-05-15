@@ -33,8 +33,12 @@ include_directories(include)
 
 add_executable(navigate_through_poses_client src/navigate_through_poses_client.cpp)
 ament_target_dependencies(navigate_through_poses_client ${dependencies})
- 
+
+add_executable(navigate_through_gps_poses_client src/navigate_through_gps_poses_client.cpp)
+ament_target_dependencies(navigate_through_gps_poses_client ${dependencies})
+
 install(TARGETS navigate_through_poses_client
+                navigate_through_gps_poses_client
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
