@@ -179,8 +179,11 @@ int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
   auto node = std::make_shared<vox_nav_navigators::NavigateThroughGPSPosesActionServer>();
-  rclcpp::spin(node->get_node_base_interface());
-  rclcpp::shutdown();
 
+  rclcpp::Rate rate(15.0);
+  while (rclcpp::ok()) {
+    rclcpp::spin_some(node);
+    rate.sleep();
+  }
   return 0;
 }
