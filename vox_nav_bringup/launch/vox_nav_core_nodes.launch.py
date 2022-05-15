@@ -82,6 +82,14 @@ def generate_launch_description():
         output='screen',
         parameters=[params],
     )
+    navigate_through_gps_poses_server_node = Node(
+        package='vox_nav_navigators',
+        executable='navigate_through_gps_poses_server_node',
+        name='navigate_through_gps_poses_server_node',
+        namespace='',
+        output='screen',
+        parameters=[params],
+    )
 
     ekf_local_filter_node = Node(package='robot_localization',
                                  executable='ekf_node',
@@ -122,5 +130,6 @@ def generate_launch_description():
         controller_server_node,
         map_server_node,
         navigate_to_pose_server_node,
-        navigate_through_poses_server_node
+        navigate_through_poses_server_node,
+        navigate_through_gps_poses_server_node
     ])

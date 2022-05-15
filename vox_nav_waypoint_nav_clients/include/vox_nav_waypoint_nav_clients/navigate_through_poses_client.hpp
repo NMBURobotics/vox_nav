@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Norwegian University of Life Sciences Fetullah Atas
+// Copyright (c) 2022 Norwegian University of Life Sciences, Fetullah Atas
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ namespace vox_nav_waypoint_nav_clients
   protected:
     bool goal_done_;
     rclcpp::TimerBase::SharedPtr timer_;
-    // client to connect waypoint follower service(FollowWaypoints)
+    // client to connect navigate through poses action server
     rclcpp_action::Client<ClientT>::SharedPtr
       navigate_through_poses_action_client_;
 
