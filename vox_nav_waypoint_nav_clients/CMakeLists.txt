@@ -41,7 +41,7 @@ install(DIRECTORY include/
         DESTINATION include/)
 
 install(
-  DIRECTORY 
+  DIRECTORY launch params
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)

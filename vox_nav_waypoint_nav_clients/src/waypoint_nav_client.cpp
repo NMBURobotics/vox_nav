@@ -22,7 +22,7 @@
 namespace vox_nav_waypoint_nav_clients
 {
   NavigateThroughPosesClient::NavigateThroughPosesClient()
-  : Node("waypoint_follower_client_node"), goal_done_(false)
+  : Node("navigate_through_poses_client_node"), goal_done_(false)
   {
     navigate_through_poses_action_client_ =
       rclcpp_action::create_client<ClientT>(
