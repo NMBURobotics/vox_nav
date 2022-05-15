@@ -128,6 +128,7 @@ parameters for these nodes are more or less as following;
           z: 4.672499893387009e-05
           w: 0.9999932007970892
 
+You will find the most up to date parameter configs under `vox_nav_bringup/params/vox_nav_default_params.yaml`
 
 vox_nav's skeleton is made by following ROS2 nodes; 
 
