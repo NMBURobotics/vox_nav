@@ -61,8 +61,8 @@ vox_nav_controller_server_rclcpp_node:
    ros__parameters: 
       controller_plugin: "LyapunovControllerROS"                               # other options: non
       controller_frequency: 100.0                                              # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
-      goal_tolerance_distance: 0.4                                            # in meters, once smaller than this one controller tries to minimize orientation error
-      goal_tolerance_orientation: 0.1                                         # in radians, once smaller than this value,controller exits with success
+      goal_tolerance_distance: 0.3                                            # in meters, once smaller than this one controller tries to minimize orientation error
+      goal_tolerance_orientation: 0.3                                         # in radians, once smaller than this value,controller exits with success
       transform_timeout: 0.01                                                 # seconds, this is used to regulate lookUpTransfrom calls from tf2
       global_plan_look_ahead_distance: 4.5                                    # look this amount of meters from current robot pose to remaining global path
       ref_traj_se2_space: "REEDS"                                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann

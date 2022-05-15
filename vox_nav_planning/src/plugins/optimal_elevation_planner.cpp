@@ -511,6 +511,9 @@ namespace vox_nav_planning
       roll = 0;
     }
 
+    // interpolate intermediate states yaw but keep the last pose as in goal
+    plan_poses[plan_poses.size() - 1].pose.orientation = goal.pose.orientation;
+
     RCLCPP_INFO(
       logger_, "A total of %d vertices were visited from a Boost Graph", num_visited_nodes);
     RCLCPP_INFO(

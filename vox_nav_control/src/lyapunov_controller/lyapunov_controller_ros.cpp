@@ -37,7 +37,6 @@ namespace vox_nav_control
     {
       parent_ = parent;
 
-
       parent->declare_parameter(plugin_name + ".V_MIN", -2.0);
       parent->declare_parameter(plugin_name + ".V_MAX", 2.0);
       parent->declare_parameter(plugin_name + ".DF_MIN", -0.5);
@@ -53,7 +52,6 @@ namespace vox_nav_control
       parent->get_parameter(plugin_name + ".k1", k1_);
       parent->get_parameter(plugin_name + ".k2", k2_);
       parent->get_parameter(plugin_name + ".lookahead_n_waypoints", lookahead_n_waypoints_);
-
 
       curr_goal_publisher_ =
         parent->create_publisher<visualization_msgs::msg::MarkerArray>(
@@ -152,7 +150,7 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
-      auto goal_pose = reference_traj_.poses.end();
+      auto goal_pose = reference_traj_.poses.back();
 
       // we dont really need roll and pitch here
       double nan, robot_psi;
@@ -162,7 +160,7 @@ namespace vox_nav_control
         curr_robot_pose.pose.orientation, nan, nan, robot_psi);
 
       vox_nav_utilities::getRPYfromMsgQuaternion(
-        goal_pose->pose.orientation, nan, nan, goal_psi);
+        goal_pose.pose.orientation, nan, nan, goal_psi);
 
       vox_nav_control::common::States curr_states;
       curr_states.x = curr_robot_pose.pose.position.x;
@@ -170,8 +168,10 @@ namespace vox_nav_control
       curr_states.psi = robot_psi;
       curr_states.v = 0.0;
 
+      auto sgn = std::copysign(1.0, (goal_psi - robot_psi));
+
       double u1 = 0.0;
-      double u2 = 0.99 * (goal_psi - robot_psi);
+      double u2 = 0.2 * sgn;
 
       computed_velocity_.linear.x = std::clamp<double>(
         u1, mpc_parameters_.V_MIN,

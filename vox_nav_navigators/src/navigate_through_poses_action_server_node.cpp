@@ -1,5 +1,5 @@
 // Copyright (c) 2019 Intel Corporation
-// Copyright (c) 2021 Norwegian University of Life Sciences, Fetullah Atas
+// Copyright (c) 2022 Norwegian University of Life Sciences, Fetullah Atas
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -109,8 +109,10 @@ namespace vox_nav_navigators
 
       auto should_cancel = [goal_handle]() {return goal_handle->is_canceling();};
       auto on_loop = [&]() {
-          RCLCPP_INFO(get_logger(), "Currently executing %i waypoint", curr_waypont_index);
+          RCLCPP_INFO(get_logger(), "Currently executing %d waypoint", curr_waypont_index);
         };
+
+      curr_waypont_index++;
 
       switch (bt.execute(should_cancel, on_loop)) {
         case vox_nav_navigators::BtStatus::SUCCEEDED:
@@ -127,7 +129,6 @@ namespace vox_nav_navigators
         default:
           throw std::logic_error("Invalid status return from BT");
       }
-      curr_waypont_index++;
     }
     RCLCPP_INFO(get_logger(), "Behavior Tree execution succeeded, Finished all waypoints");
     goal_handle->succeed(result);
