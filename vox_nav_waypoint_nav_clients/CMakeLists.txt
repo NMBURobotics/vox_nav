@@ -31,10 +31,10 @@ vox_nav_utilities
 
 include_directories(include)
 
-add_executable(waypoint_nav_client src/waypoint_nav_client.cpp)
-ament_target_dependencies(waypoint_nav_client ${dependencies})
+add_executable(navigate_through_poses_client src/navigate_through_poses_client.cpp)
+ament_target_dependencies(navigate_through_poses_client ${dependencies})
  
-install(TARGETS waypoint_nav_client
+install(TARGETS navigate_through_poses_client
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

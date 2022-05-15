@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_WAYPOINT_NAV__WAYPOINT_NAV_CLIENT_HPP_
-#define VOX_NAV_WAYPOINT_NAV__WAYPOINT_NAV_CLIENT_HPP_
+#ifndef VOX_NAV_WAYPOINT_NAV__NAVIGATE_THROUGH_POSES_CLIENT_HPP_
+#define VOX_NAV_WAYPOINT_NAV__NAVIGATE_THROUGH_POSES_CLIENT_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_action/rclcpp_action.hpp>
@@ -105,4 +105,4 @@ namespace vox_nav_waypoint_nav_clients
 
 }  // namespace vox_nav_waypoint_nav_clients
 
-#endif  // VOX_NAV_WAYPOINT_NAV__WAYPOINT_NAV_CLIENT_HPP_
+#endif  // VOX_NAV_WAYPOINT_NAV__NAVIGATE_THROUGH_POSES_CLIENT_HPP_

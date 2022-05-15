@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vox_nav_waypoint_nav_clients/waypoint_nav_client.hpp"
+#include "vox_nav_waypoint_nav_clients/navigate_through_poses_client.hpp"
 
 #include <string>
 #include <vector>
