@@ -149,7 +149,6 @@ see the robot_body_dimens params for that.
 Currently we have 2 MPC and 1 Lyapunov controller for uni-cycle robot models. 
 MPC implementations are based on (Casadi)[https://github.com/casadi/casadi] and (Acado)[https://github.com/acado/acado] while Lyapunov controller is a simple cLf.  
 
-
 **3. vox_nav_map_server_rclcpp_node**
  
 You will need to provide a pre-built pcd map of environment for this node to consume. 
@@ -162,3 +161,23 @@ With this information the node is able to grab your pcd map and georeference it 
 The pcd map is converted to an octomap and published with configured voxel sizes and topic names. 
 You should visualize topics in RVIZ, in order to make sure the map looks as expected.
 visualizing as markers usually lags RVIZ, instead we recomend you to visualize pointcloud topic of octomap.
+
+**4. vox_nav_navigators**
+
+We currently have several behaviour tree nodes in this package. The most promeinent ones are; 
+
+- navigate_to_pose
+- navigate_through_poses
+- navigate_thorugh_gps_poses
+
+All of this action servers navigates robot to given pose(s). If you see (botanbot_gui)[https://github.com/NMBURobotics/botanbot_sim/tree/main/botanbot_gui], we have created simple interface to send a single goal pose
+`navigate_to_pose` action server. For other two, things are more manual. Since there are more than one pose to navigate, we use YAML file to specify the poses, the action clients in 
+(vox_nav_waypoint_nav_clients)[https://github.com/NMBURobotics/vox_nav/tree/foxy/vox_nav_waypoint_nav_clients] reads given poses and navigates robot through them. 
+
+The gps poses are `[lat, lang]` format, while normal poses in map coordinate frames as `[x(meter), y(meter), yaw(radians)]`. 
+
+Watch a shiny video of (Thorvald II)[https://sagarobotics.com/] robot navigating through gps poses with vox_nav below.
+
+ .. raw:: html
+
+  <iframe width="1046" height="294" src="https://www.youtube.com/embed/fe--px9K61A" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
