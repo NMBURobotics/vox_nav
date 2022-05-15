@@ -1,6 +1,5 @@
 #goal definition
-geometry_msgs/PoseStamped[] poses
-string behavior_tree
+sensor_msgs/NavSatFix[] gps_poses
 ---
 #result definition
 std_msgs/Empty result
