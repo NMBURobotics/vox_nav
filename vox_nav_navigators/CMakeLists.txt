@@ -25,6 +25,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(builtin_interfaces REQUIRED)
+find_package(robot_localization REQUIRED)
 
 include_directories(
   include
@@ -46,6 +47,7 @@ tf2_geometry_msgs
 std_msgs
 std_srvs
 builtin_interfaces
+robot_localization
 )
 
 add_library(compute_path_to_pose_action_bt_node SHARED src/plugins/actions/compute_path_to_pose.cpp)
@@ -59,6 +61,9 @@ list(APPEND plugin_libs navigate_to_pose_action_bt_node)
 
 add_library(navigate_through_poses_action_bt_node SHARED src/plugins/actions/navigate_through_poses.cpp)
 list(APPEND plugin_libs navigate_through_poses_action_bt_node)
+
+add_library(navigate_through_gps_poses_action_bt_node SHARED src/plugins/actions/navigate_through_gps_poses.cpp)
+list(APPEND plugin_libs navigate_through_gps_poses_action_bt_node)
 
 foreach(bt_plugin ${plugin_libs})
   ament_target_dependencies(${bt_plugin} ${dependencies})
@@ -77,10 +82,15 @@ add_executable(navigate_through_poses_server_node src/navigate_through_poses_act
 ament_target_dependencies(navigate_through_poses_server_node ${dependencies})
 target_link_libraries(navigate_through_poses_server_node ${library_name} ${plugin_libs})
 
+add_executable(navigate_through_gps_poses_server_node src/navigate_through_gps_poses_action_server_node.cpp)
+ament_target_dependencies(navigate_through_gps_poses_server_node ${dependencies})
+target_link_libraries(navigate_through_gps_poses_server_node ${library_name} ${plugin_libs})
+
 install(TARGETS ${library_name} 
                 ${plugin_libs} 
                 navigate_to_pose_server_node
                 navigate_through_poses_server_node
+                navigate_through_gps_poses_server_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
