@@ -98,6 +98,7 @@ namespace vox_nav_navigators
     auto result = std::make_shared<ActionServer::Result>();
     auto goal = goal_handle->get_goal();
 
+    int curr_waypont_index = 0;
     for (auto && curr_goal : goal->poses) {
 
       BehaviorTree bt(bt_xml_);
@@ -107,9 +108,8 @@ namespace vox_nav_navigators
       blackboard->set<geometry_msgs::msg::PoseStamped>("pose", curr_goal);              // NOLINT
 
       auto should_cancel = [goal_handle]() {return goal_handle->is_canceling();};
-
       auto on_loop = [&]() {
-          RCLCPP_INFO(get_logger(), "Currently executing a waypoint");
+          RCLCPP_INFO(get_logger(), "Currently executing %i waypoint", curr_waypont_index);
         };
 
       switch (bt.execute(should_cancel, on_loop)) {
@@ -127,6 +127,7 @@ namespace vox_nav_navigators
         default:
           throw std::logic_error("Invalid status return from BT");
       }
+      curr_waypont_index++;
     }
     RCLCPP_INFO(get_logger(), "Behavior Tree execution succeeded, Finished all waypoints");
     goal_handle->succeed(result);
