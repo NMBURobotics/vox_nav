@@ -1,4 +1,4 @@
-navigate_through_poses_client_node:
+navigate_through_gps_poses_client_node:
   ros__parameters:
     gps_poses: [pose0,pose1,pose2]
     #lat, long
