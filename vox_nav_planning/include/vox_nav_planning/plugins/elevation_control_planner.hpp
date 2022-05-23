@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@
 #include "vox_nav_planning/planner_core.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
-
+#include "ompl/control/spaces/RealVectorControlSpace.h"
+#include "ompl/control/SimpleSetup.h"
 
 namespace vox_nav_planning
 {
@@ -61,6 +62,21 @@ namespace vox_nav_planning
     std::vector<geometry_msgs::msg::PoseStamped> createPlan(
       const geometry_msgs::msg::PoseStamped & start,
       const geometry_msgs::msg::PoseStamped & goal) override;
+
+    /**
+     * @brief propogates the states to next phase, given the control input
+     *
+     * @param start
+     * @param control
+     * @param duration
+     * @param result
+     */
+    void propagate(
+      const ompl::control::SpaceInformation * si,
+      const ompl::base::State * start,
+      const ompl::control::Control * control,
+      const double duration,
+      ompl::base::State * result);
 
     /**
     * @brief
@@ -109,7 +125,7 @@ namespace vox_nav_planning
     void setupMap() override;
 
   protected:
-    rclcpp::Logger logger_{rclcpp::get_logger("elevation_planner")};
+    rclcpp::Logger logger_{rclcpp::get_logger("elevation_control_planner")};
     // Surfels centers are elevated by node_elevation_distance_, and are stored in this
     // octomap, this maps is used by planner to sample states that are
     // strictly laying on ground but not touching. So it constrains the path to be on ground
@@ -123,7 +139,9 @@ namespace vox_nav_planning
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
     std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
     ompl::base::OptimizationObjectivePtr octocost_optimization_;
+    ompl::base::StateSpacePtr state_space_;
     ompl::control::ControlSpacePtr control_state_space_;
+    ompl::control::SimpleSetupPtr control_simple_setup_;
 
     std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
     std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;

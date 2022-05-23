@@ -71,6 +71,11 @@ add_library(elevation_planner SHARED src/plugins/elevation_planner.cpp)
 ament_target_dependencies(elevation_planner ${dependencies})
 target_link_libraries(elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
+# ELEVATION CONTROL PLANNER ############################################
+add_library(elevation_control_planner SHARED src/plugins/elevation_control_planner.cpp)
+ament_target_dependencies(elevation_control_planner ${dependencies})
+target_link_libraries(elevation_control_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
+
 # OPTIMAL ELEVATION PLANNER ####################################
 add_library(optimal_elevation_planner SHARED src/plugins/optimal_elevation_planner.cpp)
 ament_target_dependencies(optimal_elevation_planner ${dependencies})
@@ -78,6 +83,7 @@ target_link_libraries(optimal_elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LI
 
 install(TARGETS optimal_elevation_planner 
                 elevation_planner
+                elevation_control_planner
                 se2_planner
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib

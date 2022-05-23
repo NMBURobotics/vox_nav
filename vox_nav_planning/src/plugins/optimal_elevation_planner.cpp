@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,6 +37,8 @@ namespace vox_nav_planning
     is_map_ready_ = false;
     se2_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
     z_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
+    auto v_bounds = std::make_shared<ompl::base::RealVectorBounds>(1);
+
     elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
       new pcl::PointCloud<pcl::PointSurfel>);
     elevated_traversable_cloud_ = pcl::PointCloud<pcl::PointXYZRGB>::Ptr(
@@ -103,6 +105,8 @@ namespace vox_nav_planning
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minz").as_double());
     z_bounds_->setHigh(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.maxz").as_double());
+    v_bounds->setLow(0, -0.5);
+    v_bounds->setHigh(0, 0.5);
 
     typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
     CollisionGeometryPtr_t robot_body_box(new fcl::Box(
@@ -141,11 +145,13 @@ namespace vox_nav_planning
     // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
     state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
       se2_space_type_, elevated_surfel_poses_msg_,
-      rho_ /*only valid for duins or reeds*/, false /*only valid for dubins*/);
+      rho_ /*only valid for duins or reeds*/,
+      false /*only valid for dubins*/);
 
     state_space_->as<ompl::base::ElevationStateSpace>()->setBounds(
       *se2_bounds_,
-      *z_bounds_);
+      *z_bounds_,
+      *v_bounds);
 
     simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
     simple_setup_->setStateValidityChecker(

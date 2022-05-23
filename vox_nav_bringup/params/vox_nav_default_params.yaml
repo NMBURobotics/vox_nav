@@ -1,6 +1,6 @@
 vox_nav_planner_server_rclcpp_node:
   ros__parameters:
-    planner_plugin: "OptimalElevationPlanner"              # other options: "SE2Planner", "ElevationPlanner", "OptimalElevationPlanner"
+    planner_plugin: "ElevationControlPlanner"          # other options: "SE2Planner", "ElevationPlanner", "OptimalElevationPlanner"
     expected_planner_frequency: 1.0
     planner_name: "PRMstar"                            # PRMstar,LazyPRMstar,RRTstar,RRTsharp,RRTXstatic,InformedRRTstar,BITstar, 
                                                        # ABITstar,AITstar,CForest,LBTRRT,SST,TRRT,SPARS,SPARStwo,FMT,AnytimePathShortening
@@ -27,7 +27,7 @@ vox_nav_planner_server_rclcpp_node:
         maxyaw: 3.14
     ElevationPlanner: 
       plugin: "vox_nav_planning::ElevationPlanner"    # PRMstar: Reccomended
-      se2_space: "DUBINS"                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+      se2_space: "REEDS"                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 2.0                                        # Curve radius for reeds and dubins only
       state_space_boundries:
         minx: -100.0
@@ -36,6 +36,17 @@ vox_nav_planner_server_rclcpp_node:
         maxy:  100.0
         minz: -5.0
         maxz:  10.0
+    ElevationControlPlanner: 
+      plugin: "vox_nav_planning::ElevationControlPlanner"    # PRMstar: Reccomended
+      se2_space: "REEDS"                              # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+      rho: 2.0                                        # Curve radius for reeds and dubins only
+      state_space_boundries:
+        minx: -100.0
+        maxx:  100.0
+        miny: -100.0
+        maxy:  100.0
+        minz: -5.0
+        maxz:  10.0        
     OptimalElevationPlanner: 
       plugin: "vox_nav_planning::OptimalElevationPlanner"    # Bases on Astar on SuperVoxelClustering
       se2_space: "SE2"                                     # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
@@ -70,7 +81,7 @@ vox_nav_controller_server_rclcpp_node:
       robot_radius: 1.25                                                             
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
-         N: 10                                                                 # timesteps in MPC Horizon
+         N: 10                                                                # timesteps in MPC Horizon
          DT: 0.2                                                              # discretization time between timesteps(s)
          L_F: 0.67                                                            # distance from CoG to front axle(m)
          L_R: 0.67                                                            # distance from CoG to rear axle(m)

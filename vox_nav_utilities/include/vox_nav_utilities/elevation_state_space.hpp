@@ -134,12 +134,22 @@ namespace ompl
           as<RealVectorStateSpace::StateType>(1)->values[0] = z;
         }
 
+        void setVelocity(double v)
+        {
+          as<RealVectorStateSpace::StateType>(1)->values[1] = v;
+        }
+
         SE2StateSpace::StateType * getSE2()
         {
           return as<SE2StateSpace::StateType>(0);
         }
 
         RealVectorStateSpace::StateType * getZ()
+        {
+          return as<RealVectorStateSpace::StateType>(1);
+        }
+
+        RealVectorStateSpace::StateType * getVelocity()
         {
           return as<RealVectorStateSpace::StateType>(1);
         }
@@ -162,7 +172,10 @@ namespace ompl
 
       void setBounds(
         const RealVectorBounds & se2_bounds,
-        const RealVectorBounds & z_bounds);
+        const RealVectorBounds & z_bounds,
+        const RealVectorBounds & v_bounds);
+
+      void enforceBounds(State * state) const override;
 
       const RealVectorBounds getBounds() const;
 
@@ -189,6 +202,7 @@ namespace ompl
       std::shared_ptr<DubinsStateSpace> dubins_;
       std::shared_ptr<ReedsSheppStateSpace> reeds_sheep_;
       std::shared_ptr<SE2StateSpace> se2_;
+      std::shared_ptr<RealVectorStateSpace> real_vector_;
 
       double rho_;
       bool isSymmetric_;

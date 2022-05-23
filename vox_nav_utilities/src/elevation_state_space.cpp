@@ -65,9 +65,10 @@ ElevationStateSpace::ElevationStateSpace(
   setName("ElevationStateSpace" + getName());
   type_ = 32;
   addSubspace(std::make_shared<SE2StateSpace>(), 1.0);
-  addSubspace(std::make_shared<RealVectorStateSpace>(1), 1.0);
+  addSubspace(std::make_shared<RealVectorStateSpace>(2), 1.0);
   lock();
 
+  real_vector_ = std::make_shared<ompl::base::RealVectorStateSpace>(2);
   se2_ = std::make_shared<ompl::base::SE2StateSpace>();
   dubins_ = std::make_shared<ompl::base::DubinsStateSpace>(rho_, isSymmetric_);
   reeds_sheep_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(rho_);
@@ -96,25 +97,45 @@ ElevationStateSpace::ElevationStateSpace(
 
 void ElevationStateSpace::setBounds(
   const RealVectorBounds & se2_bounds,
-  const RealVectorBounds & z_bounds)
+  const RealVectorBounds & z_bounds,
+  const RealVectorBounds & v_bounds)
 {
   as<SE2StateSpace>(0)->setBounds(se2_bounds);
-  as<RealVectorStateSpace>(1)->setBounds(z_bounds);
+
+  auto z_and_v_bounds = std::make_shared<ompl::base::RealVectorBounds>(2);
+  z_and_v_bounds->setLow(0, z_bounds.low[0]);
+  z_and_v_bounds->setHigh(0, z_bounds.high[0]);
+  z_and_v_bounds->setLow(1, v_bounds.low[0]);
+  z_and_v_bounds->setHigh(1, v_bounds.high[0]);
+  as<RealVectorStateSpace>(1)->setBounds(*z_and_v_bounds);
 
   se2_->setBounds(se2_bounds);
   dubins_->setBounds(se2_bounds);
   reeds_sheep_->setBounds(se2_bounds);
+  real_vector_->setBounds(*z_and_v_bounds);
 }
+
+void ElevationStateSpace::enforceBounds(State * state) const
+{
+  auto * se2 = state->as<StateType>()->as<SE2StateSpace::StateType>(0);
+  auto * z_and_v = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+
+  se2_->enforceBounds(se2);
+  real_vector_->enforceBounds(z_and_v);
+}
+
 
 const RealVectorBounds ElevationStateSpace::getBounds() const
 {
-  auto merged_bounds = std::make_shared<ompl::base::RealVectorBounds>(3);
+  auto merged_bounds = std::make_shared<ompl::base::RealVectorBounds>(4);
   merged_bounds->setLow(0, as<SE2StateSpace>(0)->getBounds().low[0]);
   merged_bounds->setHigh(0, as<SE2StateSpace>(0)->getBounds().high[0]);
   merged_bounds->setLow(1, as<SE2StateSpace>(0)->getBounds().low[1]);
   merged_bounds->setHigh(1, as<SE2StateSpace>(0)->getBounds().high[1]);
   merged_bounds->setLow(2, as<RealVectorStateSpace>(1)->getBounds().low[0]);
   merged_bounds->setHigh(2, as<RealVectorStateSpace>(1)->getBounds().high[0]);
+  merged_bounds->setLow(3, as<RealVectorStateSpace>(1)->getBounds().low[1]);
+  merged_bounds->setHigh(3, as<RealVectorStateSpace>(1)->getBounds().high[1]);
   return *merged_bounds;
 }
 

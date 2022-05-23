@@ -172,7 +172,6 @@ namespace vox_nav_planning
 
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_clusters_pub_;
 
-
     bool supervoxel_disable_transform_;
     float supervoxel_resolution_;
     float supervoxel_seed_resolution_;
