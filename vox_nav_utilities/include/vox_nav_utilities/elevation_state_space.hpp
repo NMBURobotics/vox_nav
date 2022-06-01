@@ -109,6 +109,8 @@ namespace ompl
 
       Cost stateCost(const State * s) const override;
 
+      Cost motionCost(const State * s1, const State * s2) const override;
+
     protected:
       // Octree where the elevated surfesl are stored in
       std::shared_ptr<octomap::OcTree> elevated_surfels_octree_;
@@ -193,8 +195,10 @@ namespace ompl
         double t,
         State * state) const override;
 
+      void printState(const State * state, std::ostream & out) const override;
+
     protected:
-      rclcpp::Logger logger_{rclcpp::get_logger("elevation_state_space")};
+      rclcpp::Logger logger_ {rclcpp::get_logger("elevation_state_space")};
       geometry_msgs::msg::PoseArray elevated_surfels_poses_;
       pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
 

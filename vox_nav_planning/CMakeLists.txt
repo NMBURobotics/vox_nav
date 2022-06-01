@@ -81,6 +81,11 @@ add_library(optimal_elevation_planner SHARED src/plugins/optimal_elevation_plann
 ament_target_dependencies(optimal_elevation_planner ${dependencies})
 target_link_libraries(optimal_elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
+# RRT  PLANNER ####################################
+add_executable(rrt src/plugins/rrt.cpp)
+ament_target_dependencies(rrt ${dependencies})
+target_link_libraries(rrt ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES})
+
 install(TARGETS optimal_elevation_planner 
                 elevation_planner
                 elevation_control_planner
@@ -90,6 +95,7 @@ install(TARGETS optimal_elevation_planner
   RUNTIME DESTINATION bin)
 
 install(TARGETS planner_server
+                rrt
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

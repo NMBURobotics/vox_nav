@@ -53,6 +53,11 @@ ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::Stat
   return ompl::base::Cost(cost);
 }
 
+ompl::base::Cost OctoCostOptimizationObjective::motionCost(const State * s1, const State * s2) const
+{
+  return Cost(si_->distance(s1, s2));
+}
+
 ElevationStateSpace::ElevationStateSpace(
   const SE2StateType state_type,
   const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses,
@@ -213,6 +218,15 @@ void ompl::base::ElevationStateSpace::interpolate(
 
   state_z->values[0] = (from_z->values[0] + to_z->values[0]) / 2.0;
 }
+
+void ompl::base::ElevationStateSpace::printState(const State * state, std::ostream & out) const
+{
+  auto * se2 = state->as<StateType>()->as<SE2StateSpace::StateType>(0);
+  auto * z_and_v = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+  se2_->printState(se2, out);
+  real_vector_->printState(z_and_v, out);
+}
+
 
 OctoCellValidStateSampler::OctoCellValidStateSampler(
   const ompl::base::SpaceInformationPtr & si,

@@ -123,9 +123,7 @@ namespace vox_nav_planning
       std::uint32_t label;
       std::string name;
     };
-
     typedef float Cost;
-
     // specify some types
     typedef boost::adjacency_list<
         boost::setS,            // edge
@@ -134,14 +132,13 @@ namespace vox_nav_planning
         VertexProperty,         // vertex property
         boost::property<boost::edge_weight_t, Cost>> // edge property
       GraphT;
-
     typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
     typedef GraphT::vertex_descriptor vertex_descriptor;
     typedef GraphT::edge_descriptor edge_descriptor;
     typedef GraphT::vertex_iterator vertex_iterator;
     typedef std::pair<int, int> edge;
-    typedef std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> SuperVoxelClusters;
 
+    typedef std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> SuperVoxelClusters;
     rclcpp::Logger logger_{rclcpp::get_logger("optimal_elevation_planner")};
     // Surfels centers are elevated by node_elevation_distance_, and are stored in this
     // octomap, this maps is used by planner to sample states that are

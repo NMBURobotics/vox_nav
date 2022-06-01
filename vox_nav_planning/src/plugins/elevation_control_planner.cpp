@@ -39,6 +39,7 @@ namespace vox_nav_planning
     se2_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
     z_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
     auto v_bounds = std::make_shared<ompl::base::RealVectorBounds>(1);
+    auto control_bounds = std::make_shared<ompl::base::RealVectorBounds>(2);
 
     elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
       new pcl::PointCloud<pcl::PointSurfel>);
@@ -53,6 +54,13 @@ namespace vox_nav_planning
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
+    parent->declare_parameter(plugin_name + ".state_space_boundries.minv", -1.5);
+    parent->declare_parameter(plugin_name + ".state_space_boundries.maxv", 1.5);
+
+    parent->declare_parameter(plugin_name + ".control_boundries.minv", -0.5);
+    parent->declare_parameter(plugin_name + ".control_boundries.maxv", 0.5);
+    parent->declare_parameter(plugin_name + ".control_boundries.minw", -0.5);
+    parent->declare_parameter(plugin_name + ".control_boundries.maxw", 0.5);
 
     parent->get_parameter("planner_name", planner_name_);
     parent->get_parameter("planner_timeout", planner_timeout_);
@@ -73,8 +81,19 @@ namespace vox_nav_planning
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minz").as_double());
     z_bounds_->setHigh(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.maxz").as_double());
-    v_bounds->setLow(0, -1.5);
-    v_bounds->setHigh(0, 1.5);
+    v_bounds->setLow(
+      0, parent->get_parameter(plugin_name + ".state_space_boundries.minv").as_double());
+    v_bounds->setHigh(
+      0, parent->get_parameter(plugin_name + ".state_space_boundries.maxv").as_double());
+
+    control_bounds->setLow(
+      0, parent->get_parameter(plugin_name + ".control_boundries.minv").as_double());
+    control_bounds->setHigh(
+      0, parent->get_parameter(plugin_name + ".control_boundries.maxv").as_double());
+    control_bounds->setLow(
+      1, parent->get_parameter(plugin_name + ".control_boundries.minw").as_double());
+    control_bounds->setHigh(
+      1, parent->get_parameter(plugin_name + ".control_boundries.maxw").as_double());
 
     if (selected_se2_space_name_ == "SE2") {
       se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::SE2;
@@ -112,7 +131,7 @@ namespace vox_nav_planning
     state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
       se2_space_type_,
       elevated_surfel_poses_msg_,
-      rho_ /*only valid for duins or reeds*/,
+      rho_ /*only valid for dubins or reeds*/,
       false /*only valid for dubins*/);
 
     state_space_->as<ompl::base::ElevationStateSpace>()->setBounds(
@@ -121,15 +140,9 @@ namespace vox_nav_planning
       *v_bounds);
 
     control_state_space_ = std::make_shared<ompl::control::RealVectorControlSpace>(state_space_, 2);
-    ompl::base::RealVectorBounds cbounds(2);
-    cbounds.setLow(0, -0.2);
-    cbounds.setHigh(0, 0.2);
-    cbounds.setLow(1, -0.5);
-    cbounds.setHigh(1, 0.5);
+    control_state_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(*control_bounds);
 
-    control_state_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(cbounds);
     control_simple_setup_ = std::make_shared<ompl::control::SimpleSetup>(control_state_space_);
-
     control_simple_setup_->setOptimizationObjective(getOptimizationObjective());
     control_simple_setup_->setStateValidityChecker(
       std::bind(&ElevationControlPlanner::isStateValid, this, std::placeholders::_1));
@@ -160,13 +173,6 @@ namespace vox_nav_planning
     result->as<ompl::base::ElevationStateSpace::StateType>()->setVelocity(v + duration * ctrl[0]);
 
     si->enforceBounds(result);
-
-    const auto * ee_end = result->as<ompl::base::ElevationStateSpace::StateType>();
-
-    const double z_end = ee_end->as<ompl::base::RealVectorStateSpace::StateType>(1)->values[0];
-    const double v_end = ee_end->as<ompl::base::RealVectorStateSpace::StateType>(1)->values[1];
-
-    //RCLCPP_WARN(logger_, "Final z and V is %.3f %.3f", z_end, v_end);
   }
 
   std::vector<geometry_msgs::msg::PoseStamped> ElevationControlPlanner::createPlan(
@@ -210,11 +216,11 @@ namespace vox_nav_planning
     se3_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
     se3_goal->setVelocity(0);
 
-    control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
+    control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, 0.5);
 
     auto si = control_simple_setup_->getSpaceInformation();
     si->setMinMaxControlDuration(1, 3);
-    si->setPropagationStepSize(0.2);
+    si->setPropagationStepSize(0.5);
 
     control_simple_setup_->setStatePropagator(
       [this, si](const ompl::base::State * state, const ompl::control::Control * control,
@@ -236,7 +242,10 @@ namespace vox_nav_planning
         &ElevationControlPlanner::
         allocValidStateSampler, this, std::placeholders::_1));
 
-    //control_simple_setup_->setPlanner(planner);
+    ompl::base::PlannerPtr planner;
+    planner = ompl::base::PlannerPtr(new ompl::control::RRT(si));
+
+    control_simple_setup_->setPlanner(planner);
     control_simple_setup_->setup();
     control_simple_setup_->print(std::cout);
 
@@ -260,10 +269,10 @@ namespace vox_nav_planning
       }
 
       RCLCPP_INFO(
-        logger_, "A solution was found, the solution path includes %d poses.",
+        logger_, "A solution was found, the simplified solution path includes %d poses.",
         static_cast<int>(solution_path.getStateCount()));
 
-      //ompl::control::PathSimplifier * path_simlifier = new ompl::geometric::PathSimplifier(si);
+      ompl::geometric::PathSimplifier * path_simlifier = new ompl::geometric::PathSimplifier(si);
       //solution_path.interpolate(solution_path);
       //path_simlifier->smoothBSpline(solution_path, 1, 0.1);
 
