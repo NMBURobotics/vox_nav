@@ -25,9 +25,7 @@
 #include "ompl/control/spaces/RealVectorControlSpace.h"
 #include "ompl/control/SimpleSetup.h"
 #include "ompl/control/planners/sst/SST.h"
-#include "ompl/control/planners/xxt/XXT.h"
 #include "ompl/control/planners/rrt/RRT.h"
-
 
 namespace vox_nav_planning
 {
