@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "vox_nav_planning/plugins/elevation_control_planner.hpp"
+#include "vox_nav_planning/plugins/rrt.hpp"
 #include <pluginlib/class_list_macros.hpp>
 
 #include <string>
@@ -219,8 +220,8 @@ namespace vox_nav_planning
     control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, 0.5);
 
     auto si = control_simple_setup_->getSpaceInformation();
-    si->setMinMaxControlDuration(1, 3);
-    si->setPropagationStepSize(0.5);
+    si->setMinMaxControlDuration(1, 2);
+    si->setPropagationStepSize(0.25);
 
     control_simple_setup_->setStatePropagator(
       [this, si](const ompl::base::State * state, const ompl::control::Control * control,
@@ -243,7 +244,7 @@ namespace vox_nav_planning
         allocValidStateSampler, this, std::placeholders::_1));
 
     ompl::base::PlannerPtr planner;
-    planner = ompl::base::PlannerPtr(new ompl::control::RRT(si));
+    planner = ompl::base::PlannerPtr(new ompl::control::RRTF(si));
 
     control_simple_setup_->setPlanner(planner);
     control_simple_setup_->setup();

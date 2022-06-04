@@ -1,242 +1,286 @@
 #include "vox_nav_planning/plugins/rrt.hpp"
+#include "ompl/base/goals/GoalSampleableRegion.h"
+#include "ompl/base/objectives/MinimaxObjective.h"
+#include "ompl/base/objectives/MaximizeMinClearanceObjective.h"
+#include "ompl/base/objectives/PathLengthOptimizationObjective.h"
+#include "ompl/base/objectives/MechanicalWorkOptimizationObjective.h"
+#include "ompl/tools/config/SelfConfig.h"
+#include <limits>
 
-namespace vox_nav_planning
+ompl::control::RRTF::RRTF(const SpaceInformationPtr & si)
+: base::Planner(si, "RRTF")
 {
+  specs_.approximateSolutions = true;
+  siC_ = si.get();
+}
 
-  RRT::RRT(
-    Node start,
-    Node goal,
-    double expand_dis,
-    double path_resolution,
-    double goal_sample_rate,
-    double max_iter,
-    double robot_radius)
-  : start_(start),
-    goal_(goal),
-    expand_dis_(expand_dis),
-    path_resolution_(path_resolution),
-    goal_sample_rate_(goal_sample_rate),
-    max_iter_(max_iter),
-    robot_radius_(robot_radius)
-  {
-    if (!nodes_) {
-      nodes_ = pcl::make_shared<pcl::PointCloud<Node>>();
-    }
+ompl::control::RRTF::~RRTF()
+{
+  freeMemory();
+}
+
+void ompl::control::RRTF::setup()
+{
+  base::Planner::setup();
+  if (!nn_) {
+    nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<Node *>(this));
   }
+  nn_->setDistanceFunction(
+    [this](const Node * a, const Node * b)
+    {
+      return distanceFunction(a, b);
+    });
 
-  void RRT::initialize(
-    rclcpp::Node * parent,
-    const std::string & plugin_name)
-  {
-    is_map_ready_ = false;
-
-    elevated_surfel_cloud_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
-      new pcl::PointCloud<pcl::PointSurfel>);
-
-    // declare only planner specific parameters here
-    // common parameters are declared in server
-    parent->declare_parameter(plugin_name + ".se2_space", "REEDS");
-    parent->declare_parameter(plugin_name + ".rho", 1.5);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.minv", -1.5);
-    parent->declare_parameter(plugin_name + ".state_space_boundries.maxv", 1.5);
-    parent->declare_parameter(plugin_name + ".control_boundries.minv", -0.5);
-    parent->declare_parameter(plugin_name + ".control_boundries.maxv", 0.5);
-    parent->declare_parameter(plugin_name + ".control_boundries.minw", -0.5);
-    parent->declare_parameter(plugin_name + ".control_boundries.maxw", 0.5);
-
-    parent->get_parameter("planner_name", planner_name_);
-    parent->get_parameter("planner_timeout", planner_timeout_);
-    parent->get_parameter("interpolation_parameter", interpolation_parameter_);
-    parent->get_parameter("octomap_voxel_size", octomap_voxel_size_);
-
-    typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
-    CollisionGeometryPtr_t robot_body_box(new fcl::Box(
-        parent->get_parameter("robot_body_dimens.x").as_double(),
-        parent->get_parameter("robot_body_dimens.y").as_double(),
-        parent->get_parameter("robot_body_dimens.z").as_double()));
-
-    fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
-
-    robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
-
-    elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-    original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-
-    get_maps_and_surfels_client_node_ = std::make_shared
-      <rclcpp::Node>("get_maps_and_surfels_client_node");
-
-    get_maps_and_surfels_client_ =
-      get_maps_and_surfels_client_node_->create_client<vox_nav_msgs::srv::GetMapsAndSurfels>(
-      "get_maps_and_surfels");
-
-    setupMap();
-
-  }
-
-  RRT::~RRT()
-  {
-  }
-
-  int RRT::nearestNodeIndex(const pcl::PointCloud<Node>::Ptr nodes, const Node random_node)
-  {
-    pcl::KdTreeFLANN<Node> kdtree;
-    kdtree.setInputCloud(nodes);
-    // K nearest neighbor search
-    int K = 1;
-    std::vector<int> pointIdxNKNSearch(K);
-    std::vector<float> pointNKNSquaredDistance(K);
-    if (kdtree.nearestKSearch(random_node, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0) {
-      return pointIdxNKNSearch[0];
+  if (pdef_) {
+    if (pdef_->hasOptimizationObjective()) {
+      opt_ = pdef_->getOptimizationObjective();
     } else {
-      return -1;
+      OMPL_WARN("%s: No optimization object set. Using path length", getName().c_str());
+      opt_ = std::make_shared<base::PathLengthOptimizationObjective>(si_);
+      pdef_->setOptimizationObjective(opt_);
     }
   }
 
-  bool RRT::isStateValid(const Node * state)
-  {
-    fcl::CollisionRequest requestType(1, false, 1, false);
-    // check validity of state Fdefined by pos & rot
-    fcl::Vec3f translation(state->x, state->y, state->z);
-    tf2::Quaternion myQuaternion;
-    myQuaternion.setRPY(0, 0, state->psi);
-    fcl::Quaternion3f rotation(
-      myQuaternion.getX(), myQuaternion.getY(),
-      myQuaternion.getZ(), myQuaternion.getW());
-    robot_collision_object_->setTransform(rotation, translation);
-    fcl::CollisionResult collisionWithFullMapResult;
-    fcl::collide(
-      robot_collision_object_.get(),
-      original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
-    return !collisionWithFullMapResult.isCollision();
-  }
+  node_ = std::make_shared
+    <rclcpp::Node>("rrrstar");
 
-  std::vector<geometry_msgs::msg::PoseStamped> RRT::createPlan(
-    const geometry_msgs::msg::PoseStamped & start,
-    const geometry_msgs::msg::PoseStamped & goal)
-  {
-    if (!is_map_ready_) {
-      RCLCPP_WARN(
-        logger_, "A valid Octomap has not been recived yet, Try later again."
-      );
-      return std::vector<geometry_msgs::msg::PoseStamped>();
-    }
-    // set the start and goal states
-    double start_yaw, goal_yaw, nan;
-    vox_nav_utilities::getRPYfromMsgQuaternion(start.pose.orientation, nan, nan, start_yaw);
-    vox_nav_utilities::getRPYfromMsgQuaternion(goal.pose.orientation, nan, nan, goal_yaw);
+  rrt_path_pub_ =
+    node_->create_publisher<nav_msgs::msg::Path>(
+    "vox_nav/rrtstar/path", rclcpp::SystemDefaultsQoS());
 
-    nodes_->points.push_back(start_);
-
-    auto valid_sampler = std::make_shared<OctoCellValidStateSampler>(
-      start,
-      goal,
-      elevated_surfel_poses_msg_);
-
-    for (size_t i = 0; i < max_iter_; i++) {
-
-    }
-
-    std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
-
-    return plan_poses;
-  }
-
-  void RRT::setupMap()
-  {
-    const std::lock_guard<std::mutex> lock(octomap_mutex_);
-
-    while (!is_map_ready_ && rclcpp::ok()) {
-      auto request = std::make_shared<vox_nav_msgs::srv::GetMapsAndSurfels::Request>();
-      while (!get_maps_and_surfels_client_->wait_for_service(std::chrono::seconds(1))) {
-        if (!rclcpp::ok()) {
-          RCLCPP_ERROR(
-            logger_,
-            "Interrupted while waiting for the get_maps_and_surfels service. Exiting");
-          return;
-        }
-        RCLCPP_INFO(
-          logger_,
-          "get_maps_and_surfels service not available, waiting and trying again");
-      }
-      auto result_future = get_maps_and_surfels_client_->async_send_request(request);
-      if (rclcpp::spin_until_future_complete(
-          get_maps_and_surfels_client_node_,
-          result_future) !=
-        rclcpp::FutureReturnCode::SUCCESS)
-      {
-        RCLCPP_ERROR(logger_, "/get_maps_and_surfels service call failed");
-      }
-      auto response = result_future.get();
-      if (response->is_valid) {
-        is_map_ready_ = true;
-      } else {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        RCLCPP_INFO(
-          logger_, "Waiting for GetMapsAndSurfels service to provide correct maps.");
-        continue;
-      }
-      auto original_octomap_octree =
-        dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(response->original_octomap));
-      original_octomap_octree_ = std::make_shared<octomap::OcTree>(*original_octomap_octree);
-
-      auto elevated_surfel_octomap_octree =
-        dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(
-          response->elevated_surfel_octomap));
-      elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(
-        *elevated_surfel_octomap_octree);
-      delete original_octomap_octree;
-      delete elevated_surfel_octomap_octree;
-      auto elevated_surfels_fcl_octree =
-        std::make_shared<fcl::OcTree>(elevated_surfel_octomap_octree_);
-      elevated_surfels_collision_object_ = std::make_shared<fcl::CollisionObject>(
-        std::shared_ptr<fcl::CollisionGeometry>(elevated_surfels_fcl_octree));
-      auto original_octomap_fcl_octree = std::make_shared<fcl::OcTree>(original_octomap_octree_);
-      original_octomap_collision_object_ = std::make_shared<fcl::CollisionObject>(
-        std::shared_ptr<fcl::CollisionGeometry>(original_octomap_fcl_octree));
-      elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>(
-        response->elevated_surfel_poses);
-      for (auto && i : elevated_surfel_poses_msg_->poses) {
-        pcl::PointSurfel surfel;
-        surfel.x = i.position.x;
-        surfel.y = i.position.y;
-        surfel.z = i.position.z;
-        double r, p, y;
-        vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
-        surfel.normal_x = r;
-        surfel.normal_y = p;
-        surfel.normal_z = y;
-        elevated_surfel_cloud_->points.push_back(surfel);
-      }
-      RCLCPP_INFO(
-        logger_,
-        "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
-        "octomap for state validity (aka collision check)", original_octomap_octree_->size());
-      RCLCPP_INFO(
-        logger_,
-        "Recieved a valid Octomap which represents Elevated surfels with %d nodes,"
-        " A FCL collision tree will be created from this "
-        "octomap for state validity (aka collision check)",
-        elevated_surfel_octomap_octree_->size());
-    }
-  }
+  rrt_nodes_pub_ =
+    node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "vox_nav/rrtstar/nodes", rclcpp::SystemDefaultsQoS());
 
 }
-int main(int argc, char const * argv[])
-{
-  pcl::PointCloud<Node> cloud;
-  cloud.points.resize(2);
-  cloud.width = 2;
-  cloud.height = 1;
 
-  cloud.points[0].v = 1;
-  cloud.points[1].psi = 2;
-  cloud.points[0].x = cloud.points[0].y = cloud.points[0].z = 0;
-  cloud.points[1].x = cloud.points[1].y = cloud.points[1].z = 3;
-  return 0;
+void ompl::control::RRTF::clear()
+{
+  Planner::clear();
+  sampler_.reset();
+  valid_state_sampler_.reset();
+  freeMemory();
+  if (nn_) {
+    nn_->clear();
+  }
+}
+
+void ompl::control::RRTF::freeMemory()
+{
+  if (nn_) {
+    std::vector<Node *> Nodes;
+    nn_->list(Nodes);
+    for (auto & Node : Nodes) {
+      if (Node->state_) {
+        si_->freeState(Node->state_);
+      }
+      delete Node;
+    }
+  }
+}
+
+
+ompl::base::PlannerStatus ompl::control::RRTF::solve(const base::PlannerTerminationCondition & ptc)
+{
+  checkValidity();
+  base::Goal * goal = pdef_->getGoal().get();
+  auto * goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
+
+  auto * goal_node = new Node(siC_);
+  while (const base::State * goal = pis_.nextGoal()) {
+    si_->copyState(goal_node->state_, goal);
+  }
+
+  while (const base::State * st = pis_.nextStart()) {
+    auto * start_node = new Node(siC_);
+    si_->copyState(start_node->state_, st);
+    nn_->add(start_node);
+  }
+
+  if (nn_->size() == 0) {
+    OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
+    return base::PlannerStatus::INVALID_START;
+  }
+
+  if (!valid_state_sampler_) {
+    valid_state_sampler_ = si_->allocValidStateSampler();
+  }
+  if (!sampler_) {
+    sampler_ = si_->allocStateSampler();
+  }
+
+  OMPL_INFORM(
+    "%s: Starting planning with %u states already in datastructure\n",
+    getName().c_str(), nn_->size());
+
+  auto * rnd_node = new Node(siC_);
+  base::State * rnd_state = rnd_node->state_;
+
+  unsigned iterations = 0;
+
+  std::vector<base::State *> final_course;
+  Node * last_node = new Node(siC_);
+
+  while (ptc == false) {
+    /* sample random state (with goal biasing) */
+    if (goal_s && rng_.uniform01() < goalBias_ && goal_s->canSample()) {
+      goal_s->sampleGoal(rnd_state);
+    } else {
+      //sampler_->sampleUniform(rnd_state);
+      valid_state_sampler_->sample(rnd_state);
+    }
+
+    auto nearest_node = get_nearest_node(rnd_node);
+    auto new_node = steer(nearest_node, rnd_node, expand_dis_);
+    auto inc_cost = opt_->motionCost(nearest_node->state_, new_node->state_);
+    new_node->cost_ = opt_->combineCosts(nearest_node->cost_, inc_cost);
+
+    if (check_collision(new_node)) {
+      std::vector<Node *> near_nodes = find_near_nodes(new_node);
+      auto node_with_updated_parent = choose_parent(new_node, near_nodes);
+      if (node_with_updated_parent != nullptr) {
+        rewire(node_with_updated_parent, near_nodes);
+        nn_->add(node_with_updated_parent);
+      } else {
+        nn_->add(new_node);
+      }
+      last_node = search_best_goal_node(goal_node);
+    }
+
+    if (iterations % 10 == 0) {
+      std::stringstream ss;
+      ss << "Random node is;";
+      si_->printState(rnd_node->state_, ss);
+      ss << "Nearest Node to random node is;";
+      si_->printState(nearest_node->state_, ss);
+      ss << "Steered Node is;";
+      si_->printState(new_node->state_, ss);
+      //OMPL_INFORM("Iteration %u, %s", iterations, ss.str().c_str());
+    }
+
+    std::vector<Node *> all_nodes;
+    nn_->list(all_nodes);
+
+    visualization_msgs::msg::MarkerArray rrt_nodes;
+    int node_index_counter = 0;
+    for (auto i : all_nodes) {
+      if (i) {
+        if (!i->parent_) {
+          continue;
+        }
+
+        visualization_msgs::msg::Marker marker;
+        marker.header.frame_id = "map";
+        marker.header.stamp = rclcpp::Clock().now();
+        marker.ns = "rrt_nodes";
+        marker.id = node_index_counter;
+        marker.type = visualization_msgs::msg::Marker::LINE_LIST;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        marker.lifetime = rclcpp::Duration::from_seconds(0);
+        marker.text = std::to_string(node_index_counter);
+        marker.scale.x = 0.1;
+        marker.color.a = 1.0;
+        marker.color.r = 0.0;
+        marker.color.g = 1.0;
+        marker.color.b = 1.0;
+        marker.colors.push_back(marker.color);
+        const auto * cstate = i->state_->as<ompl::base::ElevationStateSpace::StateType>();
+        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        geometry_msgs::msg::Point node_point, parent_point;
+        node_point.x = se2->getX();
+        node_point.y = se2->getY();
+        node_point.z = z->values[0];
+        const auto * parent_cstate =
+          i->parent_->state_->as<ompl::base::ElevationStateSpace::StateType>();
+        const auto * parent_se2 = parent_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+        const auto * parent_z = parent_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        parent_point.x = parent_se2->getX();
+        parent_point.y = parent_se2->getY();
+        parent_point.z = parent_z->values[0];
+        marker.points.push_back(parent_point);
+        marker.points.push_back(node_point);
+        rrt_nodes.markers.push_back(marker);
+
+        node_index_counter++;
+
+      }
+    }
+    rrt_nodes_pub_->publish(rrt_nodes);
+
+    iterations++;
+  }
+
+  bool solved = false;
+  bool approximate = false;
+
+  if (rnd_node->state_) {
+    si_->freeState(rnd_node->state_);
+  }
+  delete rnd_node;
+
+  OMPL_INFORM(
+    "%s: Created %u states in %u iterations", getName().c_str(), nn_->size(),
+    iterations);
+
+  if (last_node) {
+    final_course = generate_final_course(last_node);
+    nav_msgs::msg::Path rrt_path;
+    for (auto i : final_course) {
+      if (i) {
+        const auto * cstate = i->as<ompl::base::ElevationStateSpace::StateType>();
+        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        tf2::Quaternion this_pose_quat;
+        this_pose_quat.setRPY(0, 0, se2->getYaw());
+        geometry_msgs::msg::PoseStamped pose;
+        pose.header.frame_id = "map";
+        pose.header.stamp = rclcpp::Clock().now();
+        pose.pose.position.x = se2->getX();
+        pose.pose.position.y = se2->getY();
+        pose.pose.position.z = z->values[0];
+        pose.pose.orientation.x = this_pose_quat.getX();
+        pose.pose.orientation.y = this_pose_quat.getY();
+        pose.pose.orientation.z = this_pose_quat.getZ();
+        pose.pose.orientation.w = this_pose_quat.getW();
+        rrt_path.poses.push_back(pose);
+        rrt_path.header = pose.header;
+      }
+      rrt_path_pub_->publish(rrt_path);
+    }
+    OMPL_INFORM("%s: Created %u plan states", getName().c_str(), rrt_path.poses.size());
+  } else {
+    OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());
+  }
+
+  return {solved, approximate};
+}
+
+void ompl::control::RRTF::getPlannerData(base::PlannerData & data) const
+{
+  Planner::getPlannerData(data);
+
+  std::vector<Node *> Nodes;
+  std::vector<Node *> allNodes;
+  if (nn_) {
+    nn_->list(Nodes);
+  }
+
+  for (unsigned i = 0; i < allNodes.size(); i++) {
+    if (allNodes[i]->parent_ != nullptr) {
+      allNodes.push_back(allNodes[i]->parent_);
+    }
+  }
+
+  double delta = siC_->getPropagationStepSize();
+
+  for (auto m : allNodes) {
+    if (m->parent_) {
+      data.addEdge(
+        base::PlannerDataVertex(m->parent_->state_),
+        base::PlannerDataVertex(m->state_));
+    } else {
+      data.addStartVertex(base::PlannerDataVertex(m->state_));
+    }
+  }
 }
