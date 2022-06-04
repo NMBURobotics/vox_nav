@@ -108,10 +108,6 @@ namespace ompl
 
       };
 
-      double path_resolution_ = 0.25;
-      double connect_circle_dist_ = 10.0;
-      double expand_dis_ = 2.0;
-
       Node * steer(Node * from_node, Node * to_node, float extend_length = INFINITY)
       {
         auto * new_node = new Node(siC_);
@@ -353,6 +349,9 @@ namespace ompl
       rclcpp::Node::SharedPtr node_;
 
       double goalBias_{0.05};
+      double path_resolution_{0.1};
+      double connect_circle_dist_{10.0};
+      double expand_dis_{0.5};
 
       /** \brief The random number generator */
       RNG rng_;

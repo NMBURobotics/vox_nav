@@ -214,26 +214,6 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
     OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());
   }
 
-  /*if (random_node->state_) {
-    si_->freeState(random_node->state_);
-  }
-  delete random_node;
-
-  if (last_node->state_) {
-    si_->freeState(last_node->state_);
-  }
-  delete last_node;
-
-  if (start_node->state_) {
-    si_->freeState(start_node->state_);
-  }
-  delete start_node;
-
-  if (goal_node->state_) {
-    si_->freeState(goal_node->state_);
-  }
-  delete goal_node;*/
-
   clear();
 
   return {solved, approximate};
