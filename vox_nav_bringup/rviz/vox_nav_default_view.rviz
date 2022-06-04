@@ -916,7 +916,7 @@ Visualization Manager:
       Enabled: true
       Name: Global Plan
       Namespaces:
-        {}
+        path: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -1019,9 +1019,9 @@ Visualization Manager:
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
-      Name: MarkerArray
+      Name: RTT TREE GROWTH
       Namespaces:
-        {}
+        rrt_nodes: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -1063,25 +1063,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 58.22472381591797
+      Distance: 65.66958618164062
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.4985921382904053
-        Y: -5.529091835021973
+        X: 3.030414581298828
+        Y: -0.216560959815979
         Z: 3.28356254613027e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.0147963762283325
+      Pitch: 1.5697963237762451
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 4.39375638961792
+      Yaw: 3.953756809234619
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016

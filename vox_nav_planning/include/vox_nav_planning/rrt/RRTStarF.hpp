@@ -349,9 +349,9 @@ namespace ompl
       rclcpp::Node::SharedPtr node_;
 
       double goalBias_{0.05};
-      double path_resolution_{0.1};
-      double connect_circle_dist_{10.0};
-      double expand_dis_{0.5};
+      double path_resolution_{0.25};
+      double connect_circle_dist_{50.0};
+      double expand_dis_{1.5};
 
       /** \brief The random number generator */
       RNG rng_;
