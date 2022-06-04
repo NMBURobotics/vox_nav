@@ -92,6 +92,10 @@ namespace vox_nav_planning
     plan_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "vox_nav/planning/plan", 1);
 
+    nav_msgs_path_pub_ =
+      this->create_publisher<nav_msgs::msg::Path>(
+      "vox_nav/planning/nav_msgs_path", rclcpp::SystemDefaultsQoS());
+
     this->action_server_ = rclcpp_action::create_server<ComputePathToPose>(
       this->get_node_base_interface(),
       this->get_node_clock_interface(),
@@ -242,6 +246,7 @@ namespace vox_nav_planning
   {
     visualization_msgs::msg::MarkerArray marker_array;
     visualization_msgs::msg::Marker start_marker, goal_marker;
+    nav_msgs::msg::Path nav_msgs_path;
 
     auto path_idx = 0;
     for (auto && i : path) {
@@ -295,6 +300,12 @@ namespace vox_nav_planning
       path_idx++;
 
       marker_array.markers.push_back(text);
+
+      geometry_msgs::msg::PoseStamped mutable_pose = i;
+      mutable_pose.header.frame_id = "map";
+      mutable_pose.header.stamp = rclcpp::Clock().now();
+      nav_msgs_path.poses.push_back(mutable_pose);
+      nav_msgs_path.header = mutable_pose.header;
     }
     // Publish goal and start states for debuging
     start_marker.pose = start_pose.pose;
@@ -304,6 +315,7 @@ namespace vox_nav_planning
     marker_array.markers.push_back(start_marker);
     marker_array.markers.push_back(goal_marker);
     plan_publisher_->publish(marker_array);
+    nav_msgs_path_pub_->publish(nav_msgs_path);
   }
 }  // namespace vox_nav_planning
 

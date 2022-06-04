@@ -134,6 +134,7 @@ namespace vox_nav_planning
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
     // Publishers for the path
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr nav_msgs_path_pub_;
     // obot mesh path, if there is one
     std::string robot_mesh_path_;
   };

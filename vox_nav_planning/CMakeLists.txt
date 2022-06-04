@@ -55,10 +55,10 @@ OCTOMAP
 LIBFCL
 pcl_ros)
 
-# RRTF  PLANNER ####################################
-add_library(rrtf SHARED src/plugins/rrt.cpp)
-target_link_libraries(rrtf ${PCL_LIBRARIES})
-ament_target_dependencies(rrtf ${dependencies})
+# RRTStarF  PLANNER ####################################
+add_library(RRTStarF SHARED src/rrt/RRTStarF.cpp)
+target_link_libraries(RRTStarF ${PCL_LIBRARIES})
+ament_target_dependencies(RRTStarF ${dependencies})
 
 # PLANNER SERVER ##############################################
 add_executable(planner_server src/planner_server.cpp)
@@ -79,7 +79,7 @@ target_link_libraries(elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES}
 # ELEVATION CONTROL PLANNER ############################################
 add_library(elevation_control_planner SHARED src/plugins/elevation_control_planner.cpp)
 ament_target_dependencies(elevation_control_planner ${dependencies})
-target_link_libraries(elevation_control_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl rrtf)
+target_link_libraries(elevation_control_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl RRTStarF)
 
 # OPTIMAL ELEVATION PLANNER ####################################
 add_library(optimal_elevation_planner SHARED src/plugins/optimal_elevation_planner.cpp)
@@ -95,7 +95,7 @@ install(TARGETS optimal_elevation_planner
   RUNTIME DESTINATION bin)
 
 install(TARGETS planner_server
-                rrtf
+                RRTStarF
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

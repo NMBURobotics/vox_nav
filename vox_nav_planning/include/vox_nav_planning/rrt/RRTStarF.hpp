@@ -12,30 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_PLANNING__PLUGINS__RRT_HPP_
-#define VOX_NAV_PLANNING__PLUGINS__RRT_HPP_
+#ifndef VOX_NAV_PLANNING__RRT__RRTSTARF_HPP_
+#define VOX_NAV_PLANNING__RRT__RRTSTARF_HPP_
 
 #include "vox_nav_planning/planner_core.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
+#include "nav_msgs/msg/path.hpp"
+
 #include "ompl/control/planners/PlannerIncludes.h"
 #include "ompl/datastructures/NearestNeighbors.h"
-#include <nav_msgs/msg/path.hpp>
 #include "ompl/base/spaces/SE2StateSpace.h"
 #include "ompl/base/spaces/RealVectorStateSpace.h"
+#include "ompl/base/goals/GoalSampleableRegion.h"
+#include "ompl/base/objectives/MinimaxObjective.h"
+#include "ompl/base/objectives/MaximizeMinClearanceObjective.h"
+#include "ompl/base/objectives/PathLengthOptimizationObjective.h"
+#include "ompl/base/objectives/MechanicalWorkOptimizationObjective.h"
+#include "ompl/tools/config/SelfConfig.h"
 
+#include <limits>
 
 namespace ompl
 {
   namespace control
   {
 
-    class RRTF : public base::Planner
+    class RRTStarF : public base::Planner
     {
     public:
       /** \brief Constructor */
-      RRTF(const SpaceInformationPtr & si);
+      RRTStarF(const SpaceInformationPtr & si);
 
-      ~RRTF() override;
+      ~RRTStarF() override;
 
       void setup() override;
 
@@ -100,13 +108,9 @@ namespace ompl
 
       };
 
-      double path_resolution_ = 0.1;
-      double goal_sample_rate_ = 5;
-      int max_iter_ = 500;
-      double robot_radius_ = 0.0;
+      double path_resolution_ = 0.25;
       double connect_circle_dist_ = 10.0;
       double expand_dis_ = 2.0;
-
 
       Node * steer(Node * from_node, Node * to_node, float extend_length = INFINITY)
       {
@@ -344,7 +348,6 @@ namespace ompl
       /** \brief The optimization objective. */
       base::OptimizationObjectivePtr opt_;
 
-      rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr rrt_path_pub_;
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rrt_nodes_pub_;
 
       rclcpp::Node::SharedPtr node_;
@@ -360,4 +363,4 @@ namespace ompl
 }
 
 
-#endif  // VOX_NAV_PLANNING__PLUGINS__RRT_HPP_
+#endif  // VOX_NAV_PLANNING__RRT__RRTSTARF_HPP_

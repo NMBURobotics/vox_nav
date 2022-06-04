@@ -1,25 +1,19 @@
-#include "vox_nav_planning/plugins/rrt.hpp"
-#include "ompl/base/goals/GoalSampleableRegion.h"
-#include "ompl/base/objectives/MinimaxObjective.h"
-#include "ompl/base/objectives/MaximizeMinClearanceObjective.h"
-#include "ompl/base/objectives/PathLengthOptimizationObjective.h"
-#include "ompl/base/objectives/MechanicalWorkOptimizationObjective.h"
-#include "ompl/tools/config/SelfConfig.h"
-#include <limits>
+#include "vox_nav_planning/rrt/RRTStarF.hpp"
 
-ompl::control::RRTF::RRTF(const SpaceInformationPtr & si)
-: base::Planner(si, "RRTF")
+
+ompl::control::RRTStarF::RRTStarF(const SpaceInformationPtr & si)
+: base::Planner(si, "RRTStarF")
 {
   specs_.approximateSolutions = true;
   siC_ = si.get();
 }
 
-ompl::control::RRTF::~RRTF()
+ompl::control::RRTStarF::~RRTStarF()
 {
   freeMemory();
 }
 
-void ompl::control::RRTF::setup()
+void ompl::control::RRTStarF::setup()
 {
   base::Planner::setup();
   if (!nn_) {
@@ -41,12 +35,8 @@ void ompl::control::RRTF::setup()
     }
   }
 
-  node_ = std::make_shared
-    <rclcpp::Node>("rrrstar");
-
-  rrt_path_pub_ =
-    node_->create_publisher<nav_msgs::msg::Path>(
-    "vox_nav/rrtstar/path", rclcpp::SystemDefaultsQoS());
+  // ros2 node to publish rrt nodes
+  node_ = std::make_shared<rclcpp::Node>("rrtstarf_rclcpp_node");
 
   rrt_nodes_pub_ =
     node_->create_publisher<visualization_msgs::msg::MarkerArray>(
@@ -54,7 +44,7 @@ void ompl::control::RRTF::setup()
 
 }
 
-void ompl::control::RRTF::clear()
+void ompl::control::RRTStarF::clear()
 {
   Planner::clear();
   sampler_.reset();
@@ -65,34 +55,36 @@ void ompl::control::RRTF::clear()
   }
 }
 
-void ompl::control::RRTF::freeMemory()
+void ompl::control::RRTStarF::freeMemory()
 {
   if (nn_) {
-    std::vector<Node *> Nodes;
-    nn_->list(Nodes);
-    for (auto & Node : Nodes) {
-      if (Node->state_) {
-        si_->freeState(Node->state_);
+    std::vector<Node *> nodes;
+    nn_->list(nodes);
+    for (auto & node : nodes) {
+      if (node->state_) {
+        si_->freeState(node->state_);
       }
-      delete Node;
+      delete node;
     }
   }
 }
 
-
-ompl::base::PlannerStatus ompl::control::RRTF::solve(const base::PlannerTerminationCondition & ptc)
+ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
+  const base::PlannerTerminationCondition & ptc)
 {
   checkValidity();
   base::Goal * goal = pdef_->getGoal().get();
   auto * goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
 
+  // get the goal node and state
   auto * goal_node = new Node(siC_);
   while (const base::State * goal = pis_.nextGoal()) {
     si_->copyState(goal_node->state_, goal);
   }
 
+  // get start node and state,push  the node inton nn_ as well
+  auto * start_node = new Node(siC_);
   while (const base::State * st = pis_.nextStart()) {
-    auto * start_node = new Node(siC_);
     si_->copyState(start_node->state_, st);
     nn_->add(start_node);
   }
@@ -102,6 +94,7 @@ ompl::base::PlannerStatus ompl::control::RRTF::solve(const base::PlannerTerminat
     return base::PlannerStatus::INVALID_START;
   }
 
+  // Use valid state sampler
   if (!valid_state_sampler_) {
     valid_state_sampler_ = si_->allocValidStateSampler();
   }
@@ -113,25 +106,24 @@ ompl::base::PlannerStatus ompl::control::RRTF::solve(const base::PlannerTerminat
     "%s: Starting planning with %u states already in datastructure\n",
     getName().c_str(), nn_->size());
 
-  auto * rnd_node = new Node(siC_);
-  base::State * rnd_state = rnd_node->state_;
+  auto * random_node = new Node(siC_);
+  base::State * random_state = random_node->state_;
 
   unsigned iterations = 0;
 
-  std::vector<base::State *> final_course;
   Node * last_node = new Node(siC_);
 
   while (ptc == false) {
     /* sample random state (with goal biasing) */
     if (goal_s && rng_.uniform01() < goalBias_ && goal_s->canSample()) {
-      goal_s->sampleGoal(rnd_state);
+      goal_s->sampleGoal(random_state);
     } else {
-      //sampler_->sampleUniform(rnd_state);
-      valid_state_sampler_->sample(rnd_state);
+      //sampler_->sampleUniform(random_state);
+      valid_state_sampler_->sample(random_state);
     }
 
-    auto nearest_node = get_nearest_node(rnd_node);
-    auto new_node = steer(nearest_node, rnd_node, expand_dis_);
+    auto nearest_node = get_nearest_node(random_node);
+    auto new_node = steer(nearest_node, random_node, expand_dis_);
     auto inc_cost = opt_->motionCost(nearest_node->state_, new_node->state_);
     new_node->cost_ = opt_->combineCosts(nearest_node->cost_, inc_cost);
 
@@ -147,20 +139,9 @@ ompl::base::PlannerStatus ompl::control::RRTF::solve(const base::PlannerTerminat
       last_node = search_best_goal_node(goal_node);
     }
 
-    if (iterations % 10 == 0) {
-      std::stringstream ss;
-      ss << "Random node is;";
-      si_->printState(rnd_node->state_, ss);
-      ss << "Nearest Node to random node is;";
-      si_->printState(nearest_node->state_, ss);
-      ss << "Steered Node is;";
-      si_->printState(new_node->state_, ss);
-      //OMPL_INFORM("Iteration %u, %s", iterations, ss.str().c_str());
-    }
-
+    // visualize rrt node tree growth in RVIZ
     std::vector<Node *> all_nodes;
     nn_->list(all_nodes);
-
     visualization_msgs::msg::MarkerArray rrt_nodes;
     int node_index_counter = 0;
     for (auto i : all_nodes) {
@@ -168,7 +149,6 @@ ompl::base::PlannerStatus ompl::control::RRTF::solve(const base::PlannerTerminat
         if (!i->parent_) {
           continue;
         }
-
         visualization_msgs::msg::Marker marker;
         marker.header.frame_id = "map";
         marker.header.stamp = rclcpp::Clock().now();
@@ -201,9 +181,7 @@ ompl::base::PlannerStatus ompl::control::RRTF::solve(const base::PlannerTerminat
         marker.points.push_back(parent_point);
         marker.points.push_back(node_point);
         rrt_nodes.markers.push_back(marker);
-
         node_index_counter++;
-
       }
     }
     rrt_nodes_pub_->publish(rrt_nodes);
@@ -214,49 +192,54 @@ ompl::base::PlannerStatus ompl::control::RRTF::solve(const base::PlannerTerminat
   bool solved = false;
   bool approximate = false;
 
-  if (rnd_node->state_) {
-    si_->freeState(rnd_node->state_);
-  }
-  delete rnd_node;
-
   OMPL_INFORM(
     "%s: Created %u states in %u iterations", getName().c_str(), nn_->size(),
     iterations);
 
   if (last_node) {
-    final_course = generate_final_course(last_node);
-    nav_msgs::msg::Path rrt_path;
+    std::vector<base::State *> final_course = generate_final_course(last_node);
+    solved = true;
+
+    /* set the solution path */
+    auto path(std::make_shared<PathControl>(si_));
     for (auto i : final_course) {
       if (i) {
-        const auto * cstate = i->as<ompl::base::ElevationStateSpace::StateType>();
-        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-        tf2::Quaternion this_pose_quat;
-        this_pose_quat.setRPY(0, 0, se2->getYaw());
-        geometry_msgs::msg::PoseStamped pose;
-        pose.header.frame_id = "map";
-        pose.header.stamp = rclcpp::Clock().now();
-        pose.pose.position.x = se2->getX();
-        pose.pose.position.y = se2->getY();
-        pose.pose.position.z = z->values[0];
-        pose.pose.orientation.x = this_pose_quat.getX();
-        pose.pose.orientation.y = this_pose_quat.getY();
-        pose.pose.orientation.z = this_pose_quat.getZ();
-        pose.pose.orientation.w = this_pose_quat.getW();
-        rrt_path.poses.push_back(pose);
-        rrt_path.header = pose.header;
+        path->append(i);
       }
-      rrt_path_pub_->publish(rrt_path);
     }
-    OMPL_INFORM("%s: Created %u plan states", getName().c_str(), rrt_path.poses.size());
+    solved = true;
+    pdef_->addSolutionPath(path, approximate, 0.0 /*approxdif*/, getName());
+    OMPL_INFORM("Found solution with cost %.2f", last_node->cost_.value());
   } else {
     OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());
   }
 
+  /*if (random_node->state_) {
+    si_->freeState(random_node->state_);
+  }
+  delete random_node;
+
+  if (last_node->state_) {
+    si_->freeState(last_node->state_);
+  }
+  delete last_node;
+
+  if (start_node->state_) {
+    si_->freeState(start_node->state_);
+  }
+  delete start_node;
+
+  if (goal_node->state_) {
+    si_->freeState(goal_node->state_);
+  }
+  delete goal_node;*/
+
+  clear();
+
   return {solved, approximate};
 }
 
-void ompl::control::RRTF::getPlannerData(base::PlannerData & data) const
+void ompl::control::RRTStarF::getPlannerData(base::PlannerData & data) const
 {
   Planner::getPlannerData(data);
 

@@ -15,17 +15,20 @@
 #ifndef VOX_NAV_PLANNING__PLUGINS__ELEVATION_CONTROL_PLANNER_HPP_
 #define VOX_NAV_PLANNING__PLUGINS__ELEVATION_CONTROL_PLANNER_HPP_
 
-#include <vector>
-#include <string>
-#include <memory>
 
+#include "vox_nav_planning/rrt/RRTStarF.hpp"
 #include "vox_nav_planning/planner_core.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
+
 #include "ompl/control/spaces/RealVectorControlSpace.h"
 #include "ompl/control/SimpleSetup.h"
 #include "ompl/control/planners/sst/SST.h"
 #include "ompl/control/planners/rrt/RRT.h"
+
+#include <vector>
+#include <string>
+#include <memory>
 
 namespace vox_nav_planning
 {

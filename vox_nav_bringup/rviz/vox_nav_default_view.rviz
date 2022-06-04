@@ -1015,7 +1015,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /vox_nav/rrtstar/path
+        Value: /vox_nav/planning/nav_msgs_path
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
@@ -1063,25 +1063,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 78.19305419921875
+      Distance: 58.22472381591797
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -3.1066744327545166
-        Y: 1.8189961910247803
+        X: 0.4985921382904053
+        Y: -5.529091835021973
         Z: 3.28356254613027e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2497966289520264
+      Pitch: 1.0147963762283325
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.2287559509277344
+      Yaw: 4.39375638961792
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016
