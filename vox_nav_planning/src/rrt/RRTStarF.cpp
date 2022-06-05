@@ -118,7 +118,7 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
     if (goal_s && rng_.uniform01() < goalBias_ && goal_s->canSample()) {
       goal_s->sampleGoal(random_state);
     } else {
-      //sampler_->sampleUniform(random_state);
+      // sampler_->sampleUniform(random_state);
       valid_state_sampler_->sample(random_state);
     }
 
