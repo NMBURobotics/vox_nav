@@ -18,16 +18,9 @@
 #include "vox_nav_planning/planner_core.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
 #include "nav_msgs/msg/path.hpp"
-
 #include "ompl/control/planners/PlannerIncludes.h"
-#include "ompl/datastructures/NearestNeighbors.h"
 #include "ompl/base/spaces/SE2StateSpace.h"
 #include "ompl/base/spaces/RealVectorStateSpace.h"
-#include "ompl/base/goals/GoalSampleableRegion.h"
-#include "ompl/base/objectives/MinimaxObjective.h"
-#include "ompl/base/objectives/MaximizeMinClearanceObjective.h"
-#include "ompl/base/objectives/PathLengthOptimizationObjective.h"
-#include "ompl/base/objectives/MechanicalWorkOptimizationObjective.h"
 #include "ompl/tools/config/SelfConfig.h"
 
 #include <limits>
@@ -40,7 +33,9 @@ namespace ompl
     class LQRPlanner : public base::Planner
     {
     public:
-      /** \brief Constructor */
+      /** \brief Plan from start to pose by LQR for linearized car model
+       *  https://ieeexplore.ieee.org/document/7553742
+       */
       LQRPlanner(const SpaceInformationPtr & si);
 
       ~LQRPlanner() override;
@@ -61,20 +56,136 @@ namespace ompl
       /** \brief Free the memory allocated by this planner */
       void freeMemory();
 
-      /** \brief State sampler */
-      base::StateSamplerPtr sampler_;
-
-      const SpaceInformation * siC_;
-
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rrt_nodes_pub_;
 
       rclcpp::Node::SharedPtr node_;
 
-      double dt_{0.1};
+      double dt_{0.2};
+      double max_time_{10.0};
+      double q1_{1};
+      double q2_{10};
+      double r_{1};
+      double v_r_{1.5};
+      double L_{0.8};
+      double phi_bound_{0.6};
+      double goal_tolerance_{0.1};
 
-      double max_time_{5.0};
 
-      std::tuple<double, double> lqr_control(
+      std::tuple<Eigen::MatrixXd, Eigen::MatrixXd,
+        Eigen::MatrixXd, Eigen::MatrixXd> getABQR()
+      {
+        Eigen::MatrixXd A(2, 2);
+        A << 0, -v_r_,
+          0, 0;
+        Eigen::MatrixXd B(1, 2);
+        B(0, 0) = 0;
+        B(0, 1) = -v_r_ / L_;
+        B = B.transpose();
+        Eigen::MatrixXd Q(2, 2);
+        Q(0, 0) = q1_;
+        Q(1, 1) = q2_;
+        Eigen::MatrixXd R(1, 1);
+        R(0, 0) = r_;
+        return std::make_tuple(A, B, Q, R);
+      }
+
+      std::vector<base::State *> compute_LQR_plan(
+        base::State * start_state,
+        base::State * goal_state,
+        std::vector<base::State *> & resulting_path)
+      {
+
+        double time = 0.0;
+        resulting_path.push_back(start_state);
+
+        const auto * start_cstate = start_state->as<ompl::base::ElevationStateSpace::StateType>();
+        const auto * start_se2 = start_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+        const auto * start_z = start_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        const auto * goal_cstate = goal_state->as<ompl::base::ElevationStateSpace::StateType>();
+        const auto * goal_se2 = goal_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+        const auto * goal_z = goal_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+        auto ABQR = getABQR();
+        auto A = std::get<0>(ABQR);
+        auto B = std::get<1>(ABQR);
+        auto Q = std::get<2>(ABQR);
+        auto R = std::get<3>(ABQR);
+
+        while (time <= max_time_) {
+
+          auto * latest_cstate =
+            resulting_path.back()->as<ompl::base::ElevationStateSpace::StateType>();
+          const auto * latest_se2 = latest_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+          const auto * latest_z = latest_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+          double xc = latest_se2->getX();
+          double yc = latest_se2->getY();
+          double thetac = latest_se2->getYaw();
+          double zc = latest_z->values[0];
+
+          double theta_r = std::atan2(
+            (yc - start_se2->getY()),
+            (xc - start_se2->getX()));
+
+          Eigen::MatrixXd T(3, 3);
+          T <<
+            -std::cos(theta_r), -std::sin(theta_r), 0,
+            std::sin(theta_r), -std::cos(theta_r), 0,
+            0, 0, 1;
+
+          Eigen::VectorXd e(3);
+          e(0) = xc - goal_se2->getX();
+          e(1) = yc - goal_se2->getY();
+          e(2) = thetac - theta_r;
+
+          auto Te_dynamics = T * e;
+
+          Eigen::VectorXd X(2);
+          X(0) = Te_dynamics(1);
+          X(1) = Te_dynamics(2);
+
+          double phi = lqr_control(A, B, Q, R, X);
+          phi = std::clamp<double>(phi, -phi_bound_, phi_bound_);
+
+          Eigen::VectorXd U(2);
+          U(0) = v_r_;
+          U(1) = phi;
+
+          auto d = std::sqrt(
+            std::pow(goal_se2->getX() - xc, 2) +
+            std::pow(goal_se2->getY() - yc, 2));
+
+          if (d < goal_tolerance_) {
+            // if Reached the goal or max time reached, break the loop
+            U(0)  = 0;
+            break;
+          }
+
+          // Propogate the states with computed optimal control3
+          // Store the state in the resulting path as that really is
+          auto * this_state = si_->allocState();
+          auto * this_cstate = this_state->as<ompl::base::ElevationStateSpace::StateType>();
+
+          /*propogate according to car-like dynamics*/
+          this_cstate->setSE2(
+            xc + dt_ * U(0) * std::cos(thetac),
+            yc + dt_ * U(0) * std::sin(thetac),
+            thetac + dt_ * (U(0) * std::tan(U(1)) / L_)
+          );
+          this_cstate->setZ(zc);
+          resulting_path.push_back(this_state);
+
+          // TIME STEP INCREASE
+          time += dt_;
+
+        }
+
+        return resulting_path;
+      }
+
+
+      // return optimal steering angle
+      double lqr_control(
         const Eigen::MatrixXd & A,
         const Eigen::MatrixXd & B,
         const Eigen::MatrixXd & Q,
@@ -82,28 +193,16 @@ namespace ompl
         const Eigen::MatrixXd & X)
       {
         auto res = dlqr(A, B, Q, R);
-
         auto K = std::get<0>(res);
-
         double phi = (K * X)(0);
-
-        std::cout << "K" << K << std::endl;
-        std::cout << "X" << X << std::endl;
-        std::cout << "K * X" << K * X << std::endl;
-        std::cout << "K * X.transpose" << K * X.transpose() << std::endl;
-
-        phi = std::clamp<double>(phi, -0.6, 0.6);
-        double v_r = 1.5;
-
-        return std::make_tuple(v_r, phi);
+        return phi;
       }
-
 
       /**
        * @brief authored by: Horibe Takamasa; https://github.com/TakaHoribe
-       *        DisContinous time Riccati Eq. solver
+       *        Continous time Riccati Eq. solver
        */
-      bool solve_dare(
+      bool solve_care(
         const Eigen::MatrixXd & A, const Eigen::MatrixXd & B,
         const Eigen::MatrixXd & Q, const Eigen::MatrixXd & R,
         Eigen::MatrixXd & P, const double dt = 0.001,
@@ -122,7 +221,6 @@ namespace ompl
           diff = fabs((P_next - P).maxCoeff());
           P = P_next;
           if (diff < tolerance) {
-            std::cout << "iteration mumber = " << i << std::endl;
             return true;
           }
         }
@@ -149,10 +247,8 @@ namespace ompl
         const Eigen::MatrixXd & R)
       {
         Eigen::MatrixXd X, K;
-        bool solved_dare = solve_dare(Ad, Bd, Q, R, X);
-        //K = (Bd.transpose() * X * Bd + R).inverse() * (Bd.transpose() * X * Ad);
+        bool solved_dare = solve_care(Ad, Bd, Q, R, X);
         K = R.inverse() * (Bd.transpose() * X);
-
         auto eig = (Ad - Bd.transpose() * K).eigenvalues();
         return std::make_tuple(K, X, eig);
       }
