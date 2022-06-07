@@ -70,23 +70,27 @@ namespace ompl
 
       rclcpp::Node::SharedPtr node_;
 
-      double dt_{0.05};
+      double dt_{0.1};
 
       double max_time_{5.0};
 
       std::tuple<double, double> lqr_control(
         const Eigen::MatrixXd & A,
         const Eigen::MatrixXd & B,
+        const Eigen::MatrixXd & Q,
+        const Eigen::MatrixXd & R,
         const Eigen::MatrixXd & X)
       {
-        auto res = dlqr(
-          A, B,
-          Eigen::MatrixXd::Identity(2, 2),
-          Eigen::MatrixXd::Identity(1, 1));
+        auto res = dlqr(A, B, Q, R);
 
         auto K = std::get<0>(res);
 
         double phi = (K * X)(0);
+
+        std::cout << "K" << K << std::endl;
+        std::cout << "X" << X << std::endl;
+        std::cout << "K * X" << K * X << std::endl;
+        std::cout << "K * X.transpose" << K * X.transpose() << std::endl;
 
         phi = std::clamp<double>(phi, -0.6, 0.6);
         double v_r = 1.5;
@@ -100,25 +104,21 @@ namespace ompl
        *        DisContinous time Riccati Eq. solver
        */
       bool solve_dare(
-        const Eigen::MatrixXd & Ad,
-        const Eigen::MatrixXd & Bd,
-        const Eigen::MatrixXd & Q,
-        const Eigen::MatrixXd & R,
-        Eigen::MatrixXd & P,
-        const double & tolerance = 0.01,
-        const uint iter_max = 150)
+        const Eigen::MatrixXd & A, const Eigen::MatrixXd & B,
+        const Eigen::MatrixXd & Q, const Eigen::MatrixXd & R,
+        Eigen::MatrixXd & P, const double dt = 0.001,
+        const double & tolerance = 1.E-5,
+        const uint iter_max = 100000)
       {
         P = Q; // initialize
         Eigen::MatrixXd P_next;
-        Eigen::MatrixXd AdT = Ad.transpose();
-        Eigen::MatrixXd BdT = Bd.transpose();
+        Eigen::MatrixXd AT = A.transpose();
+        Eigen::MatrixXd BT = B.transpose();
         Eigen::MatrixXd Rinv = R.inverse();
+
         double diff;
         for (uint i = 0; i < iter_max; ++i) {
-          // -- discrete solver --
-          P_next = AdT * P * Ad -
-            AdT * P * Bd * (R + BdT * P * Bd).inverse() * BdT * P * Ad + Q;
-
+          P_next = P + (P * A + AT * P - P * B * Rinv * BT * P + Q) * dt;
           diff = fabs((P_next - P).maxCoeff());
           P = P_next;
           if (diff < tolerance) {
@@ -150,8 +150,10 @@ namespace ompl
       {
         Eigen::MatrixXd X, K;
         bool solved_dare = solve_dare(Ad, Bd, Q, R, X);
-        K = (Bd.transpose() * X * Bd + R).inverse() * (Bd.transpose() * X * Ad);
-        auto eig = (Ad - Bd * K).eigenvalues();
+        //K = (Bd.transpose() * X * Bd + R).inverse() * (Bd.transpose() * X * Ad);
+        K = R.inverse() * (Bd.transpose() * X);
+
+        auto eig = (Ad - Bd.transpose() * K).eigenvalues();
         return std::make_tuple(K, X, eig);
       }
     };

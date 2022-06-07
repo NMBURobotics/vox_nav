@@ -85,9 +85,9 @@ ompl::base::PlannerStatus ompl::control::LQRPlanner::solve(
   A << 0, -v_r,
     0, 0;
 
-  Eigen::VectorXd B(2);
-  B(0) = 0;
-  B(1) = -v_r / L;
+  Eigen::MatrixXd B(1, 2);
+  B(0, 0) = 0;
+  B(0, 1) = -v_r / L;
   B = B.transpose();
 
   Eigen::MatrixXd Q(2, 2);
@@ -106,6 +106,7 @@ ompl::base::PlannerStatus ompl::control::LQRPlanner::solve(
     auto * latest_cstate = resulting_path.back()->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * latest_se2 = latest_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
     const auto * latest_z = latest_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
     double xc = latest_se2->getX();
     double yc = latest_se2->getY();
     double thetac = latest_se2->getYaw();
@@ -126,16 +127,19 @@ ompl::base::PlannerStatus ompl::control::LQRPlanner::solve(
     e(1) = yc - goal_se2->getY();
     e(2) = thetac - theta_r;
 
-    auto Te_dynamics = T * e.transpose();
+    auto Te_dynamics = T * e;
 
     Eigen::VectorXd X(2);
     X(0) = Te_dynamics(1);
-    X(1) = Te_dynamics(0);
+    X(1) = Te_dynamics(2);
 
-    auto res = lqr_control(A, B, X);
+    auto res = lqr_control(A, B, Q, R, X);
+
     Eigen::VectorXd U(2);
     U(0) = std::get<0>(res);
     U(1) = std::get<1>(res);
+
+    U(1) = std::clamp<double>(U(1), -0.6, 0.6);
 
     X = A * X.transpose() + B * U.transpose();
 
@@ -149,15 +153,15 @@ ompl::base::PlannerStatus ompl::control::LQRPlanner::solve(
     }
 
     auto * this_state = si_->allocState();
-    auto * this_cstate = start_state->as<ompl::base::ElevationStateSpace::StateType>();
+    auto * this_cstate = this_state->as<ompl::base::ElevationStateSpace::StateType>();
 
     this_cstate->setSE2(
-      xc + U(0) * std::cos(thetac),
-      yc + U(0) * std::sin(thetac),
-      thetac + (U(0) * std::tan(U(1)) / L)
+      xc + dt_ * U(0) * std::cos(thetac),
+      yc + dt_ * U(0) * std::sin(thetac),
+      thetac + dt_ * (U(0) * std::tan(U(1)) / L)
     );
     this_cstate->setZ(zc);
-    resulting_path.push_back(latest_cstate);
+    resulting_path.push_back(this_state);
 
     // TIME STEP INCREASE
     time += dt_;
