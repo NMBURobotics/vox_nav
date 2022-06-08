@@ -70,6 +70,27 @@ namespace ompl
       double phi_bound_{0.6};
       double goal_tolerance_{0.1};
 
+      void update_params(
+        double dt,
+        double max_time,
+        double q1,
+        double q2,
+        double r,
+        double v_r,
+        double L,
+        double phi_bound,
+        double goal_tolerance)
+      {
+        dt_ = dt;
+        max_time_ = max_time;
+        q1_ = q1;
+        q2_ = q2;
+        r_ = r;
+        v_r_ = v_r;
+        L_ = L;
+        phi_bound_ = phi_bound;
+        goal_tolerance_ = goal_tolerance;
+      }
 
       std::tuple<Eigen::MatrixXd, Eigen::MatrixXd,
         Eigen::MatrixXd, Eigen::MatrixXd> getABQR()
@@ -94,6 +115,7 @@ namespace ompl
         base::State * goal_state,
         std::vector<base::State *> & resulting_path)
       {
+        double start_to_goal_dist = si_->distance(start_state, goal_state);
 
         double time = 0.0;
         resulting_path.push_back(start_state);
@@ -121,7 +143,6 @@ namespace ompl
           double xc = latest_se2->getX();
           double yc = latest_se2->getY();
           double thetac = latest_se2->getYaw();
-          double zc = latest_z->values[0];
 
           double theta_r = std::atan2(
             (yc - start_se2->getY()),
@@ -172,6 +193,10 @@ namespace ompl
             yc + dt_ * U(0) * std::sin(thetac),
             thetac + dt_ * (U(0) * std::tan(U(1)) / L_)
           );
+          // linear inetrpolation for intermediate z values
+          double zdiff = goal_z->values[0] - start_z->values[0];
+          double traveled = (start_to_goal_dist - d) / start_to_goal_dist;
+          double zc = start_z->values[0] + traveled * zdiff;
           this_cstate->setZ(zc);
           resulting_path.push_back(this_state);
 

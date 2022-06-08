@@ -64,6 +64,7 @@ ompl::base::PlannerStatus ompl::control::LQRPlanner::solve(
 
   while (ptc == false) {
 
+    // try to compute plan as long as we are allowed
     compute_LQR_plan(start_state, goal_state, resulting_path);
     if (resulting_path.size() > 2) {break; /*Found a solution with at least some pose*/}
 
