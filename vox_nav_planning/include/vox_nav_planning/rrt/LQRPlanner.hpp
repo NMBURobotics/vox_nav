@@ -118,6 +118,7 @@ namespace ompl
         double start_to_goal_dist = si_->distance(start_state, goal_state);
 
         double time = 0.0;
+        double last_dist_to_goal = INFINITY;
         resulting_path.push_back(start_state);
 
         const auto * start_cstate = start_state->as<ompl::base::ElevationStateSpace::StateType>();
@@ -132,6 +133,8 @@ namespace ompl
         auto B = std::get<1>(ABQR);
         auto Q = std::get<2>(ABQR);
         auto R = std::get<3>(ABQR);
+
+        int iter = 0;
 
         while (time <= max_time_) {
 
@@ -182,6 +185,13 @@ namespace ompl
             break;
           }
 
+          if (iter > 0) {
+            if (d > last_dist_to_goal) {
+              // It is getting away from the goal, better to end here.
+              break;
+            }
+          }
+
           // Propogate the states with computed optimal control3
           // Store the state in the resulting path as that really is
           auto * this_state = si_->allocState();
@@ -202,6 +212,9 @@ namespace ompl
 
           // TIME STEP INCREASE
           time += dt_;
+
+          last_dist_to_goal = d;
+          iter++;
 
         }
 
