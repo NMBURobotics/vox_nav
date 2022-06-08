@@ -68,7 +68,7 @@ namespace ompl
       double v_r_{1.5};
       double L_{0.8};
       double phi_bound_{0.6};
-      double goal_tolerance_{0.1};
+      double goal_tolerance_{0.2};
 
       void update_params(
         double dt,
