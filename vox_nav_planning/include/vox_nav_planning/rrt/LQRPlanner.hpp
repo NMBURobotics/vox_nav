@@ -52,7 +52,6 @@ namespace ompl
           want to continue planning */
       void clear() override;
 
-    protected:
       /** \brief Free the memory allocated by this planner */
       void freeMemory();
 

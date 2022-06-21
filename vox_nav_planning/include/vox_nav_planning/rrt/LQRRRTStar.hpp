@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_PLANNING__RRT__RRTSTARF_HPP_
-#define VOX_NAV_PLANNING__RRT__RRTSTARF_HPP_
+#ifndef VOX_NAV_PLANNING__RRT__LQRRRTSTAR_HPP_
+#define VOX_NAV_PLANNING__RRT__LQRRRTSTAR_HPP_
 
 #include "vox_nav_planning/planner_core.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
 #include "nav_msgs/msg/path.hpp"
+#include "vox_nav_planning/rrt/LQRPlanner.hpp"
 
 #include "ompl/control/planners/PlannerIncludes.h"
 #include "ompl/datastructures/NearestNeighbors.h"
@@ -110,6 +111,10 @@ namespace ompl
 
       Node * steer(Node * from_node, Node * to_node, float extend_length = INFINITY)
       {
+
+        std::vector<base::State *> resulting_path;
+        lqr_planner_->compute_LQR_plan(from_node->state_, to_node->state_, resulting_path);
+
         auto * new_node = new Node(siC_);
         new_node->state_ = si_->allocState();
         si_->copyState(new_node->state_, from_node->state_);
@@ -310,6 +315,11 @@ namespace ompl
         return si_->distance(a->state_, b->state_);
       }
 
+      double distanceFunction(const base::State * a, const base::State * b) const
+      {
+        return si_->distance(a, b);
+      }
+
       std::vector<base::State *> generate_final_course(Node * goal_node)
       {
         std::vector<base::State *> final_path;
@@ -325,6 +335,47 @@ namespace ompl
 
         final_path.push_back(node->state_);
         return final_path;
+      }
+
+      std::tuple<std::vector<base::State *>, std::vector<double>> sample_path(
+        std::vector<base::State *> lqr_plan, double step)
+      {
+        std::vector<base::State *> p_lqr_plan;
+        std::vector<double> clen;
+
+        for (int i = 0; i < lqr_plan.size() - 1; i++) {
+          const auto * next_node_se2 =
+            lqr_plan[i +
+              1]->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
+            0);
+          const auto * next_node_z =
+            lqr_plan[i +
+              1]->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
+            1);
+          const auto * node_se2 =
+            lqr_plan[i]->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
+            0);
+          const auto * node_z =
+            lqr_plan[i]->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
+            1);
+          for (double t = 0.0; t <= 1.0; t += step) {
+            auto px = t * next_node_se2->getX() + (1.0 - t) * node_se2->getX();
+            auto py = t * next_node_se2->getY() + (1.0 - t) * node_se2->getY();
+            auto pz = t * next_node_z->values[0] + (1.0 - t) * node_z->values[0];
+            auto * this_state = si_->allocState();
+            auto * this_cstate = this_state->as<ompl::base::ElevationStateSpace::StateType>();
+            this_cstate->setSE2(px, py, 0);
+            this_cstate->setZ(pz);
+            p_lqr_plan.push_back(this_state);
+          }
+        }
+
+        for (size_t i = 0; i < p_lqr_plan.size() - 1; i++) {
+          double this_segment_dist = distanceFunction(p_lqr_plan[i + 1], p_lqr_plan[i]);
+          clen.push_back(this_segment_dist);
+        }
+
+        return std::make_tuple(p_lqr_plan, clen);
       }
 
       /** \brief Free the memory allocated by this planner */
@@ -348,6 +399,8 @@ namespace ompl
 
       rclcpp::Node::SharedPtr node_;
 
+      std::shared_ptr<LQRPlanner> lqr_planner_;
+
       double goalBias_{0.05};
       double path_resolution_{0.25};
       double connect_circle_dist_{50.0};
@@ -362,4 +415,4 @@ namespace ompl
 }
 
 
-#endif  // VOX_NAV_PLANNING__RRT__RRTSTARF_HPP_
+#endif  // VOX_NAV_PLANNING__RRT__LQRRRTSTAR_HPP_
