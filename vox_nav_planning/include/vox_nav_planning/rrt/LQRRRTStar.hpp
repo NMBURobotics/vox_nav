@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -37,13 +37,13 @@ namespace ompl
   namespace control
   {
 
-    class RRTStarF : public base::Planner
+    class LQRRRTStar : public base::Planner
     {
     public:
       /** \brief Constructor */
-      RRTStarF(const SpaceInformationPtr & si);
+      LQRRRTStar(const SpaceInformationPtr & si);
 
-      ~RRTStarF() override;
+      ~LQRRRTStar() override;
 
       void setup() override;
 
@@ -69,7 +69,7 @@ namespace ompl
         setup();
       }
 
-
+    protected:
       /** \brief Representation of a motion
 
           This only contains pointers to parent motions as we

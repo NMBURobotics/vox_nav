@@ -57,7 +57,8 @@ pcl_ros)
 
 # RRTStarF  PLANNER ####################################
 add_library(RRTStarF SHARED src/rrt/RRTStarF.cpp
-                            src/rrt/LQRPlanner.cpp )
+                            src/rrt/LQRPlanner.cpp
+                            src/rrt/LQRRRTStar.cpp )
 target_link_libraries(RRTStarF ${PCL_LIBRARIES})
 ament_target_dependencies(RRTStarF ${dependencies})
 
