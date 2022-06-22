@@ -105,6 +105,8 @@ namespace vox_nav_navigators
 
     auto should_cancel = [goal_handle]() {return goal_handle->is_canceling();};
 
+    RCLCPP_INFO(this->get_logger(), "Now executing the goal");
+
     switch (bt.execute(should_cancel)) {
       case vox_nav_navigators::BtStatus::SUCCEEDED:
         RCLCPP_INFO(get_logger(), "Behavior Tree execution succeeded");
@@ -121,6 +123,8 @@ namespace vox_nav_navigators
       default:
         throw std::logic_error("Invalid status return from BT");
     }
+
+    RCLCPP_INFO(this->get_logger(), "Goal execution ended ");
 
   }
 }  // namespace vox_nav_navigators

@@ -55,7 +55,6 @@ namespace vox_nav_planning
     get_parameter("planner_plugin", planner_id_);
     get_parameter("robot_mesh_path", robot_mesh_path_);
 
-
     declare_parameter(planner_id_ + ".plugin", planner_type_);
     get_parameter(planner_id_ + ".plugin", planner_type_);
 

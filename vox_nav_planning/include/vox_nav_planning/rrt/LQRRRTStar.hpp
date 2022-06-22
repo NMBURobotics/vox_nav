@@ -109,61 +109,50 @@ namespace ompl
 
       };
 
-      Node * steer(Node * from_node, Node * to_node, float extend_length = INFINITY)
+      Node * steer(Node * from_node, Node * to_node)
       {
 
         std::vector<base::State *> resulting_path;
         lqr_planner_->compute_LQR_plan(from_node->state_, to_node->state_, resulting_path);
 
+        auto new_path_and_lenghts = sample_path(resulting_path, 0.2);
+
+        auto lqr_interpolated_path = std::get<0>(new_path_and_lenghts);
+        //auto lengths = std::get<1>(new_path_and_lenghts);
+
+        std::vector<double> clen;
+        for (size_t i = 0; i < resulting_path.size() - 1; i++) {
+          double this_segment_dist = distanceFunction(resulting_path[i + 1], resulting_path[i]);
+          clen.push_back(this_segment_dist);
+        }
+
+        if (!lqr_interpolated_path.size() || !resulting_path.size()) {
+          return nullptr;
+        }
+
         auto * new_node = new Node(siC_);
+
         new_node->state_ = si_->allocState();
         si_->copyState(new_node->state_, from_node->state_);
 
-        auto d_theta_beta = calc_distance_and_angle(from_node, to_node);
-        auto d = std::get<0>(d_theta_beta);
-        auto theta = std::get<1>(d_theta_beta);
-        auto beta = std::get<2>(d_theta_beta);
+        auto * new_node_cstate =
+          new_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
 
-        new_node->path_.push_back(new_node->state_);
+        auto * last_node_cstate =
+          resulting_path.back()->as<ompl::base::ElevationStateSpace::StateType>();
 
-        if (extend_length > d) {
-          extend_length = d;
-        }
+        new_node_cstate->setSE2(
+          last_node_cstate->getSE2()->getX(),
+          last_node_cstate->getSE2()->getY(), 0);
+        new_node_cstate->setZ(last_node_cstate->getZ()->values[0]);
 
-        int n_expand = static_cast<int>(std::floor(extend_length / path_resolution_));
-
-        for (int i = 0; i < n_expand; i++) {
-          auto * new_node_cstate =
-            new_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
-          double x = new_node_cstate->getSE2()->getX() + path_resolution_ * std::cos(theta);
-          double y = new_node_cstate->getSE2()->getY() + path_resolution_ * std::sin(theta);
-          double z = new_node_cstate->getZ()->values[0] + path_resolution_ * std::sin(beta);
-          new_node_cstate->setSE2(x, y, 0);
-          new_node_cstate->setZ(z);
-          new_node->path_.push_back(new_node->state_);
-        }
-
-        d_theta_beta = calc_distance_and_angle(new_node, to_node);
-        d = std::get<0>(d_theta_beta);
-        theta = std::get<1>(d_theta_beta);
-        beta = std::get<2>(d_theta_beta);
-
-        if (d <= path_resolution_) {
-          auto * new_node_cstate =
-            new_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
-          auto * to_node_cstate =
-            to_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
-
-          auto * to_node_se2 = to_node_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-
-          new_node->path_.push_back(to_node->state_);
-          new_node_cstate->setSE2(to_node_se2->getX(), to_node_se2->getY(), 0);
-          new_node_cstate->setZ(to_node_cstate->getZ()->values[0]);
-        }
-
+        double cost = std::accumulate(clen.begin(), clen.end(), 0.0);
+        auto new_cost = new_node->cost_.value() + cost;
+        new_node->cost_ = base::Cost(new_cost);
+        new_node->path_ = resulting_path;
         new_node->parent_ = from_node;
-        return new_node;
 
+        return new_node;
       }
 
       std::tuple<double, double, double> calc_distance_and_angle(Node * from_node, Node * to_node)

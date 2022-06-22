@@ -6,6 +6,7 @@ ompl::control::LQRRRTStar::LQRRRTStar(const SpaceInformationPtr & si)
 {
   specs_.approximateSolutions = true;
   siC_ = si.get();
+  lqr_planner_ = std::make_shared<LQRPlanner>(si);
 }
 
 ompl::control::LQRRRTStar::~LQRRRTStar()
@@ -123,7 +124,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
     }
 
     auto nearest_node = get_nearest_node(random_node);
-    auto new_node = steer(nearest_node, random_node, expand_dis_);
+    auto new_node = steer(nearest_node, random_node);
     auto inc_cost = opt_->motionCost(nearest_node->state_, new_node->state_);
     new_node->cost_ = opt_->combineCosts(nearest_node->cost_, inc_cost);
 

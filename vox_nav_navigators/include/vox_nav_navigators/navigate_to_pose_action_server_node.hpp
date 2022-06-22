@@ -38,7 +38,6 @@ namespace vox_nav_navigators
     using ActionServer = vox_nav_msgs::action::NavigateToPose;
     using GoalHandle = rclcpp_action::ServerGoalHandle<ActionServer>;
 
-
     // The action server presented by this node
     rclcpp_action::Server<ActionServer>::SharedPtr action_server_;
 
@@ -58,6 +57,7 @@ namespace vox_nav_navigators
 
     // The XML string that defines the Behavior Tree used to implement the print_message action
     static const char bt_xml_[];
+
   };
 }  // namespace vox_nav_navigators
 
