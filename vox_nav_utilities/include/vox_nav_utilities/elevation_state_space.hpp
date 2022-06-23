@@ -131,6 +131,11 @@ namespace ompl
           as<SE2StateSpace::StateType>(0)->setYaw(yaw);
         }
 
+        void setYaw(double yaw)
+        {
+          as<SE2StateSpace::StateType>(0)->setYaw(yaw);
+        }
+
         void setZ(double z)
         {
           as<RealVectorStateSpace::StateType>(1)->values[0] = z;

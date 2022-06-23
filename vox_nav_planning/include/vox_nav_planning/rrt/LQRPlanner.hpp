@@ -59,15 +59,15 @@ namespace ompl
 
       rclcpp::Node::SharedPtr node_;
 
-      double dt_{0.2};
+      double dt_{0.4};
       double max_time_{10.0};
       double q1_{1};
       double q2_{10};
       double r_{1};
-      double v_r_{1.5};
+      double v_r_{1.0};
       double L_{0.8};
-      double phi_bound_{0.6};
-      double goal_tolerance_{0.2};
+      double phi_bound_{0.4};
+      double goal_tolerance_{0.5};
 
       void update_params(
         double dt,

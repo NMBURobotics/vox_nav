@@ -113,46 +113,51 @@ namespace ompl
       {
 
         std::vector<base::State *> resulting_path;
+
         lqr_planner_->compute_LQR_plan(from_node->state_, to_node->state_, resulting_path);
 
-        auto new_path_and_lenghts = sample_path(resulting_path, 0.2);
-
-        auto lqr_interpolated_path = std::get<0>(new_path_and_lenghts);
+        //auto new_path_and_lenghts = sample_path(resulting_path, 0.2);
+        //auto lqr_interpolated_path = std::get<0>(new_path_and_lenghts);
         //auto lengths = std::get<1>(new_path_and_lenghts);
 
-        std::vector<double> clen;
-        for (size_t i = 0; i < resulting_path.size() - 1; i++) {
-          double this_segment_dist = distanceFunction(resulting_path[i + 1], resulting_path[i]);
-          clen.push_back(this_segment_dist);
-        }
+        OMPL_INFORM("%s: resulting_path %u size", getName().c_str(), resulting_path.size());
 
-        if (!lqr_interpolated_path.size() || !resulting_path.size()) {
+        std::vector<double> clen;
+        if (resulting_path.size() > 1) {
+
+          for (int i = 1; i < resulting_path.size(); i++) {
+            double this_segment_dist = distanceFunction(resulting_path[i], resulting_path[i - 1]);
+            clen.push_back(this_segment_dist);
+          }
+
+          auto * new_node = new Node(siC_);
+
+          new_node->state_ = si_->allocState();
+          si_->copyState(new_node->state_, from_node->state_);
+
+          auto * new_node_cstate =
+            new_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
+
+          auto * last_node_cstate =
+            resulting_path.back()->as<ompl::base::ElevationStateSpace::StateType>();
+
+          new_node_cstate->setSE2(
+            last_node_cstate->getSE2()->getX(),
+            last_node_cstate->getSE2()->getY(),
+            last_node_cstate->getSE2()->getYaw());
+          new_node_cstate->setZ(last_node_cstate->getZ()->values[0]);
+
+          double cost = std::accumulate(clen.begin(), clen.end(), 0.0);
+          auto new_cost = new_node->cost_.value() + cost;
+          new_node->cost_ = base::Cost(new_cost);
+          new_node->path_ = resulting_path;
+          new_node->parent_ = from_node;
+
+          return new_node;
+        } else {
           return nullptr;
         }
 
-        auto * new_node = new Node(siC_);
-
-        new_node->state_ = si_->allocState();
-        si_->copyState(new_node->state_, from_node->state_);
-
-        auto * new_node_cstate =
-          new_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
-
-        auto * last_node_cstate =
-          resulting_path.back()->as<ompl::base::ElevationStateSpace::StateType>();
-
-        new_node_cstate->setSE2(
-          last_node_cstate->getSE2()->getX(),
-          last_node_cstate->getSE2()->getY(), 0);
-        new_node_cstate->setZ(last_node_cstate->getZ()->values[0]);
-
-        double cost = std::accumulate(clen.begin(), clen.end(), 0.0);
-        auto new_cost = new_node->cost_.value() + cost;
-        new_node->cost_ = base::Cost(new_cost);
-        new_node->path_ = resulting_path;
-        new_node->parent_ = from_node;
-
-        return new_node;
       }
 
       std::tuple<double, double, double> calc_distance_and_angle(Node * from_node, Node * to_node)

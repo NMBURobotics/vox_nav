@@ -125,6 +125,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
 
     auto nearest_node = get_nearest_node(random_node);
     auto new_node = steer(nearest_node, random_node);
+    if (!new_node) {continue;}
     auto inc_cost = opt_->motionCost(nearest_node->state_, new_node->state_);
     new_node->cost_ = opt_->combineCosts(nearest_node->cost_, inc_cost);
 
@@ -140,53 +141,6 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
       last_node = search_best_goal_node(goal_node);
     }
 
-    // visualize rrt node tree growth in RVIZ
-    std::vector<Node *> all_nodes;
-    nn_->list(all_nodes);
-    visualization_msgs::msg::MarkerArray rrt_nodes;
-    int node_index_counter = 0;
-    for (auto i : all_nodes) {
-      if (i) {
-        if (!i->parent_) {
-          continue;
-        }
-        visualization_msgs::msg::Marker marker;
-        marker.header.frame_id = "map";
-        marker.header.stamp = rclcpp::Clock().now();
-        marker.ns = "rrt_nodes";
-        marker.id = node_index_counter;
-        marker.type = visualization_msgs::msg::Marker::LINE_LIST;
-        marker.action = visualization_msgs::msg::Marker::ADD;
-        marker.lifetime = rclcpp::Duration::from_seconds(0);
-        marker.text = std::to_string(node_index_counter);
-        marker.scale.x = 0.1;
-        marker.color.a = 1.0;
-        marker.color.r = 0.0;
-        marker.color.g = 1.0;
-        marker.color.b = 1.0;
-        marker.colors.push_back(marker.color);
-        const auto * cstate = i->state_->as<ompl::base::ElevationStateSpace::StateType>();
-        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-        geometry_msgs::msg::Point node_point, parent_point;
-        node_point.x = se2->getX();
-        node_point.y = se2->getY();
-        node_point.z = z->values[0];
-        const auto * parent_cstate =
-          i->parent_->state_->as<ompl::base::ElevationStateSpace::StateType>();
-        const auto * parent_se2 = parent_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        const auto * parent_z = parent_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-        parent_point.x = parent_se2->getX();
-        parent_point.y = parent_se2->getY();
-        parent_point.z = parent_z->values[0];
-        marker.points.push_back(parent_point);
-        marker.points.push_back(node_point);
-        rrt_nodes.markers.push_back(marker);
-        node_index_counter++;
-      }
-    }
-    rrt_nodes_pub_->publish(rrt_nodes);
-
     iterations++;
   }
 
@@ -196,6 +150,68 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
   OMPL_INFORM(
     "%s: Created %u states in %u iterations", getName().c_str(), nn_->size(),
     iterations);
+
+  // visualize rrt node tree growth in RVIZ
+  std::vector<Node *> all_nodes;
+  nn_->list(all_nodes);
+  visualization_msgs::msg::MarkerArray rrt_nodes;
+  int node_index_counter = 0;
+  for (auto i : all_nodes) {
+    if (i) {
+      if (!i->parent_) {
+        continue;
+      }
+      visualization_msgs::msg::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = rclcpp::Clock().now();
+      marker.ns = "rrt_nodes";
+      marker.id = node_index_counter;
+      marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+      marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.lifetime = rclcpp::Duration::from_seconds(0);
+      marker.text = std::to_string(node_index_counter);
+      marker.scale.x = 0.1;
+      marker.scale.y = 0.25;
+      marker.scale.z = 0.25;
+      marker.color.a = 1.0;
+      marker.color.r = 0.0;
+      marker.color.g = 1.0;
+      marker.color.b = 1.0;
+      const auto * cstate = i->state_->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+      const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      geometry_msgs::msg::Point node_point, parent_point;
+      node_point.x = se2->getX();
+      node_point.y = se2->getY();
+      node_point.z = z->values[0];
+      const auto * parent_cstate =
+        i->parent_->state_->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * parent_se2 = parent_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+      const auto * parent_z = parent_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      parent_point.x = parent_se2->getX();
+      parent_point.y = parent_se2->getY();
+      parent_point.z = parent_z->values[0];
+
+      marker.points.push_back(parent_point);
+      marker.colors.push_back(marker.color);
+      for (auto && seg : i->path_) {
+        const auto * cstate = seg->as<ompl::base::ElevationStateSpace::StateType>();
+        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        geometry_msgs::msg::Point seg_point;
+        seg_point.x = se2->getX();
+        seg_point.y = se2->getY();
+        seg_point.z = z->values[0];
+        marker.points.push_back(seg_point);
+        marker.colors.push_back(marker.color);
+      }
+      marker.points.push_back(node_point);
+      marker.colors.push_back(marker.color);
+      rrt_nodes.markers.push_back(marker);
+      node_index_counter++;
+    }
+  }
+  rrt_nodes_pub_->publish(rrt_nodes);
 
   if (last_node) {
     std::vector<base::State *> final_course = generate_final_course(last_node);
