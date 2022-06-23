@@ -59,15 +59,15 @@ namespace ompl
 
       rclcpp::Node::SharedPtr node_;
 
-      double dt_{0.4};
-      double max_time_{10.0};
+      double dt_{0.25};
+      double max_time_{2.0};
       double q1_{1};
       double q2_{10};
       double r_{1};
-      double v_r_{1.0};
+      double v_r_{0.8};
       double L_{0.8};
       double phi_bound_{0.4};
-      double goal_tolerance_{0.5};
+      double goal_tolerance_{0.8};
 
       void update_params(
         double dt,
@@ -135,7 +135,7 @@ namespace ompl
 
         int iter = 0;
 
-        while (time <= max_time_) {
+        while (time < max_time_) {
 
           auto * latest_cstate =
             resulting_path.back()->as<ompl::base::ElevationStateSpace::StateType>();
@@ -174,23 +174,6 @@ namespace ompl
           U(0) = v_r_;
           U(1) = phi;
 
-          auto d = std::sqrt(
-            std::pow(goal_se2->getX() - xc, 2) +
-            std::pow(goal_se2->getY() - yc, 2));
-
-          if (d < goal_tolerance_) {
-            // if Reached the goal or max time reached, break the loop
-            U(0)  = 0;
-            break;
-          }
-
-          if (iter > 0) {
-            if (d > last_dist_to_goal) {
-              // It is getting away from the goal, better to end here.
-              break;
-            }
-          }
-
           // Propogate the states with computed optimal control3
           // Store the state in the resulting path as that really is
           auto * this_state = si_->allocState();
@@ -203,16 +186,28 @@ namespace ompl
             thetac + dt_ * (U(0) * std::tan(U(1)) / L_)
           );
           // linear inetrpolation for intermediate z values
-          double zdiff = goal_z->values[0] - start_z->values[0];
-          double traveled = (start_to_goal_dist - d) / start_to_goal_dist;
-          double zc = start_z->values[0] + traveled * zdiff;
-          this_cstate->setZ(zc);
+          double z_avg = (goal_z->values[0] + start_z->values[0]) / 2.0;
+          this_cstate->setZ(z_avg);
+
+          auto d_to_goal = si_->distance(this_state, goal_state);
+          auto d_to_start = si_->distance(this_state, start_state);
+
+          // linear inetrpolation for intermediate z values
+          double true_z = ((start_z->values[0] * d_to_goal) + (goal_z->values[0] * d_to_start)) /
+            (d_to_start + d_to_goal );
+          this_cstate->setZ(true_z);
+
+          if (si_->distance(this_state, goal_state) < goal_tolerance_) {
+            // if Reached the goal or max time reached, break the loop
+            U(0)  = 0;
+            break;
+          }
+
           resulting_path.push_back(this_state);
 
           // TIME STEP INCREASE
           time += dt_;
 
-          last_dist_to_goal = d;
           iter++;
 
         }
