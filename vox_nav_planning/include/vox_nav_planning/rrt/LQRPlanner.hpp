@@ -60,11 +60,11 @@ namespace ompl
       rclcpp::Node::SharedPtr node_;
 
       double dt_{0.25};
-      double max_time_{3.0};
+      double max_time_{2.0};
       double q1_{1};
       double q2_{10};
       double r_{1};
-      double v_r_{1.0};
+      double v_r_{1.2};
       double L_{0.8};
       double phi_bound_{0.4};
       double goal_tolerance_{0.5};
