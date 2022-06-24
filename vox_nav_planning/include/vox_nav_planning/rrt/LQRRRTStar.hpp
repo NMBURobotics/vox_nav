@@ -111,14 +111,8 @@ namespace ompl
 
       Node * steer(Node * from_node, Node * to_node)
       {
-
         std::vector<base::State *> resulting_path;
-
         lqr_planner_->compute_LQR_plan(from_node->state_, to_node->state_, resulting_path);
-
-        //auto new_path_and_lenghts = sample_path(resulting_path, 0.2);
-        //auto lqr_interpolated_path = std::get<0>(new_path_and_lenghts);
-        //auto lengths = std::get<1>(new_path_and_lenghts);
 
         std::vector<double> clen;
         if (resulting_path.size() > 1) {
@@ -129,9 +123,7 @@ namespace ompl
           }
 
           auto * new_node = new Node(siC_);
-
           new_node->state_ = si_->allocState();
-          si_->copyState(new_node->state_, from_node->state_);
 
           auto * new_node_cstate =
             new_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
@@ -156,30 +148,6 @@ namespace ompl
           return nullptr;
         }
 
-      }
-
-      std::tuple<double, double, double> calc_distance_and_angle(Node * from_node, Node * to_node)
-      {
-        const auto * from_node_se2 =
-          from_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
-          0);
-        const auto * from_node_z =
-          from_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
-          1);
-        const auto * to_node_se2 =
-          to_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
-          0);
-        const auto * to_node_z =
-          to_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
-          1);
-        double dx = to_node_se2->getX() - from_node_se2->getX();
-        double dy = to_node_se2->getY() - from_node_se2->getY();
-        double dz = to_node_z->values[0] - from_node_z->values[0];
-        double d = std::hypot(dx, dy, dz);
-        double theta = std::atan2(dy, dx);
-        double beta = std::atan2(dz, std::hypot(dx, dy));
-
-        return std::make_tuple(d, theta, beta);
       }
 
       Node * get_nearest_node(Node * rnd)
@@ -279,13 +247,6 @@ namespace ompl
         }
       }
 
-      double calc_dist_to_goal(Node * node, ompl::base::Goal * goal)
-      {
-        double dist = 0.0;
-        bool solv = goal->isSatisfied(node->state_, &dist);
-        return dist;
-      }
-
       Node * search_best_goal_node(Node * goal_node)
       {
         std::vector<Node *> near_nodes;
@@ -327,47 +288,6 @@ namespace ompl
 
         final_path.push_back(node->state_);
         return final_path;
-      }
-
-      std::tuple<std::vector<base::State *>, std::vector<double>> sample_path(
-        std::vector<base::State *> lqr_plan, double step)
-      {
-        std::vector<base::State *> p_lqr_plan;
-        std::vector<double> clen;
-
-        for (int i = 0; i < lqr_plan.size() - 1; i++) {
-          const auto * next_node_se2 =
-            lqr_plan[i +
-              1]->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
-            0);
-          const auto * next_node_z =
-            lqr_plan[i +
-              1]->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
-            1);
-          const auto * node_se2 =
-            lqr_plan[i]->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
-            0);
-          const auto * node_z =
-            lqr_plan[i]->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
-            1);
-          for (double t = 0.0; t <= 1.0; t += step) {
-            auto px = t * next_node_se2->getX() + (1.0 - t) * node_se2->getX();
-            auto py = t * next_node_se2->getY() + (1.0 - t) * node_se2->getY();
-            auto pz = t * next_node_z->values[0] + (1.0 - t) * node_z->values[0];
-            auto * this_state = si_->allocState();
-            auto * this_cstate = this_state->as<ompl::base::ElevationStateSpace::StateType>();
-            this_cstate->setSE2(px, py, 0);
-            this_cstate->setZ(pz);
-            p_lqr_plan.push_back(this_state);
-          }
-        }
-
-        for (size_t i = 0; i < p_lqr_plan.size() - 1; i++) {
-          double this_segment_dist = distanceFunction(p_lqr_plan[i + 1], p_lqr_plan[i]);
-          clen.push_back(this_segment_dist);
-        }
-
-        return std::make_tuple(p_lqr_plan, clen);
       }
 
       /** \brief Free the memory allocated by this planner */

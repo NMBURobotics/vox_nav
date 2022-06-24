@@ -113,6 +113,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
   unsigned iterations = 0;
 
   Node * last_node = new Node(siC_);
+  Node * last_valid_node = new Node(siC_);
 
   while (ptc == false) {
     /* sample random state (with goal biasing) */
@@ -141,13 +142,15 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
       last_node = search_best_goal_node(goal_node);
     }
 
+    if (last_node != nullptr) {
+      last_valid_node = last_node;
+    }
     iterations++;
 
-    if (iterations % 50 == 0 && last_node)
-    {
-        OMPL_INFORM("Curr solution cost %.2f", last_node->cost_.value());
+    if (iterations % 100 == 0 && last_valid_node) {
+      OMPL_INFORM("Curr solution cost %.2f", last_valid_node->cost_.value());
     }
-    
+
   }
 
   bool solved = false;
@@ -219,8 +222,8 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
   }
   rrt_nodes_pub_->publish(rrt_nodes);
 
-  if (last_node) {
-    std::vector<base::State *> final_course = generate_final_course(last_node);
+  if (last_valid_node) {
+    std::vector<base::State *> final_course = generate_final_course(last_valid_node);
     solved = true;
 
     /* set the solution path */
@@ -232,7 +235,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
     }
     solved = true;
     pdef_->addSolutionPath(path, approximate, 0.0 /*approxdif*/, getName());
-    OMPL_INFORM("Found solution with cost %.2f", last_node->cost_.value());
+    OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
   } else {
     OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());
   }
