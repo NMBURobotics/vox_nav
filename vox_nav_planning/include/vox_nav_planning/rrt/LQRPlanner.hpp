@@ -220,7 +220,6 @@ namespace ompl
         std::tuple<Eigen::Vector2d, Eigen::Matrix2d, Eigen::VectorXcd> res = dlqr(A, B, Q, R);
         Eigen::Vector2d K = std::get<0>(res);
         double phi = (K.transpose() * X).value();
-        std::cout << "(K.transpose() * X) " << (K.transpose() * X) << std::endl;
         return phi;
       }
 
