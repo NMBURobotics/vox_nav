@@ -60,14 +60,14 @@ namespace ompl
       rclcpp::Node::SharedPtr node_;
 
       double dt_{0.25};
-      double max_time_{2.0};
+      double max_time_{3.0};
       double q1_{1};
       double q2_{10};
       double r_{1};
-      double v_r_{0.8};
+      double v_r_{1.0};
       double L_{0.8};
       double phi_bound_{0.4};
-      double goal_tolerance_{0.8};
+      double goal_tolerance_{0.5};
 
       void update_params(
         double dt,
@@ -91,21 +91,17 @@ namespace ompl
         goal_tolerance_ = goal_tolerance;
       }
 
-      std::tuple<Eigen::MatrixXd, Eigen::MatrixXd,
-        Eigen::MatrixXd, Eigen::MatrixXd> getABQR()
+      std::tuple<Eigen::Matrix2d, Eigen::Vector2d,
+        Eigen::Matrix2d, double> getABQR()
       {
-        Eigen::MatrixXd A(2, 2);
+        Eigen::Matrix2d A(2, 2);
         A << 0, -v_r_,
           0, 0;
-        Eigen::MatrixXd B(1, 2);
-        B(0, 0) = 0;
-        B(0, 1) = -v_r_ / L_;
-        B = B.transpose();
-        Eigen::MatrixXd Q(2, 2);
-        Q(0, 0) = q1_;
-        Q(1, 1) = q2_;
-        Eigen::MatrixXd R(1, 1);
-        R(0, 0) = r_;
+        Eigen::Vector2d B(0, -v_r_ / L_);
+        Eigen::Matrix2d Q(2, 2);
+        Q << q1_, 0,
+          0, q2_;
+        double R(r_);
         return std::make_tuple(A, B, Q, R);
       }
 
@@ -127,11 +123,12 @@ namespace ompl
         const auto * goal_se2 = goal_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
         const auto * goal_z = goal_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
 
-        auto ABQR = getABQR();
-        auto A = std::get<0>(ABQR);
-        auto B = std::get<1>(ABQR);
-        auto Q = std::get<2>(ABQR);
-        auto R = std::get<3>(ABQR);
+        std::tuple<Eigen::Matrix2d, Eigen::Vector2d,
+          Eigen::Matrix2d, double> ABQR = getABQR();
+        Eigen::Matrix2d A = std::get<0>(ABQR);
+        Eigen::Vector2d B = std::get<1>(ABQR);
+        Eigen::Matrix2d Q = std::get<2>(ABQR);
+        double R = std::get<3>(ABQR);
 
         int iter = 0;
 
@@ -161,11 +158,8 @@ namespace ompl
           e(1) = yc - goal_se2->getY();
           e(2) = thetac - theta_r;
 
-          auto Te_dynamics = T * e;
-
-          Eigen::VectorXd X(2);
-          X(0) = Te_dynamics(1);
-          X(1) = Te_dynamics(2);
+          Eigen::Vector3d Te_dynamics = T * e;
+          Eigen::Vector2d X(Te_dynamics(1), Te_dynamics(2));
 
           double phi = lqr_control(A, B, Q, R, X);
           phi = std::clamp<double>(phi, -phi_bound_, phi_bound_);
@@ -215,18 +209,18 @@ namespace ompl
         return resulting_path;
       }
 
-
       // return optimal steering angle
       double lqr_control(
-        const Eigen::MatrixXd & A,
-        const Eigen::MatrixXd & B,
-        const Eigen::MatrixXd & Q,
-        const Eigen::MatrixXd & R,
-        const Eigen::MatrixXd & X)
+        const Eigen::Matrix2d & A,
+        const Eigen::Vector2d & B,
+        const Eigen::Matrix2d & Q,
+        const double & R,
+        const Eigen::Vector2d & X)
       {
-        auto res = dlqr(A, B, Q, R);
-        auto K = std::get<0>(res);
-        double phi = (K * X)(0);
+        std::tuple<Eigen::Vector2d, Eigen::Matrix2d, Eigen::VectorXcd> res = dlqr(A, B, Q, R);
+        Eigen::Vector2d K = std::get<0>(res);
+        double phi = (K.transpose() * X).value();
+        std::cout << "(K.transpose() * X) " << (K.transpose() * X) << std::endl;
         return phi;
       }
 
@@ -235,21 +229,23 @@ namespace ompl
        *        Continous time Riccati Eq. solver
        */
       bool solve_care(
-        const Eigen::MatrixXd & A, const Eigen::MatrixXd & B,
-        const Eigen::MatrixXd & Q, const Eigen::MatrixXd & R,
-        Eigen::MatrixXd & P, const double dt = 0.001,
+        const Eigen::Matrix2d & A,
+        const Eigen::Vector2d & B,
+        const Eigen::Matrix2d & Q,
+        const double & R,
+        Eigen::Matrix2d & P,
+        const double dt = 0.001,
         const double & tolerance = 1.E-5,
         const uint iter_max = 100000)
       {
         P = Q; // initialize
-        Eigen::MatrixXd P_next;
-        Eigen::MatrixXd AT = A.transpose();
-        Eigen::MatrixXd BT = B.transpose();
-        Eigen::MatrixXd Rinv = R.inverse();
+        Eigen::Matrix2d P_next;
+        Eigen::Matrix2d AT = A.transpose();
+        double Rinv = 1.0 / R;
 
         double diff;
         for (uint i = 0; i < iter_max; ++i) {
-          P_next = P + (P * A + AT * P - P * B * Rinv * BT * P + Q) * dt;
+          P_next = P + (P * A + AT * P - P * B * Rinv * B.transpose() * P + Q) * dt;
           diff = fabs((P_next - P).maxCoeff());
           P = P_next;
           if (diff < tolerance) {
@@ -272,17 +268,17 @@ namespace ompl
        * @param R
        * @return std::tuple<Eigen::MatrixXd, Eigen::MatrixXd, Eigen::VectorXcd>, K, X, EIGENVALUES
        */
-      std::tuple<Eigen::MatrixXd, Eigen::MatrixXd, Eigen::VectorXcd> dlqr(
-        const Eigen::MatrixXd & Ad,
-        const Eigen::MatrixXd & Bd,
-        const Eigen::MatrixXd & Q,
-        const Eigen::MatrixXd & R)
+       std::tuple<Eigen::Vector2d, Eigen::Matrix2d, Eigen::VectorXcd> dlqr(
+        const Eigen::Matrix2d & A,
+        const Eigen::Vector2d & B,
+        const Eigen::Matrix2d & Q,
+        const double & R)
       {
-        Eigen::MatrixXd X, K;
-        bool solved_dare = solve_care(Ad, Bd, Q, R, X);
-        K = R.inverse() * (Bd.transpose() * X);
-        auto eig = (Ad - Bd.transpose() * K).eigenvalues();
-        return std::make_tuple(K, X, eig);
+        Eigen::Matrix2d P;
+        bool solved_dare = solve_care(A, B, Q, R, P);
+        Eigen::Vector2d K = (1 / R) * (B.transpose() * P);
+        Eigen::VectorXcd eig/* = (A - B.transpose() * K).eigenvalues()*/;
+        return std::make_tuple(K, P, eig);
       }
     };
 

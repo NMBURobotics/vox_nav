@@ -120,7 +120,7 @@ namespace ompl
         //auto lqr_interpolated_path = std::get<0>(new_path_and_lenghts);
         //auto lengths = std::get<1>(new_path_and_lenghts);
 
-        OMPL_INFORM("%s: resulting_path %u size", getName().c_str(), resulting_path.size());
+        //OMPL_INFORM("%s: resulting_path %u size", getName().c_str(), resulting_path.size());
 
         std::vector<double> clen;
         if (resulting_path.size() > 1) {
@@ -396,9 +396,8 @@ namespace ompl
       std::shared_ptr<LQRPlanner> lqr_planner_;
 
       double goalBias_{0.05};
-      double path_resolution_{0.25};
-      double connect_circle_dist_{50.0};
-      double expand_dis_{1.5};
+      double connect_circle_dist_{80.0};
+      double expand_dis_{5.0};
 
       /** \brief The random number generator */
       RNG rng_;

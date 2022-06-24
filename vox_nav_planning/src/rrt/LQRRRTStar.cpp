@@ -142,6 +142,12 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
     }
 
     iterations++;
+
+    if (iterations % 50 == 0 && last_node)
+    {
+        OMPL_INFORM("Curr solution cost %.2f", last_node->cost_.value());
+    }
+    
   }
 
   bool solved = false;

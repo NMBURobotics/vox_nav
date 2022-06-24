@@ -243,7 +243,7 @@ namespace vox_nav_planning
         allocValidStateSampler, this, std::placeholders::_1));
 
     ompl::base::PlannerPtr planner;
-    planner = ompl::base::PlannerPtr(new ompl::control::LQRRRTStar(si));
+    planner = ompl::base::PlannerPtr(new ompl::control::LQRPlanner(si));
 
     control_simple_setup_->setPlanner(planner);
     control_simple_setup_->setup();
