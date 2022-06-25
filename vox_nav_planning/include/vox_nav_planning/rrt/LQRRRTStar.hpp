@@ -114,6 +114,11 @@ namespace ompl
         std::vector<base::State *> resulting_path;
         lqr_planner_->compute_LQR_plan(from_node->state_, to_node->state_, resulting_path);
 
+        double dist = si_->distance(resulting_path.back(), to_node->state_);
+        if (dist > goal_tolerance_) {
+          return nullptr;
+        }
+
         std::vector<double> clen;
         if (resulting_path.size() > 1) {
 
@@ -316,6 +321,7 @@ namespace ompl
       double goalBias_{0.05};
       double connect_circle_dist_{50.0};
       double expand_dis_{1.5};
+      double goal_tolerance_{0.5};
 
       /** \brief The random number generator */
       RNG rng_;
