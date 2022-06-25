@@ -114,11 +114,6 @@ namespace ompl
         std::vector<base::State *> resulting_path;
         lqr_planner_->compute_LQR_plan(from_node->state_, to_node->state_, resulting_path);
 
-        double dist = si_->distance(resulting_path.back(), to_node->state_);
-        if (dist > goal_tolerance_) {
-          return nullptr;
-        }
-
         std::vector<double> clen;
         if (resulting_path.size() > 1) {
 
@@ -171,6 +166,30 @@ namespace ompl
         return true;
       }
 
+      std::tuple<double, double, double> calc_distance_and_angle(Node * from_node, Node * to_node)
+      {
+        const auto * from_node_se2 =
+          from_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
+          0);
+        const auto * from_node_z =
+          from_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
+          1);
+        const auto * to_node_se2 =
+          to_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
+          0);
+        const auto * to_node_z =
+          to_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
+          1);
+        double dx = to_node_se2->getX() - from_node_se2->getX();
+        double dy = to_node_se2->getY() - from_node_se2->getY();
+        double dz = to_node_z->values[0] - from_node_z->values[0];
+        double d = std::hypot(dx, dy, dz);
+        double theta = std::atan2(dy, dx);
+        double beta = std::atan2(dz, std::hypot(dx, dy));
+
+        return std::make_tuple(d, theta, beta);
+      }
+
       std::vector<Node *> find_near_nodes(Node * new_node)
       {
         std::vector<Node *> near_nodes;
@@ -217,6 +236,7 @@ namespace ompl
       {
         for (auto near_node : near_nodes) {
           Node * edge_node = steer(new_node, near_node);
+
           if (!edge_node) {
             continue;
           }

@@ -134,7 +134,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
       std::vector<Node *> near_nodes = find_near_nodes(new_node);
       auto node_with_updated_parent = choose_parent(new_node, near_nodes);
       if (node_with_updated_parent != nullptr) {
-        rewire(node_with_updated_parent, near_nodes);
+        //rewire(node_with_updated_parent, near_nodes);
         nn_->add(node_with_updated_parent);
       } else {
         nn_->add(new_node);
