@@ -114,6 +114,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
 
   Node * last_node = new Node(siC_);
   Node * last_valid_node = new Node(siC_);
+  last_valid_node->cost_ = base::Cost(std::numeric_limits<double>::max());
 
   while (ptc == false) {
     /* sample random state (with goal biasing) */
@@ -125,10 +126,11 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
     }
 
     auto nearest_node = get_nearest_node(random_node);
-    auto new_node = steer(nearest_node, random_node);
+
+    double relative_cost = 0.0;
+    auto new_node = steer(nearest_node, random_node, &relative_cost);
     if (!new_node) {continue;}
-    auto inc_cost = opt_->motionCost(nearest_node->state_, new_node->state_);
-    new_node->cost_ = opt_->combineCosts(nearest_node->cost_, inc_cost);
+    new_node->cost_ = opt_->combineCosts(nearest_node->cost_, base::Cost(relative_cost));
 
     if (check_collision(new_node)) {
       std::vector<Node *> near_nodes = find_near_nodes(new_node);
@@ -142,13 +144,15 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
       last_node = search_best_goal_node(goal_node);
     }
 
-    if (last_node != nullptr) {
+    if (last_node != nullptr && last_node->cost_.value() < last_valid_node->cost_.value()) {
       last_valid_node = last_node;
     }
     iterations++;
 
-    if (iterations % 100 == 0 && last_valid_node) {
-      OMPL_INFORM("Curr solution cost %.2f", last_valid_node->cost_.value());
+    if (iterations % 200 == 0 && last_valid_node &&
+      static_cast<int>(last_valid_node->cost_.value()))
+    {
+      OMPL_INFORM("Current solution cost %.2f", last_valid_node->cost_.value());
     }
 
   }
@@ -223,8 +227,27 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
   rrt_nodes_pub_->publish(rrt_nodes);
 
   if (last_valid_node) {
+
+    OMPL_INFORM("Final solution cost %.2f", last_valid_node->cost_.value());
+
+    smooth_final_course(last_valid_node, 2);
+    OMPL_INFORM(
+      "Final solution cost: %.2f after smoothing segment_framing: 2",
+      last_valid_node->cost_.value());
+
+    smooth_final_course(last_valid_node, 3);
+    OMPL_INFORM(
+      "Final solution cost: %.2f after smoothing segment_framing: 3",
+      last_valid_node->cost_.value());
+
+    smooth_final_course(last_valid_node, 5);
+    OMPL_INFORM(
+      "Final solution cost: %.2f after smoothing segment_framing: 5",
+      last_valid_node->cost_.value());
+
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
     solved = true;
+
 
     /* set the solution path */
     auto path(std::make_shared<PathControl>(si_));

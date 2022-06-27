@@ -109,7 +109,7 @@ namespace ompl
 
       };
 
-      Node * steer(Node * from_node, Node * to_node)
+      Node * steer(Node * from_node, Node * to_node, double * relative_cost)
       {
         std::vector<base::State *> resulting_path;
         lqr_planner_->compute_LQR_plan(from_node->state_, to_node->state_, resulting_path);
@@ -138,6 +138,8 @@ namespace ompl
           new_node_cstate->setZ(last_node_cstate->getZ()->values[0]);
 
           double cost = std::accumulate(clen.begin(), clen.end(), 0.0);
+          *relative_cost = cost;
+
           auto new_cost = new_node->cost_.value() + cost;
           new_node->cost_ = base::Cost(new_cost);
           new_node->path_ = resulting_path;
@@ -200,10 +202,10 @@ namespace ompl
         return near_nodes;
       }
 
-      double calc_new_cost(Node * from_node, Node * to_node)
+      double calc_new_cost(Node * from_node, double relative_cost)
       {
-        base::Cost relative_cost = opt_->motionCost(from_node->state_, to_node->state_);
-        return opt_->combineCosts(from_node->cost_, relative_cost).value();
+        double new_cost = from_node->cost_.value() + relative_cost;
+        return new_cost;
       }
 
       Node * choose_parent(Node * new_node, std::vector<Node *> near_nodes)
@@ -213,9 +215,10 @@ namespace ompl
         }
         std::vector<double> costs;
         for (auto near_node : near_nodes) {
-          Node * t_node = steer(near_node, new_node);
+          double relative_cost = 0.0;
+          Node * t_node = steer(near_node, new_node, &relative_cost);
           if (t_node && check_collision(t_node)) {
-            costs.push_back(calc_new_cost(near_node, new_node));
+            costs.push_back(calc_new_cost(near_node, relative_cost));
           } else {
             costs.push_back(INFINITY);
           }
@@ -224,24 +227,27 @@ namespace ompl
         int min_cost_index = std::min_element(costs.begin(), costs.end()) - costs.begin();
 
         if (min_cost == INFINITY) {
-          std::cerr << "There is no good path.(min_cost is inf)" << std::endl;
           return nullptr;
         }
-        new_node = steer(near_nodes[min_cost_index], new_node);
+        double relative_cost = 0.0;
+        new_node = steer(near_nodes[min_cost_index], new_node, &relative_cost);
         new_node->cost_ = base::Cost(min_cost);
         return new_node;
       }
 
       void rewire(Node * new_node, std::vector<Node *> near_nodes)
       {
+        lqr_planner_->set_max_time(50.0);
+
         for (auto near_node : near_nodes) {
-          Node * edge_node = steer(new_node, near_node);
+          double relative_cost = 0.0;
+          Node * edge_node = steer(new_node, near_node, &relative_cost);
 
           if (!edge_node) {
             continue;
           }
 
-          edge_node->cost_ = base::Cost(calc_new_cost(new_node, near_node));
+          edge_node->cost_ = base::Cost(calc_new_cost(new_node, relative_cost));
           bool no_collision = check_collision(edge_node);
           bool improved_cost = near_node->cost_.value() > edge_node->cost_.value();
 
@@ -255,6 +261,7 @@ namespace ompl
             propagate_cost_to_leaves(new_node);
           }
         }
+        lqr_planner_->set_max_time(2.0);
 
       }
 
@@ -264,12 +271,29 @@ namespace ompl
           std::vector<Node *> nodes;
           nn_->list(nodes);
           for (auto & node : nodes) {
+            if (!node->parent_ || !node) {
+              break;
+            }
             if (node == parent_node) {
-              node->cost_ = base::Cost(calc_new_cost(parent_node, node));
+              node->cost_ = base::Cost(relative_path_cost(parent_node, node));
               propagate_cost_to_leaves(node);
             }
           }
         }
+      }
+
+      double relative_path_cost(Node * from_node, Node * to_node)
+      {
+        std::vector<double> clen;
+        if (to_node->path_.size() > 2) {
+          for (int i = 1; i < to_node->path_.size(); i++) {
+            double this_segment_dist = distanceFunction(to_node->path_[i], to_node->path_[i - 1]);
+            clen.push_back(this_segment_dist);
+          }
+        }
+        double cost = std::accumulate(clen.begin(), clen.end(), 0.0);
+        auto new_cost = from_node->cost_.value() + cost;
+        return new_cost;
       }
 
       Node * search_best_goal_node(Node * goal_node)
@@ -296,6 +320,95 @@ namespace ompl
       double distanceFunction(const base::State * a, const base::State * b) const
       {
         return si_->distance(a, b);
+      }
+
+      void fine_tune_final_course(Node * goal_node)
+      {
+        lqr_planner_->set_max_time(20.0);
+        std::vector<Node *> path_nodes;
+        path_nodes.push_back(goal_node);
+
+        auto node = goal_node;
+        while (node->parent_) {
+          path_nodes.push_back(node);
+          node = node->parent_;
+        }
+        if (path_nodes.size() < 4) {
+          return;
+        }
+        std::reverse(path_nodes.begin(), path_nodes.end());
+
+        for (int i = 2; i < path_nodes.size(); i += 2) {
+          if (i >= path_nodes.size()) {
+            break;
+          }
+
+          auto prev_node = path_nodes[i - 2];
+          auto cur_node = path_nodes[i];
+          double relative_cost = 0.0;
+          Node * new_node = steer(prev_node, cur_node, &relative_cost);
+          if (new_node) {
+            new_node->cost_ = base::Cost(calc_new_cost(prev_node, relative_cost));
+            bool no_collision = check_collision(new_node);
+            bool improved_cost = cur_node->cost_.value() > new_node->cost_.value();
+            if (no_collision && improved_cost) {
+              si_->copyState(cur_node->state_, new_node->state_);
+              cur_node->cost_ = new_node->cost_;
+              cur_node->path_ = new_node->path_;
+              cur_node->parent_ = new_node->parent_;
+              propagate_cost_to_leaves(prev_node);
+            }
+          }
+        }
+        lqr_planner_->set_max_time(4.0);
+      }
+
+      void smooth_final_course(Node * goal_node, int segment_framing)
+      {
+        lqr_planner_->set_max_time(50.0);
+        std::vector<Node *> path_nodes;
+        path_nodes.push_back(goal_node);
+
+        auto node = goal_node;
+        while (node->parent_) {
+          path_nodes.push_back(node);
+          node = node->parent_;
+        }
+        if (path_nodes.size() < segment_framing) {
+          return;
+        }
+        std::reverse(path_nodes.begin(), path_nodes.end());
+
+        for (int i = segment_framing; i < path_nodes.size(); i += segment_framing) {
+          if (i >= path_nodes.size()) {
+            break;
+          }
+
+          auto prev_node = path_nodes[i - segment_framing];
+          auto cur_node = path_nodes[i];
+          double relative_cost = 0.0;
+          Node * new_node = steer(prev_node, cur_node, &relative_cost);
+          if (new_node) {
+            new_node->cost_ = base::Cost(calc_new_cost(prev_node, relative_cost));
+            bool no_collision = check_collision(new_node);
+            bool improved_cost = cur_node->cost_.value() > new_node->cost_.value();
+            if (no_collision && improved_cost) {
+              si_->copyState(cur_node->state_, new_node->state_);
+              cur_node->cost_ = new_node->cost_;
+              cur_node->path_ = new_node->path_;
+              cur_node->parent_ = new_node->parent_;
+              // propogate the cost along the rest of the path
+              for (int j = i - segment_framing; j < path_nodes.size(); j++) {
+                auto node = path_nodes[j];
+                if (!node->parent_ || !node) {
+                  break;
+                }
+                node->cost_ = base::Cost(relative_path_cost(node->parent_, node));
+              }
+            }
+          }
+        }
+        lqr_planner_->set_max_time(4.0);
       }
 
       std::vector<base::State *> generate_final_course(Node * goal_node)
@@ -348,8 +461,8 @@ namespace ompl
 
 
     };
-  }
-}
+  }   // namespace control
+}  // namespace ompl
 
 
 #endif  // VOX_NAV_PLANNING__RRT__LQRRRTSTAR_HPP_

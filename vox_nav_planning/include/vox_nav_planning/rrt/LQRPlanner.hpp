@@ -69,6 +69,12 @@ namespace ompl
       double phi_bound_{0.4};
       double goal_tolerance_{0.5};
 
+      void set_max_time(
+        double max_time)
+      {
+        max_time_ = max_time;
+      }
+
       void update_params(
         double dt,
         double max_time,
@@ -267,7 +273,7 @@ namespace ompl
        * @param R
        * @return std::tuple<Eigen::MatrixXd, Eigen::MatrixXd, Eigen::VectorXcd>, K, X, EIGENVALUES
        */
-       std::tuple<Eigen::Vector2d, Eigen::Matrix2d, Eigen::VectorXcd> dlqr(
+      std::tuple<Eigen::Vector2d, Eigen::Matrix2d, Eigen::VectorXcd> dlqr(
         const Eigen::Matrix2d & A,
         const Eigen::Vector2d & B,
         const Eigen::Matrix2d & Q,
@@ -276,7 +282,7 @@ namespace ompl
         Eigen::Matrix2d P;
         bool solved_dare = solve_care(A, B, Q, R, P);
         Eigen::Vector2d K = (1 / R) * (B.transpose() * P);
-        Eigen::VectorXcd eig/* = (A - B.transpose() * K).eigenvalues()*/;
+        Eigen::VectorXcd eig /* = (A - B.transpose() * K).eigenvalues()*/;
         return std::make_tuple(K, P, eig);
       }
     };
