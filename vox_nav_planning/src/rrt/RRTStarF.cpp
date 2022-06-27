@@ -112,6 +112,8 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
   unsigned iterations = 0;
 
   Node * last_node = new Node(siC_);
+  Node * last_valid_node = new Node(siC_);
+  last_valid_node->cost_ = base::Cost(std::numeric_limits<double>::max());
 
   while (ptc == false) {
     /* sample random state (with goal biasing) */
@@ -139,54 +141,17 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
       last_node = search_best_goal_node(goal_node);
     }
 
-    // visualize rrt node tree growth in RVIZ
-    std::vector<Node *> all_nodes;
-    nn_->list(all_nodes);
-    visualization_msgs::msg::MarkerArray rrt_nodes;
-    int node_index_counter = 0;
-    for (auto i : all_nodes) {
-      if (i) {
-        if (!i->parent_) {
-          continue;
-        }
-        visualization_msgs::msg::Marker marker;
-        marker.header.frame_id = "map";
-        marker.header.stamp = rclcpp::Clock().now();
-        marker.ns = "rrt_nodes";
-        marker.id = node_index_counter;
-        marker.type = visualization_msgs::msg::Marker::LINE_LIST;
-        marker.action = visualization_msgs::msg::Marker::ADD;
-        marker.lifetime = rclcpp::Duration::from_seconds(0);
-        marker.text = std::to_string(node_index_counter);
-        marker.scale.x = 0.1;
-        marker.color.a = 1.0;
-        marker.color.r = 0.0;
-        marker.color.g = 1.0;
-        marker.color.b = 1.0;
-        marker.colors.push_back(marker.color);
-        const auto * cstate = i->state_->as<ompl::base::ElevationStateSpace::StateType>();
-        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-        geometry_msgs::msg::Point node_point, parent_point;
-        node_point.x = se2->getX();
-        node_point.y = se2->getY();
-        node_point.z = z->values[0];
-        const auto * parent_cstate =
-          i->parent_->state_->as<ompl::base::ElevationStateSpace::StateType>();
-        const auto * parent_se2 = parent_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        const auto * parent_z = parent_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-        parent_point.x = parent_se2->getX();
-        parent_point.y = parent_se2->getY();
-        parent_point.z = parent_z->values[0];
-        marker.points.push_back(parent_point);
-        marker.points.push_back(node_point);
-        rrt_nodes.markers.push_back(marker);
-        node_index_counter++;
-      }
+    if (last_node != nullptr && last_node->cost_.value() < last_valid_node->cost_.value()) {
+      last_valid_node = last_node;
     }
-    rrt_nodes_pub_->publish(rrt_nodes);
-
     iterations++;
+
+    if (iterations % 200 == 0 && last_valid_node &&
+      static_cast<int>(last_valid_node->cost_.value()))
+    {
+      OMPL_INFORM("Current solution cost %.2f", last_valid_node->cost_.value());
+    }
+
   }
 
   bool solved = false;
@@ -196,8 +161,55 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
     "%s: Created %u states in %u iterations", getName().c_str(), nn_->size(),
     iterations);
 
-  if (last_node) {
-    std::vector<base::State *> final_course = generate_final_course(last_node);
+  // visualize rrt node tree growth in RVIZ
+  std::vector<Node *> all_nodes;
+  nn_->list(all_nodes);
+  visualization_msgs::msg::MarkerArray rrt_nodes;
+  int node_index_counter = 0;
+  for (auto i : all_nodes) {
+    if (i) {
+      if (!i->parent_) {
+        continue;
+      }
+      visualization_msgs::msg::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = rclcpp::Clock().now();
+      marker.ns = "rrt_nodes";
+      marker.id = node_index_counter;
+      marker.type = visualization_msgs::msg::Marker::LINE_LIST;
+      marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.lifetime = rclcpp::Duration::from_seconds(0);
+      marker.text = std::to_string(node_index_counter);
+      marker.scale.x = 0.1;
+      marker.color.a = 1.0;
+      marker.color.r = 0.0;
+      marker.color.g = 1.0;
+      marker.color.b = 1.0;
+      marker.colors.push_back(marker.color);
+      const auto * cstate = i->state_->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+      const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      geometry_msgs::msg::Point node_point, parent_point;
+      node_point.x = se2->getX();
+      node_point.y = se2->getY();
+      node_point.z = z->values[0];
+      const auto * parent_cstate =
+        i->parent_->state_->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * parent_se2 = parent_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+      const auto * parent_z = parent_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      parent_point.x = parent_se2->getX();
+      parent_point.y = parent_se2->getY();
+      parent_point.z = parent_z->values[0];
+      marker.points.push_back(parent_point);
+      marker.points.push_back(node_point);
+      rrt_nodes.markers.push_back(marker);
+      node_index_counter++;
+    }
+  }
+  rrt_nodes_pub_->publish(rrt_nodes);
+
+  if (last_valid_node) {
+    std::vector<base::State *> final_course = generate_final_course(last_valid_node);
     solved = true;
 
     /* set the solution path */
@@ -209,7 +221,7 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
     }
     solved = true;
     pdef_->addSolutionPath(path, approximate, 0.0 /*approxdif*/, getName());
-    OMPL_INFORM("Found solution with cost %.2f", last_node->cost_.value());
+    OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
   } else {
     OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());
   }

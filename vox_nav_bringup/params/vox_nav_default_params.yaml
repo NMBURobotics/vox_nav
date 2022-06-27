@@ -2,9 +2,8 @@ vox_nav_planner_server_rclcpp_node:
   ros__parameters:
     planner_plugin: "ElevationControlPlanner"          # other options: "SE2Planner", "ElevationPlanner", "OptimalElevationPlanner"
     expected_planner_frequency: 1.0
-    planner_name: "PRMstar"                            # PRMstar,LazyPRMstar,RRTstar,RRTsharp,RRTXstatic,InformedRRTstar,BITstar, 
-                                                       # ABITstar,AITstar,CForest,LBTRRT,SST,TRRT,SPARS,SPARStwo,FMT,AnytimePathShortening
-    planner_timeout: 60.0
+    planner_name: "EST"                            
+    planner_timeout: 30.0
     interpolation_parameter: 0                         # set to 0 if you wanna disable interpolating and smooting, otherwise 25 is a good default value                    
     octomap_voxel_size: 0.4
     robot_body_dimens:
@@ -14,6 +13,8 @@ vox_nav_planner_server_rclcpp_node:
     #robot_mesh_path: "package://botanbot_description/meshes/base_simplified.stl" # leave empty if you do not have one, robot_mesh_path: ""
     robot_mesh_path: ""
     SE2Planner:
+      # Available Planners Include: PRMstar,LazyPRMstar,RRTstar,RRTsharp,RRTXstatic,InformedRRTstar,BITstar, 
+                                 #  ABITstar,AITstar,CForest,LBTRRT,SST,TRRT,SPARS,SPARStwo,FMT,AnytimePathShortening
       plugin: "vox_nav_planning::SE2Planner"         # CForest: Reccomended
       se2_space: "REEDS"                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       z_elevation: 1.5                               # Elevation of robot from ground plane, robot should not collide with plane                                      
@@ -26,8 +27,10 @@ vox_nav_planner_server_rclcpp_node:
         minyaw: -3.14
         maxyaw: 3.14
     ElevationPlanner: 
+      # Available Planners Include: PRMstar,LazyPRMstar,RRTstar,RRTsharp,RRTXstatic,InformedRRTstar,BITstar, 
+                                 #  ABITstar,AITstar,CForest,LBTRRT,SST,TRRT,SPARS,SPARStwo,FMT,AnytimePathShortening
       plugin: "vox_nav_planning::ElevationPlanner"    # PRMstar: Reccomended
-      se2_space: "REEDS"                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+      se2_space: "REEDS"                              # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 2.0                                        # Curve radius for reeds and dubins only
       state_space_boundries:
         minx: -100.0
@@ -37,8 +40,9 @@ vox_nav_planner_server_rclcpp_node:
         minz: -5.0
         maxz:  10.0
     ElevationControlPlanner: 
-      plugin: "vox_nav_planning::ElevationControlPlanner"    # PRMstar: Reccomended
-      se2_space: "SE2"                              # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+      # Available Planners Include: RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST
+      plugin: "vox_nav_planning::ElevationControlPlanner"    # RRTStarF: Reccomended
+      se2_space: "SE2"                                # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 2.0                                        # Curve radius for reeds and dubins only
       state_space_boundries:
         minx: -100.0
@@ -56,7 +60,7 @@ vox_nav_planner_server_rclcpp_node:
         maxw:  0.3  
     OptimalElevationPlanner: 
       plugin: "vox_nav_planning::OptimalElevationPlanner"    # Bases on Astar on SuperVoxelClustering
-      se2_space: "SE2"                                     # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+      se2_space: "SE2"                                      # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 2.0
       graph_search_method: "astar"                           # Other options: astar , dijkstra
       supervoxel_disable_transform: false                    # set true for organized point clouds

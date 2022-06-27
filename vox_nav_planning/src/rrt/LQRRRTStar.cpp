@@ -232,22 +232,21 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
 
     smooth_final_course(last_valid_node, 2);
     OMPL_INFORM(
-      "Final solution cost: %.2f after smoothing segment_framing: 2",
+      "Final solution cost: %.2f after smoothing with segment_framing: 2",
       last_valid_node->cost_.value());
 
     smooth_final_course(last_valid_node, 3);
     OMPL_INFORM(
-      "Final solution cost: %.2f after smoothing segment_framing: 3",
+      "Final solution cost: %.2f after smoothing with segment_framing: 3",
       last_valid_node->cost_.value());
 
     smooth_final_course(last_valid_node, 5);
     OMPL_INFORM(
-      "Final solution cost: %.2f after smoothing segment_framing: 5",
+      "Final solution cost: %.2f after smoothing with segment_framing: 5",
       last_valid_node->cost_.value());
 
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
     solved = true;
-
 
     /* set the solution path */
     auto path(std::make_shared<PathControl>(si_));

@@ -92,7 +92,6 @@ namespace vox_nav_utilities
     }
   }
 
-
   pcl::PointSurfel poseMsg2PCLSurfel(const geometry_msgs::msg::PoseStamped & pose_stamped)
   {
     pcl::PointSurfel surfel;

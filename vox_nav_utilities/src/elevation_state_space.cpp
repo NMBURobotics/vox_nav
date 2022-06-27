@@ -68,6 +68,10 @@ ElevationStateSpace::ElevationStateSpace(
   se2_state_type_(state_type)
 {
   setName("ElevationStateSpace" + getName());
+  registerDefaultProjection(std::make_shared<ElevationStateSpaceProjection>(this));
+  registerProjection(
+    "ElevationStateSpaceProjection", std::make_shared<ElevationStateSpaceProjection>(this));
+
   type_ = 32;
   addSubspace(std::make_shared<SE2StateSpace>(), 1.0);
   addSubspace(std::make_shared<RealVectorStateSpace>(2), 1.0);
@@ -267,9 +271,29 @@ bool OctoCellValidStateSampler::sampleNear(
   ompl::base::State * state, const ompl::base::State * near,
   const double distance)
 {
-  throw ompl::Exception("OctoCellValidStateSampler::sampleNear", "not implemented");
-  RCLCPP_ERROR(logger_, "Non implementd function call OctoCellValidStateSampler::sampleNear");
-  return false;
+  auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
+  auto * near_cstate = near->as<ompl::base::ElevationStateSpace::StateType>();
+  const auto * se2 = near_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+  const auto * z = near_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+  pcl::PointSurfel surfel;
+  surfel.x = se2->getX();
+  surfel.y = se2->getY();
+  surfel.z = z->values[0];
+
+  auto out_sample = vox_nav_utilities::getNearstRPoints<
+    pcl::PointSurfel,
+    pcl::PointCloud<pcl::PointSurfel>::Ptr>(
+    distance,
+    surfel,
+    search_area_surfels_);
+
+  cstate->setSE2(
+    out_sample.x,
+    out_sample.y, 0);
+  cstate->setZ(out_sample.z);
+
+  return true;
 }
 
 void OctoCellValidStateSampler::updateSearchArea(

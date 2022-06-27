@@ -230,20 +230,17 @@ namespace vox_nav_planning
       });
 
     // create a planner for the defined space
-    /*ompl::base::PlannerPtr planner;
-    vox_nav_utilities::initializeSelectedPlanner(
+    ompl::base::PlannerPtr planner;
+    initializeSelectedControlPlanner(
       planner,
       planner_name_,
       si,
-      logger_);*/
+      logger_);
 
     si->setValidStateSamplerAllocator(
       std::bind(
         &ElevationControlPlanner::
         allocValidStateSampler, this, std::placeholders::_1));
-
-    ompl::base::PlannerPtr planner;
-    planner = ompl::base::PlannerPtr(new ompl::control::LQRRRTStar(si));
 
     control_simple_setup_->setPlanner(planner);
     control_simple_setup_->setup();

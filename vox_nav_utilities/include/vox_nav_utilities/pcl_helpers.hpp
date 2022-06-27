@@ -49,6 +49,9 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <iostream>
+#include <random>
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
@@ -184,6 +187,36 @@ namespace vox_nav_utilities
     return nearest_point;
   }
 
+
+  template<typename P, typename T>
+  P getNearstRPoints(
+    const double radius,
+    const P & search_point,
+    const T & cloud)
+  {
+    // Find NN inliers in radius and select a random one
+    P nearest_point;
+    pcl::KdTreeFLANN<P> kdtree;
+    kdtree.setInputCloud(cloud);
+    // radius nearest neighbor search
+    std::vector<int> pointIdxNKNSearch;
+    std::vector<float> pointNKNSquaredDistance;
+    if (kdtree.radiusSearchT(
+        search_point, radius, pointIdxNKNSearch,
+        pointNKNSquaredDistance) > 0)
+    {
+      std::vector<int> out;
+      size_t nelems = 1;
+      std::sample(
+        pointIdxNKNSearch.begin(),
+        pointIdxNKNSearch.end(),
+        std::back_inserter(out),
+        nelems,
+        std::mt19937{std::random_device{} ()}
+      );
+      return cloud->points[out[0]];
+    }
+  }
 
   template<typename P>
   typename pcl::PointCloud<P>::Ptr downsampleInputCloud(

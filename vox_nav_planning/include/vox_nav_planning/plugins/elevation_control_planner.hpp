@@ -28,6 +28,8 @@
 #include "ompl/control/SimpleSetup.h"
 #include "ompl/control/planners/sst/SST.h"
 #include "ompl/control/planners/rrt/RRT.h"
+#include "ompl/control/planners/est/EST.h"
+#include "ompl/control/planners/PlannerIncludes.h"
 
 #include <vector>
 #include <string>
@@ -131,6 +133,32 @@ namespace vox_nav_planning
      *
      */
     void setupMap() override;
+
+    void initializeSelectedControlPlanner(
+      ompl::base::PlannerPtr & planner,
+      const std::string & selected_planner_name,
+      const ompl::control::SpaceInformationPtr & si,
+      const rclcpp::Logger & logger)
+    {
+      if (selected_planner_name == std::string("RRT")) {
+        planner = ompl::base::PlannerPtr(new ompl::control::RRT(si));
+      } else if (selected_planner_name == std::string("RRTStarF")) {
+        planner = ompl::base::PlannerPtr(new ompl::control::RRTStarF(si));
+      } else if (selected_planner_name == std::string("LQRPlanner")) {
+        planner = ompl::base::PlannerPtr(new ompl::control::LQRPlanner(si));
+      } else if (selected_planner_name == std::string("LQRRRTStar")) {
+        planner = ompl::base::PlannerPtr(new ompl::control::LQRRRTStar(si));
+      } else if (selected_planner_name == std::string("SST")) {
+        planner = ompl::base::PlannerPtr(new ompl::control::SST(si));
+      } else if (selected_planner_name == std::string("EST")) {
+        planner = ompl::base::PlannerPtr(new ompl::control::EST(si));
+      } else {
+        RCLCPP_WARN(
+          logger,
+          "Selected planner is not Found in available planners, using the default planner: RRTStarF");
+        planner = ompl::base::PlannerPtr(new ompl::control::RRTStarF(si));
+      }
+    }
 
   protected:
     rclcpp::Logger logger_{rclcpp::get_logger("elevation_control_planner")};

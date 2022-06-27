@@ -244,6 +244,36 @@ namespace ompl
       pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
       std::discrete_distribution<> distrubutions_;
     };
+
+    class ElevationStateSpaceProjection : public base::ProjectionEvaluator
+    {
+    public:
+      ElevationStateSpaceProjection(const ompl::base::StateSpace *space)
+      : base::ProjectionEvaluator(space)
+      {
+      }
+
+      virtual unsigned int getDimension(void) const
+      {
+        return 2;
+      }
+
+      virtual void defaultCellSizes(void)
+      {
+        cellSizes_.resize(2);
+        cellSizes_[0] = 0.25;
+        cellSizes_[1] = 0.25;
+      }
+
+      virtual void project(const base::State * state, Eigen::Ref<Eigen::VectorXd> projection) const
+      {
+        const auto * s_se2 =
+          state->as<ElevationStateSpace::StateType>()->as<SE2StateSpace::StateType>(0);
+        projection(0) = s_se2->getX();
+        projection(1) = s_se2->getY();
+      }
+    };
+
   } // namespace base
 }  // namespace ompl
 
