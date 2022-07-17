@@ -29,6 +29,9 @@
 #include "ompl/control/planners/sst/SST.h"
 #include "ompl/control/planners/rrt/RRT.h"
 #include "ompl/control/planners/est/EST.h"
+#include "ompl/control/planners/kpiece/KPIECE1.h"
+#include "ompl/control/planners/pdst/PDST.h"
+#include "ompl/control/planners/syclop/SyclopRRT.h"
 #include "ompl/control/planners/PlannerIncludes.h"
 
 #include <vector>
@@ -152,6 +155,8 @@ namespace vox_nav_planning
         planner = ompl::base::PlannerPtr(new ompl::control::SST(si));
       } else if (selected_planner_name == std::string("EST")) {
         planner = ompl::base::PlannerPtr(new ompl::control::EST(si));
+      } else if (selected_planner_name == std::string("KPIECE1")) {
+        planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
       } else {
         RCLCPP_WARN(
           logger,

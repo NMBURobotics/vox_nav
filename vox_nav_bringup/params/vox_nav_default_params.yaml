@@ -40,7 +40,7 @@ vox_nav_planner_server_rclcpp_node:
         minz: -5.0
         maxz:  10.0
     ElevationControlPlanner: 
-      # Available Planners Include: RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST
+      # Available Planners Include: RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1
       plugin: "vox_nav_planning::ElevationControlPlanner"    # RRTStarF: Reccomended
       se2_space: "SE2"                                # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 2.0                                        # Curve radius for reeds and dubins only

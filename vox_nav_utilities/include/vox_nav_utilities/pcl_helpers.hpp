@@ -52,6 +52,7 @@
 #include <algorithm>
 #include <iostream>
 #include <random>
+#include <experimental/algorithm>
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
@@ -207,7 +208,14 @@ namespace vox_nav_utilities
     {
       std::vector<int> out;
       size_t nelems = 1;
-      std::sample(
+      /*std::sample(
+        pointIdxNKNSearch.begin(),
+        pointIdxNKNSearch.end(),
+        std::back_inserter(out),
+        nelems,
+        std::mt19937{std::random_device{} ()}
+      );*/
+      std::experimental::fundamentals_v2::sample(
         pointIdxNKNSearch.begin(),
         pointIdxNKNSearch.end(),
         std::back_inserter(out),

@@ -63,11 +63,11 @@ LIBFCL
 pcl_ros)
 
 # RRTStarF  PLANNER ####################################
-add_library(RRTStarF SHARED src/rrt/RRTStarF.cpp
-                            src/rrt/LQRPlanner.cpp
-                            src/rrt/LQRRRTStar.cpp )
-target_link_libraries(RRTStarF ${PCL_LIBRARIES})
-ament_target_dependencies(RRTStarF ${dependencies})
+add_library(vox_nav_ompl_planners SHARED  src/rrt/RRTStarF.cpp
+                                          src/rrt/LQRPlanner.cpp
+                                          src/rrt/LQRRRTStar.cpp )
+target_link_libraries(vox_nav_ompl_planners ${PCL_LIBRARIES})
+ament_target_dependencies(vox_nav_ompl_planners ${dependencies})
 
 # PLANNER SERVER ##############################################
 add_executable(planner_server src/planner_server.cpp)
@@ -88,23 +88,29 @@ target_link_libraries(elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES}
 # ELEVATION CONTROL PLANNER ############################################
 add_library(elevation_control_planner SHARED src/plugins/elevation_control_planner.cpp)
 ament_target_dependencies(elevation_control_planner ${dependencies})
-target_link_libraries(elevation_control_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl RRTStarF)
+target_link_libraries(elevation_control_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl vox_nav_ompl_planners)
 
 # OPTIMAL ELEVATION PLANNER ####################################
 add_library(optimal_elevation_planner SHARED src/plugins/optimal_elevation_planner.cpp)
 ament_target_dependencies(optimal_elevation_planner ${dependencies})
 target_link_libraries(optimal_elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
+# ELEVATION CONTROL PLANNERS BENCHMARKS ####################################
+add_executable(control_planners_benchmark src/plugins/control_planners_benchmark.cpp)
+ament_target_dependencies(control_planners_benchmark ${dependencies})
+target_link_libraries(control_planners_benchmark ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} vox_nav_ompl_planners ompl)
+
 install(TARGETS optimal_elevation_planner 
                 elevation_planner
                 elevation_control_planner
                 se2_planner
+                vox_nav_ompl_planners
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
 
 install(TARGETS planner_server
-                RRTStarF
+                control_planners_benchmark
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
