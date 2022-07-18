@@ -32,6 +32,12 @@ namespace vox_nav_planning
     this->declare_parameter("state_space_boundries.maxz", 10.0);
     this->declare_parameter("state_space_boundries.minyaw", -3.14);
     this->declare_parameter("state_space_boundries.maxyaw", 3.14);
+    this->declare_parameter("state_space_boundries.minv", -1.5);
+    this->declare_parameter("state_space_boundries.maxv", 1.5);
+    this->declare_parameter("control_boundries.minv", -0.5);
+    this->declare_parameter("control_boundries.maxv", 0.5);
+    this->declare_parameter("control_boundries.minw", -0.5);
+    this->declare_parameter("control_boundries.maxw", 0.5);
     this->declare_parameter("robot_body_dimens.x", 1.5);
     this->declare_parameter("robot_body_dimens.y", 1.5);
     this->declare_parameter("robot_body_dimens.z", 0.4);
@@ -53,6 +59,22 @@ namespace vox_nav_planning
     this->get_parameter("octomap_voxel_size", octomap_voxel_size_);
     this->get_parameter("selected_state_space", selected_state_space_);
     this->get_parameter("min_turning_radius", min_turning_radius_);
+    this->get_parameter("robot_body_dimens.x", robot_body_dimensions_.x);
+    this->get_parameter("robot_body_dimens.y", robot_body_dimensions_.y);
+    this->get_parameter("robot_body_dimens.z", robot_body_dimensions_.z);
+    this->get_parameter("start.z", start_.z);
+    this->get_parameter("goal.z", goal_.z);
+    this->get_parameter("goal_tolerance", goal_tolerance_);
+    this->get_parameter(
+      "min_euclidean_dist_start_to_goal", min_euclidean_dist_start_to_goal_);
+    this->get_parameter("batch_size", batch_size_);
+    this->get_parameter("epochs", epochs_);
+    this->get_parameter("max_memory", max_memory_);
+    this->get_parameter("results_output_dir", results_output_dir_);
+    this->get_parameter("results_file_regex", results_file_regex_);
+    this->get_parameter("publish_a_sample_bencmark", publish_a_sample_bencmark_);
+    this->get_parameter(
+      "sample_bencmark_plans_topic", sample_bencmark_plans_topic_);
     this->get_parameter("state_space_boundries.minx", se_bounds_.minx);
     this->get_parameter("state_space_boundries.maxx", se_bounds_.maxx);
     this->get_parameter("state_space_boundries.miny", se_bounds_.miny);
@@ -61,46 +83,47 @@ namespace vox_nav_planning
     this->get_parameter("state_space_boundries.maxz", se_bounds_.maxz);
     this->get_parameter("state_space_boundries.minyaw", se_bounds_.minyaw);
     this->get_parameter("state_space_boundries.maxyaw", se_bounds_.maxyaw);
-    this->get_parameter("robot_body_dimens.x", robot_body_dimensions_.x);
-    this->get_parameter("robot_body_dimens.y", robot_body_dimensions_.y);
-    this->get_parameter("robot_body_dimens.z", robot_body_dimensions_.z);
-    this->get_parameter("start.z", start_.z);
-    this->get_parameter("goal.z", goal_.z);
-    this->get_parameter("goal_tolerance", goal_tolerance_);
-    this->get_parameter(
-      "min_euclidean_dist_start_to_goal",
-      min_euclidean_dist_start_to_goal_);
-    this->get_parameter("batch_size", batch_size_);
-    this->get_parameter("epochs", epochs_);
-    this->get_parameter("max_memory", max_memory_);
-    this->get_parameter("results_output_dir", results_output_dir_);
-    this->get_parameter("results_file_regex", results_file_regex_);
-    this->get_parameter("publish_a_sample_bencmark", publish_a_sample_bencmark_);
-    this->get_parameter(
-      "sample_bencmark_plans_topic",
-      sample_bencmark_plans_topic_);
+
+    se2_bounds_->setLow(0, this->get_parameter("state_space_boundries.minx").as_double());
+    se2_bounds_->setHigh(0, this->get_parameter("state_space_boundries.maxx").as_double());
+    se2_bounds_->setLow(1, this->get_parameter("state_space_boundries.miny").as_double());
+    se2_bounds_->setHigh(1, this->get_parameter("state_space_boundries.maxy").as_double());
+    z_bounds_->setLow(0, this->get_parameter("state_space_boundries.minz").as_double());
+    z_bounds_->setHigh(0, this->get_parameter("state_space_boundries.maxz").as_double());
+    v_bounds->setLow(0, this->get_parameter("state_space_boundries.minv").as_double());
+    v_bounds->setHigh(0, this->get_parameter("state_space_boundries.maxv").as_double());
+    control_bounds->setLow(0, this->get_parameter("control_boundries.minv").as_double());
+    control_bounds->setHigh(0, this->get_parameter("control_boundries.maxv").as_double());
+    control_bounds->setLow(1, this->get_parameter("control_boundries.minw").as_double());
+    control_bounds->setHigh(1, this->get_parameter("control_boundries.maxw").as_double());
+
+    if (selected_se2_space_name_ == "SE2") {
+      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::SE2;
+    } else if (selected_se2_space_name_ == "DUBINS") {
+      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::DUBINS;
+    } else {
+      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::REDDSSHEEP;
+    }
 
     typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
     CollisionGeometryPtr_t robot_body_box(new fcl::Box(
         robot_body_dimensions_.x,
         robot_body_dimensions_.y,
-        robot_body_dimensions_.z));
-    fcl::CollisionObject robot_body_box_object(robot_body_box,
-      fcl::Transform3f());
-    robot_collision_object_ =
-      std::make_shared<fcl::CollisionObject>(robot_body_box_object);
+        robot_body_dimensions_.z
+    ));
 
-    original_octomap_octree_ =
-      std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-
-    // service hooks for robot localization fromll service
-    get_maps_and_surfels_client_node_ =
-      std::make_shared<rclcpp::Node>("get_maps_and_surfels_client_node");
+    fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
+    robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
+    elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+    original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
+    get_maps_and_surfels_client_node_ = std::make_shared
+      <rclcpp::Node>("get_maps_and_surfels_client_node");
 
     get_maps_and_surfels_client_ =
-      get_maps_and_surfels_client_node_
-      ->create_client<vox_nav_msgs::srv::GetMapsAndSurfels>(
+      get_maps_and_surfels_client_node_->create_client<vox_nav_msgs::srv::GetMapsAndSurfels>(
       "get_maps_and_surfels");
+
+    setupMap();
 
     // Initialize pubs & subs
     plan_publisher_ =
@@ -110,16 +133,6 @@ namespace vox_nav_planning
     start_goal_poses_publisher_ =
       this->create_publisher<geometry_msgs::msg::PoseArray>(
       "start_goal_poses", rclcpp::SystemDefaultsQoS());
-
-    setupMap();
-
-    if (selected_se2_space_name_ == "SE2") {
-      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::SE2;
-    } else if (selected_se2_space_name_ == "DUBINS") {
-      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::DUBINS;
-    } else {
-      se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::REDDSSHEEP;
-    }
 
     // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
     state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
@@ -152,6 +165,31 @@ namespace vox_nav_planning
     RCLCPP_INFO(this->get_logger(), "Destroying:");
   }
 
+  void ControlPlannersBenchMarking::propagate(
+    const ompl::control::SpaceInformation * si,
+    const ompl::base::State * start,
+    const ompl::control::Control * control,
+    const double duration,
+    ompl::base::State * result)
+  {
+    const auto * ee_start = start->as<ompl::base::ElevationStateSpace::StateType>();
+    // cast the abstract state type to the type we expect
+    const auto * se2 = ee_start->as<ompl::base::SE2StateSpace::StateType>(0);
+    // extract the second component of the state and cast it to what we expect
+    const double z = ee_start->as<ompl::base::RealVectorStateSpace::StateType>(1)->values[0];
+    const double v = ee_start->as<ompl::base::RealVectorStateSpace::StateType>(1)->values[1];
+    const double * ctrl = control->as<ompl::control::RealVectorControlSpace::ControlType>()->values;
+
+    result->as<ompl::base::ElevationStateSpace::StateType>()->setSE2(
+      se2->getX() + duration * v * std::cos(se2->getYaw()) /*X*/,
+      se2->getY() + duration * v * std::sin(se2->getYaw()) /*Y*/,
+      se2->getYaw() + duration * ctrl[1] /*Yaw*/);
+    result->as<ompl::base::ElevationStateSpace::StateType>()->setZ(z);
+    result->as<ompl::base::ElevationStateSpace::StateType>()->setVelocity(v + duration * ctrl[0]);
+
+    si->enforceBounds(result);
+  }
+
   ompl::base::OptimizationObjectivePtr ControlPlannersBenchMarking::getOptimizationObjective()
   {
     // select a optimizatio objective
@@ -178,7 +216,7 @@ namespace vox_nav_planning
     control_simple_setup_ = std::make_shared<ompl::control::SimpleSetup>(control_state_space_);
     auto si = control_simple_setup_->getSpaceInformation();
 
-    ompl::base::ScopedState<ompl::base::SE2StateSpace> random_start(state_space_),
+    ompl::base::ScopedState<ompl::base::ElevationStateSpace> random_start(state_space_),
     random_goal(state_space_);
 
     geometry_msgs::msg::PoseStamped start, goal;
@@ -197,30 +235,30 @@ namespace vox_nav_planning
         goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
 
         start.pose.position.x =
-          -15; // getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+          getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
         start.pose.position.y =
-          5; // getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+          getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
         start.pose.orientation =
           vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, start_yaw);
 
         goal.pose.position.x =
-          35; // getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+          getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
         goal.pose.position.y =
-          35; // getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+          getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
         goal.pose.orientation =
           vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, goal_yaw);
 
-        random_start->setXY(start.pose.position.x, start.pose.position.y);
+        random_start->setSE2(start.pose.position.x, start.pose.position.y, 0);
         random_start->setYaw(start_yaw);
 
-        random_goal->setXY(goal.pose.position.x, goal.pose.position.y);
+        random_goal->setSE2(goal.pose.position.x, goal.pose.position.y, 0);
         random_goal->setYaw(goal_yaw);
 
         // the distance should be above a certain threshold
         double distance =
           std::sqrt(
-          std::pow(random_goal->getX() - random_start->getX(), 2) +
-          std::pow(random_goal->getY() - random_start->getY(), 2));
+          std::pow(random_goal->getSE2()->getX() - random_start->getSE2()->getY(), 2) +
+          std::pow(random_goal->getSE2()->getX() - random_start->getSE2()->getY(), 2));
 
         RCLCPP_INFO(
           this->get_logger(),
@@ -237,6 +275,24 @@ namespace vox_nav_planning
           continue;
         }
 
+        vox_nav_utilities::determineValidNearestGoalStart(
+          nearest_elevated_surfel_to_start_,
+          nearest_elevated_surfel_to_goal_,
+          start,
+          goal,
+          elevated_surfel_cloud_);
+
+        nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
+        nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
+
+        auto si = control_simple_setup_->getSpaceInformation();
+        si->setMinMaxControlDuration(1, 2);
+        si->setPropagationStepSize(0.25);
+        si->setValidStateSamplerAllocator(
+          std::bind(
+            &ControlPlannersBenchMarking::
+            allocValidStateSampler, this, std::placeholders::_1));
+
         RCLCPP_INFO(
           this->get_logger(),
           "A valid random start and goal states has been found.");
@@ -246,26 +302,13 @@ namespace vox_nav_planning
           (selected_state_space_ == "DUBINS") ||
           (selected_state_space_ == "SE2"))
         {
-          control_simple_setup_->setStartAndGoalStates(random_start, random_goal, goal_tolerance_);
-          control_simple_setup_->setStateValidityChecker(
-            [this](const ompl::base::State * state) {
-              return isStateValid(state);
+          control_simple_setup_->setStatePropagator(
+            [this, si](const ompl::base::State * state, const ompl::control::Control * control,
+            const double duration, ompl::base::State * result)
+            {
+              this->propagate(si.get(), state, control, duration, result);
             });
-
-        } else {
-          ompl::base::ScopedState<ompl::base::SE3StateSpace> se3_start(
-            state_space_),
-          se3_goal(state_space_);
-
-          se3_start->setXYZ(random_start->getX(), random_start->getY(), start_.z);
-          se3_start->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-            0, 0, 1, random_start->getYaw());
-
-          se3_goal->setXYZ(random_goal->getX(), random_goal->getY(), goal_.z);
-          se3_goal->as<ompl::base::SO3StateSpace::StateType>(1)->setAxisAngle(
-            0, 0, 1, random_goal->getYaw());
-
-          control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, goal_tolerance_);
+          control_simple_setup_->setStartAndGoalStates(random_start, random_goal, goal_tolerance_);
           control_simple_setup_->setStateValidityChecker(
             [this](const ompl::base::State * state) {
               return isStateValid(state);
@@ -307,12 +350,12 @@ namespace vox_nav_planning
         this->get_logger(),
         "Created valid random start and goal states");
 
-      start_.x = random_start->getX();
-      start_.y = random_start->getY();
-      start_.yaw = random_start->getYaw();
-      goal_.x = random_goal->getX();
-      goal_.y = random_goal->getY();
-      goal_.yaw = random_goal->getYaw();
+      start_.x = random_start->getSE2()->getX();
+      start_.y = random_start->getSE2()->getY();
+      start_.yaw = random_start->getSE2()->getYaw();
+      goal_.x = random_goal->getSE2()->getX();
+      goal_.y = random_goal->getSE2()->getY();
+      goal_.yaw = random_goal->getSE2()->getYaw();
 
       ompl::base::OptimizationObjectivePtr lengthObj(
         new ompl::base::PathLengthOptimizationObjective(si));
@@ -608,6 +651,17 @@ namespace vox_nav_planning
         elevated_surfel_octomap_octree_->size());
 
     }
+  }
+
+  ompl::base::ValidStateSamplerPtr ControlPlannersBenchMarking::allocValidStateSampler(
+    const ompl::base::SpaceInformation * si)
+  {
+    auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
+      control_simple_setup_->getSpaceInformation(),
+      nearest_elevated_surfel_to_start_,
+      nearest_elevated_surfel_to_goal_,
+      elevated_surfel_poses_msg_);
+    return valid_sampler;
   }
 
   std_msgs::msg::ColorRGBA ControlPlannersBenchMarking::getColorByIndex(int index)

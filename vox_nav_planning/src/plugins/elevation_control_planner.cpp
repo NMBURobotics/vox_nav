@@ -56,7 +56,6 @@ namespace vox_nav_planning
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.minv", -1.5);
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxv", 1.5);
-
     parent->declare_parameter(plugin_name + ".control_boundries.minv", -0.5);
     parent->declare_parameter(plugin_name + ".control_boundries.maxv", 0.5);
     parent->declare_parameter(plugin_name + ".control_boundries.minw", -0.5);
@@ -85,7 +84,6 @@ namespace vox_nav_planning
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minv").as_double());
     v_bounds->setHigh(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.maxv").as_double());
-
     control_bounds->setLow(
       0, parent->get_parameter(plugin_name + ".control_boundries.minv").as_double());
     control_bounds->setHigh(

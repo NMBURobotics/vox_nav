@@ -184,6 +184,8 @@ namespace vox_nav_planning
     std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
     geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
     pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
+    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
+    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
 
     std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
     std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
@@ -232,6 +234,15 @@ namespace vox_nav_planning
       const ompl::control::Control * control,
       const double duration,
       ompl::base::State * result);
+
+    /**
+    * @brief
+    *
+    * @param si
+    * @return ompl::base::ValidStateSamplerPtr
+    */
+    ompl::base::ValidStateSamplerPtr allocValidStateSampler(
+      const ompl::base::SpaceInformation * si);
 
     /**
     * @brief
