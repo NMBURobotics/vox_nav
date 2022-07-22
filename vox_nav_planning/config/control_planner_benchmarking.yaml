@@ -4,7 +4,7 @@ control_planners_benchmark:
     interpolation_parameter: 50
     octomap_voxel_size: 0.2
     selected_state_space: "SE2" # "DUBINS","REEDS", "SE2", "SE3" ### PS. Use DUBINS OR REEDS for Ackermann
-    selected_planners: [RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1]
+    selected_planners: [RRT,LQRRRTStar]
     min_turning_radius: 1.5
     state_space_boundries:
       minx: -40.0
@@ -30,10 +30,10 @@ control_planners_benchmark:
       z: 1.5
     goal:
       z: 1.5
-    goal_tolerance: 0.2
+    goal_tolerance: 0.4
     min_euclidean_dist_start_to_goal: 25.0
     batch_size: 1
-    epochs: 2
+    epochs: 1
     max_memory: 4096
     results_output_dir: "/home/atas/test/"
     results_file_regex: "control"

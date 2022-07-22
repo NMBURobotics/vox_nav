@@ -133,13 +133,16 @@ namespace vox_nav_planning
   {
   private:
     rclcpp::Logger logger_{rclcpp::get_logger("elevation_control_planners_benchmarks")};
-
-
     std::string selected_state_space_; // se2 ? se3
     SEBounds se_bounds_;             // struct for keeping things clean
-    std::shared_ptr<ompl::base::RealVectorBounds> ompl_se_bounds_;
     ompl::base::StateSpacePtr state_space_;
-    ompl::base::SpaceInformationPtr si;
+    ompl::control::ControlSpacePtr control_state_space_;
+    ompl::control::SimpleSetupPtr control_simple_setup_;
+    std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
+    std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
+    std::string selected_se2_space_name_;
+    ompl::base::ElevationStateSpace::SE2StateType se2_space_type_;
+    double rho_;
 
     std::vector<std::string> selected_planners_;
     std::string results_output_dir_;
@@ -164,8 +167,8 @@ namespace vox_nav_planning
     std::shared_ptr<octomap::OcTree> original_octomap_octree_;
     std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
     std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-    // Publishers for the path
 
+    // Publishers for the path
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
       plan_publisher_;
     rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr
@@ -177,21 +180,12 @@ namespace vox_nav_planning
 
     std::mutex octomap_mutex_;
 
-    ompl::control::ControlSpacePtr control_state_space_;
-    ompl::control::SimpleSetupPtr control_simple_setup_;
-
     std::shared_ptr<octomap::OcTree> elevated_surfel_octomap_octree_;
     std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
     geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
     pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
-
-    std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
-    std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
-    std::string selected_se2_space_name_;
-    ompl::base::ElevationStateSpace::SE2StateType se2_space_type_;
-    double rho_;
 
   public:
     volatile bool is_map_ready_;

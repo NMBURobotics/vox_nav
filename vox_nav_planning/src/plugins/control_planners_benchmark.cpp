@@ -43,7 +43,7 @@ namespace vox_nav_planning
     this->declare_parameter("robot_body_dimens.z", 0.4);
     this->declare_parameter("start.z", 0.0);
     this->declare_parameter("goal.z", 0.0);
-    this->declare_parameter("goal_tolerance", 0.2);
+    this->declare_parameter("goal_tolerance", 0.5);
     this->declare_parameter("min_euclidean_dist_start_to_goal", 25.0);
     this->declare_parameter("batch_size", 10);
     this->declare_parameter("epochs", 10);
@@ -125,15 +125,6 @@ namespace vox_nav_planning
 
     setupMap();
 
-    // Initialize pubs & subs
-    plan_publisher_ =
-      this->create_publisher<visualization_msgs::msg::MarkerArray>(
-      sample_bencmark_plans_topic_.c_str(), rclcpp::SystemDefaultsQoS());
-
-    start_goal_poses_publisher_ =
-      this->create_publisher<geometry_msgs::msg::PoseArray>(
-      "start_goal_poses", rclcpp::SystemDefaultsQoS());
-
     // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
     state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
       se2_space_type_,
@@ -158,6 +149,15 @@ namespace vox_nav_planning
     for (auto && i : selected_planners_) {
       RCLCPP_INFO(this->get_logger(), " %s", i.c_str());
     }
+
+    // Initialize pubs & subs
+    plan_publisher_ =
+      this->create_publisher<visualization_msgs::msg::MarkerArray>(
+      sample_bencmark_plans_topic_.c_str(), rclcpp::SystemDefaultsQoS());
+
+    start_goal_poses_publisher_ =
+      this->create_publisher<geometry_msgs::msg::PoseArray>(
+      "start_goal_poses", rclcpp::SystemDefaultsQoS());
   }
 
   ControlPlannersBenchMarking::~ControlPlannersBenchMarking()
@@ -211,54 +211,59 @@ namespace vox_nav_planning
   ControlPlannersBenchMarking::doBenchMarking()
   {
 
-    control_state_space_ = std::make_shared<ompl::control::RealVectorControlSpace>(
-      state_space_, 2);
-    control_simple_setup_ = std::make_shared<ompl::control::SimpleSetup>(control_state_space_);
-    auto si = control_simple_setup_->getSpaceInformation();
-
     ompl::base::ScopedState<ompl::base::ElevationStateSpace> random_start(state_space_),
     random_goal(state_space_);
-
     geometry_msgs::msg::PoseStamped start, goal;
     std::map<int, ompl::geometric::PathGeometric> paths_map;
+    auto si = control_simple_setup_->getSpaceInformation();
 
     for (int i = 0; i < epochs_; i++) {
 
       // spin until a valid random start and goal poses are found. Also
       // make sure that a soluion exists for generated states
       volatile bool found_valid_random_start_goal = false;
-
       double start_yaw, goal_yaw, nan;
 
       while (!found_valid_random_start_goal) {
+
         start_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
         goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
 
-        start.pose.position.x =
-          getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-        start.pose.position.y =
-          getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+        start.pose.position.x = getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+        start.pose.position.y = getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
         start.pose.orientation =
           vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, start_yaw);
 
-        goal.pose.position.x =
-          getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-        goal.pose.position.y =
-          getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+        goal.pose.position.x = getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+        goal.pose.position.y = getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
         goal.pose.orientation =
           vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, goal_yaw);
 
+        vox_nav_utilities::determineValidNearestGoalStart(
+          nearest_elevated_surfel_to_start_,
+          nearest_elevated_surfel_to_goal_,
+          start,
+          goal,
+          elevated_surfel_cloud_);
+
+        nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
+        nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
+
         random_start->setSE2(start.pose.position.x, start.pose.position.y, 0);
         random_start->setYaw(start_yaw);
+        random_start->setZ(nearest_elevated_surfel_to_start_.pose.position.z);
+        random_start->setVelocity(0);
 
         random_goal->setSE2(goal.pose.position.x, goal.pose.position.y, 0);
         random_goal->setYaw(goal_yaw);
+        random_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
+        random_goal->setVelocity(0);
 
         // the distance should be above a certain threshold
         double distance =
           std::sqrt(
-          std::pow(random_goal->getSE2()->getX() - random_start->getSE2()->getY(), 2) +
-          std::pow(random_goal->getSE2()->getX() - random_start->getSE2()->getY(), 2));
+          std::pow(random_goal->getSE2()->getX() - random_start->getSE2()->getX(), 2) +
+          std::pow(random_goal->getSE2()->getY() - random_start->getSE2()->getY(), 2));
 
         RCLCPP_INFO(
           this->get_logger(),
@@ -275,80 +280,25 @@ namespace vox_nav_planning
           continue;
         }
 
-        vox_nav_utilities::determineValidNearestGoalStart(
-          nearest_elevated_surfel_to_start_,
-          nearest_elevated_surfel_to_goal_,
-          start,
-          goal,
-          elevated_surfel_cloud_);
-
-        nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
-        nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
-
-        auto si = control_simple_setup_->getSpaceInformation();
-        si->setMinMaxControlDuration(1, 2);
-        si->setPropagationStepSize(0.25);
-        si->setValidStateSamplerAllocator(
-          std::bind(
-            &ControlPlannersBenchMarking::
-            allocValidStateSampler, this, std::placeholders::_1));
-
-        RCLCPP_INFO(
-          this->get_logger(),
-          "A valid random start and goal states has been found.");
-
-        // define start & goal states
-        if ((selected_state_space_ == "REEDS") ||
-          (selected_state_space_ == "DUBINS") ||
-          (selected_state_space_ == "SE2"))
-        {
-          control_simple_setup_->setStatePropagator(
-            [this, si](const ompl::base::State * state, const ompl::control::Control * control,
-            const double duration, ompl::base::State * result)
-            {
-              this->propagate(si.get(), state, control, duration, result);
-            });
-          control_simple_setup_->setStartAndGoalStates(random_start, random_goal, goal_tolerance_);
-          control_simple_setup_->setStateValidityChecker(
-            [this](const ompl::base::State * state) {
-              return isStateValid(state);
-            });
-        }
-
-        si->setStateValidityCheckingResolution(
-          1.0 /
-          state_space_->getMaximumExtent());
-        si->setup();
-
-        // create a planner for the defined space
-        ompl::base::PlannerPtr rrtstar_planner;
-        rrtstar_planner =
-          ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
-        control_simple_setup_->setPlanner(rrtstar_planner);
-        RCLCPP_INFO(
-          this->get_logger(), "Checking whether a solution exists for "
-          "random start and goal states .");
-        ompl::base::PlannerStatus has_solution = control_simple_setup_->solve(5.0);
-
-        // if it gets to this point , that menas our random states are valid and
-        // already meets min dist requiremnets but now there also has to be a
-        // solution for this problem
-        found_valid_random_start_goal =
-          (has_solution == ompl::base::PlannerStatus::EXACT_SOLUTION);
-
-        if (found_valid_random_start_goal) {
-          RCLCPP_INFO(
-            this->get_logger(),
-            "Found valid states and a solution for the random "
-            "problem!, proceeding to actual benchmark.");
-        }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
 
-      control_simple_setup_->clear();
+      control_simple_setup_->setStartAndGoalStates(random_start, random_goal, goal_tolerance_);
+
+      auto si = control_simple_setup_->getSpaceInformation();
+      si->setMinMaxControlDuration(1, 2);
+      si->setPropagationStepSize(0.25);
+
+      control_simple_setup_->setStatePropagator(
+        [this, si](const ompl::base::State * state, const ompl::control::Control * control,
+        const double duration, ompl::base::State * result)
+        {
+          this->propagate(si.get(), state, control, duration, result);
+        });
+
       RCLCPP_INFO(
         this->get_logger(),
-        "Created valid random start and goal states");
+        "A valid random start and goal states has been found.");
 
       start_.x = random_start->getSE2()->getX();
       start_.y = random_start->getSE2()->getY();
@@ -357,60 +307,65 @@ namespace vox_nav_planning
       goal_.y = random_goal->getSE2()->getY();
       goal_.yaw = random_goal->getSE2()->getYaw();
 
-      ompl::base::OptimizationObjectivePtr lengthObj(
-        new ompl::base::PathLengthOptimizationObjective(si));
-      ompl::base::OptimizationObjectivePtr clearObj(
-        new ompl::base::MaximizeMinClearanceObjective(si));
-
-      ompl::base::MultiOptimizationObjective * opt =
-        new ompl::base::MultiOptimizationObjective(si);
-      opt->addObjective(lengthObj, 10.0);
-      opt->addObjective(clearObj, 1.0);
-
-      control_simple_setup_->setOptimizationObjective(ompl::base::OptimizationObjectivePtr(opt));
-      si->setup();
-
-      ompl::tools::Benchmark benchmark(*control_simple_setup_, "benchmark");
+      //ompl::tools::Benchmark benchmark(*control_simple_setup_, "benchmark");
       std::mutex plan_mutex;
       int index(0);
       for (auto && planner_name : selected_planners_) {
         ompl::base::PlannerPtr planner_ptr;
-
-        ompl::base::PlannerPtr planner;
         initializeSelectedControlPlanner(
           planner_ptr,
           planner_name,
           si,
           logger_);
 
-        benchmark.addPlanner(planner_ptr);
+        //benchmark.addPlanner(planner_ptr);
 
-        if (publish_a_sample_bencmark_ && i == epochs_ - 1) {
+        if (publish_a_sample_bencmark_ && i == 0) {
+          //std::lock_guard<std::mutex> guard(plan_mutex);
+
+          RCLCPP_INFO(
+            this->get_logger(),
+            "Creating sample plans.");
+
+          si->setValidStateSamplerAllocator(
+            std::bind(
+              &ControlPlannersBenchMarking::allocValidStateSampler, this, std::placeholders::_1));
+
+          control_simple_setup_->setPlanner(planner_ptr);
+          control_simple_setup_->setup();
+          control_simple_setup_->print(std::cout);
+          ompl::base::PlannerStatus solved = control_simple_setup_->solve(planner_timeout_);
+          ompl::control::PathControl solution_path(si);
           try {
-            std::lock_guard<std::mutex> guard(plan_mutex);
-            ompl::geometric::PathGeometric curr_path =
-              makeAPlan(planner_ptr, control_simple_setup_);
-            if (curr_path.getStateCount() == 0) {
-              RCLCPP_WARN(
-                this->get_logger(),
-                "An empty path detected!, looks like %s failed to "
-                "produce a valid plan",
-                planner_name.c_str());
-            }
-            std::pair<int, ompl::geometric::PathGeometric> curr_pair(index,
-              curr_path);
-            paths_map.insert(curr_pair);
-            control_simple_setup_->clear();
+            control_simple_setup_->getSolutionPath().printAsMatrix(std::cout);
+            solution_path = control_simple_setup_->getSolutionPath();
           } catch (const std::exception & e) {
             std::cerr << e.what() << '\n';
+            RCLCPP_WARN(
+              logger_, "Exception occured while retrivieng control solution path %s",
+              e.what());
+            control_simple_setup_->clear();
           }
+
+          if (solution_path.getStateCount() == 0) {
+            RCLCPP_WARN(
+              this->get_logger(),
+              "An empty path detected!, looks like %s failed to "
+              "produce a valid plan",
+              planner_name.c_str());
+          }
+          std::pair<int, ompl::geometric::PathGeometric> curr_pair(index,
+            solution_path.asGeometric());
+          paths_map.insert(curr_pair);
+          control_simple_setup_->clear();
+
         }
         index++;
       }
 
-      ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_,
+      /*ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_,
         batch_size_);
-      request.displayProgress = false;
+      request.displayProgress = true;
 
       RCLCPP_INFO(
         this->get_logger(),
@@ -425,15 +380,10 @@ namespace vox_nav_planning
         .c_str());
       control_simple_setup_->clear();
 
-      /*b.addExperimentParameter("gt_path_length", "REAL",
-                               std::to_string(gt_plan.length()));
-      b.addExperimentParameter("gt_path_smoothness", "REAL",
-                               std::to_string(gt_plan.smoothness()));*/
-
       RCLCPP_INFO(
         this->get_logger(),
         "Bencmarking results saved to given directory: %s",
-        results_output_dir_.c_str());
+        results_output_dir_.c_str());*/
     }
     return paths_map;
   }
@@ -470,24 +420,23 @@ namespace vox_nav_planning
     const ompl::base::PlannerPtr & planner,
     const ompl::control::SimpleSetupPtr & ss)
   {
-    ss->setPlanner(planner);
+    control_simple_setup_->setup();
+    control_simple_setup_->print(std::cout);
+    control_simple_setup_->setPlanner(planner);
+
     // attempt to solve the problem within one second of planning time
-    ompl::base::PlannerStatus solved = ss->solve(planner_timeout_);
+    ompl::base::PlannerStatus solved = control_simple_setup_->solve(planner_timeout_);
 
     if (!solved) {
-      ompl::geometric::PathGeometric empty_path = ss->getSolutionPath().asGeometric();
+      ompl::geometric::PathGeometric empty_path =
+        control_simple_setup_->getSolutionPath().asGeometric();
       empty_path.clear();
       return empty_path;
     }
 
-    ompl::geometric::PathGeometric original_path = ss->getSolutionPath().asGeometric();
-    ompl::geometric::PathGeometric copy_path = ss->getSolutionPath().asGeometric();
+    ompl::geometric::PathGeometric original_path =
+      control_simple_setup_->getSolutionPath().asGeometric();
 
-    // Path smoothing using bspline
-    ompl::geometric::PathSimplifier path_simlifier(ss->getSpaceInformation());
-    path_simlifier.simplifyMax(original_path);
-    path_simlifier.smoothBSpline(original_path);
-    original_path.interpolate(interpolation_parameter_);
     return original_path;
   }
 
@@ -506,7 +455,6 @@ namespace vox_nav_planning
         marker.header.frame_id = "map";
         marker.header.stamp = rclcpp::Clock().now();
         marker.type = visualization_msgs::msg::Marker::ARROW;
-
         marker.action = visualization_msgs::msg::Marker::ADD;
         marker.lifetime = rclcpp::Duration::from_seconds(0);
         marker.scale.x = 0.8;
@@ -515,29 +463,17 @@ namespace vox_nav_planning
         marker.id = total_poses;
         marker.color = getColorByIndex(it->first);
         marker.ns = "path" + std::to_string(it->first);
-        if (selected_state_space_ == "SE3") {
-          auto se3_state = it->second.getState(curr_path_state)
-            ->as<ompl::base::SE3StateSpace::StateType>();
-          geometry_msgs::msg::Point p;
-          p.x = se3_state->getX();
-          p.y = se3_state->getY();
-          p.z = se3_state->getZ();
-          marker.pose.position = p;
-          marker.pose.orientation.x = se3_state->rotation().x;
-          marker.pose.orientation.y = se3_state->rotation().y;
-          marker.pose.orientation.z = se3_state->rotation().z;
-          marker.pose.orientation.w = se3_state->rotation().w;
-        } else {
-          auto se2_state = it->second.getState(curr_path_state)
-            ->as<ompl::base::SE2StateSpace::StateType>();
-          geometry_msgs::msg::Point p;
-          p.x = se2_state->getX();
-          p.y = se2_state->getY();
-          p.z = start_.z;
-          marker.pose.position = p;
-          marker.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-            0, 0, se2_state->getYaw());
-        }
+
+        auto se2_state = it->second.getState(curr_path_state)
+          ->as<ompl::base::SE2StateSpace::StateType>();
+        geometry_msgs::msg::Point p;
+        p.x = se2_state->getX();
+        p.y = se2_state->getY();
+        p.z = start_.z;
+        marker.pose.position = p;
+        marker.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
+          0, 0, se2_state->getYaw());
+
         marker_array.markers.push_back(marker);
         total_poses++;
       }
@@ -573,12 +509,12 @@ namespace vox_nav_planning
       while (!get_maps_and_surfels_client_->wait_for_service(std::chrono::seconds(1))) {
         if (!rclcpp::ok()) {
           RCLCPP_ERROR(
-            get_logger(),
+            logger_,
             "Interrupted while waiting for the get_maps_and_surfels service. Exiting");
           return;
         }
         RCLCPP_INFO(
-          get_logger(),
+          logger_,
           "get_maps_and_surfels service not available, waiting and trying again");
       }
 
@@ -588,7 +524,7 @@ namespace vox_nav_planning
           result_future) !=
         rclcpp::FutureReturnCode::SUCCESS)
       {
-        RCLCPP_ERROR(get_logger(), "/get_maps_and_surfels service call failed");
+        RCLCPP_ERROR(logger_, "/get_maps_and_surfels service call failed");
       }
       auto response = result_future.get();
 
@@ -597,7 +533,7 @@ namespace vox_nav_planning
       } else {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         RCLCPP_INFO(
-          get_logger(), "Waiting for GetMapsAndSurfels service to provide correct maps.");
+          logger_, "Waiting for GetMapsAndSurfels service to provide correct maps.");
         continue;
       }
 
@@ -639,12 +575,12 @@ namespace vox_nav_planning
       }
 
       RCLCPP_INFO(
-        get_logger(),
+        logger_,
         "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
         "octomap for state validity (aka collision check)", original_octomap_octree_->size());
 
       RCLCPP_INFO(
-        get_logger(),
+        logger_,
         "Recieved a valid Octomap which represents Elevated surfels with %d nodes,"
         " A FCL collision tree will be created from this "
         "octomap for state validity (aka collision check)",

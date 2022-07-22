@@ -108,12 +108,9 @@ namespace vox_nav_planning
         parent->get_parameter("robot_body_dimens.z").as_double()));
 
     fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
-
     robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
-
     elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
     original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-
     get_maps_and_surfels_client_node_ = std::make_shared
       <rclcpp::Node>("get_maps_and_surfels_client_node");
 
@@ -171,6 +168,23 @@ namespace vox_nav_planning
     result->as<ompl::base::ElevationStateSpace::StateType>()->setVelocity(v + duration * ctrl[0]);
 
     si->enforceBounds(result);
+  }
+
+  ompl::base::OptimizationObjectivePtr ElevationControlPlanner::getOptimizationObjective()
+  {
+    // select a optimizatio objective
+    ompl::base::OptimizationObjectivePtr length_objective(
+      new ompl::base::PathLengthOptimizationObjective(control_simple_setup_->getSpaceInformation()));
+    ompl::base::OptimizationObjectivePtr octocost_objective(
+      new ompl::base::OctoCostOptimizationObjective(
+        control_simple_setup_->getSpaceInformation(), elevated_surfel_octomap_octree_));
+
+    ompl::base::MultiOptimizationObjective * multi_optimization =
+      new ompl::base::MultiOptimizationObjective(control_simple_setup_->getSpaceInformation());
+    multi_optimization->addObjective(length_objective, 1.0);
+    multi_optimization->addObjective(octocost_objective, 1.0);
+
+    return ompl::base::OptimizationObjectivePtr(multi_optimization);
   }
 
   std::vector<geometry_msgs::msg::PoseStamped> ElevationControlPlanner::createPlan(
@@ -420,23 +434,6 @@ namespace vox_nav_planning
         elevated_surfel_octomap_octree_->size());
 
     }
-  }
-
-  ompl::base::OptimizationObjectivePtr ElevationControlPlanner::getOptimizationObjective()
-  {
-    // select a optimizatio objective
-    ompl::base::OptimizationObjectivePtr length_objective(
-      new ompl::base::PathLengthOptimizationObjective(control_simple_setup_->getSpaceInformation()));
-    ompl::base::OptimizationObjectivePtr octocost_objective(
-      new ompl::base::OctoCostOptimizationObjective(
-        control_simple_setup_->getSpaceInformation(), elevated_surfel_octomap_octree_));
-
-    ompl::base::MultiOptimizationObjective * multi_optimization =
-      new ompl::base::MultiOptimizationObjective(control_simple_setup_->getSpaceInformation());
-    multi_optimization->addObjective(length_objective, 1.0);
-    multi_optimization->addObjective(octocost_objective, 1.0);
-
-    return ompl::base::OptimizationObjectivePtr(multi_optimization);
   }
 
   ompl::base::ValidStateSamplerPtr ElevationControlPlanner::allocValidStateSampler(
