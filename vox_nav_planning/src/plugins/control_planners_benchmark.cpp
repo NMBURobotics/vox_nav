@@ -57,7 +57,7 @@ namespace vox_nav_planning
     this->get_parameter("planner_timeout", planner_timeout_);
     this->get_parameter("interpolation_parameter", interpolation_parameter_);
     this->get_parameter("octomap_voxel_size", octomap_voxel_size_);
-    this->get_parameter("selected_state_space", selected_state_space_);
+    this->get_parameter("selected_state_space", selected_se2_space_name_);
     this->get_parameter("min_turning_radius", min_turning_radius_);
     this->get_parameter("robot_body_dimens.x", robot_body_dimensions_.x);
     this->get_parameter("robot_body_dimens.y", robot_body_dimensions_.y);
