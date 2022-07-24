@@ -207,14 +207,14 @@ namespace vox_nav_planning
     return ompl::base::OptimizationObjectivePtr(multi_optimization);
   }
 
-  std::map<int, ompl::geometric::PathGeometric>
+  std::map<int, ompl::control::PathControl>
   ControlPlannersBenchMarking::doBenchMarking()
   {
 
     ompl::base::ScopedState<ompl::base::ElevationStateSpace> random_start(state_space_),
     random_goal(state_space_);
     geometry_msgs::msg::PoseStamped start, goal;
-    std::map<int, ompl::geometric::PathGeometric> paths_map;
+    std::map<int, ompl::control::PathControl> paths_map;
     auto si = control_simple_setup_->getSpaceInformation();
 
     for (int i = 0; i < epochs_; i++) {
@@ -320,7 +320,7 @@ namespace vox_nav_planning
 
         //benchmark.addPlanner(planner_ptr);
 
-        if (publish_a_sample_bencmark_ && i == 0) {
+        if (publish_a_sample_bencmark_) {
           //std::lock_guard<std::mutex> guard(plan_mutex);
 
           RCLCPP_INFO(
@@ -354,8 +354,7 @@ namespace vox_nav_planning
               "produce a valid plan",
               planner_name.c_str());
           }
-          std::pair<int, ompl::geometric::PathGeometric> curr_pair(index,
-            solution_path.asGeometric());
+          std::pair<int, ompl::control::PathControl> curr_pair(index, solution_path);
           paths_map.insert(curr_pair);
           control_simple_setup_->clear();
 
@@ -415,33 +414,8 @@ namespace vox_nav_planning
     return !collisionWithFullMapResult.isCollision();
   }
 
-  ompl::geometric::PathGeometric
-  ControlPlannersBenchMarking::makeAPlan(
-    const ompl::base::PlannerPtr & planner,
-    const ompl::control::SimpleSetupPtr & ss)
-  {
-    control_simple_setup_->setup();
-    control_simple_setup_->print(std::cout);
-    control_simple_setup_->setPlanner(planner);
-
-    // attempt to solve the problem within one second of planning time
-    ompl::base::PlannerStatus solved = control_simple_setup_->solve(planner_timeout_);
-
-    if (!solved) {
-      ompl::geometric::PathGeometric empty_path =
-        control_simple_setup_->getSolutionPath().asGeometric();
-      empty_path.clear();
-      return empty_path;
-    }
-
-    ompl::geometric::PathGeometric original_path =
-      control_simple_setup_->getSolutionPath().asGeometric();
-
-    return original_path;
-  }
-
   void ControlPlannersBenchMarking::publishSamplePlans(
-    std::map<int, ompl::geometric::PathGeometric> sample_paths)
+    std::map<int, ompl::control::PathControl> sample_paths)
   {
     visualization_msgs::msg::MarkerArray marker_array;
     int total_poses = 0;
@@ -464,22 +438,26 @@ namespace vox_nav_planning
         marker.color = getColorByIndex(it->first);
         marker.ns = "path" + std::to_string(it->first);
 
-        auto se2_state = it->second.getState(curr_path_state)
-          ->as<ompl::base::SE2StateSpace::StateType>();
+        const auto * cstate =
+          it->second.getState(curr_path_state)->as<ompl::base::ElevationStateSpace::StateType>();
+        // cast the abstract state type to the type we expect
+        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+        // extract the second component of the state and cast it to what we expect
+        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
         geometry_msgs::msg::Point p;
-        p.x = se2_state->getX();
-        p.y = se2_state->getY();
-        p.z = start_.z;
+        p.x = se2->getX();
+        p.y = se2->getY();
+        p.z = z->values[0];
         marker.pose.position = p;
         marker.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-          0, 0, se2_state->getYaw());
+          0, 0, se2->getYaw());
 
         marker_array.markers.push_back(marker);
         total_poses++;
       }
       it++;
     }
-    plan_publisher_->publish(marker_array);
     geometry_msgs::msg::PoseArray start_and_goal;
     start_and_goal.header = marker_array.markers.front().header;
     geometry_msgs::msg::Pose start, goal;
@@ -495,7 +473,9 @@ namespace vox_nav_planning
       vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, goal_.yaw);
     start_and_goal.poses.push_back(start);
     start_and_goal.poses.push_back(goal);
+
     start_goal_poses_publisher_->publish(start_and_goal);
+    plan_publisher_->publish(marker_array);
   }
 
   void ControlPlannersBenchMarking::setupMap()

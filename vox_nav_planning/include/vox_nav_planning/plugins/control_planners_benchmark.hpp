@@ -205,7 +205,7 @@ namespace vox_nav_planning
      * @brief perfrom actual benchmark and return a sample run
      *
      */
-    std::map<int, ompl::geometric::PathGeometric> doBenchMarking();
+    std::map<int, ompl::control::PathControl> doBenchMarking();
 
     /**
      * @brief Callback to subscribe ang get octomap
@@ -248,23 +248,11 @@ namespace vox_nav_planning
     bool isStateValid(const ompl::base::State * state);
 
     /**
-     * @brief  make a plan with specified simple setup and planner
-     *
-     * @param planner
-     * @param si
-     * @return ompl::geometric::PathGeometric
-     */
-    ompl::geometric::PathGeometric
-    makeAPlan(
-      const ompl::base::PlannerPtr & planner,
-      const ompl::control::SimpleSetupPtr & ss);
-
-    /**
      * @brief publish sample plan from bencmarking as marker array into RVIZ
      *
      */
     void publishSamplePlans(
-      std::map<int, ompl::geometric::PathGeometric> sample_paths);
+      std::map<int, ompl::control::PathControl> sample_paths);
 
     /**
      * @brief Get the Color By Index object

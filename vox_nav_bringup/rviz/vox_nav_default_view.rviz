@@ -8,7 +8,7 @@ Panels:
         - /OpenVSLAM Odometry1/Shape1
         - /OctoMap PointCloud21/Topic1
       Splitter Ratio: 0.5133614540100098
-    Tree Height: 543
+    Tree Height: 509
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -431,6 +431,18 @@ Visualization Manager:
           Value: true
         imu_link:
           Value: true
+        leg0:
+          Value: true
+        leg1:
+          Value: true
+        leg2:
+          Value: true
+        leg3:
+          Value: true
+        map:
+          Value: true
+        odom:
+          Value: true
         pipe0_1:
           Value: true
         pipe0_2:
@@ -451,6 +463,8 @@ Visualization Manager:
           Value: true
         pipe4_2:
           Value: true
+        static_map:
+          Value: true
         top0:
           Value: true
         top1:
@@ -459,7 +473,17 @@ Visualization Manager:
           Value: true
         top3:
           Value: true
+        utm:
+          Value: true
         velodyne_link:
+          Value: true
+        wheel0_link:
+          Value: true
+        wheel1_link:
+          Value: true
+        wheel2_link:
+          Value: true
+        wheel3_link:
           Value: true
         wide_angle_camera_link:
           Value: true
@@ -469,7 +493,115 @@ Visualization Manager:
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        utm:
+          map:
+            odom:
+              base_link:
+                base_sensor_link:
+                  camera_bottom_screw_frame:
+                    camera_link:
+                      camera_depth_frame:
+                        camera_color_frame:
+                          camera_color_optical_frame:
+                            {}
+                        camera_depth_optical_frame:
+                          {}
+                        camera_left_ir_frame:
+                          camera_left_ir_optical_frame:
+                            {}
+                        camera_right_ir_frame:
+                          camera_right_ir_optical_frame:
+                            {}
+                  gps_link:
+                    {}
+                  imu_link:
+                    {}
+                  velodyne_link:
+                    {}
+                  wide_angle_camera_link:
+                    {}
+                bat0:
+                  {}
+                bat1:
+                  {}
+                corner0:
+                  corner0_1:
+                    {}
+                  corner0_2:
+                    {}
+                  corner0_3:
+                    {}
+                  corner0_4:
+                    {}
+                corner1:
+                  corner1_1:
+                    {}
+                  corner1_2:
+                    {}
+                  corner1_3:
+                    {}
+                  corner1_4:
+                    {}
+                corner2:
+                  corner2_1:
+                    {}
+                  corner2_2:
+                    {}
+                  corner2_3:
+                    {}
+                  corner2_4:
+                    {}
+                corner3:
+                  corner3_1:
+                    {}
+                  corner3_2:
+                    {}
+                  corner3_3:
+                    {}
+                  corner3_4:
+                    {}
+                leg0:
+                  wheel0_link:
+                    {}
+                leg1:
+                  wheel1_link:
+                    {}
+                leg2:
+                  wheel2_link:
+                    {}
+                leg3:
+                  wheel3_link:
+                    {}
+                pipe0_1:
+                  {}
+                pipe0_2:
+                  {}
+                pipe1_1:
+                  {}
+                pipe1_2:
+                  {}
+                pipe2_1:
+                  {}
+                pipe2_2:
+                  {}
+                pipe3_1:
+                  {}
+                pipe3_2:
+                  {}
+                pipe4_1:
+                  {}
+                pipe4_2:
+                  {}
+                top0:
+                  {}
+                top1:
+                  {}
+                top2:
+                  {}
+                top3:
+                  {}
+            static_map:
+              {}
       Update Interval: 0
       Value: true
     - Class: rviz_default_plugins/Image
@@ -889,13 +1021,46 @@ Visualization Manager:
       Enabled: true
       Name: RTT TREE GROWTH
       Namespaces:
-        {}
+        rrt_nodes: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /vox_nav/rrtstar/nodes
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Namespaces:
+        path0: true
+        path1: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /benchmark_plan
+      Value: true
+    - Alpha: 1
+      Arrow Length: 0.30000001192092896
+      Axes Length: 1
+      Axes Radius: 0.5
+      Class: rviz_default_plugins/PoseArray
+      Color: 255; 25; 0
+      Enabled: true
+      Head Length: 0.07000000029802322
+      Head Radius: 0.029999999329447746
+      Name: PoseArray
+      Shaft Length: 0.23000000417232513
+      Shaft Radius: 0.009999999776482582
+      Shape: Axes
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /start_goal_poses
       Value: true
   Enabled: true
   Global Options:
@@ -931,7 +1096,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 81.43029022216797
+      Distance: 69.29594421386719
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -949,7 +1114,7 @@ Visualization Manager:
       Pitch: 1.5697963237762451
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.953756809234619
+      Yaw: 1.5569411516189575
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016
@@ -974,14 +1139,14 @@ Visualization Manager:
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1016
+  Height: 964
   Hide Left Dock: false
   Hide Right Dock: true
   Image:
     collapsed: false
   Navigation 2:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001ab0000039efc020000000dfb0000001200530065006c0065006300740069006f006e000000003d000000830000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000025c000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000018004e0061007600690067006100740069006f006e0020003200000001c70000014e000000a400fffffffb0000001e005200650061006c00730065006e0073006500430061006d00650072006100000002c6000000c10000000000000000fb0000000a0049006d00610067006500000002b7000000f00000002800fffffffb0000000a00560069006500770073010000029f0000013c000000a400fffffffb0000000a0049006d00610067006501000002250000007e0000000000000000000000010000010f0000039efc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d00650100000000000004500000000000000000000005cf0000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001ab0000036afc020000000dfb0000001200530065006c0065006300740069006f006e000000003d000000830000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000023a000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000018004e0061007600690067006100740069006f006e0020003200000001c70000014e000000a400fffffffb0000001e005200650061006c00730065006e0073006500430061006d00650072006100000002c6000000c10000000000000000fb0000000a0049006d00610067006500000002b7000000f00000002800fffffffb0000000a00560069006500770073010000027d0000012a000000a400fffffffb0000000a0049006d00610067006501000002250000007e0000000000000000000000010000010f0000039efc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d00650100000000000004500000000000000000000005cf0000036a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Tool Properties:
