@@ -229,15 +229,13 @@ namespace vox_nav_planning
         start_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
         goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
 
-        start.pose.position.x = getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-        start.pose.position.y = getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
-        start.pose.orientation =
-          vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, start_yaw);
+        start.pose.position.x = 5;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+        start.pose.position.y = -12; getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+        start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 
-        goal.pose.position.x = getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-        goal.pose.position.y = getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
-        goal.pose.orientation =
-          vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, goal_yaw);
+        goal.pose.position.x = 35;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+        goal.pose.position.y = 35;//getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+        goal.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 
         vox_nav_utilities::determineValidNearestGoalStart(
           nearest_elevated_surfel_to_start_,
@@ -268,6 +266,23 @@ namespace vox_nav_planning
         RCLCPP_INFO(
           this->get_logger(),
           "Checking whether random generated goal start pair are valid ... ");
+
+        // create a planner for the defined space
+        ompl::base::PlannerPtr rrtstar_planner;
+        rrtstar_planner =
+          ompl::base::PlannerPtr(new ompl::control::RRT(si));
+        control_simple_setup_->setPlanner(rrtstar_planner);
+        RCLCPP_INFO(
+          this->get_logger(), "Checking whether a solution exists for "
+          "random start and goal states .");
+        //ompl::base::PlannerStatus has_solution = control_simple_setup_->solve(20.0);
+
+        // if it gets to this point , that menas our random states are valid and
+        // already meets min dist requiremnets but now there also has to be a
+        // solution for this problem
+        /*found_valid_random_start_goal =
+          (has_solution == ompl::base::PlannerStatus::EXACT_SOLUTION);*/
+
 
         found_valid_random_start_goal =
           (isStateValid(random_start.get()) && isStateValid(random_goal.get()) &&
@@ -422,40 +437,38 @@ namespace vox_nav_planning
 
     auto it = sample_paths.begin();
     while (it != sample_paths.end()) {
+
+      visualization_msgs::msg::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = rclcpp::Clock().now();
+      marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+      marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.lifetime = rclcpp::Duration::from_seconds(0);
+      marker.scale.x = 0.3;
+      marker.scale.y = 0.3;
+      marker.scale.z = 0.3;
+      marker.id = total_poses;
+      marker.color = getColorByIndex(it->first);
+      marker.ns = "path" + std::to_string(it->first);
+
       for (std::size_t curr_path_state = 0;
         curr_path_state < it->second.getStateCount(); curr_path_state++)
       {
-        visualization_msgs::msg::Marker marker;
-        marker.header.frame_id = "map";
-        marker.header.stamp = rclcpp::Clock().now();
-        marker.type = visualization_msgs::msg::Marker::ARROW;
-        marker.action = visualization_msgs::msg::Marker::ADD;
-        marker.lifetime = rclcpp::Duration::from_seconds(0);
-        marker.scale.x = 0.8;
-        marker.scale.y = 0.2;
-        marker.scale.z = 0.2;
-        marker.id = total_poses;
-        marker.color = getColorByIndex(it->first);
-        marker.ns = "path" + std::to_string(it->first);
-
         const auto * cstate =
           it->second.getState(curr_path_state)->as<ompl::base::ElevationStateSpace::StateType>();
         // cast the abstract state type to the type we expect
         const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
         // extract the second component of the state and cast it to what we expect
         const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-
         geometry_msgs::msg::Point p;
         p.x = se2->getX();
         p.y = se2->getY();
         p.z = z->values[0];
-        marker.pose.position = p;
-        marker.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
-          0, 0, se2->getYaw());
-
-        marker_array.markers.push_back(marker);
-        total_poses++;
+        marker.points.push_back(p);
+        marker.colors.push_back(getColorByIndex(it->first));
       }
+      marker_array.markers.push_back(marker);
+      total_poses++;
       it++;
     }
     geometry_msgs::msg::PoseArray start_and_goal;

@@ -16,6 +16,7 @@
 #define VOX_NAV_PLANNING__RRT__RRTSTARF_HPP_
 
 #include "vox_nav_planning/planner_core.hpp"
+#include "vox_nav_planning/rrt/LQRPlanner.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
 #include "nav_msgs/msg/path.hpp"
 
@@ -310,6 +311,63 @@ namespace ompl
         return si_->distance(a->state_, b->state_);
       }
 
+      std::vector<base::State *> lqrize(Node * goal_node, int segment_framing)
+      {
+        lqr_planner_->set_max_time(50.0);
+        lqr_planner_->set_goal_tolerance(0.5);
+        lqr_planner_->set_phi_bound(0.6);
+
+        std::vector<Node *> path_nodes;
+        std::vector<base::State *> lqr_path_states;
+
+        path_nodes.push_back(goal_node);
+
+        auto node = goal_node;
+        while (node->parent_) {
+          path_nodes.push_back(node);
+          node = node->parent_;
+        }
+        if (path_nodes.size() < segment_framing) {
+          return lqr_path_states;
+        }
+
+        std::reverse(path_nodes.begin(), path_nodes.end());
+
+        for (int i = segment_framing; i < path_nodes.size(); i += segment_framing) {
+
+          if (i >= path_nodes.size()) {
+            i = path_nodes.size() - 1;
+          }
+
+          auto prev_node = path_nodes[i - segment_framing];
+          auto cur_node = path_nodes[i];
+          double relative_cost = 0.0;
+
+          std::vector<base::State *> resulting_path;
+
+          if (i == segment_framing) {
+            lqr_planner_->compute_LQR_plan(
+              prev_node->state_, cur_node->state_, resulting_path);
+          } else {
+            auto * prev_node_cstate =
+              prev_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
+            auto * latest_arrived_cstate =
+              lqr_path_states.back()->as<ompl::base::ElevationStateSpace::StateType>();
+            prev_node_cstate->setYaw(latest_arrived_cstate->getSE2()->getYaw());
+            lqr_planner_->compute_LQR_plan(
+              prev_node->state_, cur_node->state_, resulting_path);
+          }
+
+          for (auto seg : resulting_path) {
+            lqr_path_states.push_back(seg);
+
+          }
+        }
+        lqr_planner_->set_max_time(4.0);
+
+        return lqr_path_states;
+      }
+
       std::vector<base::State *> generate_final_course(Node * goal_node)
       {
         std::vector<base::State *> final_path;
@@ -349,9 +407,11 @@ namespace ompl
       rclcpp::Node::SharedPtr node_;
 
       double goalBias_{0.05};
-      double path_resolution_{0.25};
-      double connect_circle_dist_{50.0};
+      double path_resolution_{0.10};
+      double connect_circle_dist_{100.0};
       double expand_dis_{1.5};
+
+      std::shared_ptr<LQRPlanner> lqr_planner_;
 
       /** \brief The random number generator */
       RNG rng_;

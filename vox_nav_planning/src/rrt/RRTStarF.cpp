@@ -6,6 +6,7 @@ ompl::control::RRTStarF::RRTStarF(const SpaceInformationPtr & si)
 {
   specs_.approximateSolutions = true;
   siC_ = si.get();
+  lqr_planner_ = std::make_shared<LQRPlanner>(si);
 }
 
 ompl::control::RRTStarF::~RRTStarF()
@@ -210,6 +211,7 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
 
   if (last_valid_node) {
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
+    //std::vector<base::State *> final_course = lqrize(last_valid_node, 4);
     solved = true;
 
     /* set the solution path */
@@ -219,6 +221,26 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
         path->append(i);
       }
     }
+
+    for (size_t i = 1; i < path->getStateCount(); i++) {
+
+      auto * ith_cstate =
+        path->getState(i)->as<ompl::base::ElevationStateSpace::StateType>();
+      auto * ith_se2 = ith_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+      auto * ith_z = ith_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+      auto * prev_cstate =
+        path->getState(i - 1)->as<ompl::base::ElevationStateSpace::StateType>();
+      auto * prev_se2 = prev_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+      auto * prev_z = prev_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+      double dx = ith_se2->getX() - prev_se2->getX();
+      double dy = ith_se2->getY() - prev_se2->getY();
+      double roll, pitch, yaw;
+      yaw = std::atan2(dy, dx);
+      ith_se2->setYaw(yaw);
+    }
+
     solved = true;
     pdef_->addSolutionPath(path, approximate, 0.0 /*approxdif*/, getName());
     OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());

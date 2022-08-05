@@ -60,19 +60,31 @@ namespace ompl
       rclcpp::Node::SharedPtr node_;
 
       double dt_{0.25};
-      double max_time_{4.0};
+      double max_time_{2.0};
       double q1_{1};
       double q2_{10};
       double r_{1};
-      double v_r_{1.0};
+      double v_r_{1.5};
       double L_{0.8};
       double phi_bound_{0.4};
       double goal_tolerance_{0.5};
+
+      void set_phi_bound(
+        double phi_bound)
+      {
+        phi_bound_ = phi_bound;
+      }
 
       void set_max_time(
         double max_time)
       {
         max_time_ = max_time;
+      }
+
+      void set_goal_tolerance(
+        double goal_tolerance)
+      {
+        goal_tolerance_ = goal_tolerance;
       }
 
       void update_params(

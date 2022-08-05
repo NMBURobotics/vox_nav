@@ -2,8 +2,8 @@ vox_nav_planner_server_rclcpp_node:
   ros__parameters:
     planner_plugin: "ElevationControlPlanner"          # other options: "SE2Planner", "ElevationPlanner", "OptimalElevationPlanner"
     expected_planner_frequency: 1.0
-    planner_name: "RRTStarF"                            
-    planner_timeout: 20.0
+    planner_name: "LQRRRTStar"                            
+    planner_timeout: 35.0
     interpolation_parameter: 0                         # set to 0 if you wanna disable interpolating and smooting, otherwise 25 is a good default value                    
     octomap_voxel_size: 0.4
     robot_body_dimens:

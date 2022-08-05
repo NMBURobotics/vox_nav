@@ -70,6 +70,7 @@ void ompl::control::LQRRRTStar::freeMemory()
   }
 }
 
+
 ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
   const base::PlannerTerminationCondition & ptc)
 {
@@ -136,12 +137,9 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
       std::vector<Node *> near_nodes = find_near_nodes(new_node);
       auto node_with_updated_parent = choose_parent(new_node, near_nodes);
       if (node_with_updated_parent != nullptr) {
-        //rewire(node_with_updated_parent, near_nodes);
         nn_->add(node_with_updated_parent);
-      } else {
-        nn_->add(new_node);
+        last_node = search_best_goal_node(goal_node);
       }
-      last_node = search_best_goal_node(goal_node);
     }
 
     if (last_node != nullptr && last_node->cost_.value() < last_valid_node->cost_.value()) {
@@ -230,7 +228,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
 
     OMPL_INFORM("Final solution cost %.2f", last_valid_node->cost_.value());
 
-    smooth_final_course(last_valid_node, 2);
+    /*smooth_final_course(last_valid_node, 2);
     OMPL_INFORM(
       "Final solution cost: %.2f after smoothing with segment_framing: 2",
       last_valid_node->cost_.value());
@@ -243,7 +241,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
     smooth_final_course(last_valid_node, 5);
     OMPL_INFORM(
       "Final solution cost: %.2f after smoothing with segment_framing: 5",
-      last_valid_node->cost_.value());
+      last_valid_node->cost_.value());*/
 
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
     solved = true;

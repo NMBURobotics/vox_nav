@@ -208,6 +208,7 @@ namespace ompl
         return new_cost;
       }
 
+
       Node * choose_parent(Node * new_node, std::vector<Node *> near_nodes)
       {
         if (!near_nodes.size()) {
@@ -366,6 +367,8 @@ namespace ompl
       void smooth_final_course(Node * goal_node, int segment_framing)
       {
         lqr_planner_->set_max_time(50.0);
+        lqr_planner_->set_goal_tolerance(0.8);
+
         std::vector<Node *> path_nodes;
         path_nodes.push_back(goal_node);
 
@@ -380,6 +383,7 @@ namespace ompl
         std::reverse(path_nodes.begin(), path_nodes.end());
 
         for (int i = segment_framing; i < path_nodes.size(); i += segment_framing) {
+
           if (i >= path_nodes.size()) {
             break;
           }
@@ -452,8 +456,8 @@ namespace ompl
       std::shared_ptr<LQRPlanner> lqr_planner_;
 
       double goalBias_{0.05};
-      double connect_circle_dist_{50.0};
-      double expand_dis_{1.5};
+      double connect_circle_dist_{10.0};
+      double expand_dis_{2.5};
       double goal_tolerance_{0.5};
 
       /** \brief The random number generator */
