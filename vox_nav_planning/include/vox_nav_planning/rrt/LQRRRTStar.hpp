@@ -111,6 +111,11 @@ namespace ompl
 
       Node * steer(Node * from_node, Node * to_node, double * relative_cost)
       {
+
+        if (from_node == nullptr || to_node == nullptr) {
+          return nullptr;
+        }
+
         std::vector<base::State *> resulting_path;
         lqr_planner_->compute_LQR_plan(from_node->state_, to_node->state_, resulting_path);
 
@@ -301,15 +306,17 @@ namespace ompl
         return si_->distance(a, b);
       }
 
-      void smooth_final_course(Node * goal_node, int segment_framing)
+      void smooth_final_course(
+        Node * last_valid_node, int segment_framing, Node * goal_node)
       {
         lqr_planner_->set_max_time(50.0);
-        lqr_planner_->set_goal_tolerance(0.8);
+        lqr_planner_->set_goal_tolerance(0.25);
 
         std::vector<Node *> path_nodes;
-        path_nodes.push_back(goal_node);
 
-        auto node = goal_node;
+        path_nodes.push_back(last_valid_node);
+
+        auto node = last_valid_node;
         while (node->parent_) {
           path_nodes.push_back(node);
           node = node->parent_;
@@ -329,12 +336,8 @@ namespace ompl
           auto cur_node = path_nodes[i];
           double relative_cost = 0.0;
 
-          if (i >= path_nodes.size()) {
-            prev_node = path_nodes.back();
-            cur_node = goal_node;
-          }
-
           Node * new_node = steer(prev_node, cur_node, &relative_cost);
+
           if (new_node) {
             new_node->cost_ = base::Cost(calc_new_cost(prev_node, relative_cost));
             bool no_collision = check_collision(new_node);
@@ -355,6 +358,7 @@ namespace ompl
             }
           }
         }
+
         lqr_planner_->set_max_time(4.0);
       }
 
