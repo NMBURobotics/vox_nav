@@ -441,11 +441,11 @@ namespace vox_nav_planning
       visualization_msgs::msg::Marker marker;
       marker.header.frame_id = "map";
       marker.header.stamp = rclcpp::Clock().now();
-      marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+      marker.type = visualization_msgs::msg::Marker::SPHERE_LIST;
       marker.action = visualization_msgs::msg::Marker::ADD;
       marker.lifetime = rclcpp::Duration::from_seconds(0);
-      marker.scale.x = 0.3;
-      marker.scale.y = 0.3;
+      marker.scale.x = 0.4;
+      marker.scale.y = 0.4;
       marker.scale.z = 0.3;
       marker.id = total_poses;
       marker.color = getColorByIndex(it->first);

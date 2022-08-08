@@ -211,7 +211,7 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
 
   if (last_valid_node) {
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
-    //std::vector<base::State *> final_course = lqrize(last_valid_node, 4);
+    //final_course = lqrize(final_course, 4);
     solved = true;
 
     /* set the solution path */

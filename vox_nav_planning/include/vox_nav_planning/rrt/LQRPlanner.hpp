@@ -69,6 +69,18 @@ namespace ompl
       double phi_bound_{0.4};
       double goal_tolerance_{0.5};
 
+      void set_v(
+        double v)
+      {
+        v_r_ = v;
+      }
+
+      void set_dt(
+        double dt)
+      {
+        dt_ = dt;
+      }
+
       void set_phi_bound(
         double phi_bound)
       {

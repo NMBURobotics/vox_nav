@@ -131,7 +131,6 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
     double relative_cost = 0.0;
     auto new_node = steer(nearest_node, random_node, &relative_cost);
     if (!new_node) {continue;}
-    new_node->cost_ = opt_->combineCosts(nearest_node->cost_, base::Cost(relative_cost));
 
     if (check_collision(new_node)) {
       std::vector<Node *> near_nodes = find_near_nodes(new_node);
@@ -228,7 +227,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
 
     OMPL_INFORM("Final solution cost %.2f", last_valid_node->cost_.value());
 
-    /*smooth_final_course(last_valid_node, 2);
+    smooth_final_course(last_valid_node, 2);
     OMPL_INFORM(
       "Final solution cost: %.2f after smoothing with segment_framing: 2",
       last_valid_node->cost_.value());
@@ -241,7 +240,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
     smooth_final_course(last_valid_node, 5);
     OMPL_INFORM(
       "Final solution cost: %.2f after smoothing with segment_framing: 5",
-      last_valid_node->cost_.value());*/
+      last_valid_node->cost_.value());
 
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
     solved = true;

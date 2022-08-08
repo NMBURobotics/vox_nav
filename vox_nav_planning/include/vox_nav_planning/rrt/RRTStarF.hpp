@@ -311,26 +311,19 @@ namespace ompl
         return si_->distance(a->state_, b->state_);
       }
 
-      std::vector<base::State *> lqrize(Node * goal_node, int segment_framing)
+      std::vector<base::State *> lqrize(std::vector<base::State *> path_nodes, int segment_framing)
       {
-        lqr_planner_->set_max_time(50.0);
-        lqr_planner_->set_goal_tolerance(0.5);
-        lqr_planner_->set_phi_bound(0.6);
+        lqr_planner_->set_max_time(20.0);
+        lqr_planner_->set_goal_tolerance(0.25);
+        lqr_planner_->set_phi_bound(0.8);
+        lqr_planner_->set_dt(0.1);
+        lqr_planner_->set_v(1.0);
 
-        std::vector<Node *> path_nodes;
         std::vector<base::State *> lqr_path_states;
 
-        path_nodes.push_back(goal_node);
-
-        auto node = goal_node;
-        while (node->parent_) {
-          path_nodes.push_back(node);
-          node = node->parent_;
-        }
         if (path_nodes.size() < segment_framing) {
           return lqr_path_states;
         }
-
         std::reverse(path_nodes.begin(), path_nodes.end());
 
         for (int i = segment_framing; i < path_nodes.size(); i += segment_framing) {
@@ -347,15 +340,15 @@ namespace ompl
 
           if (i == segment_framing) {
             lqr_planner_->compute_LQR_plan(
-              prev_node->state_, cur_node->state_, resulting_path);
+              prev_node, cur_node, resulting_path);
           } else {
             auto * prev_node_cstate =
-              prev_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
+              prev_node->as<ompl::base::ElevationStateSpace::StateType>();
             auto * latest_arrived_cstate =
               lqr_path_states.back()->as<ompl::base::ElevationStateSpace::StateType>();
             prev_node_cstate->setYaw(latest_arrived_cstate->getSE2()->getYaw());
             lqr_planner_->compute_LQR_plan(
-              prev_node->state_, cur_node->state_, resulting_path);
+              prev_node, cur_node, resulting_path);
           }
 
           for (auto seg : resulting_path) {

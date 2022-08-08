@@ -140,7 +140,7 @@ namespace ompl
           double cost = std::accumulate(clen.begin(), clen.end(), 0.0);
           *relative_cost = cost;
 
-          auto new_cost = new_node->cost_.value() + cost;
+          auto new_cost = from_node->cost_.value() + cost;
           new_node->cost_ = base::Cost(new_cost);
           new_node->path_ = resulting_path;
           new_node->parent_ = from_node;
@@ -168,37 +168,15 @@ namespace ompl
         return true;
       }
 
-      std::tuple<double, double, double> calc_distance_and_angle(Node * from_node, Node * to_node)
-      {
-        const auto * from_node_se2 =
-          from_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
-          0);
-        const auto * from_node_z =
-          from_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
-          1);
-        const auto * to_node_se2 =
-          to_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
-          0);
-        const auto * to_node_z =
-          to_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
-          1);
-        double dx = to_node_se2->getX() - from_node_se2->getX();
-        double dy = to_node_se2->getY() - from_node_se2->getY();
-        double dz = to_node_z->values[0] - from_node_z->values[0];
-        double d = std::hypot(dx, dy, dz);
-        double theta = std::atan2(dy, dx);
-        double beta = std::atan2(dz, std::hypot(dx, dy));
-
-        return std::make_tuple(d, theta, beta);
-      }
-
       std::vector<Node *> find_near_nodes(Node * new_node)
       {
         std::vector<Node *> near_nodes;
         auto nnode = nn_->size() + 1;
-        double r = connect_circle_dist_ * std::sqrt((std::log(nnode) / nnode));
-        r = std::min(r, expand_dis_);
-        nn_->nearestR(new_node, r * r, near_nodes);
+        //double r = connect_circle_dist_ * std::sqrt((std::log(nnode) / nnode));
+        //r = std::min(r, expand_dis_);
+        //nn_->nearestR(new_node, r * r, near_nodes);
+        //nn_->nearestR(new_node, 25.0, near_nodes);
+        nn_->nearestK(new_node, 5, near_nodes);
         return near_nodes;
       }
 
@@ -217,7 +195,7 @@ namespace ompl
         std::vector<double> costs;
         for (auto near_node : near_nodes) {
           double relative_cost = 0.0;
-          Node * t_node = steer(near_node, new_node, &relative_cost);
+          auto t_node = steer(near_node, new_node, &relative_cost);
           if (t_node && check_collision(t_node)) {
             costs.push_back(calc_new_cost(near_node, relative_cost));
           } else {
@@ -231,9 +209,9 @@ namespace ompl
           return nullptr;
         }
         double relative_cost = 0.0;
-        new_node = steer(near_nodes[min_cost_index], new_node, &relative_cost);
-        new_node->cost_ = base::Cost(min_cost);
-        return new_node;
+        auto updated_new_node = steer(near_nodes[min_cost_index], new_node, &relative_cost);
+        updated_new_node->cost_ = base::Cost(min_cost);
+        return updated_new_node;
       }
 
       void rewire(Node * new_node, std::vector<Node *> near_nodes)
@@ -323,47 +301,6 @@ namespace ompl
         return si_->distance(a, b);
       }
 
-      void fine_tune_final_course(Node * goal_node)
-      {
-        lqr_planner_->set_max_time(20.0);
-        std::vector<Node *> path_nodes;
-        path_nodes.push_back(goal_node);
-
-        auto node = goal_node;
-        while (node->parent_) {
-          path_nodes.push_back(node);
-          node = node->parent_;
-        }
-        if (path_nodes.size() < 4) {
-          return;
-        }
-        std::reverse(path_nodes.begin(), path_nodes.end());
-
-        for (int i = 2; i < path_nodes.size(); i += 2) {
-          if (i >= path_nodes.size()) {
-            break;
-          }
-
-          auto prev_node = path_nodes[i - 2];
-          auto cur_node = path_nodes[i];
-          double relative_cost = 0.0;
-          Node * new_node = steer(prev_node, cur_node, &relative_cost);
-          if (new_node) {
-            new_node->cost_ = base::Cost(calc_new_cost(prev_node, relative_cost));
-            bool no_collision = check_collision(new_node);
-            bool improved_cost = cur_node->cost_.value() > new_node->cost_.value();
-            if (no_collision && improved_cost) {
-              si_->copyState(cur_node->state_, new_node->state_);
-              cur_node->cost_ = new_node->cost_;
-              cur_node->path_ = new_node->path_;
-              cur_node->parent_ = new_node->parent_;
-              propagate_cost_to_leaves(prev_node);
-            }
-          }
-        }
-        lqr_planner_->set_max_time(4.0);
-      }
-
       void smooth_final_course(Node * goal_node, int segment_framing)
       {
         lqr_planner_->set_max_time(50.0);
@@ -385,12 +322,18 @@ namespace ompl
         for (int i = segment_framing; i < path_nodes.size(); i += segment_framing) {
 
           if (i >= path_nodes.size()) {
-            break;
+            i = path_nodes.size() - 1;
           }
 
           auto prev_node = path_nodes[i - segment_framing];
           auto cur_node = path_nodes[i];
           double relative_cost = 0.0;
+
+          if (i >= path_nodes.size()) {
+            prev_node = path_nodes.back();
+            cur_node = goal_node;
+          }
+
           Node * new_node = steer(prev_node, cur_node, &relative_cost);
           if (new_node) {
             new_node->cost_ = base::Cost(calc_new_cost(prev_node, relative_cost));
