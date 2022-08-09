@@ -338,6 +338,12 @@ namespace ompl
               closest_idx = j;
             }
           }
+
+          if (closest_idx > all_states.size() - 1) {
+            sorted.push_back(all_states.back());
+            break;
+          }
+
           sorted.push_back(all_states[closest_idx]);
           all_states.erase(all_states.begin() + closest_idx);
           goto sortCont;
