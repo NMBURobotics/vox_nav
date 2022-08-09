@@ -306,6 +306,46 @@ namespace ompl
         return si_->distance(a, b);
       }
 
+      std::vector<base::State *> remove_duplicate_states(std::vector<base::State *> all_states)
+      {
+
+        multiCont : /* Empty statement using the semicolon */;
+        for (int i = 0; i < all_states.size(); i++) {
+          for (int j = 0; j < all_states.size(); j++) {
+            if ( (i != j) && (distanceFunction(all_states[i], all_states[j]) < 0.05)) {
+              // j is duplicate
+              all_states.erase(all_states.begin() + j);
+              goto multiCont;
+            }
+          }
+        }
+
+        std::vector<base::State *> sorted;
+        sorted.push_back(all_states.front());
+        all_states.erase(all_states.begin());
+
+        sortCont : /* Empty statement using the semicolon */;
+
+        for (int i = 0; i < all_states.size(); i++) {
+          int closest_idx = 100000;
+          double currnet_min = 100000.0;
+          all_states[i] = sorted.back();
+
+          for (int j = 0; j < all_states.size(); j++) {
+            double dist = distanceFunction(all_states[i], all_states[j]);
+            if (dist < currnet_min && ( i != j)) {
+              currnet_min = dist;
+              closest_idx = j;
+            }
+          }
+          sorted.push_back(all_states[closest_idx]);
+          all_states.erase(all_states.begin() + closest_idx);
+          goto sortCont;
+        }
+
+        return sorted;
+      }
+
       void smooth_final_course(
         Node * last_valid_node, int segment_framing, Node * goal_node)
       {

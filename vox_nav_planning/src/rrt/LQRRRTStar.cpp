@@ -258,6 +258,8 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
     solved = true;
 
+    final_course = remove_duplicate_states(final_course);
+
     /* set the solution path */
     auto path(std::make_shared<PathControl>(si_));
     for (auto i : final_course) {
@@ -267,6 +269,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
     }
     solved = true;
     pdef_->addSolutionPath(path, approximate, 0.0 /*approxdif*/, getName());
+    OMPL_INFORM("Solution Lenght %.2f", path->length());
     OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
   } else {
     OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());

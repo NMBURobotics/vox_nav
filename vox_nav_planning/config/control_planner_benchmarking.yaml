@@ -1,6 +1,6 @@
 control_planners_benchmark:
   ros__parameters:
-    planner_timeout: 35.0
+    planner_timeout: 30.0
     interpolation_parameter: 50
     octomap_voxel_size: 0.4
     selected_state_space: "SE2" # "DUBINS","REEDS", "SE2", "SE3" ### PS. Use DUBINS OR REEDS for Ackermann

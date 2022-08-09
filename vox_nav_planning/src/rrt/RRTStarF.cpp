@@ -216,6 +216,8 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
 
     /* set the solution path */
     auto path(std::make_shared<PathControl>(si_));
+    final_course = remove_duplicate_states(final_course);
+
     for (auto i : final_course) {
       if (i) {
         path->append(i);
@@ -244,6 +246,7 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
     solved = true;
     pdef_->addSolutionPath(path, approximate, 0.0 /*approxdif*/, getName());
     OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
+    OMPL_INFORM("Solution Lenght %.2f", path->length());
   } else {
     OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());
   }

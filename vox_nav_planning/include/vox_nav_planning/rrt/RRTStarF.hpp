@@ -310,7 +310,10 @@ namespace ompl
       {
         return si_->distance(a->state_, b->state_);
       }
-
+      double distanceFunction(const base::State * a, const base::State * b) const
+      {
+        return si_->distance(a, b);
+      }
       std::vector<base::State *> lqrize(std::vector<base::State *> path_nodes, int segment_framing)
       {
         lqr_planner_->set_max_time(20.0);
@@ -376,6 +379,24 @@ namespace ompl
 
         final_path.push_back(node->state_);
         return final_path;
+      }
+
+      std::vector<base::State *> remove_duplicate_states(std::vector<base::State *> all_states)
+      {
+
+        multiCont : /* Empty statement using the semicolon */;
+
+        for (int i = 0; i < all_states.size(); i++) {
+          for (int j = 0; j < all_states.size(); j++) {
+            if ( (i != j) && (distanceFunction(all_states[i], all_states[j]) < 0.05)) {
+              // j is duplicate
+              all_states.erase(all_states.begin() + j);
+              goto multiCont;
+            }
+          }
+        }
+
+        return all_states;
       }
 
       /** \brief Free the memory allocated by this planner */
