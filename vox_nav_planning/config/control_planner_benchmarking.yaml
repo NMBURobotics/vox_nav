@@ -32,7 +32,7 @@ control_planners_benchmark:
       z: 1.5
     goal_tolerance: 0.5
     min_euclidean_dist_start_to_goal: 25.0
-    batch_size: 1
+    batch_size: 10
     epochs: 1
     max_memory: 4096
     results_output_dir: "/home/atas/test/"
