@@ -139,6 +139,7 @@ namespace vox_nav_utilities
     pcl::PointSurfel start_nearest_surfel, goal_nearest_surfel;
     start_nearest_surfel = vox_nav_utilities::poseMsg2PCLSurfel(actual_start);
     goal_nearest_surfel = vox_nav_utilities::poseMsg2PCLSurfel(actual_goal);
+
     start_nearest_surfel = vox_nav_utilities::getNearstPoint<
       pcl::PointSurfel,
       pcl::PointCloud<pcl::PointSurfel>::Ptr>(
