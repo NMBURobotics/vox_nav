@@ -230,7 +230,7 @@ namespace vox_nav_planning
         goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
 
         start.pose.position.x = 5;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-        start.pose.position.y = -12; getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+        start.pose.position.y = -12; //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
         start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 
         goal.pose.position.x = 35;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
@@ -247,12 +247,16 @@ namespace vox_nav_planning
         nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
         nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
 
-        random_start->setSE2(start.pose.position.x, start.pose.position.y, 0);
+        random_start->setSE2(
+          nearest_elevated_surfel_to_start_.pose.position.x,
+          nearest_elevated_surfel_to_start_.pose.position.y, 0);
         random_start->setYaw(start_yaw);
         random_start->setZ(nearest_elevated_surfel_to_start_.pose.position.z);
         random_start->setVelocity(0);
 
-        random_goal->setSE2(goal.pose.position.x, goal.pose.position.y, 0);
+        random_goal->setSE2(
+          nearest_elevated_surfel_to_goal_.pose.position.x,
+          nearest_elevated_surfel_to_goal_.pose.position.y, 0);
         random_goal->setYaw(goal_yaw);
         random_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
         random_goal->setVelocity(0);
@@ -317,9 +321,12 @@ namespace vox_nav_planning
 
       start_.x = random_start->getSE2()->getX();
       start_.y = random_start->getSE2()->getY();
+      start_.z = random_start->getZ()->values[0];
       start_.yaw = random_start->getSE2()->getYaw();
+
       goal_.x = random_goal->getSE2()->getX();
       goal_.y = random_goal->getSE2()->getY();
+      goal_.z = random_goal->getZ()->values[0];
       goal_.yaw = random_goal->getSE2()->getYaw();
 
       ompl::tools::Benchmark benchmark(*control_simple_setup_, "benchmark");
@@ -432,6 +439,10 @@ namespace vox_nav_planning
   void ControlPlannersBenchMarking::publishSamplePlans(
     std::map<int, ompl::control::PathControl> sample_paths)
   {
+
+    if (!publish_a_sample_bencmark_) {
+      RCLCPP_INFO(this->get_logger(), "Will not publish sample plans.");
+    }
     visualization_msgs::msg::MarkerArray marker_array;
     int total_poses = 0;
 

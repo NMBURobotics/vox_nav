@@ -155,8 +155,16 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
 
   }
 
-  bool solved = false;
-  bool approximate = false;
+  auto final_node = steer(last_valid_node, goal_node);
+  if (final_node) {
+    if (check_collision(final_node)) {
+      std::vector<Node *> near_nodes = find_near_nodes(final_node);
+      auto final_node_parent = choose_parent(final_node, near_nodes);
+      if (final_node_parent != nullptr) {
+        nn_->add(final_node_parent);
+      }
+    }
+  }
 
   OMPL_INFORM(
     "%s: Created %u states in %u iterations", getName().c_str(), nn_->size(),
@@ -209,46 +217,50 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
   }
   rrt_nodes_pub_->publish(rrt_nodes);
 
-  if (last_valid_node) {
-    std::vector<base::State *> final_course = generate_final_course(last_valid_node);
-    //final_course = lqrize(final_course, 4);
-    solved = true;
+  bool solved = false;
+  bool approximate = false;
+  double approxdif = std::numeric_limits<double>::infinity();
 
+  if (final_node) {
+
+    OMPL_INFORM("Final solution cost %.2f", final_node->cost_.value());
+
+    std::vector<base::State *> final_course = generate_final_course(last_valid_node);
+
+    final_course = remove_duplicate_states(final_course);
+    double dist = 0.0;
+    bool solv = goal->isSatisfied(final_course.front(), &dist);
     /* set the solution path */
     auto path(std::make_shared<PathControl>(si_));
-    final_course = remove_duplicate_states(final_course);
-
     for (auto i : final_course) {
       if (i) {
         path->append(i);
       }
     }
 
-    for (size_t i = 1; i < path->getStateCount(); i++) {
-
-      auto * ith_cstate =
-        path->getState(i)->as<ompl::base::ElevationStateSpace::StateType>();
-      auto * ith_se2 = ith_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-      auto * ith_z = ith_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-
-      auto * prev_cstate =
-        path->getState(i - 1)->as<ompl::base::ElevationStateSpace::StateType>();
-      auto * prev_se2 = prev_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-      auto * prev_z = prev_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-
-      double dx = ith_se2->getX() - prev_se2->getX();
-      double dy = ith_se2->getY() - prev_se2->getY();
-      double roll, pitch, yaw;
-      yaw = std::atan2(dy, dx);
-      ith_se2->setYaw(yaw);
-    }
-
-    solved = true;
-    pdef_->addSolutionPath(path, approximate, 0.0 /*approxdif*/, getName());
-    OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
     OMPL_INFORM("Solution Lenght %.2f", path->length());
-  } else {
-    OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());
+    OMPL_INFORM("Distance of solution to goal %.2f", dist);
+
+    approxdif = dist;
+
+    if (solv) {
+      solved = true;
+      approximate = false;
+      pdef_->addSolutionPath(path, approximate, approxdif, getName());
+      OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
+    } else if (!solv && (path->length() > 1.0 )) { // approx
+      solved = false;
+      approximate = true;
+      pdef_->addSolutionPath(path, approximate, approxdif, getName());
+      OMPL_INFORM(
+        "%s: Approx solution with cost %.2f",
+        getName().c_str(), last_valid_node->cost_.value());
+    } else {
+      solved = false;
+      approximate = false;
+      pdef_->addSolutionPath(path, approximate, approxdif, getName());
+      OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());
+    }
   }
 
   clear();

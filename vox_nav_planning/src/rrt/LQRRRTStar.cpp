@@ -155,7 +155,9 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
   }
 
   double relative_cost = 0.0;
+  lqr_planner_->set_max_time(10.0);
   auto final_node = steer(last_valid_node, goal_node, &relative_cost);
+  lqr_planner_->set_max_time(4.0);
 
   if (final_node) {
     if (check_collision(final_node)) {
@@ -166,9 +168,6 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
       }
     }
   }
-
-  bool solved = false;
-  bool approximate = false;
 
   OMPL_INFORM(
     "%s: Created %u states in %u iterations", getName().c_str(), nn_->size(),
@@ -236,6 +235,10 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
   }
   rrt_nodes_pub_->publish(rrt_nodes);
 
+  bool solved = false;
+  bool approximate = false;
+  double approxdif = std::numeric_limits<double>::infinity();
+
   if (final_node) {
 
     OMPL_INFORM("Final solution cost %.2f", final_node->cost_.value());
@@ -256,9 +259,10 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
       final_node->cost_.value());
 
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
-    solved = true;
 
     final_course = remove_duplicate_states(final_course);
+    double dist = 0.0;
+    bool solv = goal->isSatisfied(final_course.front(), &dist);
 
     /* set the solution path */
     auto path(std::make_shared<PathControl>(si_));
@@ -267,12 +271,29 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
         path->append(i);
       }
     }
-    solved = true;
-    pdef_->addSolutionPath(path, approximate, 0.0 /*approxdif*/, getName());
     OMPL_INFORM("Solution Lenght %.2f", path->length());
-    OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
-  } else {
-    OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());
+    OMPL_INFORM("Distance of solution to goal %.2f", dist);
+
+    approxdif = dist;
+
+    if (solv) {
+      solved = true;
+      approximate = false;
+      pdef_->addSolutionPath(path, approximate, approxdif, getName());
+      OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
+    } else if (!solv && (path->length() > 1.0 )) { // approx
+      solved = false;
+      approximate = true;
+      pdef_->addSolutionPath(path, approximate, approxdif, getName());
+      OMPL_INFORM(
+        "%s: Approx solution with cost %.2f",
+        getName().c_str(), last_valid_node->cost_.value());
+    } else {
+      solved = false;
+      approximate = false;
+      pdef_->addSolutionPath(path, approximate, approxdif, getName());
+      OMPL_WARN("%s: Failed to cretae a plan", getName().c_str());
+    }
   }
 
   clear();
