@@ -217,6 +217,8 @@ namespace vox_nav_planning
     std::map<int, ompl::control::PathControl> paths_map;
     auto si = control_simple_setup_->getSpaceInformation();
 
+    std::stringstream ss;
+
     for (int i = 0; i < epochs_; i++) {
 
       // spin until a valid random start and goal poses are found. Also
@@ -267,18 +269,12 @@ namespace vox_nav_planning
           std::pow(random_goal->getSE2()->getX() - random_start->getSE2()->getX(), 2) +
           std::pow(random_goal->getSE2()->getY() - random_start->getSE2()->getY(), 2));
 
-        RCLCPP_INFO(
-          this->get_logger(),
-          "Checking whether random generated goal start pair are valid ... ");
-
         // create a planner for the defined space
         ompl::base::PlannerPtr rrtstar_planner;
         rrtstar_planner =
           ompl::base::PlannerPtr(new ompl::control::RRT(si));
         control_simple_setup_->setPlanner(rrtstar_planner);
-        RCLCPP_INFO(
-          this->get_logger(), "Checking whether a solution exists for "
-          "random start and goal states .");
+
         //ompl::base::PlannerStatus has_solution = control_simple_setup_->solve(20.0);
 
         // if it gets to this point , that menas our random states are valid and
@@ -315,9 +311,9 @@ namespace vox_nav_planning
           this->propagate(si.get(), state, control, duration, result);
         });
 
-      RCLCPP_INFO(
+      /*RCLCPP_INFO(
         this->get_logger(),
-        "A valid random start and goal states has been found.");
+        "A valid random start and goal states has been found.");*/
 
       start_.x = random_start->getSE2()->getX();
       start_.y = random_start->getSE2()->getY();
@@ -329,7 +325,7 @@ namespace vox_nav_planning
       goal_.z = random_goal->getZ()->values[0];
       goal_.yaw = random_goal->getSE2()->getYaw();
 
-      ompl::tools::Benchmark benchmark(*control_simple_setup_, "benchmark");
+      // ompl::tools::Benchmark benchmark(*control_simple_setup_, "benchmark");
       std::mutex plan_mutex;
       int index(0);
       for (auto && planner_name : selected_planners_) {
@@ -340,14 +336,14 @@ namespace vox_nav_planning
           si,
           logger_);
 
-        benchmark.addPlanner(planner_ptr);
+        //benchmark.addPlanner(planner_ptr);
 
         if (publish_a_sample_bencmark_) {
           std::lock_guard<std::mutex> guard(plan_mutex);
 
-          RCLCPP_INFO(
+          /*RCLCPP_INFO(
             this->get_logger(),
-            "Creating sample plans.");
+            "Creating sample plans.");*/
 
           si->setValidStateSamplerAllocator(
             std::bind(
@@ -369,22 +365,17 @@ namespace vox_nav_planning
             control_simple_setup_->clear();
           }
 
-          if (solution_path.getStateCount() == 0) {
-            RCLCPP_WARN(
-              this->get_logger(),
-              "An empty path detected!, looks like %s failed to "
-              "produce a valid plan",
-              planner_name.c_str());
-          }
+          ss << planner_name.c_str() << " " << solved << " " << solution_path.length() << "\n";
           std::pair<int, ompl::control::PathControl> curr_pair(index, solution_path);
           paths_map.insert(curr_pair);
           control_simple_setup_->clear();
-
         }
         index++;
       }
 
-      ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_,
+      std::cout << ss.str() << std::endl;
+
+      /*ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_,
         batch_size_);
       request.displayProgress = true;
 
@@ -399,12 +390,13 @@ namespace vox_nav_planning
         (results_output_dir_ + results_file_regex_ +
         "_" + std::to_string(i) + ".log")
         .c_str());
-      control_simple_setup_->clear();
 
       RCLCPP_INFO(
         this->get_logger(),
         "Bencmarking results saved to given directory: %s",
-        results_output_dir_.c_str());
+        results_output_dir_.c_str());*/
+
+      control_simple_setup_->clear();
     }
     return paths_map;
   }
