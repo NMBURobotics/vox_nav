@@ -316,10 +316,10 @@ namespace ompl
       }
       std::vector<base::State *> lqrize(std::vector<base::State *> path_nodes, int segment_framing)
       {
-        lqr_planner_->set_max_time(20.0);
-        lqr_planner_->set_goal_tolerance(0.25);
+        lqr_planner_->set_max_time(4.0);
+        lqr_planner_->set_goal_tolerance(0.5);
         lqr_planner_->set_phi_bound(0.8);
-        lqr_planner_->set_dt(0.1);
+        lqr_planner_->set_dt(0.2);
         lqr_planner_->set_v(1.0);
 
         std::vector<base::State *> lqr_path_states;
@@ -337,6 +337,10 @@ namespace ompl
 
           auto prev_node = path_nodes[i - segment_framing];
           auto cur_node = path_nodes[i];
+          if (i != segment_framing) {
+            prev_node = lqr_path_states.back();
+          }
+
           double relative_cost = 0.0;
 
           std::vector<base::State *> resulting_path;

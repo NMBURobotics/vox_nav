@@ -644,16 +644,16 @@ namespace vox_nav_planning
         result.b = 0.9;
         result.a = 1.0;
         break;
-      case 3: // DARK_GREY:
-        result.r = 0.6;
-        result.g = 0.6;
-        result.b = 0.6;
-        result.a = 1.0;
-        break;
-      case 4: // WHITE:
-        result.r = 1.0;
+      case 3: // CYAN:
+        result.r = 0.0;
         result.g = 1.0;
         result.b = 1.0;
+        result.a = 1.0;
+        break;
+      case 4: // YELLOW:
+        result.r = 1.0;
+        result.g = 1.0;
+        result.b = 0.0;
         result.a = 1.0;
         break;
       case 5: // ORANGE:

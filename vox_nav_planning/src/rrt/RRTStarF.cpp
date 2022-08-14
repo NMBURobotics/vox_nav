@@ -228,6 +228,9 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
 
     final_course = remove_duplicate_states(final_course);
+
+    //final_course = lqrize(final_course, 4);
+
     double dist = 0.0;
     bool solv = goal->isSatisfied(final_course.front(), &dist);
     /* set the solution path */
