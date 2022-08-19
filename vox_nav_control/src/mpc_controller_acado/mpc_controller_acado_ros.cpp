@@ -40,6 +40,8 @@ namespace vox_nav_control
       const std::string & plugin_name)
     {
       parent_ = parent;
+      previous_time_ = parent_->get_clock()->now();
+
       parent->declare_parameter("global_plan_look_ahead_distance", 2.5);
       parent->declare_parameter("ref_traj_se2_space", "REEDS");
       parent->declare_parameter("rho", 2.5);

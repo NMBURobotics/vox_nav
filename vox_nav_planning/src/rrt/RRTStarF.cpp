@@ -227,12 +227,15 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
 
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
 
+    OMPL_INFORM("Total states in solution %d", final_course.size());
     final_course = remove_duplicate_states(final_course);
+    OMPL_INFORM("Total states in solution after removing duplicates %d", final_course.size());
 
-    //final_course = lqrize(final_course, 4);
+    std::reverse(final_course.begin(), final_course.end());
+
 
     double dist = 0.0;
-    bool solv = goal->isSatisfied(final_course.front(), &dist);
+    bool solv = goal->isSatisfied(final_course.back(), &dist);
     /* set the solution path */
     auto path(std::make_shared<PathControl>(si_));
     for (auto i : final_course) {
