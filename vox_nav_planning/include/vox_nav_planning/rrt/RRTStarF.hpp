@@ -455,7 +455,7 @@ namespace ompl
 
       double goalBias_{0.05};
       double path_resolution_{0.025};
-      double connect_circle_dist_{50.0};
+      double connect_circle_dist_{100.0};
       double expand_dis_{1.5};
 
       std::shared_ptr<LQRPlanner> lqr_planner_;
