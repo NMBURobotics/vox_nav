@@ -1,4 +1,4 @@
-#include "vox_nav_planning/plugins/control_planners_benchmark.hpp"
+#include "vox_nav_planning/tools/control_planners_benchmark.hpp"
 
 namespace vox_nav_planning
 {

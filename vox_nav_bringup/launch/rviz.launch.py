@@ -47,8 +47,11 @@ def generate_launch_description():
         executable='rviz2',
         name='rviz2',
         arguments=['-d', rviz_config_file],
+        prefix=['xterm -e gdb -ex run --args'],
         # change it to screen if you wanna see RVIZ output in terminal
-        output={'both': 'log'},
+        #output={'both': 'screen'},
+        output='screen',
+
     )
 
     return LaunchDescription([

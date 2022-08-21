@@ -1,6 +1,6 @@
 vox_nav_planner_server_rclcpp_node:
   ros__parameters:
-    planner_plugin: "ElevationControlPlanner"          # other options: "SE2Planner", "ElevationPlanner", "OptimalElevationPlanner"
+    planner_plugin: "PolyTunnelPlanner"          # other options: "SE2Planner", "ElevationPlanner", "OptimalElevationPlanner"
     expected_planner_frequency: 1.0
     planner_name: "LQRRRTStar"                            
     planner_timeout: 35.0
@@ -78,7 +78,9 @@ vox_nav_planner_server_rclcpp_node:
         maxy: 50.0
         minz: -2.0
         maxz: 12.0
-
+    PolyTunnelPlanner:
+      plugin: "vox_nav_planning::PolyTunnelPlanner"
+      
 vox_nav_controller_server_rclcpp_node:
    ros__parameters: 
       controller_plugin: "LyapunovControllerROS"                               # other options: non
