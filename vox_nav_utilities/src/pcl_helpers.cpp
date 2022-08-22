@@ -57,16 +57,19 @@ namespace vox_nav_utilities
   }
 
   std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> extractClusterCloudsFromPointcloud(
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud)
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud,
+    double tolerance,
+    int min_cluster_size,
+    int max_cluster_size)
   {
     // Create a kd tree to cluster the input point cloud
     pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZRGB>);
     tree->setInputCloud(inputCloud);
     std::vector<pcl::PointIndices> clusterIndices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> euclideanClusterExtraction;
-    euclideanClusterExtraction.setClusterTolerance(0.1);
-    euclideanClusterExtraction.setMinClusterSize(1);
-    euclideanClusterExtraction.setMaxClusterSize(5000);
+    euclideanClusterExtraction.setClusterTolerance(tolerance);
+    euclideanClusterExtraction.setMinClusterSize(min_cluster_size);
+    euclideanClusterExtraction.setMaxClusterSize(max_cluster_size);
     euclideanClusterExtraction.setSearchMethod(tree);
     euclideanClusterExtraction.setInputCloud(inputCloud);
     euclideanClusterExtraction.extract(clusterIndices);

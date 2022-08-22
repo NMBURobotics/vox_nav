@@ -117,7 +117,10 @@ namespace vox_nav_utilities
  * @return vector of point clouds. Vector will be empty if no clusters are found.
  */
   std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> extractClusterCloudsFromPointcloud(
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud,
+    double tolerance = 0.1,
+    int min_cluster_size = 1,
+    int max_cluster_size = 5000);
 
 /**
  * @brief Get the Rigid Body Transform object

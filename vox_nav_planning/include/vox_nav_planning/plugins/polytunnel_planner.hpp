@@ -78,6 +78,8 @@ namespace vox_nav_planning
     rclcpp::Logger logger_{rclcpp::get_logger("elevation_control_planner")};
 
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr polytunnel_cloud_sub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr polytunnel_cloud_pub_;
+
     sensor_msgs::msg::PointCloud2 polytunnel_cloud_;
 
   };

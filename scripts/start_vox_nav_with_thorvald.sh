@@ -3,7 +3,7 @@
 source /opt/ros/foxy/setup.bash
 source ~/colcon_ws/install/setup.bash
 
-ouster_sync_command="sudo ptp4l -i enp5s0 -m -S os1.conf; bash"
+ouster_sync_command="sudo ptpd -i enp6s0 -M -V; bash"
 gnome-terminal -- sh -c "$ouster_sync_command"
 
 ros2_launch_command="ros2 launch sensor_drivers_bringup bringup.launch.py; bash"

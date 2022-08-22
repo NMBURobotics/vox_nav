@@ -40,6 +40,10 @@ namespace vox_nav_planning
       rclcpp::SystemDefaultsQoS(),
       std::bind(&PolyTunnelPlanner::polytunnelCloudCallback, this, std::placeholders::_1));
 
+    polytunnel_cloud_pub_ = parent->create_publisher<sensor_msgs::msg::PointCloud2>(
+      "clusterized",
+      rclcpp::SystemDefaultsQoS());
+
     RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
   }
 
@@ -56,7 +60,7 @@ namespace vox_nav_planning
     const geometry_msgs::msg::PoseStamped & goal)
   {
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::fromROSMsg(polytunnel_cloud_, *pcl_curr);
 
     if (pcl_curr->points.size() == 0) {
@@ -64,6 +68,19 @@ namespace vox_nav_planning
       return std::vector<geometry_msgs::msg::PoseStamped>();
     }
     RCLCPP_INFO(logger_, "Creating a plan with %d points", pcl_curr->points.size());
+
+    pcl_curr = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+      pcl_curr, 0.1);
+
+    pcl::io::savePCDFile("/home/atas/testt.pcd", *pcl_curr);
+
+    std::vector<pcl::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>>> clusters =
+      vox_nav_utilities::euclideanClustering<pcl::PointXYZRGB>(pcl_curr, 100, 10000, 0.5);
+
+    std_msgs::msg::Header header = polytunnel_cloud_.header;
+    header.frame_id = "map";
+
+    vox_nav_utilities::publishClustersCloud(polytunnel_cloud_pub_, header, clusters);
 
     std::vector<geometry_msgs::msg::PoseStamped> plan;
 
