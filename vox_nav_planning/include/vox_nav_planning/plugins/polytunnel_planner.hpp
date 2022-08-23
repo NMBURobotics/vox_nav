@@ -21,6 +21,11 @@
 #include "vox_nav_utilities/elevation_state_space.hpp"
 #include "vox_nav_utilities/pcl_helpers.hpp"
 
+#include "opencv2/opencv.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/opencv.hpp"
+#include "opencv2/tracking.hpp"
+
 #include <vector>
 #include <string>
 #include <memory>

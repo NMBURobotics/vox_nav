@@ -337,7 +337,8 @@ namespace vox_nav_utilities
 
   template<typename P>
   typename pcl::PointCloud<P>::Ptr segmentSurfacePlane(
-    const typename pcl::PointCloud<P>::Ptr cloud, double dist, bool set_negative)
+    const typename pcl::PointCloud<P>::Ptr cloud, double dist, bool set_negative,
+    int max_iter = 1000)
   {
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
@@ -349,6 +350,7 @@ namespace vox_nav_utilities
     // Optional
     seg.setOptimizeCoefficients(true);
     // Mandatory
+    seg.setMaxIterations(max_iter);
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMethodType(pcl::SAC_RANSAC);
     seg.setDistanceThreshold(dist);

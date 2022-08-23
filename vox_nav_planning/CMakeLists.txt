@@ -19,6 +19,13 @@ pkg_check_modules(LIBFCL REQUIRED "fcl>=0.5.0")
 find_library(LIBFCL_LIBRARIES_FULL ${LIBFCL_LIBRARIES} ${LIBFCL_LIBRARY_DIRS})
 set(LIBFCL_LIBRARIES "${LIBFCL_LIBRARIES_FULL}")
 
+# Try for OpenCV 4.X, but settle for whatever is installed
+find_package(OpenCV 4 QUIET)
+if (NOT OpenCV_FOUND)
+  find_package(OpenCV REQUIRED)
+endif ()
+message(STATUS "Found OpenCV version ${OpenCV_VERSION}")
+
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
@@ -62,7 +69,8 @@ trajectory_msgs
 visualization_msgs
 OCTOMAP
 LIBFCL
-pcl_ros)
+pcl_ros
+OpenCV)
 
 # RRTStarF  PLANNER ####################################
 add_library(vox_nav_ompl_planners SHARED  src/rrt/RRTStarF.cpp
@@ -100,7 +108,7 @@ target_link_libraries(optimal_elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LI
 # POLYTUNNEL PLANNER ####################################
 add_library(polytunnel_planner SHARED src/plugins/polytunnel_planner.cpp)
 ament_target_dependencies(polytunnel_planner ${dependencies})
-target_link_libraries(polytunnel_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
+target_link_libraries(polytunnel_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ${PCL_LIBRARIES} ompl)
 
 # ELEVATION CONTROL PLANNERS BENCHMARKS ####################################
 add_executable(control_planners_benchmark src/tools/control_planners_benchmark.cpp)

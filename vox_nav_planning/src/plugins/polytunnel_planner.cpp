@@ -60,34 +60,87 @@ namespace vox_nav_planning
     const geometry_msgs::msg::PoseStamped & goal)
   {
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
-    pcl::fromROSMsg(polytunnel_cloud_, *pcl_curr);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::fromROSMsg(polytunnel_cloud_, *cloud);
 
-    if (pcl_curr->points.size() == 0) {
+    if (cloud->points.size() == 0) {
       RCLCPP_ERROR(logger_, "No points selected from RVIZ");
       return std::vector<geometry_msgs::msg::PoseStamped>();
     }
-    RCLCPP_INFO(logger_, "Creating a plan with %d points", pcl_curr->points.size());
+    RCLCPP_INFO(logger_, "Creating a plan with %d points", cloud->points.size());
 
-    pcl_curr = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
-      pcl_curr, 0.1);
+    pcl::PointXYZ minPt, maxPt;
+    pcl::getMinMax3D(*cloud, minPt, maxPt);
 
-    pcl::io::savePCDFile("/home/atas/testt.pcd", *pcl_curr);
+    double dy = maxPt.y - minPt.y;
+    double dz = maxPt.z - minPt.z;
 
-    std::vector<pcl::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB>>> clusters =
-      vox_nav_utilities::euclideanClustering<pcl::PointXYZRGB>(pcl_curr, 100, 10000, 0.5);
+    double resolution = 0.025;
+
+    int dimx = static_cast<int>(dy / resolution);
+    int dimy = static_cast<int>(dz / resolution);
+
+    // Create cv::Mat
+    auto image = cv::Mat(
+      dimy,
+      dimx,
+      CV_8UC3);
+    image.setTo(cv::Scalar(255, 255, 255));
+
+    for (auto && point : cloud->points) {
+      int x = static_cast<int>((maxPt.y - point.y) / resolution);
+      int y = static_cast<int>((maxPt.z - point.z) / resolution);
+      if ((x >= 0 && x <= dimx) && (y >= 0 && y <= dimy)  ) {
+        image.at<cv::Vec3b>(y, x)[0] = 255;
+        image.at<cv::Vec3b>(y, x)[1] = 0;
+        image.at<cv::Vec3b>(y, x)[2] = 0;
+      }
+    }
+    const cv::String windowName = "Select";
+    std::vector<cv::Rect> boundingBoxes;
+    bool showCrosshair = true;
+    bool fromCenter = false;
+    cv::selectROIs(windowName, image, boundingBoxes, showCrosshair, fromCenter);
+    cv::destroyWindow("Select");
+
+    std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clusters;
+    int bbx_idx = 0;
+
+    for (auto && rect : boundingBoxes) {
+
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr curr_cluster(new pcl::PointCloud<pcl::PointXYZRGB>());
+
+      for (auto && point : cloud->points) {
+        int x = static_cast<int>((maxPt.y - point.y) / resolution);
+        int y = static_cast<int>((maxPt.z - point.z) / resolution);
+
+        if (x >= rect.x && x <= rect.x + rect.width) {
+          if (y >= rect.y && y <= rect.y + rect.height) {
+            pcl::PointXYZRGB selected_p;
+            selected_p.x = point.x;
+            selected_p.y = point.y;
+            selected_p.z = point.z;
+            selected_p.r = vox_nav_utilities::getColorByIndexEig(bbx_idx).x() * 255.0;
+            selected_p.g = vox_nav_utilities::getColorByIndexEig(bbx_idx).y() * 255.0;
+            selected_p.b = vox_nav_utilities::getColorByIndexEig(bbx_idx).z() * 255.0;
+            curr_cluster->points.push_back(selected_p);
+          }
+        }
+      }
+
+      clusters.push_back(curr_cluster);
+      bbx_idx++;
+
+    }
 
     std_msgs::msg::Header header = polytunnel_cloud_.header;
-    header.frame_id = "map";
-
     vox_nav_utilities::publishClustersCloud(polytunnel_cloud_pub_, header, clusters);
-
     std::vector<geometry_msgs::msg::PoseStamped> plan;
 
     return plan;
   }
 
 
-}  // namespace vox_nav_planning
+}   // namespace vox_nav_planning
 
 PLUGINLIB_EXPORT_CLASS(vox_nav_planning::PolyTunnelPlanner, vox_nav_planning::PlannerCore)
