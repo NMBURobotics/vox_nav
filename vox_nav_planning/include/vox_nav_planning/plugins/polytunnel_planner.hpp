@@ -20,6 +20,10 @@
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
 #include "vox_nav_utilities/pcl_helpers.hpp"
+#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
+#include "tf2_ros/transform_listener.h"
+#include "tf2/transform_datatypes.h"
+#include "tf2_ros/create_timer_interface.h"
 
 #include "opencv2/opencv.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -29,6 +33,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <algorithm>
 
 namespace vox_nav_planning
 {
@@ -69,24 +74,55 @@ namespace vox_nav_planning
       const geometry_msgs::msg::PoseStamped & goal) override;
 
     /**
+     * @brief Get the Overlayed Startand Goal object
+     *
+     * @return std::vector<geometry_msgs::msg::PoseStamped>
+     */
+    std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() override;
+
+    /**
      * @brief
      *
      * @param msg
      */
     void polytunnelCloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
 
-    void setupMap() override {}
-    std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() override {}
-    bool isStateValid(const ompl::base::State * state) override {}
+    /**
+     * @brief Not implemented
+     *
+     */
+    void setupMap() override
+    {
+    }
+
+    /**
+     * @brief Not implemented
+     *
+     * @param state
+     * @return true
+     * @return false
+     */
+    bool isStateValid(const ompl::base::State * state) override
+    {
+    }
 
   protected:
     rclcpp::Logger logger_{rclcpp::get_logger("elevation_control_planner")};
-
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr polytunnel_cloud_sub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr polytunnel_cloud_pub_;
-
     sensor_msgs::msg::PointCloud2 polytunnel_cloud_;
 
+    // tf buffer to get transfroms
+    std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+    // tf listner for tf transforms
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
+
+    ompl::base::StateSpacePtr state_space_;
+    std::string selected_se2_space_name_;
+    // curve radius for reeds and dubins only
+    double rho_;
+    ompl::base::SpaceInformationPtr state_space_information_;
   };
 }  // namespace vox_nav_planning
 
