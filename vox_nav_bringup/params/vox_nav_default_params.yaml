@@ -81,10 +81,10 @@ vox_nav_planner_server_rclcpp_node:
     PolyTunnelPlanner:
       plugin: "vox_nav_planning::PolyTunnelPlanner"
       ref_traj_se2_space: "DUBINS"                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
-      rho: 1.5      
+      rho: 1.0      
       transform_timeout: 0.2
       resolution: 0.01
-      row_cloud_downsample_size: 0.5
+      row_cloud_downsample_size: 0.4
       extra_interpolation: 60
 
 vox_nav_controller_server_rclcpp_node:

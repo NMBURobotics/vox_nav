@@ -289,7 +289,7 @@ namespace vox_nav_planning
         straight_flag = !straight_flag;
       }
 
-      path.interpolate(plan_poses.size() + extra_interpolation);
+      path.interpolate(path.getStateCount() + extra_interpolation);
 
       for (std::size_t path_idx = 0; path_idx < path.getStateCount(); path_idx++) {
         // cast the abstract state type to the type we expect
