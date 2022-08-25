@@ -277,8 +277,11 @@ namespace vox_nav_planning
         }
 
         for (auto && p : i->points) {
-          double void_var, yaw;
-          if (!straight_flag) {yaw = M_PI;}
+          double yaw = 0.0;
+
+          if (!straight_flag) {
+            yaw = M_PI;
+          }
           ompl::base::ScopedState<> this_state(state_space_information_->getStateSpace());
           this_state[0] = p.x;
           this_state[1] = p.y;
@@ -302,6 +305,7 @@ namespace vox_nav_planning
         pose.pose.position.x = interpolated_state->getX();
         pose.pose.position.y = interpolated_state->getY();
         pose.pose.position.z = average_point.z;
+
         pose.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
           0, 0, interpolated_state->getYaw());
 

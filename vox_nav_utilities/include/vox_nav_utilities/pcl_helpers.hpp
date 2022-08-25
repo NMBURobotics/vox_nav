@@ -60,6 +60,15 @@
 
 namespace vox_nav_utilities
 {
+
+  /**
+   * @brief Get the Color By Index Eig object
+   *
+   * @param index
+   * @return Eigen::Vector3f
+   */
+  Eigen::Vector3f getColorByIndexEig(int index);
+
 /**
 * @brief
 *
@@ -160,16 +169,55 @@ namespace vox_nav_utilities
     OutlierRemovalType outlier_removal_type);
 
 /**
-* @brief publish clustering objects' in one point cloud
-* @param publisher
-* @param header
-* @param cloud_clusters
-* @param trans
-*/
+ * @brief
+ *
+ * @param publisher
+ * @param header
+ * @param clusters_array
+ */
+  template<typename P>
   void publishClustersCloud(
     const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
     const std_msgs::msg::Header header,
-    const std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clusters_array);
+    const typename std::vector<P> clusters_array)
+  {
+    if (clusters_array.size() <= 0) {
+      std::cout << "Publish empty clusters cloud. " << std::endl;
+      sensor_msgs::msg::PointCloud2 msg_cloud;
+      pcl::toROSMsg(*(new pcl::PointCloud<pcl::PointXYZRGB>), msg_cloud);
+      msg_cloud.header = header;
+      publisher->publish(msg_cloud);
+      return;
+    } else {
+      std::cout << "Publishing " << clusters_array.size() << " clusters in one cloud." << std::endl;
+    }
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+    // different clusters with different intensity
+    for (size_t cluster_idx = 0u; cluster_idx < clusters_array.size(); ++cluster_idx) {
+      if (clusters_array[cluster_idx]->points.size() <= 0) {
+        std::cout << "An empty cluster " << cluster_idx << "." << std::endl;
+        continue;
+      }
+      for (size_t idx = 0u; idx < clusters_array[cluster_idx]->points.size(); ++idx) {
+        pcl::PointXYZRGB point;
+        auto color = getColorByIndexEig(static_cast<int>(cluster_idx % 16));
+        point.x = clusters_array[cluster_idx]->points[idx].x;
+        point.y = clusters_array[cluster_idx]->points[idx].y;
+        point.z = clusters_array[cluster_idx]->points[idx].z;
+        point.r = color.x() * 255.0;
+        point.g = color.y() * 255.0;
+        point.b = color.z() * 255.0;
+        point.a = 255;
+        cloud->points.push_back(point);
+      }
+    }
+    if (cloud->size()) {
+      sensor_msgs::msg::PointCloud2 msg_cloud;
+      pcl::toROSMsg(*cloud, msg_cloud);
+      msg_cloud.header = header;
+      publisher->publish(msg_cloud);
+    }
+  }
 
   template<typename P, typename T>
   P getNearstPoint(
@@ -663,8 +711,6 @@ namespace vox_nav_utilities
     return cloud;
 
   }
-
-  Eigen::Vector3f getColorByIndexEig(int index);
 
 
 }   // namespace vox_nav_utilities

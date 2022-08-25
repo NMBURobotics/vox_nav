@@ -144,9 +144,9 @@ namespace vox_nav_planning
     std::vector<geometry_msgs::msg::PoseStamped> plan_poses = rowClusters2InterpolatedPath(
       clusters_organized, extra_interpolation_, average_point);
 
-    vox_nav_utilities::publishClustersCloud(
+    vox_nav_utilities::publishClustersCloud<pcl::PointCloud<pcl::PointXYZ>::Ptr>(
       polytunnel_cloud_pub_, polytunnel_cloud_.header,
-      clusters);
+      clusters_organized);
 
     RCLCPP_INFO(logger_, "Created a plan with %d pose", plan_poses.size());
 

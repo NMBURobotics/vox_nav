@@ -222,7 +222,9 @@ void RawCloudClusteringTracking::cloudCallback(
     clustering_params_.clustering_max_step_size);
   std_msgs::msg::Header header = cloud->header;
   header.frame_id = "map";
-  vox_nav_utilities::publishClustersCloud(cloud_clusters_pub_, header, clusters);
+  vox_nav_utilities::publishClustersCloud<pcl::PointCloud<pcl::PointXYZRGB>::Ptr>(
+    cloud_clusters_pub_,
+    header, clusters);
 
   std::vector<std::pair<Eigen::Vector3f, Eigen::Vector3f>> cluster_boxes_vector;
   for (auto && cluster : clusters) {
