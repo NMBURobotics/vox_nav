@@ -237,6 +237,8 @@ namespace vox_nav_planning
       }
 
       RCLCPP_INFO(logger_, "Found A plan with %i poses", plan_poses.size());
+      RCLCPP_INFO(logger_, "Path Length, %s, ", planner_name_.c_str(), solution_path.length());
+
     } else {
       RCLCPP_WARN(logger_, "No solution for requested path planning !");
     }
