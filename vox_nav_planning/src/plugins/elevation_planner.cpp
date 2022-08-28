@@ -260,23 +260,17 @@ namespace vox_nav_planning
     fcl::Quaternion3f rotation(myQuaternion.getX(), myQuaternion.getY(),
       myQuaternion.getZ(), myQuaternion.getW());
 
+
     robot_collision_object_->setTransform(rotation, translation);
-    robot_collision_object_minimal_->setTransform(rotation, translation);
-
     fcl::CollisionResult collisionWithSurfelsResult, collisionWithFullMapResult;
-
-    fcl::collide(
-      robot_collision_object_minimal_.get(),
-      elevated_surfels_collision_object_.get(), requestType,
-      collisionWithSurfelsResult);
-
     fcl::collide(
       robot_collision_object_.get(),
-      original_octomap_collision_object_.get(), requestType,
-      collisionWithFullMapResult);
+      elevated_surfels_collision_object_.get(), requestType, collisionWithSurfelsResult);
+    fcl::collide(
+      robot_collision_object_.get(),
+      original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
 
-    return collisionWithSurfelsResult.isCollision() &&
-           !collisionWithFullMapResult.isCollision();
+    return collisionWithSurfelsResult.isCollision() && !collisionWithFullMapResult.isCollision();
   }
 
   void ElevationPlanner::setupMap()
