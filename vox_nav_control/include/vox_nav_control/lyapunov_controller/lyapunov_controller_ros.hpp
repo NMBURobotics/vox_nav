@@ -22,6 +22,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker_array.hpp>
+#include <nav_msgs/msg/odometry.hpp>
 
 #include <string>
 #include <memory>
@@ -112,6 +113,8 @@ namespace vox_nav_control
         const vox_nav_msgs::msg::ObjectArray & tracks,
         const geometry_msgs::msg::PoseStamped & curr_robot_pose);
 
+      void readjustPlanbyPropogation();
+
     private:
       // Given refernce traj to follow, this is set got from planner
       nav_msgs::msg::Path reference_traj_;
@@ -126,6 +129,10 @@ namespace vox_nav_control
 
       rclcpp::Node * parent_;
       rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr obstacle_tracks_sub_;
+      rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr state_propogation_plan_publisher_;
+      rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr
+        state_propogation_plan_marker_publisher_;
+
       vox_nav_msgs::msg::ObjectArray obstacle_tracks_;
       std::mutex obstacle_tracks_mutex_;
 

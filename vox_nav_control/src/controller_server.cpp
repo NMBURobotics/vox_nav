@@ -139,7 +139,8 @@ namespace vox_nav_control
     auto start_time = steady_clock_.now();
     rclcpp::Rate loop_rate(controller_frequency_);
 
-    const auto goal = goal_handle->get_goal();
+
+    auto goal = goal_handle->get_goal();
     auto feedback = std::make_shared<FollowPath::Feedback>();
     auto result = std::make_shared<FollowPath::Result>();
 
@@ -154,10 +155,21 @@ namespace vox_nav_control
         return;
       }
     }
+    geometry_msgs::msg::PoseStamped initial_robot_pose;
+    vox_nav_utilities::getCurrentPose(
+      initial_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
+    nav_msgs::msg::Path path;
+    path.header = goal->path.header;
+    initial_robot_pose.pose.position.z = goal->path.poses.front().pose.position.z;
+    path.poses.push_back(initial_robot_pose);
+
+    for (auto && i : goal->path.poses) {
+      path.poses.push_back(i);
+    }
 
     geometry_msgs::msg::Twist computed_velocity_commands;
     // set Plan
-    controller_->setPlan(goal->path);
+    controller_->setPlan(path);
 
     rclcpp::WallRate rate(controller_frequency_);
 
@@ -184,9 +196,9 @@ namespace vox_nav_control
         curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
 
       int nearest_traj_pose_index = vox_nav_control::common::nearestStateIndex(
-        goal->path,
+        path,
         curr_robot_pose);
-      curr_robot_pose.pose.position.z = goal->path.poses[nearest_traj_pose_index].pose.position.z;
+      curr_robot_pose.pose.position.z = path.poses[nearest_traj_pose_index].pose.position.z;
 
       auto & clock = *this->get_clock();
       RCLCPP_INFO_THROTTLE(
@@ -194,12 +206,12 @@ namespace vox_nav_control
         clock, 1000, "Remaining Distance to goal %.4f ...",
         vox_nav_utilities::getEuclidianDistBetweenPoses(
           curr_robot_pose,
-          goal->path.poses.back()));
+          path.poses.back()));
 
       // check if we have arrived to goal, note the goal is last pose of path
       if (vox_nav_utilities::getEuclidianDistBetweenPoses(
           curr_robot_pose,
-          goal->path.poses.back()) < goal_tolerance_distance_)
+          path.poses.back()) < goal_tolerance_distance_)
       {
         // goal has been reached
         is_goal_distance_tolerance_satisfied = true;
@@ -231,7 +243,7 @@ namespace vox_nav_control
             curr_robot_pose.pose.orientation, nan, nan, curr_robot_psi);
 
           vox_nav_utilities::getRPYfromMsgQuaternion(
-            goal->path.poses.back().pose.orientation, nan, nan, goal_psi);
+            path.poses.back().pose.orientation, nan, nan, goal_psi);
 
           if (std::abs(curr_robot_psi - goal_psi) < goal_tolerance_orientation_) {
             // goal has been reached
