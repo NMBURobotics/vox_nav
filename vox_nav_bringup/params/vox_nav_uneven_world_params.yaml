@@ -2,7 +2,7 @@ vox_nav_planner_server_rclcpp_node:
   ros__parameters:
     planner_plugin: "ElevationPlanner"                 # other options: "SE2Planner", "ElevationPlanner", "OptimalElevationPlanner"
     expected_planner_frequency: 1.0
-    planner_name: "PRMstar"                            # PRMstar,LazyPRMstar,RRTstar,RRTsharp,RRTXstatic,InformedRRTstar,BITstar, 
+    planner_name: "AnytimePathShortening"              # PRMstar,LazyPRMstar,RRTstar,RRTsharp,RRTXstatic,InformedRRTstar,BITstar, 
                                                        # ABITstar,AITstar,CForest,LBTRRT,SST,TRRT,SPARS,SPARStwo,FMT,AnytimePathShortening
     planner_timeout: 10.0
     interpolation_parameter: 25                         # set to 0 if you wanna disable interpolating and smooting, otherwise 25 is a good default value                    
