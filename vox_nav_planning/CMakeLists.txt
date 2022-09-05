@@ -45,7 +45,7 @@ find_package(tf2_ros REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 find_package(vox_nav_msgs REQUIRED)
 find_package(vox_nav_utilities REQUIRED)
-find_package(vox_nav_cupoch REQUIRED)
+#find_package(vox_nav_cupoch REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pluginlib REQUIRED)
 
@@ -60,7 +60,7 @@ octomap_msgs
 sensor_msgs
 vox_nav_msgs
 vox_nav_utilities
-vox_nav_cupoch
+#vox_nav_cupoch
 std_msgs
 tf2_eigen
 tf2_geometry_msgs
