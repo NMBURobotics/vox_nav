@@ -7,8 +7,8 @@ Panels:
         - /Global Odometry1/Shape1
         - /OpenVSLAM Odometry1/Shape1
         - /OctoMap PointCloud21/Topic1
-      Splitter Ratio: 0.5133614540100098
-    Tree Height: 509
+      Splitter Ratio: 0.6494117379188538
+    Tree Height: 561
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -635,8 +635,8 @@ Visualization Manager:
           Scale: 1
           Value: true
         Value: false
-      Enabled: false
-      Keep: 100
+      Enabled: true
+      Keep: 0
       Name: Global Odometry
       Position Tolerance: 0.10000000149011612
       Shape:
@@ -655,7 +655,57 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /odometry/global
+      Value: true
+    - Angle Tolerance: 0.10000000149011612
+      Class: rviz_default_plugins/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
+          Value: true
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
+          Value: true
+        Value: false
+      Enabled: false
+      Keep: 0
+      Name: Feedback Motion Plan
+      Position Tolerance: 0.10000000149011612
+      Shape:
+        Alpha: 1
+        Axes Length: 1
+        Axes Radius: 0.10000000149011612
+        Color: 0; 25; 255
+        Head Length: 0.30000001192092896
+        Head Radius: 0.10000000149011612
+        Shaft Length: 1
+        Shaft Radius: 0.05000000074505806
+        Value: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /vox_nav/controller/state_prop_plan
       Value: false
+    - Class: rviz_default_plugins/Marker
+      Enabled: true
+      Name: Feedback Motion Plan Prop
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /vox_nav/controller/state_prop_plan_marker
+      Value: true
     - Angle Tolerance: 0.10000000149011612
       Class: rviz_default_plugins/Odometry
       Covariance:
@@ -733,7 +783,7 @@ Visualization Manager:
         Value: /odometry/local
       Value: false
     - Class: rviz_default_plugins/MarkerArray
-      Enabled: true
+      Enabled: false
       Name: SuperVoxelVisuals
       Namespaces:
         {}
@@ -743,7 +793,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /vox_nav/supervoxel_adjacency_markers
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -810,39 +860,6 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 1
-        Min Value: 0
-        Value: false
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz_default_plugins/PointCloud2
-      Color: 255; 255; 0
-      Color Transformer: FlatColor
-      Decay Time: 0
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 4096
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: Live PointCloud2
-      Position Transformer: XYZ
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.029999999329447746
-      Style: Flat Squares
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /velodyne_points
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: Object Track Markers
@@ -942,7 +959,7 @@ Visualization Manager:
       Max Intensity: 3937
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: PointCloud2
+      Name: Live PointCloud2
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
@@ -969,13 +986,13 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: RGB8
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 3937
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: PointCloud2
+      Name: Supervoxel Cluster PointCloud2
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
@@ -989,7 +1006,7 @@ Visualization Manager:
         Value: /vox_nav/supervoxel_clusters
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
@@ -1021,7 +1038,7 @@ Visualization Manager:
       Enabled: true
       Name: RTT TREE GROWTH
       Namespaces:
-        rrt_nodes: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -1031,10 +1048,9 @@ Visualization Manager:
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
-      Name: MarkerArray
+      Name: Bnechmark Plans MarkerArray
       Namespaces:
-        path0: true
-        path1: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -1051,7 +1067,7 @@ Visualization Manager:
       Enabled: true
       Head Length: 0.07000000029802322
       Head Radius: 0.029999999329447746
-      Name: PoseArray
+      Name: Benchmark Start  Goal Poses
       Shaft Length: 0.23000000417232513
       Shaft Radius: 0.009999999776482582
       Shape: Axes
@@ -1096,16 +1112,16 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 69.29594421386719
+      Distance: 61.67367172241211
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 3.030414581298828
-        Y: -0.216560959815979
-        Z: 3.28356254613027e-05
+        X: 5.055926322937012
+        Y: -9.407971382141113
+        Z: 2.4648572434671223e-05
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -1114,7 +1130,7 @@ Visualization Manager:
       Pitch: 1.5697963237762451
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 1.5569411516189575
+      Yaw: 3.186940908432007
     Saved:
       - Class: rviz_default_plugins/XYOrbit
         Distance: 41.129825592041016
@@ -1139,14 +1155,14 @@ Visualization Manager:
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 964
+  Height: 1043
   Hide Left Dock: false
   Hide Right Dock: true
   Image:
     collapsed: false
   Navigation 2:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001ab0000036afc020000000dfb0000001200530065006c0065006300740069006f006e000000003d000000830000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000023a000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000018004e0061007600690067006100740069006f006e0020003200000001c70000014e000000a400fffffffb0000001e005200650061006c00730065006e0073006500430061006d00650072006100000002c6000000c10000000000000000fb0000000a0049006d00610067006500000002b7000000f00000002800fffffffb0000000a00560069006500770073010000027d0000012a000000a400fffffffb0000000a0049006d00610067006501000002250000007e0000000000000000000000010000010f0000039efc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d00650100000000000004500000000000000000000005cf0000036a00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001ab000003b9fc020000000dfb0000001200530065006c0065006300740069006f006e000000003d000000830000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000026e000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb00000018004e0061007600690067006100740069006f006e0020003200000001c70000014e000000a400fffffffb0000001e005200650061006c00730065006e0073006500430061006d00650072006100000002c6000000c10000000000000000fb0000000a0049006d00610067006500000002b7000000f00000002800fffffffb0000000a0056006900650077007301000002b100000145000000a400fffffffb0000000a0049006d00610067006501000002250000007e0000000000000000000000010000010f0000039efc0200000002fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000004420000003efc0100000002fb0000000800540069006d00650100000000000004420000000000000000fb0000000800540069006d00650100000000000004500000000000000000000005cf000003b900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Tool Properties:
@@ -1155,4 +1171,4 @@ Window Geometry:
     collapsed: false
   Width: 1920
   X: 0
-  Y: 27
+  Y: 0

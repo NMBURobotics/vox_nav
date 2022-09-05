@@ -84,6 +84,12 @@ namespace vox_nav_utilities
       planner = ompl::base::PlannerPtr(new ompl::geometric::FMT(si));
     } else if (selected_planner_name == std::string("AnytimePathShortening")) {
       planner = ompl::base::PlannerPtr(new ompl::geometric::AnytimePathShortening(si));
+      auto aps_planner = std::make_shared<ompl::geometric::AnytimePathShortening>(si);
+      for (size_t i = 0; i < 8; i++) {
+        auto prm_planner = ompl::base::PlannerPtr(new ompl::geometric::PRMstar(si));
+        aps_planner->addPlanner(prm_planner);
+      }
+      planner = ompl::base::PlannerPtr(aps_planner);
     } else {
       RCLCPP_WARN(
         logger,

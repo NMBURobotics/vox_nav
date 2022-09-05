@@ -32,7 +32,6 @@ find_package(pcl_ros REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(vox_nav_msgs REQUIRED)
 find_package(vox_nav_utilities REQUIRED)
- 
 find_package(casadi REQUIRED)
 find_package(ACADO REQUIRED)
 
@@ -64,7 +63,7 @@ set(dependencies
 
 add_executable(vox_nav_controller_server src/controller_server.cpp)
 ament_target_dependencies(vox_nav_controller_server ${dependencies})
-target_link_libraries(vox_nav_controller_server ompl)
+target_link_libraries(vox_nav_controller_server ompl mosquittopp)
 
 add_executable(mpc_controller_acado_code_gen src/mpc_controller_acado/mpc_controller_acado_code_gen.cpp)
 ament_target_dependencies(mpc_controller_acado_code_gen ${dependencies})

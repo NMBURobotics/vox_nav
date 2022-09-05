@@ -62,6 +62,96 @@ namespace vox_nav_control
         "/vox_nav/tracking/objects", rclcpp::SystemDefaultsQoS(),
         std::bind(&LyapunovControllerROS::obstacleTracksCallback, this, std::placeholders::_1));
 
+      state_propogation_plan_publisher_ = parent->create_publisher<nav_msgs::msg::Odometry>(
+        "/vox_nav/controller/state_prop_plan", rclcpp::QoS(10));
+
+      state_propogation_plan_marker_publisher_ =
+        parent->create_publisher<visualization_msgs::msg::Marker>(
+        "/vox_nav/controller/state_prop_plan_marker", rclcpp::QoS(10));
+    }
+
+    void LyapunovControllerROS::readjustPlanbyPropogation()
+    {
+      double dt = 0.2;
+      double goal_tol = 1.0;
+
+      geometry_msgs::msg::PoseStamped curr_robot_pose;
+      curr_robot_pose = reference_traj_.poses.front();
+
+      volatile bool is_goal_distance_tolerance_satisfied = false;
+      int index = 0;
+      std_msgs::msg::ColorRGBA color;
+      // YELLOW:
+      color.r = 1.0;
+      color.g = 1.0;
+      color.b = 0.0;
+      color.a = 1.0;
+
+      visualization_msgs::msg::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = rclcpp::Clock().now();
+      marker.type = visualization_msgs::msg::Marker::SPHERE_LIST;
+      marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.lifetime = rclcpp::Duration::from_seconds(0);
+      marker.scale.x = 0.2;
+      marker.scale.y = 0.2;
+      marker.scale.z = 0.2;
+      marker.id = 0;
+      marker.color = color;
+      marker.ns = "state_prop_plan_marker";
+
+      while (!is_goal_distance_tolerance_satisfied && index < 2500) {
+
+        int nearest_traj_pose_index = vox_nav_control::common::nearestStateIndex(
+          reference_traj_,
+          curr_robot_pose);
+        curr_robot_pose.pose.position.z =
+          reference_traj_.poses[nearest_traj_pose_index].pose.position.z;
+
+        // check if we have arrived to goal, note the goal is last pose of path
+        if (vox_nav_utilities::getEuclidianDistBetweenPoses(
+            curr_robot_pose, reference_traj_.poses.back()) < goal_tol)
+        {
+          // goal has been reached
+          is_goal_distance_tolerance_satisfied = true;
+          // reset the velocity
+          break;
+        }
+
+        auto computed_velocity_commands = computeVelocityCommands(curr_robot_pose);
+
+        // now propogate
+        double robot_roll, robot_pitch, robot_yaw;
+        vox_nav_utilities::getRPYfromMsgQuaternion(
+          curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_yaw);
+
+        curr_robot_pose.pose.position.x +=
+          dt * computed_velocity_commands.linear.x * std::cos(robot_yaw);
+        curr_robot_pose.pose.position.y +=
+          dt * computed_velocity_commands.linear.x * std::sin(robot_yaw);
+        robot_yaw += dt * computed_velocity_commands.angular.z;
+
+        curr_robot_pose.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
+          robot_roll,
+          robot_pitch,
+          robot_yaw);
+
+        nav_msgs::msg::Odometry odom_msg;
+        odom_msg.header.frame_id = "map";
+        odom_msg.child_frame_id = "base_link";
+        odom_msg.header.stamp = parent_->get_clock()->now();
+        odom_msg.pose.pose = curr_robot_pose.pose;
+        state_propogation_plan_publisher_->publish(odom_msg);
+
+        marker.points.push_back(odom_msg.pose.pose.position);
+        marker.colors.push_back(color);
+
+        index++;
+      }
+
+      state_propogation_plan_marker_publisher_->publish(marker);
+
+      RCLCPP_INFO(parent_->get_logger(), "Number of poses in feedback plan %i", index);
     }
 
     geometry_msgs::msg::Twist LyapunovControllerROS::computeVelocityCommands(
@@ -186,6 +276,8 @@ namespace vox_nav_control
     void LyapunovControllerROS::setPlan(const nav_msgs::msg::Path & path)
     {
       reference_traj_ = path;
+
+      readjustPlanbyPropogation();
     }
 
     void LyapunovControllerROS::obstacleTracksCallback(

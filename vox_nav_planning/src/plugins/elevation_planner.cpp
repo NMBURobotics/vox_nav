@@ -190,9 +190,10 @@ namespace vox_nav_planning
       planner, planner_name_, si,
       logger_);
 
-    // si->setValidStateSamplerAllocator(std::bind(
-    //     &ElevationPlanner::allocValidStateSampler, this,
-    //     std::placeholders::_1));
+    si->setValidStateSamplerAllocator(
+      std::bind(
+        &ElevationPlanner::allocValidStateSampler, this,
+        std::placeholders::_1));
 
     simple_setup_->setPlanner(planner);
     simple_setup_->setup();
@@ -237,6 +238,11 @@ namespace vox_nav_planning
       }
 
       RCLCPP_INFO(logger_, "Found A plan with %i poses", plan_poses.size());
+      RCLCPP_INFO(logger_, "Path Length, %s, %.2f", planner_name_.c_str(), solution_path.length());
+      RCLCPP_INFO(
+        logger_, "Path Smoothness, %s, %.2f",
+        planner_name_.c_str(), solution_path.smoothness());
+
     } else {
       RCLCPP_WARN(logger_, "No solution for requested path planning !");
     }
@@ -260,23 +266,17 @@ namespace vox_nav_planning
     fcl::Quaternion3f rotation(myQuaternion.getX(), myQuaternion.getY(),
       myQuaternion.getZ(), myQuaternion.getW());
 
+
     robot_collision_object_->setTransform(rotation, translation);
-    robot_collision_object_minimal_->setTransform(rotation, translation);
-
     fcl::CollisionResult collisionWithSurfelsResult, collisionWithFullMapResult;
-
-    fcl::collide(
-      robot_collision_object_minimal_.get(),
-      elevated_surfels_collision_object_.get(), requestType,
-      collisionWithSurfelsResult);
-
     fcl::collide(
       robot_collision_object_.get(),
-      original_octomap_collision_object_.get(), requestType,
-      collisionWithFullMapResult);
+      elevated_surfels_collision_object_.get(), requestType, collisionWithSurfelsResult);
+    fcl::collide(
+      robot_collision_object_.get(),
+      original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
 
-    return collisionWithSurfelsResult.isCollision() &&
-           !collisionWithFullMapResult.isCollision();
+    return collisionWithSurfelsResult.isCollision() && !collisionWithFullMapResult.isCollision();
   }
 
   void ElevationPlanner::setupMap()

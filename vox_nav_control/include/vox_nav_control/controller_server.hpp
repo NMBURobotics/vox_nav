@@ -36,6 +36,8 @@
 #include "vox_nav_control/common.hpp"
 #include "vox_nav_utilities/tf_helpers.hpp"
 
+#include <mosquittopp.h>
+
 namespace vox_nav_control
 {
   class ControllerServer : public rclcpp::Node

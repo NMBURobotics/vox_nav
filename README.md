@@ -12,6 +12,8 @@ You can download videos and see capablities of project. See all available videos
 
 * ![Thorvald Navigation with vox_nav](docs/assets/real_robot_demos1.gif)
  
+* ![Thorvald Navigation with vox_nav in Tight Polytunnels](docs/assets/polytunnel.gif)
+
 * ![MPC following a Trajectory](docs/assets/mpc_3.mp4)
 
 * ![Full Navigation using Behaviour Trees](docs/assets/navigation_in_action.mp4)
