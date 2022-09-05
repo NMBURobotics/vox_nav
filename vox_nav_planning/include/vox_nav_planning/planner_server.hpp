@@ -137,6 +137,7 @@ namespace vox_nav_planning
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr nav_msgs_path_pub_;
     // obot mesh path, if there is one
     std::string robot_mesh_path_;
+    bool publish_segment_ids_;
   };
 
 }  // namespace vox_nav_planning

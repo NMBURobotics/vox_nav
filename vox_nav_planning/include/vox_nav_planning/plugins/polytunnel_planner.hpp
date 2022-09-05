@@ -261,13 +261,46 @@ namespace vox_nav_planning
     }
 
     std::vector<geometry_msgs::msg::PoseStamped> rowClusters2InterpolatedPath(
-      std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clusters_organized,
+      std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> & clusters_organized,
       int extra_interpolation,
-      pcl::PointXYZRGB average_point
+      pcl::PointXYZRGB average_point,
+      geometry_msgs::msg::PoseStamped curr_robot_pose
     )
     {
       std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
       ompl::geometric::PathGeometric path(state_space_information_);
+
+      ompl::base::ScopedState<> robot_state(state_space_information_->getStateSpace());
+      robot_state[0] = curr_robot_pose.pose.position.x;
+      robot_state[1] = curr_robot_pose.pose.position.y;
+      double void_var, robot_yaw;
+      vox_nav_utilities::getRPYfromMsgQuaternion(
+        curr_robot_pose.pose.orientation,
+        void_var, void_var, robot_yaw);
+      robot_state[2] = robot_yaw;
+      path.append(static_cast<ompl::base::State *>(robot_state.get()));
+
+
+      int cluster_index = 0;
+      for (auto && i : clusters_organized) {
+        int n = row_extension_dist_ / row_cloud_downsample_size_;
+        if (n >= i->points.size()) {
+          continue;
+        }
+        for (size_t ex = 0; ex < n; ex++) {
+          auto head_point = i->points.front();
+          auto tail_point = i->points.back();
+          head_point.x -= row_cloud_downsample_size_;
+          tail_point.x += row_cloud_downsample_size_;
+          // Do not extend first head row
+          if (cluster_index != 0) {
+            i->points.insert(i->points.begin(), head_point);
+          }
+          i->points.push_back(tail_point);
+        }
+
+        cluster_index++;
+      }
 
       bool straight_flag = true;
       for (auto && i : clusters_organized) {
@@ -284,7 +317,7 @@ namespace vox_nav_planning
           }
           ompl::base::ScopedState<> this_state(state_space_information_->getStateSpace());
           this_state[0] = p.x;
-          this_state[1] = p.y;
+          this_state[1] = p.y + y_offset_;
           this_state[2] = yaw;
           path.append(static_cast<ompl::base::State *>(this_state.get()));
         }
@@ -343,6 +376,8 @@ namespace vox_nav_planning
     double resolution_;
     double row_cloud_downsample_size_;
     int extra_interpolation_;
+    double y_offset_;
+    double row_extension_dist_;
 
   };
 }  // namespace vox_nav_planning

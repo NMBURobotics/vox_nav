@@ -50,10 +50,13 @@ namespace vox_nav_planning
     declare_parameter("robot_body_dimens.y", 0.8);
     declare_parameter("robot_body_dimens.z", 0.6);
     declare_parameter("robot_mesh_path", "");
+    declare_parameter("publish_segment_ids", true);
+
 
     get_parameter("expected_planner_frequency", expected_planner_frequency_);
     get_parameter("planner_plugin", planner_id_);
     get_parameter("robot_mesh_path", robot_mesh_path_);
+    get_parameter("publish_segment_ids", publish_segment_ids_);
 
     declare_parameter(planner_id_ + ".plugin", planner_type_);
     get_parameter(planner_id_ + ".plugin", planner_type_);
@@ -287,7 +290,9 @@ namespace vox_nav_planning
       text.action = visualization_msgs::msg::Marker::ADD;
       text.lifetime = rclcpp::Duration::from_seconds(0);
       std::string dis(std::to_string(path_idx) + "," + std::to_string(yaw));
-      text.text = dis;
+      if (publish_segment_ids_) {
+        text.text = dis;
+      }
       text.pose = i.pose;
       text.pose.position.z += 0.5;
       text.scale.x = 0.3;
