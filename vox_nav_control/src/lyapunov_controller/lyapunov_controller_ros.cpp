@@ -79,7 +79,7 @@ namespace vox_nav_control
       curr_robot_pose = reference_traj_.poses.front();
 
       volatile bool is_goal_distance_tolerance_satisfied = false;
-      int index = 0;
+      volatile int index = 0;
       std_msgs::msg::ColorRGBA color;
       // YELLOW:
       color.r = 1.0;

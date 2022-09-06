@@ -109,7 +109,13 @@ namespace vox_nav_planning
     v_bounds->setHigh(0, 0.5);
 
     typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
-    CollisionGeometryPtr_t robot_body_box(new fcl::Box(
+
+    /*CollisionGeometryPtr_t robot_body_box(new fcl::Box(
+        parent->get_parameter("robot_body_dimens.x").as_double(),
+        parent->get_parameter("robot_body_dimens.y").as_double(),
+        parent->get_parameter("robot_body_dimens.z").as_double()));*/
+
+    CollisionGeometryPtr_t robot_body_box(new fcl::Ellipsoid(
         parent->get_parameter("robot_body_dimens.x").as_double(),
         parent->get_parameter("robot_body_dimens.y").as_double(),
         parent->get_parameter("robot_body_dimens.z").as_double()));
@@ -171,7 +177,7 @@ namespace vox_nav_planning
     }
 
     double radius = vox_nav_utilities::getEuclidianDistBetweenPoses(goal, start) / 2.0;
-    radius *= 2.0;
+    radius *= 1.25;
 
     auto search_point_pose = vox_nav_utilities::getLinearInterpolatedPose(goal, start);
     pcl::PointXYZRGB search_point_xyzrgb;
@@ -322,51 +328,60 @@ namespace vox_nav_planning
     WeightMap weightmap = get(boost::edge_weight, g);
     //Add a vertex for each label, store ids in a map
     std::map<std::uint32_t, vertex_descriptor> supervoxel_label_id_map;
-    for (auto it = supervoxel_adjacency.cbegin();
-      it != supervoxel_adjacency.cend(); )
-    {
-      std::uint32_t supervoxel_label = it->first;
-      vertex_descriptor supervoxel_id = boost::add_vertex(g);
-      g[supervoxel_id].label = (supervoxel_label);
-      supervoxel_label_id_map.insert(std::make_pair(supervoxel_label, supervoxel_id));
-      it = supervoxel_adjacency.upper_bound(supervoxel_label);
-    }
 
-    // fill edges acquired from supervoxel clustering
-    for (auto it = supervoxel_adjacency.cbegin();
-      it != supervoxel_adjacency.cend(); )
-    {
-      std::uint32_t supervoxel_label = it->first;
-      auto supervoxel = supervoxel_clusters_.at(supervoxel_label);
-      for (auto adjacent_it = supervoxel_adjacency.equal_range(supervoxel_label).first;
-        adjacent_it != supervoxel_adjacency.equal_range(supervoxel_label).second; ++adjacent_it)
+    try {
+      for (auto it = supervoxel_adjacency.cbegin();
+        it != supervoxel_adjacency.cend(); )
       {
-        std::uint32_t neighbour_supervoxel_label = adjacent_it->second;
-        auto neighbour_supervoxel = supervoxel_clusters_.at(neighbour_supervoxel_label);
-        if (isEdgeinCollision(supervoxel->centroid_, neighbour_supervoxel->centroid_)) {
-          continue;
-        }
-        edge_descriptor e; bool edge_added;
-        vertex_descriptor u = (supervoxel_label_id_map.find(supervoxel_label))->second;
-        vertex_descriptor v = (supervoxel_label_id_map.find(neighbour_supervoxel_label))->second;
-        boost::tie(e, edge_added) = boost::add_edge(u, v, g);
-        // Calc distance between centers, set this as edge weight
-        // the more distane the heavier final cost
-        if (edge_added) {
-          pcl::PointXYZRGBA centroid_data = supervoxel->centroid_;
-          pcl::PointXYZRGBA neighbour_centroid_data = neighbour_supervoxel->centroid_;
-
-          float absolute_distance = vox_nav_utilities::PCLPointEuclideanDist<>(
-            centroid_data,
-            neighbour_centroid_data);
-          // Lets also add elevation as weight
-          float absolute_elevation = std::abs(centroid_data.z - neighbour_centroid_data.z);
-          weightmap[e] = distance_penalty_weight_ * absolute_distance +
-            elevation_penalty_weight_ * absolute_elevation;
-        }
+        std::uint32_t supervoxel_label = it->first;
+        vertex_descriptor supervoxel_id = boost::add_vertex(g);
+        g[supervoxel_id].label = (supervoxel_label);
+        supervoxel_label_id_map.insert(std::make_pair(supervoxel_label, supervoxel_id));
+        it = supervoxel_adjacency.upper_bound(supervoxel_label);
       }
-      it = supervoxel_adjacency.upper_bound(supervoxel_label);
+
+      // fill edges acquired from supervoxel clustering
+      for (auto it = supervoxel_adjacency.cbegin();
+        it != supervoxel_adjacency.cend(); )
+      {
+        std::uint32_t supervoxel_label = it->first;
+        auto supervoxel = supervoxel_clusters_.at(supervoxel_label);
+        for (auto adjacent_it = supervoxel_adjacency.equal_range(supervoxel_label).first;
+          adjacent_it != supervoxel_adjacency.equal_range(supervoxel_label).second; ++adjacent_it)
+        {
+          std::uint32_t neighbour_supervoxel_label = adjacent_it->second;
+          auto neighbour_supervoxel = supervoxel_clusters_.at(neighbour_supervoxel_label);
+          if (isEdgeinCollision(supervoxel->centroid_, neighbour_supervoxel->centroid_)) {
+            continue;
+          }
+          edge_descriptor e; bool edge_added;
+          vertex_descriptor u = (supervoxel_label_id_map.find(supervoxel_label))->second;
+          vertex_descriptor v = (supervoxel_label_id_map.find(neighbour_supervoxel_label))->second;
+          boost::tie(e, edge_added) = boost::add_edge(u, v, g);
+          // Calc distance between centers, set this as edge weight
+          // the more distane the heavier final cost
+          if (edge_added) {
+            pcl::PointXYZRGBA centroid_data = supervoxel->centroid_;
+            pcl::PointXYZRGBA neighbour_centroid_data = neighbour_supervoxel->centroid_;
+
+            float absolute_distance = vox_nav_utilities::PCLPointEuclideanDist<>(
+              centroid_data,
+              neighbour_centroid_data);
+            // Lets also add elevation as weight
+            float absolute_elevation = std::abs(centroid_data.z - neighbour_centroid_data.z);
+            weightmap[e] = distance_penalty_weight_ * absolute_distance +
+              elevation_penalty_weight_ * absolute_elevation;
+          }
+        }
+        it = supervoxel_adjacency.upper_bound(supervoxel_label);
+      }
+    } catch (const std::exception & e) {
+      RCLCPP_WARN(
+        logger_, "Catched an exception %s \n search failed to find a valid path!",
+        e.what());
+      return std::vector<geometry_msgs::msg::PoseStamped>();
     }
+
 
     RCLCPP_INFO(
       logger_,
@@ -444,6 +459,8 @@ namespace vox_nav_planning
       // Should not be eecuted. If code executed up until here,
       // A path was NOT found. Warn user about it
       RCLCPP_WARN(logger_, "%s search failed to find a valid path!", graph_search_method_.c_str());
+      return plan_poses;
+
     } catch (FoundGoal found_goal) {
       auto a2 = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> graph_search_ms_double = a2 - a1;
