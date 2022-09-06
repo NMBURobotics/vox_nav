@@ -584,32 +584,35 @@ namespace vox_nav_planning
     const pcl::PointXYZRGBA & a,
     const pcl::PointXYZRGBA & b)
   {
-    fcl::Vec3f edge_center(
-      (a.x + b.x) / 2.0,
-      (a.y + b.y) / 2.0,
-      (a.z + b.z) / 2.0);
-
-    double dx = a.x - b.x;
-    double dy = a.y - b.y;
-    double dz = a.z - b.z;
+    fcl::Vec3f a_center(a.x, a.y, a.z);
+    fcl::Vec3f b_center(b.x, b.y, b.z);
 
     double roll, pitch, yaw;
-    yaw = std::atan2(dy, dx);
-    pitch = -std::atan2(dz, std::sqrt(dx * dx + dy * dy));
-    roll = 0;
 
     tf2::Quaternion quat;
     quat.setRPY(roll, pitch, yaw);
     fcl::Quaternion3f rotation(quat.getX(), quat.getY(), quat.getZ(), quat.getW());
 
-    robot_collision_object_->setTransform(rotation, edge_center);
+    robot_collision_object_->setTransform(rotation, a_center);
 
-    fcl::CollisionResult collisionWithFullMapResult;
+    fcl::CollisionResult acollisionWithFullMapResult, bcollisionWithFullMapResult;
     fcl::CollisionRequest requestType(1, false, 1, false);
+
     fcl::collide(
       robot_collision_object_.get(),
-      original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
-    return collisionWithFullMapResult.isCollision();
+      original_octomap_collision_object_.get(), requestType, acollisionWithFullMapResult);
+
+    robot_collision_object_->setTransform(rotation, b_center);
+
+    fcl::collide(
+      robot_collision_object_.get(),
+      original_octomap_collision_object_.get(), requestType, bcollisionWithFullMapResult);
+
+    auto res = (acollisionWithFullMapResult.isCollision() ||
+      bcollisionWithFullMapResult.isCollision());
+
+    return res;
+
   }
 
   void OptimalElevationPlanner::setupMap()

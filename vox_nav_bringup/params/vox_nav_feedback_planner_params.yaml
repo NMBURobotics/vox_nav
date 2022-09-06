@@ -7,8 +7,8 @@ vox_nav_planner_server_rclcpp_node:
     interpolation_parameter: 0                         # set to 0 if you wanna disable interpolating and smooting, otherwise 25 is a good default value                    
     octomap_voxel_size: 0.4
     robot_body_dimens:
-      x: 1.1
-      y: 1.1
+      x: 1.25
+      y: 1.25
       z: 0.4
     #robot_mesh_path: "package://botanbot_description/meshes/base_simplified.stl" # leave empty if you do not have one, robot_mesh_path: ""
     robot_mesh_path: ""
@@ -145,11 +145,11 @@ vox_nav_controller_server_rclcpp_node:
          plugin: "lyapunov_controller::LyapunovControllerROS"
          V_MIN: -0.2                                                          # min / max velocity constraint(m / s)
          V_MAX: 0.2
-         DF_MIN: -0.15                                                         # min / max front steer angle constraint(rad)
-         DF_MAX: 0.15
+         DF_MIN: -0.1                                                         # min / max front steer angle constraint(rad)
+         DF_MAX: 0.1
          k1: -1.0
          k2: 1.0
-         lookahead_n_waypoints: 3
+         lookahead_n_waypoints: 2
 
 vox_nav_map_server_rclcpp_node:
   ros__parameters:
