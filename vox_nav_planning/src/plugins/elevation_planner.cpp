@@ -242,6 +242,12 @@ namespace vox_nav_planning
       RCLCPP_INFO(
         logger_, "Path Smoothness, %s, %.2f",
         planner_name_.c_str(), solution_path.smoothness());
+      
+      total_solution_length_ += solution_path.length();
+      total_requested_plans_ += 1;
+      double curr_average_solution = total_solution_length_ /
+        static_cast<double>(total_requested_plans_);
+      RCLCPP_INFO(logger_, "total problems %i, Curr average Length, %.2f", total_requested_plans_, curr_average_solution);
 
     } else {
       RCLCPP_WARN(logger_, "No solution for requested path planning !");

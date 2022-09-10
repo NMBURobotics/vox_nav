@@ -7,9 +7,9 @@ vox_nav_planner_server_rclcpp_node:
     interpolation_parameter: 0                         # set to 0 if you wanna disable interpolating and smooting, otherwise 25 is a good default value                    
     octomap_voxel_size: 0.4
     robot_body_dimens:
-      x: 1.2
-      y: 1.2
-      z: 0.8
+      x: 1.25
+      y: 1.25
+      z: 0.4
     #robot_mesh_path: "package://botanbot_description/meshes/base_simplified.stl" # leave empty if you do not have one, robot_mesh_path: ""
     robot_mesh_path: ""
     SE2Planner:
@@ -64,8 +64,8 @@ vox_nav_planner_server_rclcpp_node:
       rho: 2.0
       graph_search_method: "astar"                           # Other options: astar , dijkstra
       supervoxel_disable_transform: false                    # set true for organized point clouds
-      supervoxel_resolution: 0.4
-      supervoxel_seed_resolution: 1.5
+      supervoxel_resolution: 0.2
+      supervoxel_seed_resolution: 0.8
       supervoxel_color_importance: 0.0
       supervoxel_spatial_importance: 1.0
       supervoxel_normal_importance: 1.0
@@ -145,11 +145,11 @@ vox_nav_controller_server_rclcpp_node:
          plugin: "lyapunov_controller::LyapunovControllerROS"
          V_MIN: -0.5                                                          # min / max velocity constraint(m / s)
          V_MAX: 0.5
-         DF_MIN: -0.5                                                         # min / max front steer angle constraint(rad)
-         DF_MAX: 0.5
+         DF_MIN: -0.125                                                         # min / max front steer angle constraint(rad)
+         DF_MAX: 0.125
          k1: -1.0
          k2: 5.0
-         lookahead_n_waypoints: 2
+         lookahead_n_waypoints: 4
 
 vox_nav_map_server_rclcpp_node:
   ros__parameters:
@@ -174,10 +174,10 @@ vox_nav_map_server_rclcpp_node:
     remove_outlier_radius_search: 0.6
     remove_outlier_min_neighbors_in_radius: 5
     # COST REGRESSION CRITICS AND PARAMS
-    uniform_sample_radius: 0.2
-    surfel_radius: 0.6                                                       # Works as resolution of cost regression onto map
-    max_allowed_tilt: 0.15                                                   # 1st Cost critic Any angle(radians) higher than this is marked as NON-traversable
-    max_allowed_point_deviation: 0.20                                        # 2nd Cost critic Point deviation from plane, this could be viewed as roughness of each cell 
+    uniform_sample_radius: 0.15
+    surfel_radius: 0.8                                                       # Works as resolution of cost regression onto map
+    max_allowed_tilt: 0.125                                                   # 1st Cost critic Any angle(radians) higher than this is marked as NON-traversable
+    max_allowed_point_deviation: 0.15                                        # 2nd Cost critic Point deviation from plane, this could be viewed as roughness of each cell 
     max_allowed_energy_gap: 0.5                                              # 3rd Cost critic Max Energy in each cell, this is detemined by max height differnce between edge points of cell
     node_elevation_distance: 1.2                                             # According to cell_radius, cell centers are sampled from original point cloud map, they are elevated from the original cloud
     plane_fit_threshold: 0.1                                                 # when fitting a plane to each cell, a plane_fit_threshold is considered from plane fitting utility of PCL

@@ -53,6 +53,8 @@ namespace vox_nav_planning
     parent->declare_parameter(plugin_name + ".resolution", 0.01);
     parent->declare_parameter(plugin_name + ".row_cloud_downsample_size", 0.4);
     parent->declare_parameter(plugin_name + ".extra_interpolation", 60);
+    parent->declare_parameter(plugin_name + ".y_offset", -0.2);
+    parent->declare_parameter(plugin_name + ".row_extension_dist", 2.4);
 
     parent->get_parameter(plugin_name + ".ref_traj_se2_space", selected_se2_space_name_);
     parent->get_parameter(plugin_name + ".rho", rho_);
@@ -60,6 +62,8 @@ namespace vox_nav_planning
     parent->get_parameter(plugin_name + ".resolution", resolution_);
     parent->get_parameter(plugin_name + ".row_cloud_downsample_size", row_cloud_downsample_size_);
     parent->get_parameter(plugin_name + ".extra_interpolation", extra_interpolation_);
+    parent->get_parameter(plugin_name + ".y_offset", y_offset_);
+    parent->get_parameter(plugin_name + ".row_extension_dist", row_extension_dist_);
 
 
     // This is used to interpolate local refernce states
@@ -142,7 +146,7 @@ namespace vox_nav_planning
       orginizeAndSortClusterPoints(clusters, set, robot_position);
 
     std::vector<geometry_msgs::msg::PoseStamped> plan_poses = rowClusters2InterpolatedPath(
-      clusters_organized, extra_interpolation_, average_point);
+      clusters_organized, extra_interpolation_, average_point, curr_robot_pose);
 
     vox_nav_utilities::publishClustersCloud<pcl::PointCloud<pcl::PointXYZ>::Ptr>(
       polytunnel_cloud_pub_, polytunnel_cloud_.header,
