@@ -237,6 +237,9 @@ namespace vox_nav_control
 
     while (rclcpp::ok() && !is_goal_distance_tolerance_satisfied) {
 
+      auto & clock = *this->get_clock();
+
+
       auto loop_start_time = steady_clock_.now();
       // Check if there is a cancel request
       if (goal_handle->is_canceling()) {
@@ -256,7 +259,17 @@ namespace vox_nav_control
         curr_robot_pose);
       curr_robot_pose.pose.position.z = path.poses[nearest_traj_pose_index].pose.position.z;
 
-      auto & clock = *this->get_clock();
+      // MQTT Subscriber, used to determine PAUSE/RESUME behaviour
+      if (curr_comand_ == 0) {
+        rate.sleep();
+        RCLCPP_INFO_THROTTLE(
+          get_logger(),
+          clock,
+          2000,     // ms
+          "Robot pause flag is up !");
+        continue;
+      }
+
       RCLCPP_INFO_THROTTLE(
         get_logger(),
         clock, 1000, "Remaining Distance to goal %.4f ...",
@@ -278,16 +291,6 @@ namespace vox_nav_control
           this->get_logger(), "Goal has been reached, Now adjusting correct orientation ...");
 
         while (rclcpp::ok() && !is_goal_orientation_tolerance_satisfied) {
-
-          if (curr_comand_ == 0) {
-            rate.sleep();
-            RCLCPP_INFO_THROTTLE(
-              get_logger(),
-              clock,
-              2000, // ms
-              "Robot pause flag is up !");
-            continue;
-          }
 
           if (goal_handle->is_canceling()) {
             RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
