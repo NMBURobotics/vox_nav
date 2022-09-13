@@ -39,7 +39,7 @@
 #include <mosquittopp.h>
 #include "mosquitto.h"
 
-volatile int curr_comand_;
+volatile int curr_comand_{1};
 
 rclcpp::Logger mqtt_logger{rclcpp::get_logger("mqtt_logger")};
 
