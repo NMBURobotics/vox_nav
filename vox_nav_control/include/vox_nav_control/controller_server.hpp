@@ -39,7 +39,7 @@
 #include <mosquittopp.h>
 #include "mosquitto.h"
 
-std::shared_ptr<std::string> curr_comand_;
+volatile int curr_comand_;
 
 rclcpp::Logger mqtt_logger{rclcpp::get_logger("mqtt_logger")};
 
@@ -104,6 +104,7 @@ void on_message(struct mosquitto * mosq, void * obj, const struct mosquitto_mess
 {
   /* This blindly prints the payload, but the payload can be anything so take care. */
   RCLCPP_INFO(mqtt_logger, "%s %d %s\n", msg->topic, msg->qos, (char *)msg->payload);
+  curr_comand_ = std::atoi((char *)msg->payload);
 }
 
 namespace vox_nav_control
@@ -190,9 +191,6 @@ namespace vox_nav_control
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
 
     // MQTT stuff
-    std::shared_ptr<std::string> curr_manipulator_cmd_;
-
-
     std::shared_ptr<std::thread> mqtt_thread_;
   };
 

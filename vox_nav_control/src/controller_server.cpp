@@ -99,10 +99,6 @@ namespace vox_nav_control
     cmd_vel_publisher_ =
       this->create_publisher<geometry_msgs::msg::Twist>("vox_nav/cmd_vel", 10);
 
-    curr_manipulator_cmd_ = std::make_shared<std::string>();
-
-    mosquitto_lib_init();
-
     mqtt_thread_ =
       std::make_shared<std::thread>(
       std::thread(
@@ -282,6 +278,16 @@ namespace vox_nav_control
           this->get_logger(), "Goal has been reached, Now adjusting correct orientation ...");
 
         while (rclcpp::ok() && !is_goal_orientation_tolerance_satisfied) {
+
+          if (curr_comand_ == 0) {
+            rate.sleep();
+            RCLCPP_INFO_THROTTLE(
+              get_logger(),
+              clock,
+              2000, // ms
+              "Robot pause flag is up !");
+            continue;
+          }
 
           if (goal_handle->is_canceling()) {
             RCLCPP_INFO(get_logger(), "Goal was canceled. Canceling planning action.");
