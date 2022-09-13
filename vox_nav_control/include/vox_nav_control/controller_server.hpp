@@ -38,6 +38,47 @@
 
 #include <mosquittopp.h>
 
+class mqtt_manipulator_command : public mosqpp::mosquittopp
+{
+private:
+  std::string * curr_comand_;
+
+public:
+  mqtt_manipulator_command(const char * id, const char * host, int port, std::string * curr_comand)
+  {
+    int keepalive = 60;
+    connect(host, port, keepalive);
+    curr_comand_ = curr_comand;
+  }
+  ~mqtt_manipulator_command() {}
+
+  void on_connect(int rc)
+  {
+    printf("Connected with code %d.\n", rc);
+    if (rc == 0) {
+      subscribe(NULL, "current_command");
+    }
+  }
+
+  void on_message(const struct mosquitto_message * message)
+  {
+    char buf[51];
+    if (!strcmp(message->topic, "current_command")) {
+      memset(buf, 0, 51 * sizeof(char));
+      /* Copy N-1 bytes to ensure always 0 terminated. */
+      memcpy(buf, message->payload, 50 * sizeof(char));
+      *curr_comand_ = std::string(buf);
+      publish(NULL, "current_command_fake", strlen(buf), buf);
+    }
+  }
+
+  void on_subscribe(int mid, int qos_count, const int * granted_qos)
+  {
+    printf("Subscription succeeded.\n");
+  }
+};
+
+
 namespace vox_nav_control
 {
   class ControllerServer : public rclcpp::Node
@@ -114,6 +155,10 @@ namespace vox_nav_control
 
     // ROS Publisher to publish velocity commands
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
+    
+    // MQTT stuff
+    class mqtt_manipulator_command * mqtt_manipulator_command_;
+    int rc_;
   };
 
 }  // namespace vox_nav_control

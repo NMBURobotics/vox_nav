@@ -98,6 +98,12 @@ namespace vox_nav_control
 
     cmd_vel_publisher_ =
       this->create_publisher<geometry_msgs::msg::Twist>("vox_nav/cmd_vel", 10);
+
+
+    mosqpp::lib_init();
+
+   // mqtt_manipulator_command_ = new mqtt_manipulator_command("tempconv", "localhost", 1883 );
+    //tempconv->loop_forever();
   }
 
   ControllerServer::~ControllerServer()
@@ -105,6 +111,9 @@ namespace vox_nav_control
     RCLCPP_INFO(get_logger(), "Destroying");
     controller_.reset();
     action_server_.reset();
+
+    mosqpp::lib_cleanup();
+
   }
 
   rclcpp_action::GoalResponse ControllerServer::handle_goal(
