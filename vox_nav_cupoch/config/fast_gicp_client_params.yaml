@@ -1,11 +1,11 @@
 fast_gicp_client:
   ros__parameters:
-    x_bound: 20.0
-    y_bound: 20.0
+    x_bound: 40.0
+    y_bound: 40.0
     z_bound: 5.0
-    downsample_voxel_size: 0.1
+    downsample_voxel_size: 0.05
     max_icp_iter: 60
-    max_correspondence_distance: 3.0
-    method : 'VGICP' # OTHER OPTIONS' GICP, VGICP, VGICP_CUDA, NDT_CUDA
+    max_correspondence_distance: 1.0
+    method : 'NDT_CUDA' # OTHER OPTIONS' GICP, VGICP, VGICP_CUDA, NDT_CUDA
     num_threads: 8
     debug: True
