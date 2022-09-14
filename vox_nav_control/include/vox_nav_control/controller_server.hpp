@@ -37,6 +37,75 @@
 #include "vox_nav_utilities/tf_helpers.hpp"
 
 #include <mosquittopp.h>
+#include "mosquitto.h"
+
+volatile int curr_comand_{1};
+
+rclcpp::Logger mqtt_logger{rclcpp::get_logger("mqtt_logger")};
+
+/* Callback called when the client receives a CONNACK message from the broker. */
+void on_connect(struct mosquitto * mosq, void * obj, int reason_code)
+{
+  int rc;
+  /* Print out the connection result. mosquitto_connack_string() produces an
+   * appropriate string for MQTT v3.x clients, the equivalent for MQTT v5.0
+   * clients is mosquitto_reason_string().
+   */
+  RCLCPP_INFO(
+    mqtt_logger, "on_connect: %s\n",
+    mosquitto_connack_string(reason_code));
+  if (reason_code != 0) {
+    /* If the connection fails for any reason, we don't want to keep on
+     * retrying in this example, so disconnect. Without this, the client
+     * will attempt to reconnect. */
+    mosquitto_disconnect(mosq);
+  }
+
+  /* Making subscriptions in the on_connect() callback means that if the
+   * connection drops and is automatically resumed by the client, then the
+   * subscriptions will be recreated when the client reconnects. */
+  rc = mosquitto_subscribe(mosq, NULL, "current_command", 2);
+  if (rc != MOSQ_ERR_SUCCESS) {
+    RCLCPP_INFO(mqtt_logger, "Error subscribing: %s\n", mosquitto_strerror(rc));
+    /* We might as well disconnect if we were unable to subscribe */
+    mosquitto_disconnect(mosq);
+  }
+}
+
+
+/* Callback called when the broker sends a SUBACK in response to a SUBSCRIBE. */
+void on_subscribe(
+  struct mosquitto * mosq, void * obj, int mid, int qos_count,
+  const int * granted_qos)
+{
+  int i;
+  bool have_subscription = false;
+
+  /* In this example we only subscribe to a single topic at once, but a
+   * SUBSCRIBE can contain many topics at once, so this is one way to check
+   * them all. */
+  for (i = 0; i < qos_count; i++) {
+    RCLCPP_INFO(mqtt_logger, "on_subscribe: %d:granted qos = %d\n", i, granted_qos[i]);
+    if (granted_qos[i] <= 2) {
+      have_subscription = true;
+    }
+  }
+  if (have_subscription == false) {
+    /* The broker rejected all of our subscriptions, we know we only sent
+     * the one SUBSCRIBE, so there is no point remaining connected. */
+    RCLCPP_INFO(mqtt_logger, "Error: All subscriptions rejected.\n");
+    mosquitto_disconnect(mosq);
+  }
+}
+
+
+/* Callback called when the client receives a message. */
+void on_message(struct mosquitto * mosq, void * obj, const struct mosquitto_message * msg)
+{
+  /* This blindly prints the payload, but the payload can be anything so take care. */
+  RCLCPP_INFO(mqtt_logger, "%s %d %s\n", msg->topic, msg->qos, (char *)msg->payload);
+  curr_comand_ = std::atoi((char *)msg->payload);
+}
 
 namespace vox_nav_control
 {
@@ -90,6 +159,12 @@ namespace vox_nav_control
      */
     void followPath(const std::shared_ptr<GoalHandleFollowPath> goal_handle);
 
+    /**
+    * @brief A dedicated thread to run MQTT.
+    *
+    */
+    void executeMQTTThread();
+
   protected:
     // FollowPath action server
     rclcpp_action::Server<FollowPath>::SharedPtr action_server_;
@@ -114,6 +189,9 @@ namespace vox_nav_control
 
     // ROS Publisher to publish velocity commands
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_publisher_;
+
+    // MQTT stuff
+    std::shared_ptr<std::thread> mqtt_thread_;
   };
 
 }  // namespace vox_nav_control

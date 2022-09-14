@@ -98,6 +98,62 @@ namespace vox_nav_control
 
     cmd_vel_publisher_ =
       this->create_publisher<geometry_msgs::msg::Twist>("vox_nav/cmd_vel", 10);
+
+    mqtt_thread_ =
+      std::make_shared<std::thread>(
+      std::thread(
+        &ControllerServer::executeMQTTThread,
+        this));
+
+    RCLCPP_INFO(get_logger(), "Constructed control server ... ");
+
+  }
+
+  void ControllerServer::executeMQTTThread()
+  {
+
+    struct mosquitto * mosq;
+    int rc;
+
+    /* Required before calling other mosquitto functions */
+    mosquitto_lib_init();
+
+    /* Create a new client instance.
+     * id = NULL -> ask the broker to generate a client id for us
+     * clean session = true -> the broker should remove old sessions when we connect
+     * obj = NULL -> we aren't passing any of our private data for callbacks
+     */
+    mosq = mosquitto_new(NULL, true, NULL);
+    if (mosq == NULL) {
+      RCLCPP_INFO(get_logger(), "Error: Out of memory.\n");
+      return;
+    }
+
+    /* Configure callbacks. This should be done before connecting ideally. */
+    mosquitto_connect_callback_set(mosq, on_connect);
+    mosquitto_subscribe_callback_set(mosq, on_subscribe);
+    mosquitto_message_callback_set(mosq, on_message);
+
+    /* Connect to test.mosquitto.org on port 1883, with a keepalive of 60 seconds.
+     * This call makes the socket connection only, it does not complete the MQTT
+     * CONNECT/CONNACK flow, you should use mosquitto_loop_start() or
+     * mosquitto_loop_forever() for processing net traffic. */
+    rc = mosquitto_connect(mosq, "192.168.0.10", 1883, 60);
+    if (rc != MOSQ_ERR_SUCCESS) {
+      mosquitto_destroy(mosq);
+      RCLCPP_INFO(get_logger(), "Error: %s\n", mosquitto_strerror(rc));
+      return;
+    }
+
+    /* Run the network loop in a blocking call. The only thing we do in this
+     * example is to print incoming messages, so a blocking call here is fine.
+     *
+     * This call will continue forever, carrying automatic reconnections if
+     * necessary, until the user calls mosquitto_disconnect().
+     */
+    mosquitto_loop_forever(mosq, -1, 1);
+
+    mosquitto_lib_cleanup();
   }
 
   ControllerServer::~ControllerServer()
@@ -181,6 +237,9 @@ namespace vox_nav_control
 
     while (rclcpp::ok() && !is_goal_distance_tolerance_satisfied) {
 
+      auto & clock = *this->get_clock();
+
+
       auto loop_start_time = steady_clock_.now();
       // Check if there is a cancel request
       if (goal_handle->is_canceling()) {
@@ -200,7 +259,17 @@ namespace vox_nav_control
         curr_robot_pose);
       curr_robot_pose.pose.position.z = path.poses[nearest_traj_pose_index].pose.position.z;
 
-      auto & clock = *this->get_clock();
+      // MQTT Subscriber, used to determine PAUSE/RESUME behaviour
+      if (curr_comand_ == 0) {
+        rate.sleep();
+        RCLCPP_INFO_THROTTLE(
+          get_logger(),
+          clock,
+          2000,     // ms
+          "Robot pause flag is up !");
+        continue;
+      }
+
       RCLCPP_INFO_THROTTLE(
         get_logger(),
         clock, 1000, "Remaining Distance to goal %.4f ...",

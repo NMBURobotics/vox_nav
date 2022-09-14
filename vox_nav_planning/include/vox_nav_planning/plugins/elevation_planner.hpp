@@ -132,6 +132,9 @@ namespace vox_nav_planning
     ompl::base::ElevationStateSpace::SE2StateType se2_space_type_;
     // curve radius for reeds and dubins only
     double rho_;
+
+    int total_requested_plans_{0};
+    double total_solution_length_{0.0};
   };
 }  // namespace vox_nav_planning
 
