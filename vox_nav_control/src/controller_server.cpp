@@ -265,7 +265,7 @@ namespace vox_nav_control
       vox_nav_utilities::getCurrentPose(
         curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
 
-
+      // NOTE THAT THIS IS ONLY FOR POLYTUNNEL PLANNER
       vox_nav_control::common::readjustGlobalPlanLocally(
         curr_robot_pose, latest_live_cloud_,
         readjusted_reference_traj_publisher_, path,
