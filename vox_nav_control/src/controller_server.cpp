@@ -138,7 +138,7 @@ namespace vox_nav_control
      * This call makes the socket connection only, it does not complete the MQTT
      * CONNECT/CONNACK flow, you should use mosquitto_loop_start() or
      * mosquitto_loop_forever() for processing net traffic. */
-    rc = mosquitto_connect(mosq, "192.168.0.10", 1883, 60);
+    rc = mosquitto_connect(mosq, "192.168.0.171", 1883, 60);
     if (rc != MOSQ_ERR_SUCCESS) {
       mosquitto_destroy(mosq);
       RCLCPP_INFO(get_logger(), "Error: %s\n", mosquitto_strerror(rc));

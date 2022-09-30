@@ -115,9 +115,12 @@ namespace vox_nav_planning
         parent->get_parameter("robot_body_dimens.y").as_double(),
         parent->get_parameter("robot_body_dimens.z").as_double()));*/
 
-    CollisionGeometryPtr_t robot_body_box(new fcl::Ellipsoid(
+    /*CollisionGeometryPtr_t robot_body_box(new fcl::Ellipsoid(
         parent->get_parameter("robot_body_dimens.x").as_double(),
         parent->get_parameter("robot_body_dimens.y").as_double(),
+        parent->get_parameter("robot_body_dimens.z").as_double()));*/
+
+    CollisionGeometryPtr_t robot_body_box(new fcl::Sphere(
         parent->get_parameter("robot_body_dimens.z").as_double()));
 
     fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
