@@ -3,7 +3,7 @@ cupoch_gpu_icp:
     x_bound: 40.0
     y_bound: 40.0
     z_bound: 5.0
-    downsample_voxel_size: 0.1
-    max_icp_iter: 30
-    max_correspondence_distance: 0.5
+    downsample_voxel_size: 0.05
+    max_icp_iter: 50
+    max_correspondence_distance: 1.0
     debug: True

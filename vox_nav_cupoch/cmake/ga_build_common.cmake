@@ -100,7 +100,7 @@ find_package(CUDA REQUIRED  QUIET)
 find_package(Eigen3 REQUIRED  QUIET)
 set(CMAKE_CUDA_COMPILE_FEATURES cuda_std_14)
 set(CUPOCH_NVCC_FLAGS
-    -arch=sm_50
+    -arch=sm_75
     --expt-relaxed-constexpr
     --expt-extended-lambda
     --default-stream per-thread

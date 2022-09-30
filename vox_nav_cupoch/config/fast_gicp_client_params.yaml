@@ -3,9 +3,9 @@ fast_gicp_client:
     x_bound: 20.0
     y_bound: 20.0
     z_bound: 5.0
-    downsample_voxel_size: 0.1
-    max_icp_iter: 60
-    max_correspondence_distance: 3.0
-    method : 'VGICP' # OTHER OPTIONS' GICP, VGICP, VGICP_CUDA, NDT_CUDA
+    downsample_voxel_size: 0.05
+    max_icp_iter: 150
+    max_correspondence_distance: 1.0
+    method : 'GICP' # OTHER OPTIONS' GICP, VGICP, VGICP_CUDA, NDT_CUDA
     num_threads: 8
     debug: True

@@ -1,17 +1,18 @@
 vox_nav_planner_server_rclcpp_node:
   ros__parameters:
-    planner_plugin: "OptimalElevationPlanner"          # other options: "SE2Planner", "ElevationPlanner", "OptimalElevationPlanner"
+    planner_plugin: "PolyTunnelPlanner"          # other options: "SE2Planner", "ElevationPlanner", "OptimalElevationPlanner"
     expected_planner_frequency: 1.0
-    planner_name: "LQRRRTStar"                            
-    planner_timeout: 35.0
+    planner_name: "RRTStarF"                            
+    planner_timeout: 25.0
     interpolation_parameter: 0                         # set to 0 if you wanna disable interpolating and smooting, otherwise 25 is a good default value                    
     octomap_voxel_size: 0.4
     robot_body_dimens:
-      x: 1.25
-      y: 1.25
-      z: 0.4
+      x: 1.2
+      y: 1.2
+      z: 0.6
     #robot_mesh_path: "package://botanbot_description/meshes/base_simplified.stl" # leave empty if you do not have one, robot_mesh_path: ""
     robot_mesh_path: ""
+    publish_segment_ids: false
     SE2Planner:
       # Available Planners Include: PRMstar,LazyPRMstar,RRTstar,RRTsharp,RRTXstatic,InformedRRTstar,BITstar, 
                                  #  ABITstar,AITstar,CForest,LBTRRT,SST,TRRT,SPARS,SPARStwo,FMT,AnytimePathShortening
@@ -64,8 +65,8 @@ vox_nav_planner_server_rclcpp_node:
       rho: 2.0
       graph_search_method: "astar"                           # Other options: astar , dijkstra
       supervoxel_disable_transform: false                    # set true for organized point clouds
-      supervoxel_resolution: 0.2
-      supervoxel_seed_resolution: 0.8
+      supervoxel_resolution: 0.4
+      supervoxel_seed_resolution: 1.5
       supervoxel_color_importance: 0.0
       supervoxel_spatial_importance: 1.0
       supervoxel_normal_importance: 1.0
@@ -81,35 +82,37 @@ vox_nav_planner_server_rclcpp_node:
     PolyTunnelPlanner:
       plugin: "vox_nav_planning::PolyTunnelPlanner"
       ref_traj_se2_space: "DUBINS"                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
-      rho: 1.0      
+      rho: 1.5      
       transform_timeout: 0.2
       resolution: 0.01
       row_cloud_downsample_size: 0.4
       extra_interpolation: 60
+      y_offset: -0.0                                           # robot has a tool on its right, tolerate for that and shift plan y_offset much 
+      row_extension_dist: 2.4
 
 vox_nav_controller_server_rclcpp_node:
    ros__parameters: 
-      controller_plugin: "LyapunovControllerROS"                               # other options: non
+      controller_plugin: "MPCControllerCasadiROS"                               # other options: non
       controller_frequency: 100.0                                              # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
-      goal_tolerance_distance: 0.3                                            # in meters, once smaller than this one controller tries to minimize orientation error
-      goal_tolerance_orientation: 0.3                                         # in radians, once smaller than this value,controller exits with success
+      goal_tolerance_distance: 0.2                                            # in meters, once smaller than this one controller tries to minimize orientation error
+      goal_tolerance_orientation: 0.2                                         # in radians, once smaller than this value,controller exits with success
       transform_timeout: 0.01                                                 # seconds, this is used to regulate lookUpTransfrom calls from tf2
-      global_plan_look_ahead_distance: 2.5                                    # look this amount of meters from current robot pose to remaining global path
-      ref_traj_se2_space: "REEDS"                                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+      global_plan_look_ahead_distance: 2.0                                    # look this amount of meters from current robot pose to remaining global path
+      ref_traj_se2_space: "SE2"                                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 3.0                                                                # Curve radius form reeds and dubins only
       robot_radius: 1.25                                                             
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
-         N: 10                                                                # timesteps in MPC Horizon
+         N: 8                                                                # timesteps in MPC Horizon
          DT: 0.2                                                              # discretization time between timesteps(s)
          L_F: 0.67                                                            # distance from CoG to front axle(m)
          L_R: 0.67                                                            # distance from CoG to rear axle(m)
-         V_MIN: -0.4                                                          # min / max velocity constraint(m / s)
-         V_MAX: 1.0
+         V_MIN: -0.1                                                          # min / max velocity constraint(m / s)
+         V_MAX: 0.1
          A_MIN: -0.1                                                          # min / max acceleration constraint(m / s ^ 2)
          A_MAX: 1.0
-         DF_MIN: -0.8                                                         # min / max front steer angle constraint(rad)
-         DF_MAX: 0.8
+         DF_MIN: -1.0                                                         # min / max front steer angle constraint(rad)
+         DF_MAX: 1.0
          A_DOT_MIN: -0.5                                                      # min / max jerk constraint(m / s ^ 3)
          A_DOT_MAX: 0.5
          DF_DOT_MIN: -0.5                                                     # min / max front steer angle rate constraint(rad / s)
@@ -119,17 +122,17 @@ vox_nav_controller_server_rclcpp_node:
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
          obstacle_cost: 50.0
-         max_obstacles: 4
+         max_obstacles: 0
 
       MPCControllerAcadoROS:
          plugin: "mpc_controller_acado::MPCControllerAcadoROS"
          N: 20                                                                # timesteps in MPC Horizon
          Ni: 1
-         DT: 0.2                                                              # discretization time between timesteps(s)
+         DT: 0.05                                                              # discretization time between timesteps(s)
          L_F: 0.67                                                            # distance from CoG to front axle(m)
          L_R: 0.67                                                            # distance from CoG to rear axle(m)
-         V_MIN: -0.2                                                          # min / max velocity constraint(m / s)
-         V_MAX: 0.4
+         V_MIN: -0.05                                                          # min / max velocity constraint(m / s)
+         V_MAX: 0.1
          A_MIN: -0.1                                                          # min / max acceleration constraint(m / s ^ 2)
          A_MAX: 0.5
          DF_MIN: -0.6                                                         # min / max front steer angle constraint(rad)
@@ -145,41 +148,40 @@ vox_nav_controller_server_rclcpp_node:
          plugin: "lyapunov_controller::LyapunovControllerROS"
          V_MIN: -0.5                                                          # min / max velocity constraint(m / s)
          V_MAX: 0.5
-         DF_MIN: -0.125                                                         # min / max front steer angle constraint(rad)
-         DF_MAX: 0.125
+         DF_MIN: -0.5                                                         # min / max front steer angle constraint(rad)
+         DF_MAX: 0.5
          k1: -1.0
          k2: 5.0
-         lookahead_n_waypoints: 4
+         lookahead_n_waypoints: 2
 
 vox_nav_map_server_rclcpp_node:
   ros__parameters:
-    pcd_map_filename: /home/atas/colcon_ws/src/Thorvald/thorvald_vox_nav/maps/container_office_map.pcd # Provide a PCD format map
-    #pcd_map_filename: /home/atas/colcon_ws/src/Thorvald/thorvald_vox_nav/maps/strawberry_tunnnel_map.pcd # Provide a PCD format map
+    pcd_map_filename: /home/atas/colcon_ws/src/Thorvald/thorvald_vox_nav/maps/strawberry_tunnnel_map.pcd # Provide a PCD format map
 
     # PCD PREPROCESS PARAMS
-    pcd_map_downsample_voxel_size: 0.10                                       # Set to smaller if you do not want downsample pointclouds of the map
+    pcd_map_downsample_voxel_size: 0.05                                       # Set to smaller if you do not want downsample pointclouds of the map
     pcd_map_transform:                                                        # Apply an OPTIONAL rigid-body transrom to pcd file, leave to all zeros if not wished
       translation:                                                            # Unit is meters
-        x: 0.0
-        y: 0.0
-        z: 0.0
+        x: -0.0
+        y: -0.0
+        z: -0.0
       rotation:                                                               # intrinsic rotation X-Y-Z (r-p-y)sequence, if you acquired map in camera frmae and want to represent
                                                                               # it in base_link or lidar frmae, you can specify the rotation here, UNit is Radians
         r: 0.0 #3.14
         p: 0.0 #1.57
-        y: 0.0 #1.57
-    apply_filters: True                                                      # Optional noise removal steps to apply to map
+        y: -0.0 #1.57
+    apply_filters: False                                                      # Optional noise removal steps to apply to map
     remove_outlier_mean_K: 50                                                 # you can set it True and play with parameters if the map is noisy
     remove_outlier_stddev_threshold: 0.06
-    remove_outlier_radius_search: 0.6
-    remove_outlier_min_neighbors_in_radius: 5
+    remove_outlier_radius_search: 0.8
+    remove_outlier_min_neighbors_in_radius: 4
     # COST REGRESSION CRITICS AND PARAMS
-    uniform_sample_radius: 0.15
-    surfel_radius: 0.8                                                       # Works as resolution of cost regression onto map
-    max_allowed_tilt: 0.125                                                   # 1st Cost critic Any angle(radians) higher than this is marked as NON-traversable
-    max_allowed_point_deviation: 0.15                                        # 2nd Cost critic Point deviation from plane, this could be viewed as roughness of each cell 
+    uniform_sample_radius: 0.1
+    surfel_radius: 0.5                                                       # Works as resolution of cost regression onto map
+    max_allowed_tilt: 0.15                                                   # 1st Cost critic Any angle(radians) higher than this is marked as NON-traversable
+    max_allowed_point_deviation: 0.20                                        # 2nd Cost critic Point deviation from plane, this could be viewed as roughness of each cell 
     max_allowed_energy_gap: 0.5                                              # 3rd Cost critic Max Energy in each cell, this is detemined by max height differnce between edge points of cell
-    node_elevation_distance: 1.2                                             # According to cell_radius, cell centers are sampled from original point cloud map, they are elevated from the original cloud
+    node_elevation_distance: 1.6                                             # According to cell_radius, cell centers are sampled from original point cloud map, they are elevated from the original cloud
     plane_fit_threshold: 0.1                                                 # when fitting a plane to each cell, a plane_fit_threshold is considered from plane fitting utility of PCL
     robot_mass: 0.1                                                          # approximate robot mass considering cell_radius, this isnt so important
     average_speed: 1.0                                                       # average robot speed(m/s) when calcuating kinetic energy m = 0.5 * (m * pow(v,2))
@@ -196,18 +198,9 @@ vox_nav_map_server_rclcpp_node:
     map_datum:                                                               # Datum coordinates of map is used to geo-reference the map 
                                                                              # If you are building a map with a SLAM method, you need to get a reading from GPS and absolute headed IMU
                                                                              # just before you start to build the map. See for example 
-      latitude: 59.66424233333333         # CONTAINER OFFICE
-      longitude: 10.76279866666667
-      altitude: 109.0
-      #altitude: 0.9
-
-      #latitude: 59.66597883333333          # ROBOT LAB
-      #longitude: 10.777659
-      #altitude: 111.0
-
-      #latitude: 59.664226426330366          # UNEVEN GAZEBO
-      #longitude: 10.762822144413834
-      #altitude: 0.0
+      latitude: 59.66426383333334
+      longitude: 10.76287566666667
+      altitude: 109.7
       quaternion:
         x: 0.0
         y: 0.0
