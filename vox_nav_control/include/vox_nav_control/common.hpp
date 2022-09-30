@@ -31,6 +31,7 @@
 #include <ompl/base/ScopedState.h>
 
 #include <vox_nav_utilities/tf_helpers.hpp>
+#include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_msgs/msg/object_array.hpp>
 
 using namespace Eigen;
@@ -82,11 +83,13 @@ namespace vox_nav_control
     {
       double x;   // X position
       double y;   // Y position
+      double z;   // Y position
       double psi;   // heading angle
       double v;   // linear velocity
       States()
       : x(0.0),
         y(0.0),
+        z(0.0),
         psi(0.0),
         v(0.0) {}
     };
@@ -308,7 +311,10 @@ namespace vox_nav_control
         marker.lifetime = rclcpp::Duration::from_seconds(0);
         marker.pose.position.x = interpolated_reference_states[i].x;
         marker.pose.position.y = interpolated_reference_states[i].y;
-        marker.pose.position.z = 1.3;
+        if (interpolated_reference_states[i].z == 0.0)
+        {marker.pose.position.z = 1.3;} else {
+          marker.pose.position.z = interpolated_reference_states[i].z;
+        }
         marker.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
           0, 0, interpolated_reference_states[i].psi);
         marker.scale.x = 0.25;
@@ -462,9 +468,129 @@ namespace vox_nav_control
       }
     }
 
+    static void readjustGlobalPlanLocally(
+      const geometry_msgs::msg::PoseStamped & curr_robot_pose,
+      const pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_curr,
+      const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub,
+      nav_msgs::msg::Path & reference_traj,
+      double inflate_y_cropping = 0.3,
+      double inflate_z_cropping = 0.3,
+      int look_ahead_waypints = 10)
+    {
 
-  }  //   namespace common
+      double r, p, robot_yaw;
+      vox_nav_utilities::getRPYfromMsgQuaternion(curr_robot_pose.pose.orientation, r, p, robot_yaw);
 
-}  // namespace vox_nav_control
+      // Now lets find nearest trajectory point to robot base
+      int nearsest_traj_state_index = nearestStateIndex(reference_traj, curr_robot_pose);
+      int local_goal_state_index = nearsest_traj_state_index + look_ahead_waypints;
+
+      if (local_goal_state_index > reference_traj.poses.size() - 1) {
+        local_goal_state_index = reference_traj.poses.size() - 1;
+      }
+
+      // To store the sliced vector
+      std::vector<geometry_msgs::msg::PoseStamped> poses_in_vicinity =
+        slice<geometry_msgs::msg::PoseStamped>(
+        reference_traj.poses,
+        nearsest_traj_state_index,
+        local_goal_state_index);
+
+      for (auto && i : poses_in_vicinity) {
+        double yaw;
+        vox_nav_utilities::getRPYfromMsgQuaternion(i.pose.orientation, r, p, yaw);
+        // only apply the readjustments to segments in row
+        double segment_orientation = std::fmod(yaw, M_PI);
+        if (std::abs(segment_orientation) > 0.2) {
+          // This segment isnt in row
+          return;
+        }
+      }
+      Eigen::Vector4f min, max;
+      if (std::abs(robot_yaw) < 0.4) {      // THe robot is facing +x
+        min(0) = reference_traj.poses[nearsest_traj_state_index].pose.position.x;
+        min(1) = reference_traj.poses[nearsest_traj_state_index].pose.position.y -
+          inflate_y_cropping;
+        min(2) = reference_traj.poses[nearsest_traj_state_index].pose.position.z -
+          inflate_z_cropping;
+        min(3) = 1;
+        max(0) = reference_traj.poses[local_goal_state_index].pose.position.x;
+        max(1) = reference_traj.poses[local_goal_state_index].pose.position.y +
+          inflate_y_cropping;
+        max(2) = reference_traj.poses[local_goal_state_index].pose.position.z +
+          inflate_z_cropping;
+        max(3) = 1;
+      } else {                              // The robot is facing -x
+        min(0) = reference_traj.poses[local_goal_state_index].pose.position.x;
+        min(1) = reference_traj.poses[local_goal_state_index].pose.position.y -
+          inflate_y_cropping;
+        min(2) = reference_traj.poses[local_goal_state_index].pose.position.z -
+          inflate_z_cropping;
+        min(3) = 1;
+        max(0) = reference_traj.poses[nearsest_traj_state_index].pose.position.x;
+        max(1) = reference_traj.poses[nearsest_traj_state_index].pose.position.y +
+          inflate_y_cropping;
+        max(2) = reference_traj.poses[nearsest_traj_state_index].pose.position.z +
+          inflate_z_cropping;
+        max(3) = 1;
+      }
+
+      auto croppped_live_cloud = vox_nav_utilities::cropBox<pcl::PointXYZ>(
+        pcl_curr,
+        min,
+        max);
+
+      pcl::PointXYZ center;
+      pcl::computeCentroid<pcl::PointXYZ, pcl::PointXYZ>(*croppped_live_cloud, center);
+
+      for (auto && i : croppped_live_cloud->points) {
+        double dy = i.y - center.y;
+        double dz = i.z - center.z;
+        i.y -= dy;
+        i.z -= dz;
+      }
+
+      std::vector<States> readjusted_states;
+      for (size_t i = nearsest_traj_state_index; i == local_goal_state_index; i++) {
+        auto position = reference_traj.poses[i].pose.position;
+        double dy = position.y - center.y;
+        double dz = position.z - center.z;
+        reference_traj.poses[i].pose.position.y -= dy;
+        reference_traj.poses[i].pose.position.z -= dz;
+        States state;
+        state.x = reference_traj.poses[i].pose.position.x;
+        state.y = reference_traj.poses[i].pose.position.y;
+        state.z = reference_traj.poses[i].pose.position.z;
+        double curr_yaw;
+        vox_nav_utilities::getRPYfromMsgQuaternion(
+          reference_traj.poses[i].pose.orientation, r, p,
+          curr_yaw);
+        state.psi = curr_yaw;
+        readjusted_states.push_back(state);
+      }
+
+      std_msgs::msg::ColorRGBA yellow;
+      yellow.r = 1.0;
+      yellow.g = 1.0;
+      yellow.a = 1.0;
+
+      // Computed actual traj
+      publishTrajStates(
+        readjusted_states,
+        yellow,
+        "readjusted_segment",
+        marker_pub);
+
+      /*auto readjusted_segments_cloud = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZ>(
+        croppped_live_cloud,
+        0.1);*/
+
+
+    }
+
+
+  }   //   namespace common
+
+}   // namespace vox_nav_control
 
 #endif  // VOX_NAV_CONTROL__COMMON_HPP_

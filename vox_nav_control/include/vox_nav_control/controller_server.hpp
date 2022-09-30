@@ -19,11 +19,14 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <mutex>
 #include <unordered_map>
 
 #include "rclcpp_action/rclcpp_action.hpp"
 #include "geometry_msgs/msg/point.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
+
 #include "vox_nav_msgs/action/follow_path.hpp"
 #include "visualization_msgs/msg/marker.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -35,6 +38,8 @@
 #include "vox_nav_control/controller_core.hpp"
 #include "vox_nav_control/common.hpp"
 #include "vox_nav_utilities/tf_helpers.hpp"
+#include "vox_nav_utilities/pcl_helpers.hpp"
+#include <pcl_ros/transforms.hpp>
 
 #include <mosquittopp.h>
 #include "mosquitto.h"
@@ -165,6 +170,14 @@ namespace vox_nav_control
     */
     void executeMQTTThread();
 
+    /**
+   * @brief Processing done in this func.
+   *
+   * @param cloud
+   */
+    void liveCloudCallback(
+      const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
+
   protected:
     // FollowPath action server
     rclcpp_action::Server<FollowPath>::SharedPtr action_server_;
@@ -192,6 +205,14 @@ namespace vox_nav_control
 
     // MQTT stuff
     std::shared_ptr<std::thread> mqtt_thread_;
+
+    //
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_subscriber_;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr latest_live_cloud_;
+    std::mutex latest_live_cloud_mutex_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
+      readjusted_reference_traj_publisher_;
+
   };
 
 }  // namespace vox_nav_control

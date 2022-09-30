@@ -105,6 +105,16 @@ namespace vox_nav_control
         &ControllerServer::executeMQTTThread,
         this));
 
+    live_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+      "/ouster/points",
+      rclcpp::SensorDataQoS(),
+      std::bind(
+        &ControllerServer::liveCloudCallback, this, std::placeholders::_1));
+
+    readjusted_reference_traj_publisher_ =
+      this->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "/vox_nav/controller/readjusted_plan", 1);
+
     RCLCPP_INFO(get_logger(), "Constructed control server ... ");
 
   }
@@ -237,6 +247,7 @@ namespace vox_nav_control
 
     while (rclcpp::ok() && !is_goal_distance_tolerance_satisfied) {
 
+
       auto & clock = *this->get_clock();
 
 
@@ -253,6 +264,13 @@ namespace vox_nav_control
 
       vox_nav_utilities::getCurrentPose(
         curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
+
+
+      vox_nav_control::common::readjustGlobalPlanLocally(
+        curr_robot_pose, latest_live_cloud_,
+        readjusted_reference_traj_publisher_, path,
+        0.3, 0.2);
+      controller_->setPlan(path);
 
       int nearest_traj_pose_index = vox_nav_control::common::nearestStateIndex(
         path,
@@ -370,6 +388,17 @@ namespace vox_nav_control
       RCLCPP_INFO(this->get_logger(), "Follow Path Succeeded!");
     }
   }
+
+  void ControllerServer::liveCloudCallback(
+    const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
+  {
+    std::lock_guard<std::mutex> guard(latest_live_cloud_mutex_);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::fromROSMsg(*cloud, *pcl_curr);
+    pcl_ros::transformPointCloud("map", *pcl_curr, *pcl_curr, *tf_buffer_);
+    latest_live_cloud_ = pcl_curr;
+  }
+
 }  // namespace vox_nav_control
 
 int main(int argc, char ** argv)
