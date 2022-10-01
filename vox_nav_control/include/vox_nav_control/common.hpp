@@ -472,6 +472,8 @@ namespace vox_nav_control
       const geometry_msgs::msg::PoseStamped & curr_robot_pose,
       const pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_curr,
       const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub,
+      const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub,
+      const rclcpp::Node * node,
       nav_msgs::msg::Path & reference_traj,
       double inflate_y_cropping = 0.3,
       double inflate_z_cropping = 0.3,
@@ -501,7 +503,7 @@ namespace vox_nav_control
         vox_nav_utilities::getRPYfromMsgQuaternion(i.pose.orientation, r, p, yaw);
         // only apply the readjustments to segments in row
         double segment_orientation = std::fmod(yaw, M_PI);
-        if (std::abs(segment_orientation) > 0.2) {
+        if (std::abs(segment_orientation) > 0.4) {
           // This segment isnt in row
           return;
         }
@@ -546,12 +548,12 @@ namespace vox_nav_control
       for (auto && i : croppped_live_cloud->points) {
         double dy = i.y - center.y;
         double dz = i.z - center.z;
-        i.y -= dy;
-        i.z -= dz;
+        //i.y -= dy;
+        //i.z -= dz;
       }
 
       std::vector<States> readjusted_states;
-      for (size_t i = nearsest_traj_state_index; i == local_goal_state_index; i++) {
+      for (int i = nearsest_traj_state_index; i < local_goal_state_index + 1; i++) {
         auto position = reference_traj.poses[i].pose.position;
         double dy = position.y - center.y;
         double dz = position.z - center.z;
@@ -581,11 +583,22 @@ namespace vox_nav_control
         "readjusted_segment",
         marker_pub);
 
+      RCLCPP_INFO(
+        node->get_logger(), "publishTrajStates should publish %d states", readjusted_states.size());
+      RCLCPP_INFO(
+        node->get_logger(), "nearsest_traj_state_index   %d ", nearsest_traj_state_index);
+      RCLCPP_INFO(
+        node->get_logger(), "local_goal_state_index   %d ", local_goal_state_index);
+
       /*auto readjusted_segments_cloud = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZ>(
         croppped_live_cloud,
         0.1);*/
 
-
+      sensor_msgs::msg::PointCloud2 clod;
+      pcl::toROSMsg(*croppped_live_cloud, clod);
+      clod.header.frame_id = "map";
+      clod.header.stamp = node->now();
+      cloud_pub->publish(clod);
     }
 
 

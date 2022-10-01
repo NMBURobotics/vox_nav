@@ -115,6 +115,11 @@ namespace vox_nav_control
       this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "/vox_nav/controller/readjusted_plan", 1);
 
+    dbg_cloud_pub_ =
+      this->create_publisher<sensor_msgs::msg::PointCloud2>(
+      "/vox_nav/controller/readjusted_plan_cloud", rclcpp::SensorDataQoS()
+      );
+
     RCLCPP_INFO(get_logger(), "Constructed control server ... ");
 
   }
@@ -268,8 +273,12 @@ namespace vox_nav_control
       // NOTE THAT THIS IS ONLY FOR POLYTUNNEL PLANNER
       vox_nav_control::common::readjustGlobalPlanLocally(
         curr_robot_pose, latest_live_cloud_,
-        readjusted_reference_traj_publisher_, path,
+        readjusted_reference_traj_publisher_,
+        dbg_cloud_pub_,
+        this,
+        path,
         0.3, 0.2);
+
       controller_->setPlan(path);
 
       int nearest_traj_pose_index = vox_nav_control::common::nearestStateIndex(

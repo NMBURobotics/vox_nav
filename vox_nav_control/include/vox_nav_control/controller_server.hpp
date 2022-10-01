@@ -212,6 +212,9 @@ namespace vox_nav_control
     std::mutex latest_live_cloud_mutex_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
       readjusted_reference_traj_publisher_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr
+      dbg_cloud_pub_;
+
 
   };
 
