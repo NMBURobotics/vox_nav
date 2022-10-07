@@ -28,7 +28,7 @@ def generate_launch_description():
                 remappings=[('/ouster/points', '/ouster/points'),
                             ('vox_nav/map_server/octomap_pointcloud',
                              'vox_nav/map_server/octomap_pointcloud'),
-                            ('odometry/gps', 'odometry/gps')],
+                            ('odometry/gps', 'odometry/global')],
                 parameters=[params]
                 )
 

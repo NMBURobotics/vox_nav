@@ -271,7 +271,7 @@ namespace vox_nav_control
         curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
 
       // NOTE THAT THIS IS ONLY FOR POLYTUNNEL PLANNER
-      vox_nav_control::common::readjustGlobalPlanLocally(
+      /*vox_nav_control::common::readjustGlobalPlanLocally(
         curr_robot_pose, latest_live_cloud_,
         readjusted_reference_traj_publisher_,
         dbg_cloud_pub_,
@@ -279,7 +279,7 @@ namespace vox_nav_control
         path,
         0.3, 0.2);
 
-      controller_->setPlan(path);
+      controller_->setPlan(path);*/
 
       int nearest_traj_pose_index = vox_nav_control::common::nearestStateIndex(
         path,

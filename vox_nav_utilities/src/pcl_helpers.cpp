@@ -154,6 +154,30 @@ namespace vox_nav_utilities
     return filteredCloud;
   }
 
+  pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
+    pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int int_param, double double_param,
+    OutlierRemovalType outlier_removal_type)
+  {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+    if (outlier_removal_type == OutlierRemovalType::StatisticalOutlierRemoval) {
+      pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+      sor.setInputCloud(inputCloud);
+      sor.setMeanK(int_param);
+      sor.setStddevMulThresh(double_param);
+      sor.filter(*filteredCloud);
+    } else {
+      pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
+      outrem.setInputCloud(inputCloud);
+      outrem.setMinNeighborsInRadius(int_param);
+      outrem.setRadiusSearch(double_param);
+      outrem.setKeepOrganized(true);
+      outrem.filter(*filteredCloud);
+    }
+    return filteredCloud;
+  }
+
+
   Eigen::Vector3f getColorByIndexEig(int index)
   {
     Eigen::Vector3f result;

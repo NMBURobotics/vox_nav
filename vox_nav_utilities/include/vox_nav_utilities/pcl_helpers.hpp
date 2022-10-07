@@ -168,6 +168,18 @@ namespace vox_nav_utilities
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int int_param, double double_param,
     OutlierRemovalType outlier_removal_type);
 
+/*!
+* Remove outliers from the point cloud. Function is based on
+* the StatisticalOutlierRemoval filter from pcl. The explanation on
+* how the algorithm works can be found here:
+* http://pointclouds.org/documentation/tutorials/statistical_outlier.php
+* @param[in] Input point cloud
+* @return Point cloud where outliers have been removed.
+*/
+  pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
+    pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int int_param, double double_param,
+    OutlierRemovalType outlier_removal_type);
+
 /**
  * @brief
  *

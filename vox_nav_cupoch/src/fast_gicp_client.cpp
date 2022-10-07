@@ -123,14 +123,13 @@ void FastGICPClient::liveCloudCallback(
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZ>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
 
+    pcl_ros::transformPointCloud(
+      "base_link", *pcl_curr, *pcl_curr, *tf_buffer_);
 
     auto croppped_live_cloud = vox_nav_utilities::cropBox<pcl::PointXYZ>(
       pcl_curr,
       Eigen::Vector4f(-params_.x_bound, -params_.y_bound, -params_.z_bound, 1),
       Eigen::Vector4f(params_.x_bound, params_.y_bound, params_.z_bound, 1));
-
-    pcl_ros::transformPointCloud(
-      "base_link", *croppped_live_cloud, *croppped_live_cloud, *tf_buffer_);
 
     geometry_msgs::msg::PoseStamped curr_robot_pose;
 
@@ -163,6 +162,20 @@ void FastGICPClient::liveCloudCallback(
       vox_nav_utilities::downsampleInputCloud<pcl::PointXYZ>(
       croppped_live_cloud, params_.downsample_voxel_size);
 
+    /*croppped_map_cloud = vox_nav_utilities::removeOutliersFromInputCloud(
+      croppped_map_cloud,
+      50,
+      0.08,
+      vox_nav_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
+    croppped_map_cloud = vox_nav_utilities::removeNans<pcl::PointXYZ>(croppped_map_cloud);
+
+    croppped_live_cloud = vox_nav_utilities::removeOutliersFromInputCloud(
+      croppped_live_cloud,
+      50,
+      0.08,
+      vox_nav_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
+    croppped_live_cloud = vox_nav_utilities::removeNans<pcl::PointXYZ>(croppped_live_cloud);*/
+
     auto aligned = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
 
     pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr reg = createRegistration(
@@ -176,6 +189,7 @@ void FastGICPClient::liveCloudCallback(
     reg->setMaximumIterations(params_.max_icp_iter);
     reg->setInputSource(croppped_live_cloud);
     reg->setInputTarget(croppped_map_cloud);
+
     reg->align(*aligned);
 
     Eigen::Affine3f T;
@@ -232,8 +246,8 @@ void FastGICPClient::liveCloudCallback(
       std::cout << "Resulting transfrom: \n" << reg->getFinalTransformation() << std::endl;
 
       if (sequence_ == 0) {
-        pcl::io::savePCDFileASCII("/home/atas/target.pcd", *croppped_map_cloud);
-        pcl::io::savePCDFileASCII("/home/atas/source.pcd", *croppped_live_cloud);
+        //pcl::io::savePCDFileASCII("/home/atas/target.pcd", *croppped_map_cloud);
+        //pcl::io::savePCDFileASCII("/home/atas/source.pcd", *croppped_live_cloud);
       }
 
     }
@@ -268,12 +282,12 @@ pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr FastGICPClient::createRegis
   } else if (method == "VGICP_CUDA") {
     auto vgicp_cuda =
       pcl::make_shared<fast_gicp::FastVGICPCuda<pcl::PointXYZ, pcl::PointXYZ>>();
-    vgicp_cuda->setNearestNeighborSearchMethod(fast_gicp::NearestNeighborMethod::CPU_PARALLEL_KDTREE);
-    vgicp_cuda->setResolution(1.0);
+    vgicp_cuda->setNearestNeighborSearchMethod(fast_gicp::NearestNeighborMethod::GPU_RBF_KERNEL);
+    vgicp_cuda->setResolution(0.1);
     return vgicp_cuda;
   } else if (method == "NDT_CUDA") {
     auto ndt = pcl::make_shared<fast_gicp::NDTCuda<pcl::PointXYZ, pcl::PointXYZ>>();
-    ndt->setResolution(1.0);
+    ndt->setResolution(0.1);
     ndt->setDistanceMode(fast_gicp::NDTDistanceMode::P2D);
     ndt->setNeighborSearchMethod(fast_gicp::NeighborSearchMethod::DIRECT_RADIUS, 0.8);
     return ndt;

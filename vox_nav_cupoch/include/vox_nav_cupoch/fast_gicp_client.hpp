@@ -65,6 +65,7 @@
 namespace vox_nav_cupoch
 {
 
+
   struct ICPParameters
   {
     float x_bound;

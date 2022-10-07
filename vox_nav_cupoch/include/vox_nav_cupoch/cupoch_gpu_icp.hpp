@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef VOX_NAV_CUPOCH__CUPOCH_GPU_ICP_HPP_
 #define VOX_NAV_CUPOCH__CUPOCH_GPU_ICP_HPP_
 
@@ -72,12 +71,12 @@ namespace vox_nav_cupoch
     bool debug;
   };
 
-/**
- * @brief Given a raw point cloud,
- * clusterize it and use UKF to track clusters. Publish vis of tracks in RVIZ
- * and publish vox_nav_msgs::msg::ObjectArray
- *
- */
+  /**
+   * @brief Given a raw point cloud,
+   * clusterize it and use UKF to track clusters. Publish vis of tracks in RVIZ
+   * and publish vox_nav_msgs::msg::ObjectArray
+   *
+   */
   class CupochGPUICP : public rclcpp::Node
   {
 
@@ -100,25 +99,31 @@ namespace vox_nav_cupoch
      * @param poses
      */
     void liveCloudCallback(
-      const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
+        const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
 
     /**
-    * @brief Processing done in this func.
-    *
-    * @param cloud
-    * @param poses
-    */
+     * @brief Processing done in this func.
+     *
+     * @param cloud
+     * @param poses
+     */
     void mapCloudCallback(
-      const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
+        const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
 
     /**
-    * @brief Processing done in this func.
-    *
-    * @param cloud
-    * @param poses
-    */
+     * @brief Processing done in this func.
+     *
+     * @param cloud
+     * @param poses
+     */
     void gpsOdomCallback(
-      const nav_msgs::msg::Odometry::ConstSharedPtr odom);
+        const nav_msgs::msg::Odometry::ConstSharedPtr odom);
+
+    template <typename T>
+    T clamp(const T &n, const T &lower, const T &upper)
+    {
+      return std::max(lower, std::min(n, upper));
+    }
 
   private:
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_subscriber_;
@@ -128,12 +133,12 @@ namespace vox_nav_cupoch
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_pub_;
 
-    //Publish base to map after ICP correction
+    // Publish base to map after ICP correction
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
-      base_to_map_pose_pub_;
+        base_to_map_pose_pub_;
 
     rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr
-      new_robot_pose_publisher_;
+        new_robot_pose_publisher_;
 
     // tf buffer to get access to transfroms
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
@@ -150,10 +155,8 @@ namespace vox_nav_cupoch
     ICPParameters params_;
 
     Eigen::Matrix4f last_transform_estimate_;
-
-
   };
 
-}  // namespace vox_nav_cupoch
+} // namespace vox_nav_cupoch
 
-#endif  // VOX_NAV_CUPOCH__CUPOCH_GPU_ICP_HPP_
+#endif // VOX_NAV_CUPOCH__CUPOCH_GPU_ICP_HPP_
