@@ -401,11 +401,11 @@ namespace vox_nav_control
   void ControllerServer::liveCloudCallback(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
   {
-    std::lock_guard<std::mutex> guard(latest_live_cloud_mutex_);
+    /*std::lock_guard<std::mutex> guard(latest_live_cloud_mutex_);
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZ>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
     pcl_ros::transformPointCloud("map", *pcl_curr, *pcl_curr, *tf_buffer_);
-    latest_live_cloud_ = pcl_curr;
+    latest_live_cloud_ = pcl_curr;*/
   }
 
 }  // namespace vox_nav_control
