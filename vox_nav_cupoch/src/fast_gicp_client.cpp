@@ -123,8 +123,13 @@ void FastGICPClient::liveCloudCallback(
     pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZ>());
     pcl::fromROSMsg(*cloud, *pcl_curr);
 
-    pcl_ros::transformPointCloud(
-      "base_link", *pcl_curr, *pcl_curr, *tf_buffer_);
+
+    if (!pcl_ros::transformPointCloud(
+        "base_link", *pcl_curr, *pcl_curr, *tf_buffer_))
+    {
+      RCLCPP_WARN(get_logger(), "Error Encountered at transfrom, doing nothing");
+      return;
+    }
 
     auto croppped_live_cloud = vox_nav_utilities::cropBox<pcl::PointXYZ>(
       pcl_curr,
@@ -152,8 +157,12 @@ void FastGICPClient::liveCloudCallback(
     croppped_map_cloud->header.stamp = pcl_curr->header.stamp;
     croppped_map_cloud->header.seq = pcl_curr->header.seq;
 
-    pcl_ros::transformPointCloud(
-      "base_link", *croppped_map_cloud, *croppped_map_cloud, *tf_buffer_);
+    if (!pcl_ros::transformPointCloud(
+        "base_link", *croppped_map_cloud, *croppped_map_cloud, *tf_buffer_))
+    {
+      RCLCPP_WARN(get_logger(), "Error Encountered at transfrom, doing nothing");
+      return;
+    }
 
     croppped_map_cloud =
       vox_nav_utilities::downsampleInputCloud<pcl::PointXYZ>(
@@ -161,20 +170,6 @@ void FastGICPClient::liveCloudCallback(
     croppped_live_cloud =
       vox_nav_utilities::downsampleInputCloud<pcl::PointXYZ>(
       croppped_live_cloud, params_.downsample_voxel_size);
-
-    /*croppped_map_cloud = vox_nav_utilities::removeOutliersFromInputCloud(
-      croppped_map_cloud,
-      50,
-      0.08,
-      vox_nav_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
-    croppped_map_cloud = vox_nav_utilities::removeNans<pcl::PointXYZ>(croppped_map_cloud);
-
-    croppped_live_cloud = vox_nav_utilities::removeOutliersFromInputCloud(
-      croppped_live_cloud,
-      50,
-      0.08,
-      vox_nav_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
-    croppped_live_cloud = vox_nav_utilities::removeNans<pcl::PointXYZ>(croppped_live_cloud);*/
 
     auto aligned = pcl::make_shared<pcl::PointCloud<pcl::PointXYZ>>();
 
@@ -189,11 +184,22 @@ void FastGICPClient::liveCloudCallback(
     reg->setMaximumIterations(params_.max_icp_iter);
     reg->setInputSource(croppped_live_cloud);
     reg->setInputTarget(croppped_map_cloud);
-
     reg->align(*aligned);
 
+    auto res_transformation = reg->getFinalTransformation();
+
+    /*if (std::abs(res_transformation(0, 3)) > 0.1 ||
+      std::abs(res_transformation(1, 3)) > 0.1 ||
+      std::abs(res_transformation(2, 3)) > 0.1)
+    {
+
+      res_transformation(0, 3) = clamp<double>(res_transformation(0, 3), -0.1, 0.1);
+      res_transformation(1, 3) = clamp<double>(res_transformation(1, 3), -0.1, 0.1);
+      res_transformation(2, 3) = clamp<double>(res_transformation(2, 3), -0.1, 0.1);
+    }*/
+
     Eigen::Affine3f T;
-    T.matrix() = reg->getFinalTransformation();
+    T.matrix() = res_transformation;
     Eigen::Affine3d T_d = T.cast<double>();
     auto transformation = tf2::eigenToTransform(T_d);
 
@@ -234,7 +240,7 @@ void FastGICPClient::liveCloudCallback(
     live_cloud_pub_->publish(live_cloud_crop_msg);
     map_cloud_pub_->publish(map_cloud_crop_msg);
 
-    last_transform_estimate_ = reg->getFinalTransformation();
+    last_transform_estimate_ = res_transformation;
 
     if (params_.debug) {
       RCLCPP_INFO(
@@ -243,7 +249,7 @@ void FastGICPClient::liveCloudCallback(
       RCLCPP_INFO(
         get_logger(), "Did %s with Map Cloud of %d points...",
         params_.method.c_str(), croppped_map_cloud->points.size());
-      std::cout << "Resulting transfrom: \n" << reg->getFinalTransformation() << std::endl;
+      std::cout << "Resulting transfrom: \n" << res_transformation << std::endl;
 
       if (sequence_ == 0) {
         //pcl::io::savePCDFileASCII("/home/atas/target.pcd", *croppped_map_cloud);

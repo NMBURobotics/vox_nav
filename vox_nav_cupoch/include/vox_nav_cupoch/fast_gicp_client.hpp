@@ -144,6 +144,12 @@ namespace vox_nav_cupoch
      */
     void swap_source_and_target(pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr reg);
 
+    template<typename T>
+    T clamp(const T & n, const T & lower, const T & upper)
+    {
+      return std::max(lower, std::min(n, upper));
+    }
+
   private:
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_subscriber_;
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_subscriber_;
