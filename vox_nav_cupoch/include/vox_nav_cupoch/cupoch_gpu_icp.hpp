@@ -150,6 +150,8 @@ namespace vox_nav_cupoch
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr map_cloud_;
     nav_msgs::msg::Odometry::SharedPtr latest_gps_odom_;
 
+    geometry_msgs::msg::PoseWithCovarianceStamped latest_icp_pose_;
+
     std::mutex latest_gps_odom_mutex_;
 
     ICPParameters params_;

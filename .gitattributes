@@ -1,0 +1,2 @@
+*.zip filter=lfs diff=lfs merge=lfs -text
+*.db3 filter=lfs diff=lfs merge=lfs -text

@@ -3,4 +3,4 @@
 */cmake-build-debug/*
 */cmake-build-default/*
 */googletest/*
-
+*.db3-*

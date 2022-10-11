@@ -118,6 +118,8 @@ void CupochGPUICP::liveCloudCallback(
                 "base_link", *pcl_curr, *pcl_curr, *tf_buffer_))
         {
             RCLCPP_WARN(get_logger(), "Error Encountered at transfrom, doing nothing");
+            latest_icp_pose_.header.stamp = now();
+            base_to_map_pose_pub_->publish(latest_icp_pose_);
             return;
         }
 
@@ -149,9 +151,11 @@ void CupochGPUICP::liveCloudCallback(
         croppped_map_cloud->header.seq = pcl_curr->header.seq;
 
         if (!pcl_ros::transformPointCloud(
-                "base_link", rclcpp::Time(0), *croppped_map_cloud, "map", *croppped_map_cloud, *tf_buffer_))
+                "base_link", *croppped_map_cloud, *croppped_map_cloud, *tf_buffer_))
         {
             RCLCPP_WARN(get_logger(), "Error Encountered at transfrom, doing nothing");
+            latest_icp_pose_.header.stamp = now();
+            base_to_map_pose_pub_->publish(latest_icp_pose_);
             return;
         }
 
@@ -232,6 +236,7 @@ void CupochGPUICP::liveCloudCallback(
         icp_pose.header.stamp = curr_robot_pose.header.stamp;
         icp_pose.header.frame_id = "map";
         icp_pose.pose.pose = a.pose;
+        latest_icp_pose_ = icp_pose;
         base_to_map_pose_pub_->publish(icp_pose);
 
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr live_cloud_crop(new pcl::PointCloud<pcl::PointXYZRGB>());
