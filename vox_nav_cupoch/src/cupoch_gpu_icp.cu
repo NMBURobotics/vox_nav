@@ -149,7 +149,7 @@ void CupochGPUICP::liveCloudCallback(
         croppped_map_cloud->header.seq = pcl_curr->header.seq;
 
         if (!pcl_ros::transformPointCloud(
-                "base_link", *croppped_map_cloud, *croppped_map_cloud, *tf_buffer_))
+                "base_link", rclcpp::Time(0), *croppped_map_cloud, "map", *croppped_map_cloud, *tf_buffer_))
         {
             RCLCPP_WARN(get_logger(), "Error Encountered at transfrom, doing nothing");
             return;
@@ -192,14 +192,14 @@ void CupochGPUICP::liveCloudCallback(
             *live_points_cupoch, *map_points_cupoch, params_.max_correspondence_distance,
             Eigen::Matrix4f::Identity(), point_to_point, criteria);
 
-        if (std::abs(res.transformation_(0, 3)) > 0.1 ||
-            std::abs(res.transformation_(1, 3)) > 0.1 ||
-            std::abs(res.transformation_(2, 3)) > 0.1)
+        if (std::abs(res.transformation_(0, 3)) > 0.5 ||
+            std::abs(res.transformation_(1, 3)) > 0.5 ||
+            std::abs(res.transformation_(2, 3)) > 0.5)
         {
 
-            res.transformation_(0, 3) = clamp<double>(res.transformation_(0, 3), -0.1, 0.1);
-            res.transformation_(1, 3) = clamp<double>(res.transformation_(1, 3), -0.1, 0.1);
-            res.transformation_(2, 3) = clamp<double>(res.transformation_(2, 3), -0.1, 0.1);
+            res.transformation_(0, 3) = clamp<double>(res.transformation_(0, 3), -0.5, 0.5);
+            res.transformation_(1, 3) = clamp<double>(res.transformation_(1, 3), -0.5, 0.5);
+            res.transformation_(2, 3) = clamp<double>(res.transformation_(2, 3), -0.5, 0.5);
         }
 
         live_points_cupoch->Transform(res.transformation_);
