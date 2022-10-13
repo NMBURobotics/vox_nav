@@ -287,13 +287,24 @@ namespace vox_nav_control
       curr_robot_pose.pose.position.z = path.poses[nearest_traj_pose_index].pose.position.z;
 
       // MQTT Subscriber, used to determine PAUSE/RESUME behaviour
+      if (curr_comand_ == 2) {
+        rate.sleep();
+        RCLCPP_INFO_THROTTLE(
+          get_logger(),
+          clock,
+          2000,     // ms
+          "ROBOT WONT MOVE, PAUSED, PRESS RESUME !");
+        continue;
+      }
+
+      // MQTT Subscriber, used to determine PAUSE/RESUME behaviour
       if (curr_comand_ == 0) {
         rate.sleep();
         RCLCPP_INFO_THROTTLE(
           get_logger(),
           clock,
           2000,     // ms
-          "Robot pause flag is up !");
+          "Recieved STOP command !");
         continue;
       }
 
