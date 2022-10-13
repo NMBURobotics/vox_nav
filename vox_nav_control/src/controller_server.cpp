@@ -305,7 +305,22 @@ namespace vox_nav_control
           clock,
           2000,     // ms
           "Recieved STOP command !");
-        continue;
+
+        double void_var, segment_yaw;
+        vox_nav_utilities::getRPYfromMsgQuaternion(
+          path.poses[nearest_traj_pose_index].pose.orientation, void_var, void_var, segment_yaw);
+        double segment_orientation = std::fmod(segment_yaw, M_PI);
+
+        if (std::abs(segment_orientation) > 0.4) {
+          rate.sleep();
+          RCLCPP_INFO_THROTTLE(
+            get_logger(),
+            clock,
+            2000,   // ms
+            "Turning, wont listen to STOP command !");
+        } else {
+          continue;
+        }
       }
 
       RCLCPP_INFO_THROTTLE(
@@ -339,8 +354,8 @@ namespace vox_nav_control
 
           computed_velocity_commands =
             controller_->computeHeadingCorrectionCommands(curr_robot_pose);
-          cmd_vel_publisher_->publish(computed_velocity_commands);
-          goal_handle->publish_feedback(feedback);
+          //cmd_vel_publisher_->publish(computed_velocity_commands);
+          //goal_handle->publish_feedback(feedback);
 
           vox_nav_utilities::getCurrentPose(
             curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
@@ -377,7 +392,7 @@ namespace vox_nav_control
       RCLCPP_INFO_THROTTLE(
         get_logger(),
         clock,
-        2000, // ms
+        2000,   // ms
         "Average Current Control loop rate is %.4f Hz",
         1.0 / (average_time_taken_by_controller_loop / control_cycles));
 
@@ -419,7 +434,7 @@ namespace vox_nav_control
     latest_live_cloud_ = pcl_curr;*/
   }
 
-}  // namespace vox_nav_control
+}   // namespace vox_nav_control
 
 int main(int argc, char ** argv)
 {
