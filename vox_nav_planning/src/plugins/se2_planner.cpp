@@ -81,14 +81,14 @@ namespace vox_nav_planning
     state_space_->as<ompl::base::SE2StateSpace>()->setBounds(*se2_bounds_);
     simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
 
-    typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
-    CollisionGeometryPtr_t robot_body_box(new fcl::Box(
+    typedef std::shared_ptr<fcl::CollisionGeometryf> CollisionGeometryPtr_t;
+    CollisionGeometryPtr_t robot_body_box(new fcl::Box<float>(
         parent->get_parameter("robot_body_dimens.x").as_double(),
         parent->get_parameter("robot_body_dimens.y").as_double(),
         parent->get_parameter("robot_body_dimens.z").as_double()));
 
-    fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
-    robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
+    fcl::CollisionObjectf robot_body_box_object(robot_body_box, fcl::Transform3f());
+    robot_collision_object_ = std::make_shared<fcl::CollisionObjectf>(robot_body_box_object);
     original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
 
     // service hooks for robot localization fromll service
@@ -205,15 +205,15 @@ namespace vox_nav_planning
     const ompl::base::SE2StateSpace::StateType * se2_state =
       state->as<ompl::base::SE2StateSpace::StateType>();
     // check validity of state Fdefined by pos & rot
-    fcl::Vec3f translation(se2_state->getX(), se2_state->getY(), z_elevation_);
+    fcl::Vector3f translation(se2_state->getX(), se2_state->getY(), z_elevation_);
     tf2::Quaternion myQuaternion;
     myQuaternion.setRPY(0, 0, se2_state->getYaw());
-    fcl::Quaternion3f rotation(myQuaternion.getX(), myQuaternion.getY(),
+    fcl::Quaternionf rotation(myQuaternion.getX(), myQuaternion.getY(),
       myQuaternion.getZ(), myQuaternion.getW());
     robot_collision_object_->setTransform(rotation, translation);
-    fcl::CollisionRequest requestType(1, false, 1, false);
-    fcl::CollisionResult collisionResult;
-    fcl::collide(
+    fcl::CollisionRequestf requestType(1, false, 1, false);
+    fcl::CollisionResultf collisionResult;
+    fcl::collide<float>(
       robot_collision_object_.get(),
       original_octomap_collision_object_.get(), requestType, collisionResult);
     return !collisionResult.isCollision();
@@ -264,9 +264,9 @@ namespace vox_nav_planning
 
       delete original_octomap_octree;
 
-      auto original_octomap_fcl_octree = std::make_shared<fcl::OcTree>(original_octomap_octree_);
-      original_octomap_collision_object_ = std::make_shared<fcl::CollisionObject>(
-        std::shared_ptr<fcl::CollisionGeometry>(original_octomap_fcl_octree));
+      auto original_octomap_fcl_octree = std::make_shared<fcl::OcTreef>(original_octomap_octree_);
+      original_octomap_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
+        std::shared_ptr<fcl::CollisionGeometryf>(original_octomap_fcl_octree));
 
       RCLCPP_INFO(
         logger_,

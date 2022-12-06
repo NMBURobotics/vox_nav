@@ -138,9 +138,8 @@ namespace vox_nav_waypoint_nav_clients
   }
 
   void NavigateThroughGPSPosesClient::goalResponseCallback(
-    std::shared_future<NavigateThroughGPSPosesGoalHandle::SharedPtr> future)
+    NavigateThroughGPSPosesGoalHandle::SharedPtr goal_handle)
   {
-    auto goal_handle = future.get();
     if (!goal_handle) {
       RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
     } else {

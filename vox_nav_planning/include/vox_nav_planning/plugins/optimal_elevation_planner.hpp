@@ -152,7 +152,7 @@ namespace vox_nav_planning
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr elevated_traversable_cloud_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
-    std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> elevated_surfels_collision_object_;
 
     ompl::base::StateSpacePtr state_space_;
     std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;

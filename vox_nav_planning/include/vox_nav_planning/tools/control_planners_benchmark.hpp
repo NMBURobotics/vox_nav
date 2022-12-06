@@ -87,12 +87,11 @@
 #include <octomap_msgs/conversions.h>
 #include <octomap_msgs/msg/octomap.hpp>
 // FCL
-#include <fcl/broadphase/broadphase.h>
-#include <fcl/collision.h>
 #include <fcl/config.h>
-#include <fcl/math/transform.h>
-#include <fcl/octree.h>
-#include <fcl/traversal/traversal_node_octree.h>
+#include "fcl/geometry/octree/octree.h"
+#include "fcl/math/constants.h"
+#include "fcl/narrowphase/collision.h"
+#include "fcl/narrowphase/collision_object.h"
 // STL
 #include <iostream>
 #include <map>
@@ -165,8 +164,8 @@ namespace vox_nav_planning
     geometry_msgs::msg::Vector3 robot_body_dimensions_;
 
     std::shared_ptr<octomap::OcTree> original_octomap_octree_;
-    std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
-    std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> original_octomap_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_;
 
     // Publishers for the path
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
@@ -181,7 +180,7 @@ namespace vox_nav_planning
     std::mutex octomap_mutex_;
 
     std::shared_ptr<octomap::OcTree> elevated_surfel_octomap_octree_;
-    std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> elevated_surfels_collision_object_;
     geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
     pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;

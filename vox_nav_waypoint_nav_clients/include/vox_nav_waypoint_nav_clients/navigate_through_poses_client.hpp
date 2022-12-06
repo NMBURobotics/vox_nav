@@ -79,7 +79,7 @@ namespace vox_nav_waypoint_nav_clients
    */
     std::vector<geometry_msgs::msg::PoseStamped> loadWaypointsFromYAML();
 
-    void goalResponseCallback(std::shared_future<NavigateThroughPosesGoalHandle::SharedPtr> future);
+    void goalResponseCallback(NavigateThroughPosesGoalHandle::SharedPtr goal_handle);
 
     void feedbackCallback(
       NavigateThroughPosesGoalHandle::SharedPtr,

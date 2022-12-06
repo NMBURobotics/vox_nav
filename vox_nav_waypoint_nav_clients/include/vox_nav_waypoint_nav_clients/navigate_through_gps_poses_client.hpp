@@ -80,8 +80,7 @@ namespace vox_nav_waypoint_nav_clients
    */
     std::vector<sensor_msgs::msg::NavSatFix> loadGPSWaypointsFromYAML();
 
-    void goalResponseCallback(
-      std::shared_future<NavigateThroughGPSPosesGoalHandle::SharedPtr> future);
+    void goalResponseCallback(NavigateThroughGPSPosesGoalHandle::SharedPtr goal_handle);
 
     void feedbackCallback(
       NavigateThroughGPSPosesGoalHandle::SharedPtr,

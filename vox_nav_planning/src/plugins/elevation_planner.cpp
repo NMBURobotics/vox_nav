@@ -86,18 +86,18 @@ namespace vox_nav_planning
       se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::REDDSSHEEP;
     }
 
-    typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
+    typedef std::shared_ptr<fcl::CollisionGeometryf> CollisionGeometryPtr_t;
     CollisionGeometryPtr_t robot_body_box(
-      new fcl::Box(
+      new fcl::Box<float>(
         parent->get_parameter("robot_body_dimens.x").as_double(),
         parent->get_parameter("robot_body_dimens.y").as_double(),
         parent->get_parameter("robot_body_dimens.z").as_double()));
 
-    fcl::CollisionObject robot_body_box_object(robot_body_box,
+    fcl::CollisionObjectf robot_body_box_object(robot_body_box,
       fcl::Transform3f());
 
     robot_collision_object_ =
-      std::make_shared<fcl::CollisionObject>(robot_body_box_object);
+      std::make_shared<fcl::CollisionObjectf>(robot_body_box_object);
 
     elevated_surfel_octomap_octree_ =
       std::make_shared<octomap::OcTree>(octomap_voxel_size_);
@@ -242,12 +242,14 @@ namespace vox_nav_planning
       RCLCPP_INFO(
         logger_, "Path Smoothness, %s, %.2f",
         planner_name_.c_str(), solution_path.smoothness());
-      
+
       total_solution_length_ += solution_path.length();
       total_requested_plans_ += 1;
       double curr_average_solution = total_solution_length_ /
         static_cast<double>(total_requested_plans_);
-      RCLCPP_INFO(logger_, "total problems %i, Curr average Length, %.2f", total_requested_plans_, curr_average_solution);
+      RCLCPP_INFO(
+        logger_, "total problems %i, Curr average Length, %.2f", total_requested_plans_,
+        curr_average_solution);
 
     } else {
       RCLCPP_WARN(logger_, "No solution for requested path planning !");
@@ -264,21 +266,21 @@ namespace vox_nav_planning
     const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
     // extract the second component of the state and cast it to what we expect
     const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    fcl::CollisionRequest requestType(1, false, 1, false);
+    fcl::CollisionRequestf requestType(1, false, 1, false);
     // check validity of state Fdefined by pos & rot
-    fcl::Vec3f translation(se2->getX(), se2->getY(), z->values[0]);
+    fcl::Vector3f translation(se2->getX(), se2->getY(), z->values[0]);
     tf2::Quaternion myQuaternion;
     myQuaternion.setRPY(0, 0, se2->getYaw());
-    fcl::Quaternion3f rotation(myQuaternion.getX(), myQuaternion.getY(),
+    fcl::Quaternionf rotation(myQuaternion.getX(), myQuaternion.getY(),
       myQuaternion.getZ(), myQuaternion.getW());
 
 
     robot_collision_object_->setTransform(rotation, translation);
-    fcl::CollisionResult collisionWithSurfelsResult, collisionWithFullMapResult;
-    fcl::collide(
+    fcl::CollisionResultf collisionWithSurfelsResult, collisionWithFullMapResult;
+    fcl::collide<float>(
       robot_collision_object_.get(),
       elevated_surfels_collision_object_.get(), requestType, collisionWithSurfelsResult);
-    fcl::collide(
+    fcl::collide<float>(
       robot_collision_object_.get(),
       original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
 
@@ -343,14 +345,14 @@ namespace vox_nav_planning
       delete elevated_surfel_octomap_octree;
 
       auto elevated_surfels_fcl_octree =
-        std::make_shared<fcl::OcTree>(elevated_surfel_octomap_octree_);
-      elevated_surfels_collision_object_ = std::make_shared<fcl::CollisionObject>(
-        std::shared_ptr<fcl::CollisionGeometry>(elevated_surfels_fcl_octree));
+        std::make_shared<fcl::OcTreef>(elevated_surfel_octomap_octree_);
+      elevated_surfels_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
+        std::shared_ptr<fcl::CollisionGeometryf>(elevated_surfels_fcl_octree));
 
       auto original_octomap_fcl_octree =
-        std::make_shared<fcl::OcTree>(original_octomap_octree_);
-      original_octomap_collision_object_ = std::make_shared<fcl::CollisionObject>(
-        std::shared_ptr<fcl::CollisionGeometry>(original_octomap_fcl_octree));
+        std::make_shared<fcl::OcTreef>(original_octomap_octree_);
+      original_octomap_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
+        std::shared_ptr<fcl::CollisionGeometryf>(original_octomap_fcl_octree));
 
       elevated_surfel_poses_msg_ =
         std::make_shared<geometry_msgs::msg::PoseArray>(

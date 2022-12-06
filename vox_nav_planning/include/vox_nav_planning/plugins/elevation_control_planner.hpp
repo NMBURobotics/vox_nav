@@ -178,7 +178,7 @@ namespace vox_nav_planning
     pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
     geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
-    std::shared_ptr<fcl::CollisionObject> elevated_surfels_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> elevated_surfels_collision_object_;
     ompl::base::OptimizationObjectivePtr octocost_optimization_;
     ompl::base::StateSpacePtr state_space_;
     ompl::control::ControlSpacePtr control_state_space_;

@@ -108,7 +108,7 @@ namespace vox_nav_planning
     v_bounds->setLow(0, -0.5);
     v_bounds->setHigh(0, 0.5);
 
-    typedef std::shared_ptr<fcl::CollisionGeometry> CollisionGeometryPtr_t;
+    typedef std::shared_ptr<fcl::CollisionGeometryf> CollisionGeometryPtr_t;
 
     /*CollisionGeometryPtr_t robot_body_box(new fcl::Box(
         parent->get_parameter("robot_body_dimens.x").as_double(),
@@ -120,11 +120,11 @@ namespace vox_nav_planning
         parent->get_parameter("robot_body_dimens.y").as_double(),
         parent->get_parameter("robot_body_dimens.z").as_double()));*/
 
-    CollisionGeometryPtr_t robot_body_box(new fcl::Sphere(
+    CollisionGeometryPtr_t robot_body_box(new fcl::Sphere<float>(
         parent->get_parameter("robot_body_dimens.z").as_double()));
 
-    fcl::CollisionObject robot_body_box_object(robot_body_box, fcl::Transform3f());
-    robot_collision_object_ = std::make_shared<fcl::CollisionObject>(robot_body_box_object);
+    fcl::CollisionObjectf robot_body_box_object(robot_body_box, fcl::Transform3f());
+    robot_collision_object_ = std::make_shared<fcl::CollisionObjectf>(robot_body_box_object);
 
     elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
     original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
@@ -562,21 +562,21 @@ namespace vox_nav_planning
     const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
     // extract the second component of the state and cast it to what we expect
     const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    fcl::CollisionRequest requestType(1, false, 1, false);
+    fcl::CollisionRequestf requestType(1, false, 1, false);
     // check validity of state Fdefined by pos & rot
-    fcl::Vec3f translation(se2->getX(), se2->getY(), z->values[0]);
+    fcl::Vector3f translation(se2->getX(), se2->getY(), z->values[0]);
     tf2::Quaternion myQuaternion;
     myQuaternion.setRPY(0, 0, se2->getYaw());
-    fcl::Quaternion3f rotation(
+    fcl::Quaternionf rotation(
       myQuaternion.getX(), myQuaternion.getY(),
       myQuaternion.getZ(), myQuaternion.getW());
 
     robot_collision_object_->setTransform(rotation, translation);
-    fcl::CollisionResult collisionWithSurfelsResult, collisionWithFullMapResult;
-    fcl::collide(
+    fcl::CollisionResultf collisionWithSurfelsResult, collisionWithFullMapResult;
+    fcl::collide<float>(
       robot_collision_object_.get(),
       elevated_surfels_collision_object_.get(), requestType, collisionWithSurfelsResult);
-    fcl::collide(
+    fcl::collide<float>(
       robot_collision_object_.get(),
       original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
 
@@ -587,27 +587,27 @@ namespace vox_nav_planning
     const pcl::PointXYZRGBA & a,
     const pcl::PointXYZRGBA & b)
   {
-    fcl::Vec3f a_center(a.x, a.y, a.z);
-    fcl::Vec3f b_center(b.x, b.y, b.z);
+    fcl::Vector3f a_center(a.x, a.y, a.z);
+    fcl::Vector3f b_center(b.x, b.y, b.z);
 
     double roll, pitch, yaw;
 
     tf2::Quaternion quat;
     quat.setRPY(roll, pitch, yaw);
-    fcl::Quaternion3f rotation(quat.getX(), quat.getY(), quat.getZ(), quat.getW());
+    fcl::Quaternionf rotation(quat.getX(), quat.getY(), quat.getZ(), quat.getW());
 
     robot_collision_object_->setTransform(rotation, a_center);
 
-    fcl::CollisionResult acollisionWithFullMapResult, bcollisionWithFullMapResult;
-    fcl::CollisionRequest requestType(1, false, 1, false);
+    fcl::CollisionResultf acollisionWithFullMapResult, bcollisionWithFullMapResult;
+    fcl::CollisionRequestf requestType(1, false, 1, false);
 
-    fcl::collide(
+    fcl::collide<float>(
       robot_collision_object_.get(),
       original_octomap_collision_object_.get(), requestType, acollisionWithFullMapResult);
 
     robot_collision_object_->setTransform(rotation, b_center);
 
-    fcl::collide(
+    fcl::collide<float>(
       robot_collision_object_.get(),
       original_octomap_collision_object_.get(), requestType, bcollisionWithFullMapResult);
 
@@ -671,13 +671,13 @@ namespace vox_nav_planning
       delete elevated_surfel_octomap_octree;
 
       auto elevated_surfels_fcl_octree =
-        std::make_shared<fcl::OcTree>(elevated_surfel_octomap_octree_);
-      elevated_surfels_collision_object_ = std::make_shared<fcl::CollisionObject>(
-        std::shared_ptr<fcl::CollisionGeometry>(elevated_surfels_fcl_octree));
+        std::make_shared<fcl::OcTreef>(elevated_surfel_octomap_octree_);
+      elevated_surfels_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
+        std::shared_ptr<fcl::CollisionGeometryf>(elevated_surfels_fcl_octree));
 
-      auto original_octomap_fcl_octree = std::make_shared<fcl::OcTree>(original_octomap_octree_);
-      original_octomap_collision_object_ = std::make_shared<fcl::CollisionObject>(
-        std::shared_ptr<fcl::CollisionGeometry>(original_octomap_fcl_octree));
+      auto original_octomap_fcl_octree = std::make_shared<fcl::OcTreef>(original_octomap_octree_);
+      original_octomap_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
+        std::shared_ptr<fcl::CollisionGeometryf>(original_octomap_fcl_octree));
 
       elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>(
         response->elevated_surfel_poses);

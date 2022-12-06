@@ -76,11 +76,10 @@
 #include <octomap/octomap_utils.h>
 // FCL
 #include <fcl/config.h>
-#include <fcl/octree.h>
-#include <fcl/traversal/traversal_node_octree.h>
-#include <fcl/collision.h>
-#include <fcl/broadphase/broadphase.h>
-#include <fcl/math/transform.h>
+#include "fcl/geometry/octree/octree.h"
+#include "fcl/math/constants.h"
+#include "fcl/narrowphase/collision.h"
+#include "fcl/narrowphase/collision_object.h"
 // STL
 #include <string>
 #include <iostream>
@@ -159,9 +158,9 @@ namespace vox_nav_planning
     rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
     // octomap acquired from original PCD map
     std::shared_ptr<octomap::OcTree> original_octomap_octree_;
-    std::shared_ptr<fcl::CollisionObject> original_octomap_collision_object_;
-    std::shared_ptr<fcl::CollisionObject> robot_collision_object_;
-    std::shared_ptr<fcl::CollisionObject> robot_collision_object_minimal_;
+    std::shared_ptr<fcl::CollisionObjectf> original_octomap_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_minimal_;
     ompl::geometric::SimpleSetupPtr simple_setup_;
     // to ensure safety when accessing global var curr_frame_
     std::mutex global_mutex_;

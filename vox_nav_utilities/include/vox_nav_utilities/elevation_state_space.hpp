@@ -77,11 +77,7 @@
 #include <octomap/octomap_utils.h>
 // FCL
 #include <fcl/config.h>
-#include <fcl/octree.h>
-#include <fcl/traversal/traversal_node_octree.h>
-#include <fcl/collision.h>
-#include <fcl/broadphase/broadphase.h>
-#include <fcl/math/transform.h>
+#include "fcl/geometry/octree/octree.h"
 // STL
 #include <string>
 #include <iostream>
@@ -248,7 +244,7 @@ namespace ompl
     class ElevationStateSpaceProjection : public base::ProjectionEvaluator
     {
     public:
-      ElevationStateSpaceProjection(const ompl::base::StateSpace *space)
+      ElevationStateSpaceProjection(const ompl::base::StateSpace * space)
       : base::ProjectionEvaluator(space)
       {
       }
