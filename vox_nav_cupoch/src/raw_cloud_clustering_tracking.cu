@@ -228,14 +228,27 @@ void RawCloudClusteringTracking::cloudCallback(
 
   std::vector<std::pair<Eigen::Vector3f, Eigen::Vector3f>> cluster_boxes_vector;
   for (auto && cluster : clusters) {
-    auto cupoch_cloud = std::make_shared<cupoch::geometry::PointCloud>();
+
+    /*auto cupoch_cloud = std::make_shared<cupoch::geometry::PointCloud>();
     thrust::host_vector<Eigen::Vector3f> points;
     for (auto && i : cluster->points) {
       points.push_back(Eigen::Vector3f(i.x, i.y, i.z));
-    }
-    cupoch_cloud->SetPoints(points);
-    auto oobb = cupoch_cloud->GetAxisAlignedBoundingBox();
-    cluster_boxes_vector.push_back(std::make_pair(oobb.GetMinBound(), oobb.GetMaxBound()));
+    }*/
+
+    pcl::MomentOfInertiaEstimation<pcl::PointXYZRGB> feature_extractor;
+    feature_extractor.setInputCloud(cluster);
+    feature_extractor.compute();
+    pcl::PointXYZRGB min_point_AABB;
+    pcl::PointXYZRGB max_point_AABB;
+    feature_extractor.getAABB(min_point_AABB, max_point_AABB);
+    Eigen::Vector3f min_bound(min_point_AABB.x, min_point_AABB.y, min_point_AABB.z);
+    Eigen::Vector3f max_bound(max_point_AABB.x, max_point_AABB.y, max_point_AABB.z);
+
+
+    /*cupoch_cloud->SetPoints(points);
+    auto oobb = cupoch_cloud->GetAxisAlignedBoundingBox();*/
+
+    cluster_boxes_vector.push_back(std::make_pair(min_bound, max_bound));
   }
 
   vox_nav_msgs::msg::ObjectArray object_array;

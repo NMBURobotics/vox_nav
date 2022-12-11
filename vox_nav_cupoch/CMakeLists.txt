@@ -7,9 +7,9 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 # Add this repository's cmake modules to CMAKE_MODULE_PATH
-list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_LIST_DIR}/cmake)
+#list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
-include(ga_build_common)
+#include(ga_build_common)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -30,14 +30,15 @@ find_package(visualization_msgs REQUIRED)
 find_package(PCL REQUIRED)
 find_package(vox_nav_msgs REQUIRED)
 find_package(vox_nav_utilities REQUIRED)
-find_package(thrust REQUIRED)
+#find_package(thrust REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(fast_gicp REQUIRED)
+find_package(CUDA REQUIRED)
 
 include_directories(include
         ${PCL_INCLUDE_DIRS}
-        ${THRUST_INCLUDE_DIR}
-        ${CUPOCH_INCLUDE_DIRS}
+        #${THRUST_INCLUDE_DIR}
+        #${CUPOCH_INCLUDE_DIRS}
         ${CUDA_INCLUDE_DIRS}
         ${fast_gicp_INCLUDE_DIRS})
 
@@ -64,60 +65,59 @@ option(BUILD_VGICP_CUDA "Build GPU-powered VGICP" ON)
 add_definitions(${PCL_DEFINITIONS})
 add_definitions(-BUILD_VGICP_CUDA)
 
-set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "")
-APPEND_TARGET_ARCH_FLAGS()
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
-        ${CUPOCH_NVCC_FLAGS}   )
-add_definitions(${CUPOCH_DEFINITIONS})
-message("zs: ${CMAKE_PROJECT_NAME} CUDA_NVCC_FLAGS = " ${CUDA_NVCC_FLAGS})
-include(GATest)
+#set_directory_properties(PROPERTIES COMPILE_DEFINITIONS "")
+#APPEND_TARGET_ARCH_FLAGS()
+#set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS}
+#        ${CUPOCH_NVCC_FLAGS}   )
+#add_definitions(${CUPOCH_DEFINITIONS})
+#message("zs: ${CMAKE_PROJECT_NAME} CUDA_NVCC_FLAGS = " ${CUDA_NVCC_FLAGS})
+#include(GATest)
+#
+#message("CUPOCH_LIBRARY_DIRS: ${${CUPOCH_LIBRARY_DIRS}} ${CUPOCH_LIBRARY_DIRS} = " ${${CUPOCH_LIBRARY_DIRS}})
+#message("CUPOCH_INCLUDE_DIRS: ${${CUPOCH_INCLUDE_DIRS}} ${CUPOCH_INCLUDE_DIRS} = " ${${CUPOCH_INCLUDE_DIRS}})
+#message("CUPOCH_LIBRARIES: ${${CUPOCH_LIBRARIES}} ${CUPOCH_LIBRARIES} = " ${${CUPOCH_LIBRARIES}})
 
-message("CUPOCH_LIBRARY_DIRS: ${${CUPOCH_LIBRARY_DIRS}} ${CUPOCH_LIBRARY_DIRS} = " ${${CUPOCH_LIBRARY_DIRS}})
-message("CUPOCH_INCLUDE_DIRS: ${${CUPOCH_INCLUDE_DIRS}} ${CUPOCH_INCLUDE_DIRS} = " ${${CUPOCH_INCLUDE_DIRS}})
-message("CUPOCH_LIBRARIES: ${${CUPOCH_LIBRARIES}} ${CUPOCH_LIBRARIES} = " ${${CUPOCH_LIBRARIES}})
 
+#cuda_add_executable(ros2bag_kitti_bin src/ros2bag_kitti_bin.cu)
+#ament_target_dependencies(ros2bag_kitti_bin ${dependencies})
+#target_include_directories(ros2bag_kitti_bin PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+#target_link_directories(ros2bag_kitti_bin PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+#target_link_libraries(ros2bag_kitti_bin ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES})
 
-cuda_add_executable(ros2bag_kitti_bin src/ros2bag_kitti_bin.cu)
-ament_target_dependencies(ros2bag_kitti_bin ${dependencies})
-target_include_directories(ros2bag_kitti_bin PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-target_link_directories(ros2bag_kitti_bin PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(ros2bag_kitti_bin ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES})
-
-cuda_add_executable(semantic_cloud_clustering src/semantic_cloud_clustering.cu)
-ament_target_dependencies(semantic_cloud_clustering ${dependencies})
-target_include_directories(semantic_cloud_clustering PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-target_link_directories(semantic_cloud_clustering PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(semantic_cloud_clustering ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+#cuda_add_executable(semantic_cloud_clustering src/semantic_cloud_clustering.cu)
+#ament_target_dependencies(semantic_cloud_clustering ${dependencies})
+#target_include_directories(semantic_cloud_clustering PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+#target_link_directories(semantic_cloud_clustering PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+#target_link_libraries(semantic_cloud_clustering ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
 cuda_add_executable(raw_cloud_clustering_tracking src/raw_cloud_clustering_tracking.cu)
 ament_target_dependencies(raw_cloud_clustering_tracking ${dependencies})
-target_include_directories(raw_cloud_clustering_tracking PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-target_link_directories(raw_cloud_clustering_tracking PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(raw_cloud_clustering_tracking ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+target_include_directories(raw_cloud_clustering_tracking PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(raw_cloud_clustering_tracking PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(raw_cloud_clustering_tracking ${PCL_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
-cuda_add_executable(cupoch_gpu_icp src/cupoch_gpu_icp.cu)
-ament_target_dependencies(cupoch_gpu_icp ${dependencies})
-target_include_directories(cupoch_gpu_icp PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-target_link_directories(cupoch_gpu_icp PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(cupoch_gpu_icp ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+#cuda_add_executable(cupoch_gpu_icp src/cupoch_gpu_icp.cu)
+#ament_target_dependencies(cupoch_gpu_icp ${dependencies})
+#target_include_directories(cupoch_gpu_icp PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+#target_link_directories(cupoch_gpu_icp PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+#target_link_libraries(cupoch_gpu_icp ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
 add_executable(pcl_cpu_ndt src/pcl_cpu_ndt.cpp)
 ament_target_dependencies(pcl_cpu_ndt ${dependencies})
-target_include_directories(pcl_cpu_ndt PUBLIC ${CUPOCH_INCLUDE_DIRS} ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-target_link_directories(pcl_cpu_ndt PUBLIC ${PCL_LIBRARY_DIRS} ${CUPOCH_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(pcl_cpu_ndt ${PCL_LIBRARIES} ${CUPOCH_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
-
+target_include_directories(pcl_cpu_ndt PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(pcl_cpu_ndt PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(pcl_cpu_ndt ${PCL_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
 cuda_add_executable(fast_gicp_client src/fast_gicp_client.cpp)
 ament_target_dependencies(fast_gicp_client ${dependencies})
-target_include_directories(fast_gicp_client PUBLIC $ ${THRUST_INCLUDE_DIR} ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${fast_gicp_INCLUDE_DIRS})
+target_include_directories(fast_gicp_client PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${fast_gicp_INCLUDE_DIRS})
 target_link_directories(fast_gicp_client PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(fast_gicp_client ${PCL_LIBRARIES} ${CUDA_LIBRARIES} ${fast_gicp_LIBRARIES} OpenMP::OpenMP_CXX)
 
-install(TARGETS ros2bag_kitti_bin
-                semantic_cloud_clustering
+install(TARGETS #ros2bag_kitti_bin
+                #semantic_cloud_clustering
                 raw_cloud_clustering_tracking
-                cupoch_gpu_icp
+                #cupoch_gpu_icp
                 pcl_cpu_ndt
                 fast_gicp_client
         RUNTIME DESTINATION lib/${PROJECT_NAME})

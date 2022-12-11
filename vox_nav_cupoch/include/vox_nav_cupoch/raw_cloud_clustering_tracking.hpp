@@ -30,6 +30,7 @@ Credits to author: Simon Appel, https://github.com/appinho
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.hpp>
+#include <pcl/features/moment_of_inertia_estimation.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -42,10 +43,6 @@ Credits to author: Simon Appel, https://github.com/appinho
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <nav_msgs/msg/odometry.hpp>
-
-#include <cupoch/collision/collision.h>
-#include <cupoch/cupoch.h>
-#include <cupoch/geometry/occupancygrid.h>
 
 #include "vox_nav_utilities/map_manager_helpers.hpp"
 #include "vox_nav_utilities/pcl_helpers.hpp"
