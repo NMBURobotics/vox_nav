@@ -99,11 +99,11 @@ namespace vox_nav_control
     cmd_vel_publisher_ =
       this->create_publisher<geometry_msgs::msg::Twist>("vox_nav/cmd_vel", 10);
 
-    mqtt_thread_ =
+    /*mqtt_thread_ =
       std::make_shared<std::thread>(
       std::thread(
         &ControllerServer::executeMQTTThread,
-        this));
+        this));*/
 
     live_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
       "/ouster/points",

@@ -34,7 +34,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/segmentation/region_growing_rgb.h>
-#include <pcl/io/pcd_io.h>
+#include <pcl/common/io.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/point_types.h>
 #include <pcl/segmentation/extract_clusters.h>
@@ -52,6 +52,7 @@
 #include <algorithm>
 #include <iostream>
 #include <random>
+#include <numeric>
 #include <experimental/algorithm>
 
 #include "rclcpp/rclcpp.hpp"
@@ -137,9 +138,9 @@ namespace vox_nav_utilities
  * @param translation
  * @param intrinsicRpy
  * @param node_logger
- * @return Eigen::Affine3f
+ * @return Eigen::Affine3d
  */
-  Eigen::Affine3f getRigidBodyTransform(
+  Eigen::Affine3d getRigidBodyTransform(
     const Eigen::Vector3d & translation,
     const Eigen::Vector3d & intrinsicRpy,
     const rclcpp::Logger & node_logger);
@@ -150,9 +151,9 @@ namespace vox_nav_utilities
  * @param angle
  * @param axis
  * @param node_logger
- * @return Eigen::Matrix3f
+ * @return Eigen::Matrix3d
  */
-  Eigen::Matrix3f getRotationMatrix(
+  Eigen::Matrix3d getRotationMatrix(
     double angle, XYZ axis,
     const rclcpp::Logger & node_logger);
 
@@ -283,7 +284,7 @@ namespace vox_nav_utilities
         pointIdxNKNSearch.end(),
         std::back_inserter(out),
         nelems,
-        std::mt19937{std::random_device{} ()}
+        std::mt19937{std::random_device{}()}
       );
       return cloud->points[out[0]];
     }

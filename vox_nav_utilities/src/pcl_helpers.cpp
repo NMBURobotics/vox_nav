@@ -90,22 +90,22 @@ namespace vox_nav_utilities
     return clusterClouds;
   }
 
-  Eigen::Matrix3f getRotationMatrix(
+  Eigen::Matrix3d getRotationMatrix(
     double angle, XYZ axis,
     const rclcpp::Logger & node_logger)
   {
-    Eigen::Matrix3f rotationMatrix = Eigen::Matrix3f::Identity();
+    Eigen::Matrix3d rotationMatrix = Eigen::Matrix3d::Identity();
     switch (axis) {
       case XYZ::X: {
-          rotationMatrix = Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitX());
+          rotationMatrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitX());
           break;
         }
       case XYZ::Y: {
-          rotationMatrix = Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitY());
+          rotationMatrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY());
           break;
         }
       case XYZ::Z: {
-          rotationMatrix = Eigen::AngleAxisf(angle, Eigen::Vector3f::UnitZ());
+          rotationMatrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitZ());
           break;
         }
       default:
@@ -114,15 +114,15 @@ namespace vox_nav_utilities
     return rotationMatrix;
   }
 
-  Eigen::Affine3f getRigidBodyTransform(
+  Eigen::Affine3d getRigidBodyTransform(
     const Eigen::Vector3d & translation,
     const Eigen::Vector3d & intrinsicRpy,
     const rclcpp::Logger & node_logger)
   {
-    Eigen::Affine3f rigidBodyTransform;
+    Eigen::Affine3d rigidBodyTransform;
     rigidBodyTransform.setIdentity();
     rigidBodyTransform.translation() << translation.x(), translation.y(), translation.z();
-    Eigen::Matrix3f rotation(Eigen::Matrix3f::Identity());
+    Eigen::Matrix3d rotation(Eigen::Matrix3d::Identity());
     rotation *= getRotationMatrix(intrinsicRpy.x(), XYZ::X, node_logger);
     rotation *= getRotationMatrix(intrinsicRpy.y(), XYZ::Y, node_logger);
     rotation *= getRotationMatrix(intrinsicRpy.z(), XYZ::Z, node_logger);

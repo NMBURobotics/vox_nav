@@ -81,12 +81,15 @@ namespace vox_nav_utilities
         remove_outlier_radius_search_,
         vox_nav_utilities::OutlierRemovalType::RadiusOutlierRemoval);
     }
-    pointcloud_ = vox_nav_utilities::transformCloud(
-      pointcloud_,
-      vox_nav_utilities::getRigidBodyTransform(
-        pointloud_transform_matrix_.translation_,
-        pointloud_transform_matrix_.rpyIntrinsic_,
-        get_logger()));
+
+    Eigen::Affine3d bt = vox_nav_utilities::getRigidBodyTransform(
+      pointloud_transform_matrix_.translation_,
+      pointloud_transform_matrix_.rpyIntrinsic_,
+      get_logger());
+    auto final_tr = tf2::eigenToTransform(bt);
+    pcl_ros::transformPointCloud(
+      *pointcloud_, *pointcloud_, final_tr
+    );
 
     octomap_markers_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "vox_nav/utils/octomap_markers", rclcpp::SystemDefaultsQoS());

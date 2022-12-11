@@ -296,12 +296,22 @@ namespace vox_nav_map_server
         pcd_map_pointcloud_->points.size());
     }
     // apply a rigid body transfrom if it was given one
-    pcd_map_pointcloud_ = vox_nav_utilities::transformCloud(
+    /*pcd_map_pointcloud_ = vox_nav_utilities::transformCloud(
       pcd_map_pointcloud_,
       vox_nav_utilities::getRigidBodyTransform(
         pcd_map_transform_matrix_.translation_,
         pcd_map_transform_matrix_.rpyIntrinsic_,
-        get_logger()));
+        get_logger()));*/
+
+    Eigen::Affine3d bt = vox_nav_utilities::getRigidBodyTransform(
+      pcd_map_transform_matrix_.translation_,
+      pcd_map_transform_matrix_.rpyIntrinsic_,
+      get_logger());
+    auto final_tr = tf2::eigenToTransform(bt);
+    pcl_ros::transformPointCloud(
+      *pcd_map_pointcloud_, *pcd_map_pointcloud_, final_tr
+    );
+
     // Experimental, this assumes we have no prior infromation of
     // segmentation, so mark all points as traversable
     // by painting them green > 0

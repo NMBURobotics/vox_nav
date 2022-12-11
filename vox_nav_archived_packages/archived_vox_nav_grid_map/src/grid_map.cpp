@@ -82,12 +82,14 @@ namespace archived_vox_nav_grid_map
       remove_outlier_stddev_threshold_,
       vox_nav_utilities::OutlierRemovalType::StatisticalOutlierRemoval);
 
-    pointcloud_ = vox_nav_utilities::transformCloud(
-      pointcloud_,
-      vox_nav_utilities::getRigidBodyTransform(
-        pointloud_transform_matrix_.translation_,
-        pointloud_transform_matrix_.rpyIntrinsic_,
-        get_logger()));
+    Eigen::Affine3d bt = vox_nav_utilities::getRigidBodyTransform(
+      pointloud_transform_matrix_.translation_,
+      pointloud_transform_matrix_.rpyIntrinsic_,
+      get_logger());
+    auto final_tr = tf2::eigenToTransform(bt);
+    pcl_ros::transformPointCloud(
+      *pointcloud_, *pointcloud_, final_tr
+    );
 
     grid_map_publisher_ = this->create_publisher<grid_map_msgs::msg::GridMap>(
       topic_name_.c_str(), rclcpp::QoS(1).transient_local());

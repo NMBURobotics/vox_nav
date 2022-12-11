@@ -18,22 +18,25 @@
 #include <octomap/octomap.h>
 #include <octomap/ColorOcTree.h>
 
-#include <pcl/io/io.h>
-#include <pcl/io/pcd_io.h>
+#include <pcl/common/io.h>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_representation.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/filter.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/transforms.hpp>
 
 #include <iostream>
 #include <limits>
 #include <exception>
 #include <string>
+#include <numeric>
 
 #include "rclcpp/rclcpp.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "vox_nav_utilities/pcl_helpers.hpp"
+#include <tf2_eigen/tf2_eigen.h>
 
 
 namespace vox_nav_utilities

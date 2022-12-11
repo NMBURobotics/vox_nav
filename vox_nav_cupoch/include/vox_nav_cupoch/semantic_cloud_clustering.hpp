@@ -26,7 +26,7 @@
 #include <pcl/conversions.h>
 #include <pcl/filters/crop_box.h>
 #include <pcl/filters/extract_indices.h>
-#include <pcl/io/pcd_io.h>
+#include <pcl/common/io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>

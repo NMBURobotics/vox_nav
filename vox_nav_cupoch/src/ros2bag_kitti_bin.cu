@@ -24,7 +24,7 @@
 #include <pcl/conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
-#include <pcl/io/pcd_io.h>
+#include <pcl/common/io.h>
 #include <pcl/PCLPointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf2_eigen/tf2_eigen.h>
