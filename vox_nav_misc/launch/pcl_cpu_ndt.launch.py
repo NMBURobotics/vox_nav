@@ -9,7 +9,7 @@ import os
 
 def generate_launch_description():
 
-    share_dir = get_package_share_directory('vox_nav_cupoch')
+    share_dir = get_package_share_directory('vox_nav_misc')
 
     params = LaunchConfiguration('params')
 
@@ -19,7 +19,7 @@ def generate_launch_description():
             share_dir, 'config', 'pcl_cpu_ndt_params.yaml'),
         description='Path to the vox_nav parameters file.')
 
-    node = Node(package='vox_nav_cupoch',
+    node = Node(package='vox_nav_misc',
                 executable='pcl_cpu_ndt',
                 name='pcl_cpu_ndt',
                 output='screen',

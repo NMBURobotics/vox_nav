@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(vox_nav_cupoch)
+project(vox_nav_misc)
 
 # Default to C++17
 if(NOT CMAKE_CXX_STANDARD)

@@ -43,7 +43,7 @@
         "/home/atas/colcon_ws/src/cupoch/third_party/eigen/",
         "/home/atas/colcon_ws/src/perception_cupoch/cupoch_conversions/include/**",
         "/home/atas/colcon_ws/src/clock_publisher/include/**",
-        "/home/atas/colcon_ws/src/vox_nav/vox_nav_cupoch_experimental/include/**"
+        "/home/atas/colcon_ws/src/vox_nav/vox_nav_misc_experimental/include/**"
       ],
       "defines": [],
       "compilerPath": "/usr/bin/gcc",

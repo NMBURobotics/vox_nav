@@ -13,8 +13,8 @@
 // limitations under the License.
 
 
-#ifndef VOX_NAV_CUPOCH__FAST_GICP_CLIENT_HPP_
-#define VOX_NAV_CUPOCH__FAST_GICP_CLIENT_HPP_
+#ifndef VOX_NAV_MISC__FAST_GICP_CLIENT_HPP_
+#define VOX_NAV_MISC__FAST_GICP_CLIENT_HPP_
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/common/common.h>
@@ -62,7 +62,7 @@
 #include <Eigen/Core>
 
 
-namespace vox_nav_cupoch
+namespace vox_nav_misc
 {
 
 
@@ -184,6 +184,6 @@ namespace vox_nav_cupoch
     int sequence_;
   };
 
-}   // namespace vox_nav_cupoch
+}   // namespace vox_nav_misc
 
-#endif  // VOX_NAV_CUPOCH__FAST_GICP_CLIENT_HPP_
+#endif  // VOX_NAV_MISC__FAST_GICP_CLIENT_HPP_

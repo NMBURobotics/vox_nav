@@ -13,8 +13,8 @@
 // limitations under the License.
 
 
-#ifndef VOX_NAV_CUPOCH__PCL_CPU_NDT_HPP_
-#define VOX_NAV_CUPOCH__PCL_CPU_NDT_HPP_
+#ifndef VOX_NAV_MISC__FAST_GICP_CLIENT_HPP_
+#define VOX_NAV_MISC__FAST_GICP_CLIENT_HPP_
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/common/common.h>
@@ -26,7 +26,7 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.hpp>
-#include <pcl/registration/ndt.h>
+#include <pcl/registration/registration.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -53,10 +53,18 @@
 #include <memory>
 #include <mutex>
 
+#include <fast_gicp/gicp/fast_gicp.hpp>
+#include <fast_gicp/gicp/fast_gicp_st.hpp>
+#include <fast_gicp/gicp/fast_vgicp.hpp>
+#include <fast_gicp/ndt/ndt_cuda.hpp>
+#include <fast_gicp/gicp/fast_vgicp_cuda.hpp>
+
 #include <Eigen/Core>
 
-namespace vox_nav_cupoch
+
+namespace vox_nav_misc
 {
+
 
   struct ICPParameters
   {
@@ -65,10 +73,9 @@ namespace vox_nav_cupoch
     float z_bound;
     float downsample_voxel_size;
     int max_icp_iter;
-    float transformation_epsilon;
-    float step_size;
-    float resolution;
     float max_correspondence_distance;
+    std::string method;
+    int num_threads;
     bool debug;
   };
 
@@ -78,7 +85,7 @@ namespace vox_nav_cupoch
  * and publish vox_nav_msgs::msg::ObjectArray
  *
  */
-  class PCLCPUNDT : public rclcpp::Node
+  class FastGICPClient : public rclcpp::Node
   {
 
   public:
@@ -86,12 +93,12 @@ namespace vox_nav_cupoch
      * @brief Construct a new Raw Cloud Clustering Tracking object
      *
      */
-    PCLCPUNDT();
+    FastGICPClient();
     /**
      * @brief Destroy the Raw Cloud Clustering Tracking object
      *
      */
-    ~PCLCPUNDT();
+    ~FastGICPClient();
 
     /**
      * @brief Processing done in this func.
@@ -120,6 +127,29 @@ namespace vox_nav_cupoch
     void gpsOdomCallback(
       const nav_msgs::msg::Odometry::ConstSharedPtr odom);
 
+    /**
+     * @brief Create a reg object
+     *
+     * @param method
+     * @param num_threads
+     * @return pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr
+     */
+    pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr createRegistration(
+      std::string method, int num_threads);
+
+    /**
+     * @brief
+     *
+     * @param reg
+     */
+    void swap_source_and_target(pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr reg);
+
+    template<typename T>
+    T clamp(const T & n, const T & lower, const T & upper)
+    {
+      return std::max(lower, std::min(n, upper));
+    }
+
   private:
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_subscriber_;
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_subscriber_;
@@ -142,7 +172,7 @@ namespace vox_nav_cupoch
     bool map_configured_;
     std::once_flag get_map_cloud_once_;
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr map_cloud_;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr map_cloud_;
     nav_msgs::msg::Odometry::SharedPtr latest_gps_odom_;
 
     std::mutex latest_gps_odom_mutex_;
@@ -151,8 +181,9 @@ namespace vox_nav_cupoch
 
     Eigen::Matrix4f last_transform_estimate_;
 
+    int sequence_;
   };
 
-}  // namespace vox_nav_cupoch
+}   // namespace vox_nav_misc
 
-#endif  // VOX_NAV_CUPOCH__PCL_CPU_NDT_HPP_
+#endif  // VOX_NAV_MISC__FAST_GICP_CLIENT_HPP_

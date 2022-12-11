@@ -8,7 +8,7 @@ import os
 
 
 def generate_launch_description():
-    share_dir = get_package_share_directory('vox_nav_cupoch')
+    share_dir = get_package_share_directory('vox_nav_misc')
 
     params = LaunchConfiguration('params')
 
@@ -19,7 +19,7 @@ def generate_launch_description():
         description='Path to the vox_nav parameters file.')
 
     node = Node(
-        package='vox_nav_cupoch',
+        package='vox_nav_misc',
         executable='raw_cloud_clustering_tracking',
         name='raw_cloud_clustering_tracking',
         output='screen',
