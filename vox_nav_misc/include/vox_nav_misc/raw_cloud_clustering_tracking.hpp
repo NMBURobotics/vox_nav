@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2021 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/*
+DISCLAIMER: some parts of code has been taken from; https://github.com/appinho/SARosPerceptionKitti
+Credits to author: Simon Appel, https://github.com/appinho
+*/
 
-#ifndef VOX_NAV_MISC__FAST_GICP_CLIENT_HPP_
-#define VOX_NAV_MISC__FAST_GICP_CLIENT_HPP_
+#ifndef VOX_NAV_CUPOCH__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
+#define VOX_NAV_CUPOCH__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/common/common.h>
@@ -26,15 +30,14 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.hpp>
-#include <pcl/registration/registration.h>
+#include <pcl/features/moment_of_inertia_estimation.h>
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/buffer.h>
-#include "tf2_ros/transform_listener.h"
-#include "tf2_ros/create_timer_ros.h"
+#include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <pcl/filters/model_outlier_removal.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -51,32 +54,101 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include <mutex>
-
-#include <fast_gicp/gicp/fast_gicp.hpp>
-#include <fast_gicp/gicp/fast_gicp_st.hpp>
-#include <fast_gicp/gicp/fast_vgicp.hpp>
-#include <fast_gicp/ndt/ndt_cuda.hpp>
-#include <fast_gicp/gicp/fast_vgicp_cuda.hpp>
 
 #include <Eigen/Core>
 
-
-namespace vox_nav_misc
+namespace vox_nav_cupoch
 {
-
-
-  struct ICPParameters
+  struct ClusteringParameters
   {
     float x_bound;
     float y_bound;
     float z_bound;
     float downsample_voxel_size;
-    int max_icp_iter;
-    float max_correspondence_distance;
-    std::string method;
-    int num_threads;
-    bool debug;
+    float remove_ground_plane_thres;
+    float clustering_min_points;
+    float clustering_max_points;
+    float clustering_max_step_size;
+    float sacle_up_objects;
+    int N;
+    float dt;
+    float min_cluster_height;
+  };
+  struct Parameter
+  {
+    float da_ped_dist_pos;
+    float da_ped_dist_form;
+    float da_car_dist_pos;
+    float da_car_dist_form;
+    int tra_dim_z;
+    int tra_dim_x;
+    int tra_dim_x_aug;
+    float tra_std_lidar_x;
+    float tra_std_lidar_y;
+    float tra_std_acc;
+    float tra_std_yaw_rate;
+    float tra_lambda;
+    int tra_aging_bad;
+    float tra_occ_factor;
+    float tra_min_dist_between_tracks;
+    float p_init_x;
+    float p_init_y;
+    float p_init_v;
+    float p_init_yaw;
+    float p_init_yaw_rate;
+  };
+
+  struct History
+  {
+    int good_age;
+    int bad_age;
+    std::vector<Eigen::Vector3f> historic_positions;
+  };
+
+  struct Geometry
+  {
+    float width;
+    float length;
+    float height;
+    float orientation;
+  };
+
+  struct Semantic
+  {
+    int id;
+    std::string name;
+    float confidence;
+  };
+
+  struct State
+  {
+    Eigen::VectorXd x;
+    float z;
+    Eigen::MatrixXd P;
+    Eigen::VectorXd x_aug;
+    Eigen::VectorXd P_aug;
+    Eigen::MatrixXd Xsig_pred;
+  };
+
+  struct Track
+  {
+    // Attributes
+    int id;
+    State sta;
+    Geometry geo;
+    Semantic sem;
+    History hist;
+    int r;
+    int g;
+    int b;
+    float prob_existence;
+  };
+
+  struct VizObject
+  {
+    visualization_msgs::msg::Marker cyl;
+    visualization_msgs::msg::Marker arr;
+    visualization_msgs::msg::Marker txt;
   };
 
 /**
@@ -85,7 +157,7 @@ namespace vox_nav_misc
  * and publish vox_nav_msgs::msg::ObjectArray
  *
  */
-  class FastGICPClient : public rclcpp::Node
+  class RawCloudClusteringTracking : public rclcpp::Node
   {
 
   public:
@@ -93,12 +165,12 @@ namespace vox_nav_misc
      * @brief Construct a new Raw Cloud Clustering Tracking object
      *
      */
-    FastGICPClient();
+    RawCloudClusteringTracking();
     /**
      * @brief Destroy the Raw Cloud Clustering Tracking object
      *
      */
-    ~FastGICPClient();
+    ~RawCloudClusteringTracking();
 
     /**
      * @brief Processing done in this func.
@@ -106,84 +178,55 @@ namespace vox_nav_misc
      * @param cloud
      * @param poses
      */
-    void liveCloudCallback(
+    void cloudCallback(
       const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
-
-    /**
-    * @brief Processing done in this func.
-    *
-    * @param cloud
-    * @param poses
-    */
-    void mapCloudCallback(
-      const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
-
-    /**
-    * @brief Processing done in this func.
-    *
-    * @param cloud
-    * @param poses
-    */
-    void gpsOdomCallback(
-      const nav_msgs::msg::Odometry::ConstSharedPtr odom);
-
-    /**
-     * @brief Create a reg object
-     *
-     * @param method
-     * @param num_threads
-     * @return pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr
-     */
-    pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr createRegistration(
-      std::string method, int num_threads);
-
-    /**
-     * @brief
-     *
-     * @param reg
-     */
-    void swap_source_and_target(pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr reg);
-
-    template<typename T>
-    T clamp(const T & n, const T & lower, const T & upper)
-    {
-      return std::max(lower, std::min(n, upper));
-    }
 
   private:
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_subscriber_;
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_subscriber_;
-    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr gps_odom_subscriber_;
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_clusters_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr tracking_markers_pub_;
+    rclcpp::Time last_time_stamp_;
+    rclcpp::Time dynamic_obejct_last_time_stamp_;
+    rclcpp::Publisher<vox_nav_msgs::msg::ObjectArray>::SharedPtr list_tracked_objects_pub_;
+    std::shared_ptr<tf2_ros::Buffer> buffer_;
+    std::shared_ptr<tf2_ros::TransformListener> transform_listener_;
 
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_pub_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_cloud_pub_;
+    // Parameters
+    Parameter params_;
+    ClusteringParameters clustering_params_;
 
-    //Publish base to map after ICP correction
-    rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr
-      base_to_map_pose_pub_;
+    // Processing
+    bool is_initialized_;
+    int track_id_counter_;
+    int time_frame_;
 
-    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr
-      new_robot_pose_publisher_;
+    // UKF
+    Eigen::MatrixXd R_laser_;
+    Eigen::VectorXd weights_;
+    std::vector<Track> tracks_;
 
-    // tf buffer to get access to transfroms
-    std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+    // Prediction
+    void publishTracks(const std_msgs::msg::Header & header);
+    void Prediction(const double delta_t);
+    void Update(const vox_nav_msgs::msg::ObjectArray & detected_objects);
+    void TrackManagement(const vox_nav_msgs::msg::ObjectArray & detected_objects);
+    void initTrack(const vox_nav_msgs::msg::Object & obj);
 
-    bool map_configured_;
-    std::once_flag get_map_cloud_once_;
+    // Data Association members
+    std::vector<int> da_tracks_;
+    std::vector<int> da_objects_;
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr map_cloud_;
-    nav_msgs::msg::Odometry::SharedPtr latest_gps_odom_;
-
-    std::mutex latest_gps_odom_mutex_;
-
-    ICPParameters params_;
-
-    Eigen::Matrix4f last_transform_estimate_;
-
-    int sequence_;
+    // Data Association functions
+    void GlobalNearestNeighbor(const vox_nav_msgs::msg::ObjectArray & detected_objects);
+    float CalculateDistance(const Track & track, const vox_nav_msgs::msg::Object & object);
+    float CalculateBoxMismatch(const Track & track, const vox_nav_msgs::msg::Object & object);
+    float CalculateEuclideanAndBoxOffset(
+      const Track & track,
+      const vox_nav_msgs::msg::Object & object);
+    float CalculateEuclideanDistanceBetweenTracks(const Track & t1, const Track & t2);
+    bool compareGoodAge(Track t1, Track t2);
   };
 
-}   // namespace vox_nav_misc
+}  // namespace vox_nav_cupoch
 
-#endif  // VOX_NAV_MISC__FAST_GICP_CLIENT_HPP_
+#endif  // VOX_NAV_CUPOCH__RAW_CLOUD_CLUSTERING_TRACKING_HPP_
