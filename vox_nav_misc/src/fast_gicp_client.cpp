@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vox_nav_cupoch/fast_gicp_client.hpp"
+#include "vox_nav_misc/fast_gicp_client.hpp"
 
 #include <string>
 #include <vector>
@@ -20,7 +20,7 @@
 #include <algorithm>
 
 
-using namespace vox_nav_cupoch;
+using namespace vox_nav_misc;
 
 FastGICPClient::FastGICPClient()
 : Node("fast_gicp_client_rclcpp_node")

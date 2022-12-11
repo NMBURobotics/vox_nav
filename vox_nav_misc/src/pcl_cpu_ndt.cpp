@@ -13,14 +13,14 @@
 // limitations under the License.
 
 
-#include "vox_nav_cupoch/pcl_cpu_ndt.hpp"
+#include "vox_nav_misc/pcl_cpu_ndt.hpp"
 
 #include <string>
 #include <vector>
 #include <memory>
 #include <algorithm>
 
-using namespace vox_nav_cupoch;
+using namespace vox_nav_misc;
 
 PCLCPUNDT::PCLCPUNDT()
 : Node("pcl_cpu_ndt_rclcpp_node")

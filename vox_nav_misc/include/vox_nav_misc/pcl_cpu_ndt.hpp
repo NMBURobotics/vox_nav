@@ -13,8 +13,8 @@
 // limitations under the License.
 
 
-#ifndef VOX_NAV_CUPOCH__PCL_CPU_NDT_HPP_
-#define VOX_NAV_CUPOCH__PCL_CPU_NDT_HPP_
+#ifndef VOX_NAV_MISC__PCL_CPU_NDT_HPP_
+#define VOX_NAV_MISC__PCL_CPU_NDT_HPP_
 
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/common/common.h>
@@ -55,7 +55,7 @@
 
 #include <Eigen/Core>
 
-namespace vox_nav_cupoch
+namespace vox_nav_misc
 {
 
   struct ICPParameters
@@ -153,6 +153,6 @@ namespace vox_nav_cupoch
 
   };
 
-}  // namespace vox_nav_cupoch
+}  // namespace vox_nav_misc
 
-#endif  // VOX_NAV_CUPOCH__PCL_CPU_NDT_HPP_
+#endif  // VOX_NAV_MISC__PCL_CPU_NDT_HPP_

@@ -17,9 +17,9 @@ DISCLAIMER: some parts of code has been taken from; https://github.com/appinho/S
 Credits to author: Simon Appel, https://github.com/appinho
 */
 
-#include "vox_nav_cupoch/raw_cloud_clustering_tracking.hpp"
+#include "vox_nav_misc/raw_cloud_clustering_tracking.hpp"
 
-using namespace vox_nav_cupoch;
+using namespace vox_nav_misc;
 
 RawCloudClusteringTracking::RawCloudClusteringTracking()
 : Node("cloud_clustering_rclcpp_node")
