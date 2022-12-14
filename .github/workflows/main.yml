@@ -54,6 +54,7 @@ jobs:
                   sudo apt-get install xdotool
                   sudo apt-get install coinor-libipopt-dev
                   sudo apt install -y libfcl0.7
+                  sudo apt install -y pkg-config
                   rosdep update
                   cd ~/ros2_ws
                   wget https://raw.githubusercontent.com/jediofgever/vox_nav/humble/underlay.repos
