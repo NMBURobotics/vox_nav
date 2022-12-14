@@ -120,7 +120,7 @@ ament_target_dependencies(control_planners_benchmark ${dependencies})
 target_link_libraries(control_planners_benchmark ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} vox_nav_ompl_planners ompl)
 
 # AITStarKin                            ####################################
-add_executable(AITStarKin include/vox_nav_planning/experimental/AITStarKin.cpp)
+add_library(AITStarKin include/vox_nav_planning/experimental/AITStarKin.cpp)
 ament_target_dependencies(AITStarKin ${dependencies})
 target_link_libraries(AITStarKin ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} vox_nav_ompl_planners ompl)
 
@@ -130,6 +130,7 @@ install(TARGETS optimal_elevation_planner
                 polytunnel_planner
                 se2_planner
                 vox_nav_ompl_planners
+                AITStarKin
                 
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -137,7 +138,7 @@ install(TARGETS optimal_elevation_planner
 
 install(TARGETS planner_server
                 control_planners_benchmark
-                AITStarKin
+                
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
@@ -160,6 +161,7 @@ ament_export_libraries( optimal_elevation_planner
                         elevation_planner
                         elevation_control_planner
                         polytunnel_planner
-                        se2_planner)
+                        se2_planner
+                        AITStarKin)
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 ament_package()

@@ -1,94 +1,103 @@
-#include <boost/graph/astar_search.hpp>
-#include <boost/graph/dijkstra_shortest_paths.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/random.hpp>
-#include <boost/random.hpp>
-#include <boost/graph/graphviz.hpp>
+#include "AITStarKin.hpp"
 
-#include "ompl/control/spaces/RealVectorControlSpace.h"
-#include "ompl/control/SimpleSetup.h"
-#include "ompl/control/planners/sst/SST.h"
-#include "ompl/control/planners/rrt/RRT.h"
-#include "ompl/control/planners/est/EST.h"
-#include "ompl/control/planners/kpiece/KPIECE1.h"
-#include "ompl/control/planners/pdst/PDST.h"
-#include "ompl/control/planners/syclop/SyclopRRT.h"
-#include "ompl/control/planners/PlannerIncludes.h"
 
-// euclidean distance heuristic
-template<class Graph, class CostType, class SuperVoxelClustersPtr>
-class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
+ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
+: base::Planner(si, "AITStarKin")
 {
-public:
-  typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-  distance_heuristic(SuperVoxelClustersPtr sc, Vertex goal_vertex, Graph g)
-  : supervoxel_clusters_(sc), goal_vertex_(goal_vertex), g_(g)
-  {
-  }
-  CostType operator()(Vertex u)
-  {
-    auto u_vertex_label = g_[u].label;
-    auto goal_vertex_label = g_[goal_vertex_].label;
-    auto u_supervoxel_centroid = supervoxel_clusters_->at(u_vertex_label)->centroid_;
-    auto goal_supervoxel_centroid = supervoxel_clusters_->at(goal_vertex_label)->centroid_;
-    CostType dx = u_supervoxel_centroid.x - goal_supervoxel_centroid.x;
-    CostType dy = u_supervoxel_centroid.y - goal_supervoxel_centroid.y;
-    CostType dz = u_supervoxel_centroid.z - goal_supervoxel_centroid.z;
-    return std::sqrt(dx * dx + dy * dy + dz * dz);
-  }
+  specs_.approximateSolutions = true;
+  siC_ = si.get();
+}
 
-private:
-  SuperVoxelClustersPtr supervoxel_clusters_;
-  Vertex goal_vertex_;
-  Graph g_;
-};
-
-// exception for termination
-struct FoundGoal {};
-template<class Vertex>
-class custom_goal_visitor : public boost::default_astar_visitor
+ompl::control::AITStarKin::~AITStarKin()
 {
-public:
-  custom_goal_visitor(Vertex goal_vertex, int * num_visits)
-  : goal_vertex_(goal_vertex), num_visits_(num_visits)
-  {
+  freeMemory();
+}
+
+void ompl::control::AITStarKin::setup()
+{
+  base::Planner::setup();
+  if (!nn_) {
+    nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
   }
-  template<class Graph>
-  void examine_vertex(Vertex u, Graph & g)
-  {
-    ++(*num_visits_);
-    if (u == goal_vertex_) {
-      throw FoundGoal();
+  nn_->setDistanceFunction(
+    [this](const VertexProperty * a, const VertexProperty * b)
+    {
+      return distanceFunction(a, b);
+    });
+
+  if (pdef_) {
+    if (pdef_->hasOptimizationObjective()) {
+      opt_ = pdef_->getOptimizationObjective();
+    } else {
+      OMPL_WARN("%s: No optimization object set. Using path length", getName().c_str());
+      opt_ = std::make_shared<base::PathLengthOptimizationObjective>(si_);
+      pdef_->setOptimizationObjective(opt_);
     }
   }
 
-private:
-  Vertex goal_vertex_;
-  int * num_visits_;
-};
+}
 
-struct VertexProperty
+void ompl::control::AITStarKin::clear()
 {
-  std::uint32_t label;
-  std::string name;
-};
-typedef float Cost;
-// specify some types
-typedef boost::adjacency_list<
-    boost::setS,                // edge
-    boost::vecS,                // vertex
-    boost::undirectedS,         // type
-    VertexProperty,             // vertex property
-    boost::property<boost::edge_weight_t, Cost>>     // edge property
-  GraphT;
-typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
-typedef GraphT::vertex_descriptor vertex_descriptor;
-typedef GraphT::edge_descriptor edge_descriptor;
-typedef GraphT::vertex_iterator vertex_iterator;
-typedef std::pair<int, int> edge;
+  Planner::clear();
+  sampler_.reset();
+  valid_state_sampler_.reset();
+  freeMemory();
+  if (nn_) {
+    nn_->clear();
+  }
+}
 
-int main(int argc, char const * argv[])
+void ompl::control::AITStarKin::freeMemory()
 {
-  /* code */
-  return 0;
+  if (nn_) {
+    std::vector<VertexProperty *> nodes;
+    nn_->list(nodes);
+    for (auto & node : nodes) {
+      if (node->state) {
+        si_->freeState(node->state);
+      }
+      delete node;
+    }
+  }
+}
+
+
+ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
+  const base::PlannerTerminationCondition & ptc)
+{
+  checkValidity();
+  base::Goal * goal = pdef_->getGoal().get();
+  auto * goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
+
+  // Use valid state sampler
+  if (!valid_state_sampler_) {
+    valid_state_sampler_ = si_->allocValidStateSampler();
+  }
+  if (!sampler_) {
+    sampler_ = si_->allocStateSampler();
+  }
+
+  OMPL_INFORM(
+    "%s: Starting planning with %u states already in datastructure\n",
+    getName().c_str(), nn_->size());
+
+
+  clear();
+
+  return {};
+}
+
+void ompl::control::AITStarKin::getPlannerData(base::PlannerData & data) const
+{
+  Planner::getPlannerData(data);
+
+  std::vector<VertexProperty *> Nodes;
+  std::vector<VertexProperty *> allNodes;
+  if (nn_) {
+    nn_->list(Nodes);
+  }
+
+  double delta = siC_->getPropagationStepSize();
+
 }
