@@ -2,7 +2,7 @@ repositories:
   vox_nav:
     type: git
     url: https://github.com/jediofgever/vox_nav.git
-    version: foxy
+    version: humble
   #perception_pcl:
   #  type: git
   #  url: https://github.com/ros-perception/perception_pcl.git

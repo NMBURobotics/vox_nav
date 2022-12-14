@@ -18,7 +18,7 @@
     <depend>std_msgs</depend>
     <depend>tf2_geometry_msgs</depend>
     <depend>visualization_msgs</depend>
-    <!--<depend>libfcl0.7</depend>-->
+    <depend>libfcl-dev</depend>
     <depend>octomap</depend>
     <depend>octomap_msgs</depend>
     <depend>vox_nav_msgs</depend>
