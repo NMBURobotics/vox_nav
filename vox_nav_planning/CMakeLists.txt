@@ -119,18 +119,25 @@ add_executable(control_planners_benchmark src/tools/control_planners_benchmark.c
 ament_target_dependencies(control_planners_benchmark ${dependencies})
 target_link_libraries(control_planners_benchmark ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} vox_nav_ompl_planners ompl)
 
+# AITStarKin                            ####################################
+add_executable(AITStarKin include/vox_nav_planning/experimental/AITStarKin.cpp)
+ament_target_dependencies(AITStarKin ${dependencies})
+target_link_libraries(AITStarKin ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} vox_nav_ompl_planners ompl)
+
 install(TARGETS optimal_elevation_planner 
                 elevation_planner
                 elevation_control_planner
                 polytunnel_planner
                 se2_planner
                 vox_nav_ompl_planners
+                
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
 
 install(TARGETS planner_server
                 control_planners_benchmark
+                AITStarKin
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

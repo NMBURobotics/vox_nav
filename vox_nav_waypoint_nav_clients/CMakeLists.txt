@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(vox_nav_waypoint_nav_clients CXX)
+project(vox_nav_waypoint_nav_clients C CXX)
 
 # Default to C++17
 if(NOT CMAKE_CXX_STANDARD)
