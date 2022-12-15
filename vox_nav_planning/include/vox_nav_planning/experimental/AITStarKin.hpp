@@ -43,6 +43,10 @@
 #include "ompl/base/objectives/MechanicalWorkOptimizationObjective.h"
 #include "ompl/tools/config/SelfConfig.h"
 
+#include "rclcpp/rclcpp.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
+#include "vox_nav_utilities/elevation_state_space.hpp"
+
 #include <limits>
 #include <cstdint>
 
@@ -181,6 +185,10 @@ namespace ompl
 
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> nn_;
 
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rrt_nodes_pub_;
+
+      rclcpp::Node::SharedPtr node_;
+
       double distanceFunction(const VertexProperty * a, const VertexProperty * b) const
       {
         return si_->distance(a->state, b->state);
@@ -191,9 +199,10 @@ namespace ompl
         return si_->distance(a, b);
       }
 
-      std::vector<ompl::base::State *> & generateBatchofSamples(
+      void generateBatchofSamples(
         int batch_size,
-        bool use_valid_sampler = false);
+        bool use_valid_sampler,
+        std::vector<ompl::base::State *> & samples);
 
 
     };
