@@ -19,6 +19,7 @@
 #include "vox_nav_planning/rrt/RRTStarF.hpp"
 #include "vox_nav_planning/rrt/LQRPlanner.hpp"
 #include "vox_nav_planning/rrt/LQRRRTStar.hpp"
+#include "vox_nav_planning/experimental/AITStarKin.hpp"
 
 #include "vox_nav_planning/planner_core.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
@@ -157,6 +158,8 @@ namespace vox_nav_planning
         planner = ompl::base::PlannerPtr(new ompl::control::EST(si));
       } else if (selected_planner_name == std::string("KPIECE1")) {
         planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
+      } else if (selected_planner_name == std::string("AITStarKin")) {
+        planner = ompl::base::PlannerPtr(new ompl::control::AITStarKin(si));
       } else {
         RCLCPP_WARN(
           logger,

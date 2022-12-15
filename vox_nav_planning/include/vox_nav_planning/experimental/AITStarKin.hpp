@@ -44,6 +44,7 @@
 #include "ompl/tools/config/SelfConfig.h"
 
 #include <limits>
+#include <cstdint>
 
 namespace ompl
 {
@@ -158,9 +159,10 @@ namespace ompl
 
       struct VertexProperty
       {
-        std::uint32_t label;
         std::string name;
         ompl::base::State * state;
+        std::uintptr_t state_label;
+        std::size_t id;
       };
 
       typedef float Cost;
@@ -188,6 +190,11 @@ namespace ompl
       {
         return si_->distance(a, b);
       }
+
+      std::vector<ompl::base::State *> & generateBatchofSamples(
+        int batch_size,
+        bool use_valid_sampler = false);
+
 
     };
   }   // namespace control

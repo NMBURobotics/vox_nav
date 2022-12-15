@@ -79,7 +79,8 @@ OpenCV)
 # RRTStarF  PLANNER ####################################
 add_library(vox_nav_ompl_planners SHARED  src/rrt/RRTStarF.cpp
                                           src/rrt/LQRPlanner.cpp
-                                          src/rrt/LQRRRTStar.cpp )
+                                          src/rrt/LQRRRTStar.cpp 
+                                          include/vox_nav_planning/experimental/AITStarKin.cpp)
 target_link_libraries(vox_nav_ompl_planners ${PCL_LIBRARIES})
 ament_target_dependencies(vox_nav_ompl_planners ${dependencies})
 
@@ -119,19 +120,12 @@ add_executable(control_planners_benchmark src/tools/control_planners_benchmark.c
 ament_target_dependencies(control_planners_benchmark ${dependencies})
 target_link_libraries(control_planners_benchmark ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} vox_nav_ompl_planners ompl)
 
-# AITStarKin                            ####################################
-add_library(AITStarKin include/vox_nav_planning/experimental/AITStarKin.cpp)
-ament_target_dependencies(AITStarKin ${dependencies})
-target_link_libraries(AITStarKin ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} vox_nav_ompl_planners ompl)
-
 install(TARGETS optimal_elevation_planner 
                 elevation_planner
                 elevation_control_planner
                 polytunnel_planner
                 se2_planner
                 vox_nav_ompl_planners
-                AITStarKin
-                
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)
@@ -161,7 +155,6 @@ ament_export_libraries( optimal_elevation_planner
                         elevation_planner
                         elevation_control_planner
                         polytunnel_planner
-                        se2_planner
-                        AITStarKin)
+                        se2_planner)
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 ament_package()
