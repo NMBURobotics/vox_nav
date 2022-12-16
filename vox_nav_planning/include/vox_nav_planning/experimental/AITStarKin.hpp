@@ -31,7 +31,6 @@
 #include "ompl/control/planners/pdst/PDST.h"
 #include "ompl/control/planners/syclop/SyclopRRT.h"
 #include "ompl/control/planners/PlannerIncludes.h"
-#include "ompl/datastructures/NearestNeighbors.h"
 #include "ompl/control/planners/PlannerIncludes.h"
 #include "ompl/base/spaces/SE2StateSpace.h"
 #include "ompl/base/spaces/RealVectorStateSpace.h"
@@ -41,6 +40,8 @@
 #include "ompl/base/objectives/PathLengthOptimizationObjective.h"
 #include "ompl/base/objectives/MechanicalWorkOptimizationObjective.h"
 #include "ompl/tools/config/SelfConfig.h"
+#include "ompl/datastructures/NearestNeighbors.h"
+#include "ompl/datastructures/LPAstarOnGraph.h"
 
 #include "rclcpp/rclcpp.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -85,6 +86,16 @@ namespace ompl
         nn_ = std::make_shared<NN<VertexProperty *>>();
         setup();
       }
+
+      struct VertexProperty
+      {
+        std::string name;
+        ompl::base::State * state;
+        std::uintptr_t state_label;
+        std::size_t id;
+        double g;
+        double rhs;
+      };
 
     protected:
       /** \brief Free the memory allocated by this planner */
@@ -160,13 +171,6 @@ namespace ompl
         int * num_visits_;
       };
 
-      struct VertexProperty
-      {
-        std::string name;
-        ompl::base::State * state;
-        std::uintptr_t state_label;
-        std::size_t id;
-      };
 
       typedef float Cost;
       typedef boost::adjacency_list<
@@ -198,6 +202,8 @@ namespace ompl
         return si_->distance(a, b);
       }
 
+      const VertexProperty * getVertex(std::size_t id);
+
       void generateBatchofSamples(
         int batch_size,
         bool use_valid_sampler,
@@ -205,6 +211,34 @@ namespace ompl
 
       void visulizeRGG(const GraphT & g);
 
+      class CostEstimatorApx
+      {
+      public:
+        CostEstimatorApx(AITStarKin * alg)
+        : alg_(alg)
+        {
+        }
+        double operator()(std::size_t i)
+        {
+          double lb_estimate = (*(alg_->LPAstarApx_))(i);
+          if (lb_estimate != std::numeric_limits<double>::infinity()) {
+            return lb_estimate;
+          }
+
+          return alg_->distanceFunction(alg_->getVertex(i), &alg_->start_vertex_);
+        }
+
+      private:
+        AITStarKin * alg_;
+      };        // CostEstimatorApx
+
+      using LPAstarApx = LPAstarOnGraph<GraphT, CostEstimatorApx>;
+      LPAstarApx * LPAstarApx_{nullptr};             // rooted at target
+
+      VertexProperty start_vertex_;
+      VertexProperty goal_vertex_;
+
+      GraphT g_;
 
     };
   }   // namespace control

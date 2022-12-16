@@ -100,19 +100,21 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
   // get the goal node and state
   auto * goal_state = si_->allocState();
+  VertexProperty * goal_vertex = new VertexProperty();
   while (const base::State * goal = pis_.nextGoal()) {
     si_->copyState(goal_state, goal);
   }
+  goal_vertex->state = goal_state;
+  nn_->add(goal_vertex);
 
   // get start node and state,push  the node inton nn_ as well
-  auto * start_start = si_->allocState();
+  auto * start_state = si_->allocState();
   VertexProperty * start_vertex = new VertexProperty();
-
   while (const base::State * st = pis_.nextStart()) {
-    si_->copyState(start_start, st);
-    start_vertex->state = start_start;
-    nn_->add(start_vertex);
+    si_->copyState(start_state, st);
   }
+  start_vertex->state = start_state;
+  nn_->add(start_vertex);
 
   if (nn_->size() == 0) {
     OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
@@ -129,18 +131,24 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   std::vector<ompl::base::State *> samples;
   generateBatchofSamples(batch_size, true, samples);
 
-  GraphT g;
-  WeightMap weightmap = get(boost::edge_weight, g);
+  WeightMap weightmap = get(boost::edge_weight, g_);
+
+  // Add goal and start to graph
+  vertex_descriptor start_vertex_descriptor = boost::add_vertex(g_);
+  vertex_descriptor goal_vertex_descriptor = boost::add_vertex(g_);
+  g_[start_vertex_descriptor].state = start_state;
+  g_[start_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(start_state);
+  g_[start_vertex_descriptor].id = start_vertex_descriptor;
+  g_[goal_vertex_descriptor].state = goal_state;
+  g_[goal_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(goal_state);
+  g_[goal_vertex_descriptor].id = goal_vertex_descriptor;
 
   for (auto && i : samples) {
-    vertex_descriptor this_vertex_descriptor = boost::add_vertex(g);
-    g[this_vertex_descriptor].state = (i);
-    g[this_vertex_descriptor].state_label = (reinterpret_cast<std::uintptr_t>(i));
-    g[this_vertex_descriptor].id = (this_vertex_descriptor);
-    VertexProperty * this_vertex_property = new VertexProperty();
-    this_vertex_property->state = i;
-    this_vertex_property->state_label = (reinterpret_cast<std::uintptr_t>(i));
-    this_vertex_property->id = (this_vertex_descriptor);
+    vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_);
+    g_[this_vertex_descriptor].state = (i);
+    g_[this_vertex_descriptor].state_label = (reinterpret_cast<std::uintptr_t>(i));
+    g_[this_vertex_descriptor].id = (this_vertex_descriptor);
+    VertexProperty * this_vertex_property = new VertexProperty(g_[this_vertex_descriptor]);
     nn_->add(this_vertex_property);
   }
 
@@ -155,16 +163,17 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     for (auto && nb : nbh) {
       vertex_descriptor u = i->id;
       vertex_descriptor v = nb->id;
-      double dist = distanceFunction(g[u].state, g[v].state);
+      double dist = distanceFunction(g_[u].state, g_[v].state);
       edge_descriptor e; bool edge_added;
       if (u == v || dist > radius) {
         continue;
       }
-      boost::tie(e, edge_added) = boost::add_edge(u, v, g);
+      boost::tie(e, edge_added) = boost::add_edge(u, v, g_);
     }
   }
 
-  visulizeRGG(g);
+
+  visulizeRGG(g_);
 
   clear();
 
@@ -210,6 +219,12 @@ void ompl::control::AITStarKin::generateBatchofSamples(
     }
   } while (samples.size() < batch_size);
 
+}
+
+const ompl::control::AITStarKin::VertexProperty * ompl::control::AITStarKin::getVertex(
+  std::size_t id)
+{
+  return &g_[id];
 }
 
 void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
