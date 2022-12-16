@@ -406,9 +406,24 @@ namespace vox_nav_planning
       original_octomap_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
         std::shared_ptr<fcl::CollisionGeometryf>(original_octomap_fcl_octree));
 
-      elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>(
-        response->elevated_surfel_poses);
-      for (auto && i : elevated_surfel_poses_msg_->poses) {
+
+      elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>();
+
+      for (sensor_msgs::PointCloud2ConstIterator<float> it(response->traversable_cloud, "x");
+        it != it.end(); ++it)
+      {
+        geometry_msgs::msg::Pose pose;
+        pose.position.x = it[0];
+        pose.position.y = it[1];
+        pose.position.z = it[2];
+        pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
+          0,
+          0,
+          0);
+        elevated_surfel_poses_msg_->poses.push_back(pose);
+      }
+
+      for (auto && i : response->elevated_surfel_poses.poses) {
         pcl::PointSurfel surfel;
         surfel.x = i.position.x;
         surfel.y = i.position.y;

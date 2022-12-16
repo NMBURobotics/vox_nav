@@ -35,6 +35,8 @@
 #include "ompl/control/planners/syclop/SyclopRRT.h"
 #include "ompl/control/planners/PlannerIncludes.h"
 
+#include "sensor_msgs/point_cloud2_iterator.hpp"
+
 #include <vector>
 #include <string>
 #include <memory>

@@ -9,5 +9,6 @@ octomap_msgs/Octomap elevated_surfel_octomap
 geometry_msgs/PoseArray elevated_surfel_poses
 # 
 sensor_msgs/PointCloud2 traversable_elevated_cloud
+sensor_msgs/PointCloud2 traversable_cloud
 #
 bool is_valid

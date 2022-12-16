@@ -15,7 +15,6 @@
 #ifndef VOX_NAV_PLANNING__RRT__AITSTARKIN_HPP_
 #define VOX_NAV_PLANNING__RRT__AITSTARKIN_HPP_
 
-
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/graph/adjacency_list.hpp>
@@ -203,6 +202,8 @@ namespace ompl
         int batch_size,
         bool use_valid_sampler,
         std::vector<ompl::base::State *> & samples);
+
+      void visulizeRGG(const GraphT & g);
 
 
     };

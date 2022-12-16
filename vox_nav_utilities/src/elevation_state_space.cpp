@@ -172,7 +172,11 @@ double ompl::base::ElevationStateSpace::distance(const State * state1, const Sta
     state2->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
   if (se2_state_type_ == SE2StateType::SE2) {
-    return se2_->distance(state1_se2, state2_se2);
+    return std::sqrt(
+      std::pow(state1_se2->getX() - state2_se2->getX(), 2) +
+      std::pow(state1_se2->getY() - state2_se2->getY(), 2));
+
+    //return se2_->distance(state1_se2, state2_se2);
   } else if (se2_state_type_ == SE2StateType::DUBINS) {
     if (isSymmetric_) {
       return rho_ * std::min(
@@ -238,7 +242,8 @@ OctoCellValidStateSampler::OctoCellValidStateSampler(
   const geometry_msgs::msg::PoseStamped goal,
   const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses)
 : ValidStateSampler(si.get()),
-  elevated_surfels_poses_(*elevated_surfels_poses)
+  elevated_surfels_poses_(*elevated_surfels_poses),
+  rng_(rd_())
 {
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
@@ -256,9 +261,7 @@ OctoCellValidStateSampler::OctoCellValidStateSampler(
 bool OctoCellValidStateSampler::sample(ompl::base::State * state)
 {
   auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
-  std::random_device rd;
-  std::mt19937 rng(rd());
-  int val = distrubutions_(rng);
+  auto val = (*int_distr_)(rng_);
   auto out_sample = search_area_surfels_->points.at(val);
   cstate->setSE2(
     out_sample.x,
@@ -313,8 +316,8 @@ void OctoCellValidStateSampler::updateSearchArea(
 
   RCLCPP_INFO(logger_, "Updated search area surfels, %d", search_area_surfels_->points.size());
 
-  search_area_surfels_ = vox_nav_utilities::uniformlySampleCloud<pcl::PointSurfel>(
-    search_area_surfels_, 1.2);
+  /*search_area_surfels_ = vox_nav_utilities::uniformlySampleCloud<pcl::PointSurfel>(
+    search_area_surfels_, 1.2);*/
 
   RCLCPP_INFO(
     logger_, "Uniformly sampled %d search area surfels,", search_area_surfels_->points.size());
@@ -327,4 +330,9 @@ void OctoCellValidStateSampler::updateSearchArea(
   }
   std::discrete_distribution<> distrubutions(weights.begin(), weights.end());
   distrubutions_ = distrubutions;
+
+  int_distr_ = std::make_shared<std::uniform_int_distribution<int>>(
+    0,
+    search_area_surfels_->points.size());
+
 }

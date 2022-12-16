@@ -589,6 +589,7 @@ namespace vox_nav_map_server
     response->elevated_surfel_octomap = *elevated_surfel_octomap_msg_;
     response->elevated_surfel_poses = *elevated_surfel_poses_msg_;
     response->traversable_elevated_cloud = *elevated_surfels_pointcloud_msg_;
+    response->traversable_cloud = *traversable_pointcloud_msg_;
     response->is_valid = true;
   }
 }   // namespace vox_nav_map_server

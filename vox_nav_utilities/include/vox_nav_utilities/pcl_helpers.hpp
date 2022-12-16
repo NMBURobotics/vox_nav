@@ -348,7 +348,7 @@ namespace vox_nav_utilities
     const double radius)
   {
     typename pcl::PointCloud<P>::Ptr subcloud_within_radius(new pcl::PointCloud<P>());
-    float resolution = 0.2;
+    float resolution = 0.1;
     pcl::octree::OctreePointCloudSearch<P> octree(resolution);
     octree.setInputCloud(cloud);
     octree.addPointsFromInputCloud();

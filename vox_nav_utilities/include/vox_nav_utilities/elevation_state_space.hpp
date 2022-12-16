@@ -239,6 +239,10 @@ namespace ompl
       pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
       pcl::PointCloud<pcl::PointSurfel>::Ptr search_area_surfels_;
       std::discrete_distribution<> distrubutions_;
+      std::random_device rd_;
+      std::mt19937 rng_;
+
+      std::shared_ptr<std::uniform_int_distribution<>> int_distr_;
     };
 
     class ElevationStateSpaceProjection : public base::ProjectionEvaluator
