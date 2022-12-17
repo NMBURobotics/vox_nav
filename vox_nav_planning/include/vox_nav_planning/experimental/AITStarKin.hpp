@@ -75,6 +75,9 @@ namespace ompl
           want to continue planning */
       void clear() override;
 
+      /** \brief Free the memory allocated by this planner */
+      void freeMemory();
+
       /** \brief Set a different nearest neighbors datastructure */
       template<template<typename T> class NN>
       void setNearestNeighbors()
@@ -97,11 +100,27 @@ namespace ompl
         double rhs;
       };
 
+      double distanceFunction(const VertexProperty * a, const VertexProperty * b) const
+      {
+        return si_->distance(a->state, b->state);
+      }
+
+      double distanceFunction(const base::State * a, const base::State * b) const
+      {
+        return si_->distance(a, b);
+      }
+
       void addVertex(const VertexProperty * a)
       {
-        boost::add_vertex(*a, graphApx_);
-        boost::add_vertex(*a, graphLb_);
-        //boost::add_vertex(*a, g_);
+        // Add goal and start to graph
+        vertex_descriptor g = boost::add_vertex(g_);
+        vertex_descriptor apx = boost::add_vertex(graphApx_);
+        vertex_descriptor lb = boost::add_vertex(graphLb_);
+        g_[g].state = a->state;
+        g_[g].state_label = reinterpret_cast<std::uintptr_t>(a->state);
+        g_[g].id = g;
+        graphApx_[apx] = g_[g];
+        graphLb_[lb] = g_[g];
       }
 
       void addEdgeApx(VertexProperty * a, VertexProperty * b, double c)
@@ -111,6 +130,7 @@ namespace ompl
         LPAstarApx_->insertEdge(a->id, b->id, c);
         LPAstarApx_->insertEdge(b->id, a->id, c);
       }
+
       void addEdgeLb(const VertexProperty * a, const VertexProperty * b, double c)
       {
         WeightProperty w(c);
@@ -119,9 +139,19 @@ namespace ompl
         LPAstarLb_->insertEdge(b->id, a->id, c);
       }
 
-    protected:
-      /** \brief Free the memory allocated by this planner */
-      void freeMemory();
+      const VertexProperty * getVertex(std::size_t id)
+      {
+        return &g_[id];
+      }
+
+      void generateBatchofSamples(
+        int batch_size,
+        bool use_valid_sampler,
+        std::vector<ompl::base::State *> & samples);
+
+    private:
+      int batch_size_{500};
+      double radius_{1.5};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_;
@@ -134,66 +164,6 @@ namespace ompl
       /** \brief The optimization objective. */
       base::OptimizationObjectivePtr opt_;
 
-      double goalBias_{0.05};
-      double connect_circle_dist_{10.0};
-      double expand_dis_{2.5};
-      double goal_tolerance_{0.5};
-
-      /** \brief The random number generator */
-      RNG rng_;
-
-      // euclidean distance heuristic
-      template<class Graph, class CostType, class SuperVoxelClustersPtr>
-      class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
-      {
-      public:
-        typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-        distance_heuristic(SuperVoxelClustersPtr sc, Vertex goal_vertex, Graph g)
-        : supervoxel_clusters_(sc), goal_vertex_(goal_vertex), g_(g)
-        {
-        }
-        CostType operator()(Vertex u)
-        {
-          auto u_vertex_label = g_[u].label;
-          auto goal_vertex_label = g_[goal_vertex_].label;
-          auto u_supervoxel_centroid = supervoxel_clusters_->at(u_vertex_label)->centroid_;
-          auto goal_supervoxel_centroid = supervoxel_clusters_->at(goal_vertex_label)->centroid_;
-          CostType dx = u_supervoxel_centroid.x - goal_supervoxel_centroid.x;
-          CostType dy = u_supervoxel_centroid.y - goal_supervoxel_centroid.y;
-          CostType dz = u_supervoxel_centroid.z - goal_supervoxel_centroid.z;
-          return std::sqrt(dx * dx + dy * dy + dz * dz);
-        }
-
-      private:
-        SuperVoxelClustersPtr supervoxel_clusters_;
-        Vertex goal_vertex_;
-        Graph g_;
-      };
-
-      struct FoundGoal {};
-      template<class Vertex>
-      class custom_goal_visitor : public boost::default_astar_visitor
-      {
-      public:
-        custom_goal_visitor(Vertex goal_vertex, int * num_visits)
-        : goal_vertex_(goal_vertex), num_visits_(num_visits)
-        {
-        }
-        template<class Graph>
-        void examine_vertex(Vertex u, Graph & g)
-        {
-          ++(*num_visits_);
-          if (u == goal_vertex_) {
-            throw FoundGoal();
-          }
-        }
-
-      private:
-        Vertex goal_vertex_;
-        int * num_visits_;
-      };
-
-
       typedef float Cost;
       typedef boost::adjacency_list<
           boost::vecS,          // edge
@@ -202,6 +172,7 @@ namespace ompl
           VertexProperty,       // vertex property
           boost::property<boost::edge_weight_t, Cost>> // edge property
         GraphT;
+
       typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
       typedef GraphT::vertex_descriptor vertex_descriptor;
       typedef GraphT::edge_descriptor edge_descriptor;
@@ -209,33 +180,12 @@ namespace ompl
       typedef std::pair<int, int> edge;
       using WeightProperty = boost::property<boost::edge_weight_t, Cost>;
 
-
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> nn_;
-
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rrt_nodes_pub_;
-
       rclcpp::Node::SharedPtr node_;
 
-      double distanceFunction(const VertexProperty * a, const VertexProperty * b) const
-      {
-        return si_->distance(a->state, b->state);
-      }
-
-      double distanceFunction(const base::State * a, const base::State * b) const
-      {
-        return si_->distance(a, b);
-      }
-
-      const VertexProperty * getVertex(std::size_t id);
-
-      void generateBatchofSamples(
-        int batch_size,
-        bool use_valid_sampler,
-        std::vector<ompl::base::State *> & samples);
-
-      void visulizeRGG(const GraphT & g);
-
-      friend class CostEstimatorApx;        // allow CostEstimatorApx access to private members
+      // allow CostEstimatorApx access to private members
+      friend class CostEstimatorApx;
       class CostEstimatorApx
       {
       public:
@@ -249,12 +199,12 @@ namespace ompl
           if (lb_estimate != std::numeric_limits<double>::infinity()) {
             return lb_estimate;
           }
-          return alg_->distanceFunction(alg_->getVertex(i), &alg_->start_vertex_);
+          return alg_->distanceFunction(alg_->getVertex(i), alg_->start_vertex_);
         }
 
       private:
         AITStarKin * alg_;
-      };        // CostEstimatorApx
+      };  // CostEstimatorApx
 
       class CostEstimatorLb
       {
@@ -274,20 +224,22 @@ namespace ompl
       private:
         base::Goal * goal_;
         AITStarKin * alg_;
-      };        // CostEstimatorLb
+      };  // CostEstimatorLb
 
       using LPAstarApx = LPAstarOnGraph<GraphT, CostEstimatorApx>;
       using LPAstarLb = LPAstarOnGraph<GraphT, CostEstimatorLb>;
 
       LPAstarApx * LPAstarApx_{nullptr};             // rooted at target
-      LPAstarLb * LPAstarLb_{nullptr};             // rooted at source
+      LPAstarLb * LPAstarLb_{nullptr};               // rooted at source
 
-      VertexProperty start_vertex_;
-      VertexProperty goal_vertex_;
+      VertexProperty * start_vertex_;
+      VertexProperty * goal_vertex_;
 
       GraphT g_;
       GraphT graphLb_;
       GraphT graphApx_;
+
+      void visulizeRGG(const GraphT & g);
 
     };
   }   // namespace control

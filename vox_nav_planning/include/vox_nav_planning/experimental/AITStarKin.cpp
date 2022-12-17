@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "AITStarKin.hpp"
 
 ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
@@ -24,7 +23,7 @@ ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
 
 ompl::control::AITStarKin::~AITStarKin()
 {
-  //freeMemory();
+  freeMemory();
 }
 
 void ompl::control::AITStarKin::setup()
@@ -91,32 +90,41 @@ void ompl::control::AITStarKin::freeMemory()
   }
 
   delete LPAstarApx_;
+  delete LPAstarLb_;
 }
 
 ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   const base::PlannerTerminationCondition & ptc)
 {
+
   checkValidity();
+
+  goal_vertex_ = new VertexProperty();
+  start_vertex_ = new VertexProperty();
+
   base::Goal * goal = pdef_->getGoal().get();
   auto * goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
 
   // get the goal node and state
   auto * goal_state = si_->allocState();
-  VertexProperty * goal_vertex = new VertexProperty();
+
   while (const base::State * goal = pis_.nextGoal()) {
     si_->copyState(goal_state, goal);
   }
-  goal_vertex->state = goal_state;
-  nn_->add(goal_vertex);
+  goal_vertex_->state = goal_state;
+
+  addVertex(goal_vertex_);
+  nn_->add(goal_vertex_);
 
   // get start node and state,push  the node inton nn_ as well
   auto * start_state = si_->allocState();
-  VertexProperty * start_vertex = new VertexProperty();
   while (const base::State * st = pis_.nextStart()) {
     si_->copyState(start_state, st);
   }
-  start_vertex->state = start_state;
-  nn_->add(start_vertex);
+  start_vertex_->state = start_state;
+
+  addVertex(start_vertex_);
+  nn_->add(start_vertex_);
 
   if (nn_->size() == 0) {
     OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
@@ -127,39 +135,20 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     "%s: Starting planning with %u states already in datastructure\n", getName().c_str(),
     nn_->size());
 
-  int batch_size = 500;
-  double radius = 1.5;
-
   std::vector<ompl::base::State *> samples;
-  generateBatchofSamples(batch_size, true, samples);
-
-  WeightMap weightmap = get(boost::edge_weight, g_);
-
-  // Add goal and start to graph
-  vertex_descriptor start_vertex_descriptor = boost::add_vertex(g_);
-  vertex_descriptor goal_vertex_descriptor = boost::add_vertex(g_);
-  g_[start_vertex_descriptor].state = start_state;
-  g_[start_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(start_state);
-  g_[start_vertex_descriptor].id = start_vertex_descriptor;
-  g_[goal_vertex_descriptor].state = goal_state;
-  g_[goal_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(goal_state);
-  g_[goal_vertex_descriptor].id = goal_vertex_descriptor;
-  start_vertex_ = g_[start_vertex_descriptor];
-  goal_vertex_ = g_[goal_vertex_descriptor];
+  generateBatchofSamples(batch_size_, true, samples);
 
   for (auto && i : samples) {
-    vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_);
-    g_[this_vertex_descriptor].state = (i);
-    g_[this_vertex_descriptor].state_label = (reinterpret_cast<std::uintptr_t>(i));
-    g_[this_vertex_descriptor].id = (this_vertex_descriptor);
-    VertexProperty * this_vertex_property = new VertexProperty(g_[this_vertex_descriptor]);
-    nn_->add(this_vertex_property);
+    VertexProperty * this_vertex = new VertexProperty();
+    this_vertex->state = i;
+    addVertex(this_vertex);
+    nn_->add(this_vertex);
   }
 
   CostEstimatorLb costEstimatorLb(goal, this);
-  LPAstarLb_ = new LPAstarLb(start_vertex_.id, goal_vertex_.id, graphLb_, costEstimatorLb);    // rooted at source
+  LPAstarLb_ = new LPAstarLb(start_vertex_->id, goal_vertex_->id, graphLb_, costEstimatorLb);    // rooted at source
   CostEstimatorApx costEstimatorApx(this);
-  LPAstarApx_ = new LPAstarApx(goal_vertex_.id, start_vertex_.id, graphApx_, costEstimatorApx);    // rooted at target
+  LPAstarApx_ = new LPAstarApx(goal_vertex_->id, start_vertex_->id, graphApx_, costEstimatorApx);    // rooted at target
 
   for (auto vd : boost::make_iterator_range(vertices(g_))) {
     addVertex(&g_[vd]);
@@ -172,13 +161,13 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
   for (auto && i : vertices_in_nn) {
     std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
-    nn_->nearestR(i, radius, nbh);
+    nn_->nearestR(i, radius_, nbh);
     for (auto && nb : nbh) {
       vertex_descriptor u = i->id;
       vertex_descriptor v = nb->id;
       double dist = distanceFunction(g_[u].state, g_[v].state);
       edge_descriptor e; bool edge_added;
-      if (u == v || dist > radius) {
+      if (u == v || dist > radius_) {
         continue;
       }
       boost::tie(e, edge_added) = boost::add_edge(u, v, WeightProperty(dist), g_);
@@ -205,15 +194,12 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 void ompl::control::AITStarKin::getPlannerData(base::PlannerData & data) const
 {
   Planner::getPlannerData(data);
-
   std::vector<VertexProperty *> Nodes;
   std::vector<VertexProperty *> allNodes;
   if (nn_) {
     nn_->list(Nodes);
   }
-
   double delta = siC_->getPropagationStepSize();
-
 }
 
 void ompl::control::AITStarKin::generateBatchofSamples(
@@ -222,16 +208,13 @@ void ompl::control::AITStarKin::generateBatchofSamples(
   std::vector<ompl::base::State *> & samples)
 {
   samples.reserve(batch_size);
-
   do{
-
     // Create a new vertex.
     auto state = si_->allocState();
     samples.push_back(state);
     if (use_valid_sampler) {
       valid_state_sampler_->sample(samples.back());
     } else {
-
       do{
         // Sample the associated state uniformly within the informed set.
         sampler_->sampleUniform(samples.back());
@@ -240,30 +223,18 @@ void ompl::control::AITStarKin::generateBatchofSamples(
 
     }
   } while (samples.size() < batch_size);
-
-}
-
-const ompl::control::AITStarKin::VertexProperty * ompl::control::AITStarKin::getVertex(
-  std::size_t id)
-{
-  return &g_[id];
 }
 
 void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
 {
-
   visualization_msgs::msg::MarkerArray marker_array;
   rrt_nodes_pub_->publish(marker_array);
 
   // To make a graph of the supervoxel adjacency,
   // we need to iterate through the supervoxel adjacency multimap
-
-
   for (auto vd : boost::make_iterator_range(vertices(g))) {
-
     double lb_estimate = (*(LPAstarApx_))(g[vd].id);
     double pax_estimate = (*(LPAstarLb_))(g[vd].id);
-
 
     const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * target_se2 = target_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
