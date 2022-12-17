@@ -24,7 +24,7 @@ ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
 
 ompl::control::AITStarKin::~AITStarKin()
 {
-  freeMemory();
+  //freeMemory();
 }
 
 void ompl::control::AITStarKin::setup()
@@ -89,6 +89,8 @@ void ompl::control::AITStarKin::freeMemory()
       delete node;
     }
   }
+
+  delete LPAstarApx_;
 }
 
 ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
@@ -142,6 +144,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   g_[goal_vertex_descriptor].state = goal_state;
   g_[goal_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(goal_state);
   g_[goal_vertex_descriptor].id = goal_vertex_descriptor;
+  start_vertex_ = g_[start_vertex_descriptor];
+  goal_vertex_ = g_[goal_vertex_descriptor];
 
   for (auto && i : samples) {
     vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_);
@@ -150,6 +154,15 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     g_[this_vertex_descriptor].id = (this_vertex_descriptor);
     VertexProperty * this_vertex_property = new VertexProperty(g_[this_vertex_descriptor]);
     nn_->add(this_vertex_property);
+  }
+
+  CostEstimatorLb costEstimatorLb(goal, this);
+  LPAstarLb_ = new LPAstarLb(start_vertex_.id, goal_vertex_.id, graphLb_, costEstimatorLb);    // rooted at source
+  CostEstimatorApx costEstimatorApx(this);
+  LPAstarApx_ = new LPAstarApx(goal_vertex_.id, start_vertex_.id, graphApx_, costEstimatorApx);    // rooted at target
+
+  for (auto vd : boost::make_iterator_range(vertices(g_))) {
+    addVertex(&g_[vd]);
   }
 
   std::vector<VertexProperty *> vertices_in_nn;
@@ -168,10 +181,19 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       if (u == v || dist > radius) {
         continue;
       }
-      boost::tie(e, edge_added) = boost::add_edge(u, v, g_);
+      boost::tie(e, edge_added) = boost::add_edge(u, v, WeightProperty(dist), g_);
+
+      addEdgeApx(i, nb, dist);
+      addEdgeLb(i, nb, dist);
     }
   }
 
+  std::list<std::size_t> pathApx;
+  double costApx = LPAstarApx_->computeShortestPath(pathApx);
+  double costLb = LPAstarLb_->computeShortestPath(pathApx);
+
+  std::cout << costApx << std::endl;
+  std::cout << costLb << std::endl;
 
   visulizeRGG(g_);
 
@@ -238,6 +260,11 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
 
 
   for (auto vd : boost::make_iterator_range(vertices(g))) {
+
+    double lb_estimate = (*(LPAstarApx_))(g[vd].id);
+    double pax_estimate = (*(LPAstarLb_))(g[vd].id);
+
+
     const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * target_se2 = target_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
     const auto * target_z = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
@@ -262,6 +289,23 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
     sphere.color.b = 1.0;
     marker_array.markers.push_back(sphere);
 
+    visualization_msgs::msg::Marker text;
+    text.header.frame_id = "map";
+    text.header.stamp = rclcpp::Clock().now();
+    text.ns = "rgg_costs";
+    text.id = g[vd].id;
+    text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+    text.action = visualization_msgs::msg::Marker::ADD;
+    text.lifetime = rclcpp::Duration::from_seconds(0);
+    text.text = std::to_string(lb_estimate) + ", " + std::to_string(pax_estimate);
+    text.pose = sphere.pose;
+    text.pose.position.z += 0.5;
+    text.scale.x = 0.3;
+    text.scale.y = 0.3;
+    text.scale.z = 0.3;
+    text.color.a = 1.0;
+    text.color.r = 1.0;
+    marker_array.markers.push_back(text);
   }
 
   auto es = boost::edges(g);
@@ -302,12 +346,10 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
     line_strip.scale.z = 0.25;
     line_strip.color.a = 1.0;
     line_strip.color.r = 0.0;
-    line_strip.color.g = 1.0;
     line_strip.color.b = 1.0;
 
     std_msgs::msg::ColorRGBA yellow_color;
-    yellow_color.r = 1.0;
-    yellow_color.g = 1.0;
+    yellow_color.b = 1.0;
     yellow_color.a = 1.0;
 
     line_strip.points.push_back(source_point);

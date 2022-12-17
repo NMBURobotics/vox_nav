@@ -228,7 +228,7 @@ namespace vox_nav_planning
     se3_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
     se3_goal->setVelocity(0);
 
-    control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, 2.5);
+    control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, 0.5);
 
     auto si = control_simple_setup_->getSpaceInformation();
     si->setMinMaxControlDuration(1, 2);

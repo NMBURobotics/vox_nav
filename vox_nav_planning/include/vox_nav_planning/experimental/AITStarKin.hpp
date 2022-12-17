@@ -97,6 +97,28 @@ namespace ompl
         double rhs;
       };
 
+      void addVertex(const VertexProperty * a)
+      {
+        boost::add_vertex(*a, graphApx_);
+        boost::add_vertex(*a, graphLb_);
+        //boost::add_vertex(*a, g_);
+      }
+
+      void addEdgeApx(VertexProperty * a, VertexProperty * b, double c)
+      {
+        WeightProperty w(c);
+        boost::add_edge(a->id, b->id, w, graphApx_);
+        LPAstarApx_->insertEdge(a->id, b->id, c);
+        LPAstarApx_->insertEdge(b->id, a->id, c);
+      }
+      void addEdgeLb(const VertexProperty * a, const VertexProperty * b, double c)
+      {
+        WeightProperty w(c);
+        boost::add_edge(a->id, b->id, w, graphLb_);
+        LPAstarLb_->insertEdge(a->id, b->id, c);
+        LPAstarLb_->insertEdge(b->id, a->id, c);
+      }
+
     protected:
       /** \brief Free the memory allocated by this planner */
       void freeMemory();
@@ -174,7 +196,7 @@ namespace ompl
 
       typedef float Cost;
       typedef boost::adjacency_list<
-          boost::setS,          // edge
+          boost::vecS,          // edge
           boost::vecS,          // vertex
           boost::undirectedS,   // type
           VertexProperty,       // vertex property
@@ -185,6 +207,8 @@ namespace ompl
       typedef GraphT::edge_descriptor edge_descriptor;
       typedef GraphT::vertex_iterator vertex_iterator;
       typedef std::pair<int, int> edge;
+      using WeightProperty = boost::property<boost::edge_weight_t, Cost>;
+
 
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> nn_;
 
@@ -211,6 +235,7 @@ namespace ompl
 
       void visulizeRGG(const GraphT & g);
 
+      friend class CostEstimatorApx;        // allow CostEstimatorApx access to private members
       class CostEstimatorApx
       {
       public:
@@ -220,11 +245,10 @@ namespace ompl
         }
         double operator()(std::size_t i)
         {
-          double lb_estimate = (*(alg_->LPAstarApx_))(i);
+          double lb_estimate = (*(alg_->LPAstarLb_))(i);
           if (lb_estimate != std::numeric_limits<double>::infinity()) {
             return lb_estimate;
           }
-
           return alg_->distanceFunction(alg_->getVertex(i), &alg_->start_vertex_);
         }
 
@@ -232,13 +256,38 @@ namespace ompl
         AITStarKin * alg_;
       };        // CostEstimatorApx
 
+      class CostEstimatorLb
+      {
+      public:
+        CostEstimatorLb(base::Goal * goal, AITStarKin * alg)
+        : goal_(goal), alg_(alg)
+        {
+        }
+        double operator()(std::size_t i)
+        {
+          double dist = 0.0;
+          goal_->isSatisfied(alg_->getVertex(i)->state, &dist);
+
+          return dist;
+        }
+
+      private:
+        base::Goal * goal_;
+        AITStarKin * alg_;
+      };        // CostEstimatorLb
+
       using LPAstarApx = LPAstarOnGraph<GraphT, CostEstimatorApx>;
+      using LPAstarLb = LPAstarOnGraph<GraphT, CostEstimatorLb>;
+
       LPAstarApx * LPAstarApx_{nullptr};             // rooted at target
+      LPAstarLb * LPAstarLb_{nullptr};             // rooted at source
 
       VertexProperty start_vertex_;
       VertexProperty goal_vertex_;
 
       GraphT g_;
+      GraphT graphLb_;
+      GraphT graphApx_;
 
     };
   }   // namespace control
