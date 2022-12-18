@@ -89,8 +89,8 @@ void ompl::control::AITStarKin::freeMemory()
     }
   }
 
-  //delete LPAstarApx_;
-  //delete LPAstarLb_;
+  //delete LPAstarCost2Come_;
+  //delete LPAstarCost2Go_;
 }
 
 ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
@@ -152,10 +152,13 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     nn_->add(this_vertex_property);
   }
 
-  CostEstimatorLb costEstimatorLb(goal, this);
-  LPAstarLb_ = new LPAstarLb(goal_vertex_.id, start_vertex_.id, graphLb_, costEstimatorLb);    // rooted at source
-  CostEstimatorApx costEstimatorApx(this);
-  LPAstarApx_ = new LPAstarApx(start_vertex_.id, goal_vertex_.id, graphApx_, costEstimatorApx);    // rooted at target
+  Cost2GoEstimator cost2GoEstimator(goal, this);
+  LPAstarCost2Go_ =
+    new LPAstarCost2Go(goal_vertex_.id, start_vertex_.id, graphLb_, cost2GoEstimator);                    // rooted at source
+
+  Cost2ComeEstimator cost2ComeEstimator(this);
+  LPAstarCost2Come_ =
+    new LPAstarCost2Come(start_vertex_.id, goal_vertex_.id, graphApx_, cost2ComeEstimator);                      // rooted at target
 
   for (auto vd : boost::make_iterator_range(vertices(g_))) {
     std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
@@ -175,8 +178,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
 
   std::list<std::size_t> pathApx, pathLb;
-  double costApx = LPAstarApx_->computeShortestPath(pathApx);
-  double costLb = LPAstarLb_->computeShortestPath(pathLb);
+  double costApx = LPAstarCost2Come_->computeShortestPath(pathApx);
+  double costLb = LPAstarCost2Go_->computeShortestPath(pathLb);
 
   std::cout << costApx << std::endl;
   std::cout << costLb << std::endl;
@@ -229,8 +232,8 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
   // To make a graph of the supervoxel adjacency,
   // we need to iterate through the supervoxel adjacency multimap
   for (auto vd : boost::make_iterator_range(vertices(g))) {
-    double apx_estimate = (*(LPAstarApx_))(g[vd].id);  // cpst to come
-    double lb_estimate = (*(LPAstarLb_))(g[vd].id);  // cost to go
+    double apx_estimate = (*(LPAstarCost2Come_))(g[vd].id);  // cpst to come
+    double lb_estimate = (*(LPAstarCost2Go_))(g[vd].id);  // cost to go
     std::stringstream ss_lb, ss_apx;
     ss_lb << std::setprecision(2) << lb_estimate;
     ss_apx << std::setprecision(2) << apx_estimate;

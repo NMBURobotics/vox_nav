@@ -120,16 +120,16 @@ namespace ompl
       {
         WeightProperty w(c);
         boost::add_edge(a->id, b->id, w, graphApx_);
-        LPAstarApx_->insertEdge(a->id, b->id, c);
-        LPAstarApx_->insertEdge(b->id, a->id, c);
+        LPAstarCost2Come_->insertEdge(a->id, b->id, c);
+        LPAstarCost2Come_->insertEdge(b->id, a->id, c);
       }
 
       void addEdgeLb(const VertexProperty * a, const VertexProperty * b, double c)
       {
         WeightProperty w(c);
         boost::add_edge(a->id, b->id, w, graphLb_);
-        LPAstarLb_->insertEdge(a->id, b->id, c);
-        LPAstarLb_->insertEdge(b->id, a->id, c);
+        LPAstarCost2Go_->insertEdge(a->id, b->id, c);
+        LPAstarCost2Go_->insertEdge(b->id, a->id, c);
       }
 
       const VertexProperty * getVertex(std::size_t id)
@@ -177,18 +177,18 @@ namespace ompl
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rrt_nodes_pub_;
       rclcpp::Node::SharedPtr node_;
 
-      // allow CostEstimatorApx access to private members
-      friend class CostEstimatorApx;
-      class CostEstimatorApx
+      // allow Cost2ComeEstimator access to private members
+      friend class Cost2ComeEstimator;
+      class Cost2ComeEstimator
       {
       public:
-        CostEstimatorApx(AITStarKin * alg)
+        Cost2ComeEstimator(AITStarKin * alg)
         : alg_(alg)
         {
         }
         double operator()(std::size_t i)
         {
-          double lb_estimate = (*(alg_->LPAstarLb_))(i);
+          double lb_estimate = (*(alg_->LPAstarCost2Go_))(i);
           if (lb_estimate != std::numeric_limits<double>::infinity()) {
             return lb_estimate;
           }
@@ -197,12 +197,12 @@ namespace ompl
 
       private:
         AITStarKin * alg_;
-      };  // CostEstimatorApx
+      };  // Cost2ComeEstimator
 
-      class CostEstimatorLb
+      class Cost2GoEstimator
       {
       public:
-        CostEstimatorLb(base::Goal * goal, AITStarKin * alg)
+        Cost2GoEstimator(base::Goal * goal, AITStarKin * alg)
         : goal_(goal), alg_(alg)
         {
         }
@@ -217,13 +217,13 @@ namespace ompl
       private:
         base::Goal * goal_;
         AITStarKin * alg_;
-      };  // CostEstimatorLb
+      };  // Cost2GoEstimator
 
-      using LPAstarApx = LPAstarOnGraph<GraphT, CostEstimatorApx>;
-      using LPAstarLb = LPAstarOnGraph<GraphT, CostEstimatorLb>;
+      using LPAstarCost2Come = LPAstarOnGraph<GraphT, Cost2ComeEstimator>;
+      using LPAstarCost2Go = LPAstarOnGraph<GraphT, Cost2GoEstimator>;
 
-      LPAstarApx * LPAstarApx_{nullptr};             // rooted at target
-      LPAstarLb * LPAstarLb_{nullptr};               // rooted at source
+      LPAstarCost2Come * LPAstarCost2Come_{nullptr};
+      LPAstarCost2Go * LPAstarCost2Go_{nullptr};
 
       VertexProperty start_vertex_;
       VertexProperty goal_vertex_;
