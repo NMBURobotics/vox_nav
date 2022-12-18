@@ -229,8 +229,8 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
   // To make a graph of the supervoxel adjacency,
   // we need to iterate through the supervoxel adjacency multimap
   for (auto vd : boost::make_iterator_range(vertices(g))) {
-    double lb_estimate = (*(LPAstarApx_))(g[vd].id);  // cost from goal to start
-    double apx_estimate = (*(LPAstarLb_))(g[vd].id);  // cost from start to goal
+    double apx_estimate = (*(LPAstarApx_))(g[vd].id);  // cpst to come
+    double lb_estimate = (*(LPAstarLb_))(g[vd].id);  // cost to go
     std::stringstream ss_lb, ss_apx;
     ss_lb << std::setprecision(2) << lb_estimate;
     ss_apx << std::setprecision(2) << apx_estimate;
@@ -267,7 +267,7 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
     text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     text.action = visualization_msgs::msg::Marker::ADD;
     text.lifetime = rclcpp::Duration::from_seconds(0);
-    text.text = ss_apx.str(); // + "/" + ss_lb.str();
+    text.text = ss_apx.str() + "/" + ss_lb.str();
     text.pose = sphere.pose;
     text.pose.position.z += 0.5;
     text.scale.x = 0.3;

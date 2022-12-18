@@ -114,7 +114,6 @@ namespace ompl
       {
         boost::add_vertex(*a, graphApx_);
         boost::add_vertex(*a, graphLb_);
-        //boost::add_vertex(*a, g_);
       }
 
       void addEdgeApx(VertexProperty * a, VertexProperty * b, double c)
