@@ -185,16 +185,19 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   double costApx = LPAstarCost2Come_->computeShortestPath(reversePath);
   double costLb = LPAstarCost2Go_->computeShortestPath(forwardPath);
 
-  for (auto && i : forwardPath) {
+  if ((*(LPAstarCost2Go_))(goal_vertex_.id) != std::numeric_limits<double>::infinity()) {
 
-    //siC_->dire
+    for (size_t i = 1; i < forwardPath.size(); i++) {
+      auto c = siC_->allocControl();
+      auto prev_state_it = *std::next(forwardPath.begin(), i - 1);
+      auto curr_state_it = *std::next(forwardPath.begin(), i);
+      auto steps = controlSampler_->sampleTo(c, g_[prev_state_it].state, g_[curr_state_it].state);
+    }
 
   }
 
-
   std::cout << costApx << std::endl;
   std::cout << costLb << std::endl;
-
 
   visulizeRGG(g_);
 
