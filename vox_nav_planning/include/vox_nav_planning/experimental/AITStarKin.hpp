@@ -22,6 +22,7 @@
 #include <boost/random.hpp>
 #include <boost/graph/graphviz.hpp>
 
+#include "ompl/control/DirectedControlSampler.h"
 #include "ompl/control/spaces/RealVectorControlSpace.h"
 #include "ompl/control/SimpleSetup.h"
 #include "ompl/control/planners/sst/SST.h"
@@ -157,6 +158,8 @@ namespace ompl
       /** \brief The optimization objective. */
       base::OptimizationObjectivePtr opt_;
 
+      DirectedControlSamplerPtr controlSampler_;
+
       typedef float Cost;
       typedef boost::adjacency_list<
           boost::vecS,          // edge
@@ -216,6 +219,25 @@ namespace ompl
 
       private:
         base::Goal * goal_;
+        AITStarKin * alg_;
+      };  // Cost2GoEstimator
+
+      friend class ForwardPropogateHeuristic;
+      class ForwardPropogateHeuristic
+      {
+      public:
+        ForwardPropogateHeuristic(AITStarKin * alg)
+        : alg_(alg)
+        {
+        }
+        double operator()(std::size_t i)
+        {
+          double cost = (*(alg_->LPAstarCost2Go_))(i);
+
+          return cost;
+        }
+
+      private:
         AITStarKin * alg_;
       };  // Cost2GoEstimator
 

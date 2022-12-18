@@ -56,6 +56,10 @@ void ompl::control::AITStarKin::setup()
     sampler_ = si_->allocStateSampler();
   }
 
+  if (!controlSampler_) {
+    controlSampler_ = siC_->allocDirectedControlSampler();
+  }
+
   // ros2 node to publish rrt nodes
   node_ = std::make_shared<rclcpp::Node>("aitstarkin_rclcpp_node");
 
@@ -154,7 +158,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
   Cost2GoEstimator cost2GoEstimator(goal, this);
   LPAstarCost2Go_ =
-    new LPAstarCost2Go(goal_vertex_.id, start_vertex_.id, graphLb_, cost2GoEstimator);                    // rooted at source
+    new LPAstarCost2Go(goal_vertex_.id, start_vertex_.id, graphLb_, cost2GoEstimator);                           // rooted at source
 
   Cost2ComeEstimator cost2ComeEstimator(this);
   LPAstarCost2Come_ =
@@ -177,12 +181,20 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     }
   }
 
-  std::list<std::size_t> pathApx, pathLb;
-  double costApx = LPAstarCost2Come_->computeShortestPath(pathApx);
-  double costLb = LPAstarCost2Go_->computeShortestPath(pathLb);
+  std::list<std::size_t> forwardPath, reversePath;
+  double costApx = LPAstarCost2Come_->computeShortestPath(reversePath);
+  double costLb = LPAstarCost2Go_->computeShortestPath(forwardPath);
+
+  for (auto && i : forwardPath) {
+
+    //siC_->dire
+
+  }
+
 
   std::cout << costApx << std::endl;
   std::cout << costLb << std::endl;
+
 
   visulizeRGG(g_);
 
