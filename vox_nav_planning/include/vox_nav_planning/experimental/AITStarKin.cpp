@@ -119,23 +119,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   start_vertex->state = start_state;
   nn_->add(start_vertex);
 
-  if (nn_->size() == 0) {
-    OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
-    return base::PlannerStatus::INVALID_START;
-  }
-
-  OMPL_INFORM(
-    "%s: Starting planning with %u states already in datastructure\n", getName().c_str(),
-    nn_->size());
-
-  int batch_size = 500;
-  double radius = 1.5;
-
-  std::vector<ompl::base::State *> samples;
-  generateBatchofSamples(batch_size, true, samples);
-
-  WeightMap weightmap = get(boost::edge_weight, g_);
-
   // Add goal and start to graph
   vertex_descriptor start_vertex_descriptor = boost::add_vertex(g_);
   vertex_descriptor goal_vertex_descriptor = boost::add_vertex(g_);
@@ -148,6 +131,18 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   start_vertex_ = g_[start_vertex_descriptor];
   goal_vertex_ = g_[goal_vertex_descriptor];
 
+  if (nn_->size() == 0) {
+    OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
+    return base::PlannerStatus::INVALID_START;
+  }
+
+  OMPL_INFORM(
+    "%s: Starting planning with %u states already in datastructure\n", getName().c_str(),
+    nn_->size());
+
+  std::vector<ompl::base::State *> samples;
+  generateBatchofSamples(batch_size_, true, samples);
+
   for (auto && i : samples) {
     vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_);
     g_[this_vertex_descriptor].state = (i);
@@ -158,9 +153,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
 
   CostEstimatorLb costEstimatorLb(goal, this);
-  LPAstarLb_ = new LPAstarLb(start_vertex_.id, goal_vertex_.id, graphLb_, costEstimatorLb);    // rooted at source
+  LPAstarLb_ = new LPAstarLb(goal_vertex_.id, start_vertex_.id, graphLb_, costEstimatorLb);    // rooted at source
   CostEstimatorApx costEstimatorApx(this);
-  LPAstarApx_ = new LPAstarApx(goal_vertex_.id, start_vertex_.id, graphApx_, costEstimatorApx);    // rooted at target
+  LPAstarApx_ = new LPAstarApx(start_vertex_.id, goal_vertex_.id, graphApx_, costEstimatorApx);    // rooted at target
 
   for (auto vd : boost::make_iterator_range(vertices(g_))) {
     std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
@@ -222,7 +217,6 @@ void ompl::control::AITStarKin::generateBatchofSamples(
         sampler_->sampleUniform(samples.back());
         // Count how many states we've checked.
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));
-
     }
   } while (samples.size() < batch_size);
 }
@@ -235,8 +229,11 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
   // To make a graph of the supervoxel adjacency,
   // we need to iterate through the supervoxel adjacency multimap
   for (auto vd : boost::make_iterator_range(vertices(g))) {
-    double lb_estimate = (*(LPAstarApx_))(g[vd].id);
-    double pax_estimate = (*(LPAstarLb_))(g[vd].id);
+    double lb_estimate = (*(LPAstarApx_))(g[vd].id);  // cost from goal to start
+    double apx_estimate = (*(LPAstarLb_))(g[vd].id);  // cost from start to goal
+    std::stringstream ss_lb, ss_apx;
+    ss_lb << std::setprecision(2) << lb_estimate;
+    ss_apx << std::setprecision(2) << apx_estimate;
 
     const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * target_se2 = target_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
@@ -270,7 +267,7 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
     text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     text.action = visualization_msgs::msg::Marker::ADD;
     text.lifetime = rclcpp::Duration::from_seconds(0);
-    text.text = std::to_string(lb_estimate) + ", " + std::to_string(pax_estimate);
+    text.text = ss_apx.str(); // + "/" + ss_lb.str();
     text.pose = sphere.pose;
     text.pose.position.z += 0.5;
     text.scale.x = 0.3;
