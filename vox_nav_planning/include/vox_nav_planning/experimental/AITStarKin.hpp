@@ -133,12 +133,6 @@ namespace ompl
         LPAstarLb_->insertEdge(b->id, a->id, c);
       }
 
-      void addEdgeG(const VertexProperty * a, const VertexProperty * b, double c)
-      {
-        WeightProperty w(c);
-        boost::add_edge(a->id, b->id, w, g_);
-      }
-
       const VertexProperty * getVertex(std::size_t id)
       {
         return &g_[id];

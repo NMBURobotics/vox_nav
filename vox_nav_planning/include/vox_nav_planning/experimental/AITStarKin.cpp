@@ -174,7 +174,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         continue;
       }
       boost::tie(e, edge_added) = boost::add_edge(u, v, WeightProperty(dist), g_);
-      addEdgeG(&g_[vd], nb, dist);
       addEdgeApx(&g_[vd], nb, dist);
       addEdgeLb(&g_[vd], nb, dist);
     }
