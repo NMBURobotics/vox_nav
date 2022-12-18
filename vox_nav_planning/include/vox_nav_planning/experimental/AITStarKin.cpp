@@ -89,8 +89,8 @@ void ompl::control::AITStarKin::freeMemory()
     }
   }
 
-  delete LPAstarApx_;
-  delete LPAstarLb_;
+  //delete LPAstarApx_;
+  //delete LPAstarLb_;
 }
 
 ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
@@ -98,33 +98,26 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 {
 
   checkValidity();
-
-  goal_vertex_ = new VertexProperty();
-  start_vertex_ = new VertexProperty();
-
   base::Goal * goal = pdef_->getGoal().get();
   auto * goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
 
   // get the goal node and state
   auto * goal_state = si_->allocState();
-
+  VertexProperty * goal_vertex = new VertexProperty();
   while (const base::State * goal = pis_.nextGoal()) {
     si_->copyState(goal_state, goal);
   }
-  goal_vertex_->state = goal_state;
-
-  addVertex(goal_vertex_);
-  nn_->add(goal_vertex_);
+  goal_vertex->state = goal_state;
+  nn_->add(goal_vertex);
 
   // get start node and state,push  the node inton nn_ as well
   auto * start_state = si_->allocState();
+  VertexProperty * start_vertex = new VertexProperty();
   while (const base::State * st = pis_.nextStart()) {
     si_->copyState(start_state, st);
   }
-  start_vertex_->state = start_state;
-
-  addVertex(start_vertex_);
-  nn_->add(start_vertex_);
+  start_vertex->state = start_state;
+  nn_->add(start_vertex);
 
   if (nn_->size() == 0) {
     OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
@@ -135,35 +128,45 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     "%s: Starting planning with %u states already in datastructure\n", getName().c_str(),
     nn_->size());
 
+  int batch_size = 500;
+  double radius = 1.5;
+
   std::vector<ompl::base::State *> samples;
-  generateBatchofSamples(batch_size_, true, samples);
+  generateBatchofSamples(batch_size, true, samples);
+
+  WeightMap weightmap = get(boost::edge_weight, g_);
+
+  // Add goal and start to graph
+  vertex_descriptor start_vertex_descriptor = boost::add_vertex(g_);
+  vertex_descriptor goal_vertex_descriptor = boost::add_vertex(g_);
+  g_[start_vertex_descriptor].state = start_state;
+  g_[start_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(start_state);
+  g_[start_vertex_descriptor].id = start_vertex_descriptor;
+  g_[goal_vertex_descriptor].state = goal_state;
+  g_[goal_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(goal_state);
+  g_[goal_vertex_descriptor].id = goal_vertex_descriptor;
+  start_vertex_ = g_[start_vertex_descriptor];
+  goal_vertex_ = g_[goal_vertex_descriptor];
 
   for (auto && i : samples) {
-    VertexProperty * this_vertex = new VertexProperty();
-    this_vertex->state = i;
-    addVertex(this_vertex);
-    nn_->add(this_vertex);
+    vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_);
+    g_[this_vertex_descriptor].state = (i);
+    g_[this_vertex_descriptor].state_label = (reinterpret_cast<std::uintptr_t>(i));
+    g_[this_vertex_descriptor].id = (this_vertex_descriptor);
+    VertexProperty * this_vertex_property = new VertexProperty(g_[this_vertex_descriptor]);
+    nn_->add(this_vertex_property);
   }
 
   CostEstimatorLb costEstimatorLb(goal, this);
-  LPAstarLb_ = new LPAstarLb(start_vertex_->id, goal_vertex_->id, graphLb_, costEstimatorLb);    // rooted at source
+  LPAstarLb_ = new LPAstarLb(start_vertex_.id, goal_vertex_.id, graphLb_, costEstimatorLb);    // rooted at source
   CostEstimatorApx costEstimatorApx(this);
-  LPAstarApx_ = new LPAstarApx(goal_vertex_->id, start_vertex_->id, graphApx_, costEstimatorApx);    // rooted at target
+  LPAstarApx_ = new LPAstarApx(goal_vertex_.id, start_vertex_.id, graphApx_, costEstimatorApx);    // rooted at target
 
   for (auto vd : boost::make_iterator_range(vertices(g_))) {
-    addVertex(&g_[vd]);
-  }
-
-  std::vector<VertexProperty *> vertices_in_nn;
-  if (nn_) {
-    nn_->list(vertices_in_nn);
-  }
-
-  for (auto && i : vertices_in_nn) {
     std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
-    nn_->nearestR(i, radius_, nbh);
+    nn_->nearestR(&g_[vd], radius_, nbh);
     for (auto && nb : nbh) {
-      vertex_descriptor u = i->id;
+      vertex_descriptor u = g_[vd].id;
       vertex_descriptor v = nb->id;
       double dist = distanceFunction(g_[u].state, g_[v].state);
       edge_descriptor e; bool edge_added;
@@ -171,15 +174,15 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         continue;
       }
       boost::tie(e, edge_added) = boost::add_edge(u, v, WeightProperty(dist), g_);
-
-      addEdgeApx(i, nb, dist);
-      addEdgeLb(i, nb, dist);
+      addEdgeG(&g_[vd], nb, dist);
+      addEdgeApx(&g_[vd], nb, dist);
+      addEdgeLb(&g_[vd], nb, dist);
     }
   }
 
-  std::list<std::size_t> pathApx;
+  std::list<std::size_t> pathApx, pathLb;
   double costApx = LPAstarApx_->computeShortestPath(pathApx);
-  double costLb = LPAstarLb_->computeShortestPath(pathApx);
+  double costLb = LPAstarLb_->computeShortestPath(pathLb);
 
   std::cout << costApx << std::endl;
   std::cout << costLb << std::endl;
@@ -246,7 +249,7 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
     visualization_msgs::msg::Marker sphere;
     sphere.header.frame_id = "map";
     sphere.header.stamp = rclcpp::Clock().now();
-    sphere.ns = "rgg";
+    sphere.ns = "rgg_vertex";
     sphere.id = g[vd].id;
     sphere.type = visualization_msgs::msg::Marker::SPHERE;
     sphere.action = visualization_msgs::msg::Marker::ADD;
@@ -280,9 +283,8 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
   }
 
   auto es = boost::edges(g);
-  int index = 1000;
-
   vertex_descriptor u, v;
+  int edge_index = 0;
   for (auto eit = es.first; eit != es.second; ++eit) {
 
     u = boost::source(*eit, g);
@@ -305,32 +307,28 @@ void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
 
     visualization_msgs::msg::Marker line_strip;
     line_strip.header.frame_id = "map";
-    line_strip.ns = "rgg";
-    line_strip.id = index;
+    line_strip.ns = "rgg_edges";
+    line_strip.id = edge_index;
     line_strip.type = visualization_msgs::msg::Marker::LINE_LIST;
     line_strip.action = visualization_msgs::msg::Marker::ADD;
     line_strip.lifetime = rclcpp::Duration::from_seconds(0);
     line_strip.header.stamp = rclcpp::Clock().now();
-    line_strip.scale.x = 0.1;
-    line_strip.scale.x = 0.1;
-    line_strip.scale.y = 0.25;
-    line_strip.scale.z = 0.25;
+    line_strip.scale.x = 0.05;
+    line_strip.scale.y = 0.05;
+    line_strip.scale.z = 0.05;
     line_strip.color.a = 1.0;
     line_strip.color.r = 0.0;
     line_strip.color.b = 1.0;
-
-    std_msgs::msg::ColorRGBA yellow_color;
-    yellow_color.b = 1.0;
-    yellow_color.a = 1.0;
-
+    std_msgs::msg::ColorRGBA blue_color;
+    blue_color.b = 1.0;
+    blue_color.a = 1.0;
     line_strip.points.push_back(source_point);
-    line_strip.colors.push_back(yellow_color);
+    line_strip.colors.push_back(blue_color);
     line_strip.points.push_back(target_point);
-    line_strip.colors.push_back(yellow_color);
+    line_strip.colors.push_back(blue_color);
 
     marker_array.markers.push_back(line_strip);
-
-    index++;
+    edge_index++;
   }
 
   rrt_nodes_pub_->publish(marker_array);

@@ -112,15 +112,9 @@ namespace ompl
 
       void addVertex(const VertexProperty * a)
       {
-        // Add goal and start to graph
-        vertex_descriptor g = boost::add_vertex(g_);
-        vertex_descriptor apx = boost::add_vertex(graphApx_);
-        vertex_descriptor lb = boost::add_vertex(graphLb_);
-        g_[g].state = a->state;
-        g_[g].state_label = reinterpret_cast<std::uintptr_t>(a->state);
-        g_[g].id = g;
-        graphApx_[apx] = g_[g];
-        graphLb_[lb] = g_[g];
+        boost::add_vertex(*a, graphApx_);
+        boost::add_vertex(*a, graphLb_);
+        //boost::add_vertex(*a, g_);
       }
 
       void addEdgeApx(VertexProperty * a, VertexProperty * b, double c)
@@ -137,6 +131,12 @@ namespace ompl
         boost::add_edge(a->id, b->id, w, graphLb_);
         LPAstarLb_->insertEdge(a->id, b->id, c);
         LPAstarLb_->insertEdge(b->id, a->id, c);
+      }
+
+      void addEdgeG(const VertexProperty * a, const VertexProperty * b, double c)
+      {
+        WeightProperty w(c);
+        boost::add_edge(a->id, b->id, w, g_);
       }
 
       const VertexProperty * getVertex(std::size_t id)
@@ -199,7 +199,7 @@ namespace ompl
           if (lb_estimate != std::numeric_limits<double>::infinity()) {
             return lb_estimate;
           }
-          return alg_->distanceFunction(alg_->getVertex(i), alg_->start_vertex_);
+          return alg_->distanceFunction(alg_->getVertex(i), &alg_->start_vertex_);
         }
 
       private:
@@ -232,8 +232,8 @@ namespace ompl
       LPAstarApx * LPAstarApx_{nullptr};             // rooted at target
       LPAstarLb * LPAstarLb_{nullptr};               // rooted at source
 
-      VertexProperty * start_vertex_;
-      VertexProperty * goal_vertex_;
+      VertexProperty start_vertex_;
+      VertexProperty goal_vertex_;
 
       GraphT g_;
       GraphT graphLb_;
