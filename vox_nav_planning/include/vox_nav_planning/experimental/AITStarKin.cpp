@@ -57,7 +57,7 @@ void ompl::control::AITStarKin::setup()
   }
 
   if (!controlSampler_) {
-    controlSampler_ = siC_->allocDirectedControlSampler();
+    controlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, 100);
   }
 
   // ros2 node to publish rrt nodes
@@ -100,6 +100,9 @@ void ompl::control::AITStarKin::freeMemory()
 ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   const base::PlannerTerminationCondition & ptc)
 {
+
+  auto a1 = std::chrono::high_resolution_clock::now();
+
 
   checkValidity();
   base::Goal * goal = pdef_->getGoal().get();
@@ -182,28 +185,42 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
 
   std::list<std::size_t> forwardPath, reversePath;
-  double costApx = LPAstarCost2Come_->computeShortestPath(reversePath);
-  double costLb = LPAstarCost2Go_->computeShortestPath(forwardPath);
+  double costApx = LPAstarCost2Come_->computeShortestPath(forwardPath);
+  double costLb = LPAstarCost2Go_->computeShortestPath(reversePath);
 
-  if ((*(LPAstarCost2Go_))(goal_vertex_.id) != std::numeric_limits<double>::infinity()) {
+  bool goal_reached = (*(LPAstarCost2Go_))(goal_vertex_.id) !=
+    std::numeric_limits<double>::infinity();
+  if (goal_reached) {
 
     for (size_t i = 1; i < forwardPath.size(); i++) {
       auto c = siC_->allocControl();
       auto prev_state_it = *std::next(forwardPath.begin(), i - 1);
       auto curr_state_it = *std::next(forwardPath.begin(), i);
+
       auto steps = controlSampler_->sampleTo(c, g_[prev_state_it].state, g_[curr_state_it].state);
     }
 
   }
 
-  std::cout << costApx << std::endl;
-  std::cout << costLb << std::endl;
+  /* set the solution path */
+  auto path(std::make_shared<PathControl>(si_));
+  for (auto i : forwardPath) {
+    if (g_[i].state) {
+      path->append(g_[i].state);
+    }
+  }
+  pdef_->addSolutionPath(path, false, 0.0, getName());
 
-  visulizeRGG(g_);
+  auto a2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> elapsed = a2 - a1;
+
+  OMPL_INFORM("%s: Took  %.4f milliseconds.\n", getName().c_str(), elapsed.count());
+
+  visualizeRGG(g_);
 
   clear();
 
-  return {};
+  return {goal_reached, false};
 }
 
 void ompl::control::AITStarKin::getPlannerData(base::PlannerData & data) const
@@ -239,7 +256,7 @@ void ompl::control::AITStarKin::generateBatchofSamples(
   } while (samples.size() < batch_size);
 }
 
-void ompl::control::AITStarKin::visulizeRGG(const GraphT & g)
+void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
 {
   visualization_msgs::msg::MarkerArray marker_array;
   rrt_nodes_pub_->publish(marker_array);

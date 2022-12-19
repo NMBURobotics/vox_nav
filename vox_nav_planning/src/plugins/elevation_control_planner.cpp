@@ -191,6 +191,8 @@ namespace vox_nav_planning
     const geometry_msgs::msg::PoseStamped & start,
     const geometry_msgs::msg::PoseStamped & goal)
   {
+
+
     if (!is_map_ready_) {
       RCLCPP_WARN(
         logger_, "A valid Octomap has not been recived yet, Try later again."
@@ -231,8 +233,8 @@ namespace vox_nav_planning
     control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, 0.5);
 
     auto si = control_simple_setup_->getSpaceInformation();
-    si->setMinMaxControlDuration(1, 2);
-    si->setPropagationStepSize(0.25);
+    si->setMinMaxControlDuration(1, 10);
+    si->setPropagationStepSize(0.1);
 
     control_simple_setup_->setStatePropagator(
       [this, si](const ompl::base::State * state, const ompl::control::Control * control,

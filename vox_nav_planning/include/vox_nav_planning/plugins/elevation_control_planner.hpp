@@ -25,6 +25,7 @@
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
 
+#include "ompl/control/SimpleDirectedControlSampler.h"
 #include "ompl/control/spaces/RealVectorControlSpace.h"
 #include "ompl/control/SimpleSetup.h"
 #include "ompl/control/planners/sst/SST.h"

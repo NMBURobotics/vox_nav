@@ -23,6 +23,7 @@
 #include <boost/graph/graphviz.hpp>
 
 #include "ompl/control/DirectedControlSampler.h"
+#include "ompl/control/SimpleDirectedControlSampler.h"
 #include "ompl/control/spaces/RealVectorControlSpace.h"
 #include "ompl/control/SimpleSetup.h"
 #include "ompl/control/planners/sst/SST.h"
@@ -254,7 +255,8 @@ namespace ompl
       GraphT graphLb_;
       GraphT graphApx_;
 
-      void visulizeRGG(const GraphT & g);
+      void visualizeRGG(const GraphT & g);
+
 
     };
   }   // namespace control
