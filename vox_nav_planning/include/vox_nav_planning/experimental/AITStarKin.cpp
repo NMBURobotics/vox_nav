@@ -216,6 +216,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     std::vector<Cost> d(boost::num_vertices(g_));
 
     if (!adaptive_h_available) {
+      OMPL_INFORM(
+        "%s: Adaptive H function not available, skipping this cycle.\n",
+        getName().c_str());
       goto skip_this_cycle;
     }
 
@@ -227,6 +230,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       boost::astar_search_tree(
         g_, start_vertex_.id, heuristic,
         boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+
+      OMPL_INFORM("%s: A* Failed to produce final collision free path.\n", getName().c_str() );
+
     } catch (FoundGoal found_goa) {
 
       OMPL_INFORM("%s: A valid geometric path has been found.\n", getName().c_str() );
@@ -260,7 +266,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         }
 
         if ((g_[u].blacklisted || g_[v].blacklisted) ||
-          (u_estimate == std::numeric_limits<double>::infinity() ||
+          (u_estimate == std::numeric_limits<double>::infinity() &&
           v_estimate == std::numeric_limits<double>::infinity()))
         {
           edges_to_be_removed.push_back(std::make_pair(u, v));
@@ -285,7 +291,7 @@ skip_this_cycle:
       "%s: Advancing with %d vertices and %d edges.\n",
       getName().c_str(), boost::num_vertices(g_), boost::num_edges(g_));
 
-    //visualizeRGG(g_);
+    visualizeRGG(g_);
 
   }
 

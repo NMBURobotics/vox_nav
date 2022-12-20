@@ -410,9 +410,10 @@ namespace vox_nav_planning
         std::shared_ptr<fcl::CollisionGeometryf>(original_octomap_fcl_octree));
 
 
-      elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>();
+      elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>(
+        response->elevated_surfel_poses);
 
-      for (sensor_msgs::PointCloud2ConstIterator<float> it(response->traversable_cloud, "x");
+      /*for (sensor_msgs::PointCloud2ConstIterator<float> it(response->traversable_cloud, "x");
         it != it.end(); ++it)
       {
         geometry_msgs::msg::Pose pose;
@@ -424,7 +425,7 @@ namespace vox_nav_planning
           0,
           0);
         elevated_surfel_poses_msg_->poses.push_back(pose);
-      }
+      }*/
 
       for (auto && i : response->elevated_surfel_poses.poses) {
         pcl::PointSurfel surfel;

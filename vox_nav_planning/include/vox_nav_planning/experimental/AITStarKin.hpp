@@ -283,11 +283,9 @@ namespace ompl
           // If the vertex is in collsion or the cost is inf, blacklist it
           bool is_vertex_ok = alg_->si_->getStateValidityChecker()->isValid(
             alg_->getVertex(u)->state);
-          double u_estimate = (*(alg_->LPAstarCost2Go_))(alg_->g_[u].id); // cost to go
-          if (!is_vertex_ok || (u_estimate == std::numeric_limits<double>::infinity())) {
+          if (!is_vertex_ok) {
             alg_->g_[u].blacklisted = true;
           }
-
           // check whether examined vertex was goal, if yes throw
           ++(*num_visits_);
           if (u == goal_vertex_) {
