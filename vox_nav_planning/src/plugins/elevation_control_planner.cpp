@@ -386,8 +386,9 @@ namespace vox_nav_planning
         continue;
       }
 
+
       auto original_octomap_octree =
-        dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(response->original_octomap));
+        dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(response->collision_octomap));
       original_octomap_octree_ = std::make_shared<octomap::OcTree>(*original_octomap_octree);
 
       auto elevated_surfel_octomap_octree =

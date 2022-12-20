@@ -176,6 +176,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     }
 
     // create edges to construct an RGG, the vertices closer than radius_ will construct an edge
+    std::vector<vertex_descriptor> vertices_to_be_removed;
     for (auto vd : boost::make_iterator_range(vertices(g_))) {
       std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
       nn_->nearestR(&g_[vd], radius_, nbh);
@@ -184,26 +185,39 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         vertex_descriptor v = nb->id;
         double dist = distanceFunction(g_[u].state, g_[v].state);
         edge_descriptor e; bool edge_added;
-        if (u == v || dist > radius_ || dist < 0.01 /*do not add same vertice twice*/) {
+
+        if (u == v || dist > radius_) {
           continue;
         }
+        if (dist < 0.01 /*do not add same vertice twice*/) {
+          vertices_to_be_removed.push_back(v);
+          nn_->remove(nb);
+          continue;
+        }
+
         boost::tie(e, edge_added) = boost::add_edge(u, v, WeightProperty(dist), g_);
         addEdgeApx(&g_[vd], nb, dist);
         addEdgeLb(&g_[vd], nb, dist);
       }
     }
-
+    for (auto && i : vertices_to_be_removed) {
+      boost::remove_vertex(i, g_);
+    }
 
     forwardPath.clear(); reversePath.clear();
     double costApx = LPAstarCost2Come_->computeShortestPath(forwardPath);
     double costLb = LPAstarCost2Go_->computeShortestPath(reversePath);
 
-    goal_reached = (*(LPAstarCost2Go_))(goal_vertex_.id) != std::numeric_limits<double>::infinity();
+    bool adaptive_h_available = (*(LPAstarCost2Go_))(goal_vertex_.id) !=
+      std::numeric_limits<double>::infinity();
 
     int num_visited_nodes = 0;
-
     std::vector<vertex_descriptor> p(boost::num_vertices(g_));
     std::vector<Cost> d(boost::num_vertices(g_));
+
+    if (!adaptive_h_available) {
+      goto skip_this_cycle;
+    }
 
     try {
       // Run A* qith Hueroistic being from ForwardPropogateHeuristic
@@ -266,19 +280,19 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       }
     }
 
+skip_this_cycle:
     OMPL_INFORM(
       "%s: Advancing with %d vertices and %d edges.\n",
       getName().c_str(), boost::num_vertices(g_), boost::num_edges(g_));
 
-
-    visualizeRGG(g_);
+    //visualizeRGG(g_);
 
   }
 
   goal_reached = (*(LPAstarCost2Go_))(goal_vertex_.id) !=
     std::numeric_limits<double>::infinity();
   if (goal_reached) {
-
+    OMPL_INFORM("%s: Calculating Kinodynamic path.\n", getName().c_str());
     for (size_t i = 1; i < forwardPath.size(); i++) {
       auto c = siC_->allocControl();
       auto prev_state_it = *std::next(forwardPath.begin(), i - 1);

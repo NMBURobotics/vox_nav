@@ -205,6 +205,9 @@ namespace vox_nav_map_server
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr elevated_surfel_pcl_publisher_;
     // publishes octomap in form of a point cloud message
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr traversable_pointcloud_publisher_;
+    // publishes octomap in form of a point cloud message
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr
+      non_traversable_pointcloud_publisher_;
     // publish sampled node poses for planner to use.
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr octomap_markers_publisher_;
     // publish sampled node poses for planner to use.
@@ -221,12 +224,16 @@ namespace vox_nav_map_server
     sensor_msgs::msg::PointCloud2::SharedPtr elevated_surfels_pointcloud_msg_;
     // reusable octomap point loud message, dont need to recreate each time we publish
     sensor_msgs::msg::PointCloud2::SharedPtr traversable_pointcloud_msg_;
+    // reusable octomap point loud message, dont need to recreate each time we publish
+    sensor_msgs::msg::PointCloud2::SharedPtr non_traversable_pointcloud_msg_;
     // reusable octomap marker array message, used to publish occupied nodes onlyu
     visualization_msgs::msg::MarkerArray::SharedPtr original_octomap_markers_msg_;
     // reusable octomap marker array message, used to publish occupied nodes onlyu
     visualization_msgs::msg::MarkerArray::SharedPtr elevated_surfel_octomap_markers_msg_;
     // octomap acquired from original PCD map
     octomap_msgs::msg::Octomap::SharedPtr original_octomap_msg_;
+
+    octomap_msgs::msg::Octomap::SharedPtr collision_octomap_msg_;
     // Surfels centers are elevated by node_elevation_distance_, and are stored in this
     // octomap, this maps is used by planner to sample states that are
     // strictly laying on ground but not touching. So it constrains the path to be on ground
@@ -243,6 +250,7 @@ namespace vox_nav_map_server
     // Pointcloud map is stroed here
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcd_map_pointcloud_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr pure_traversable_pointcloud_;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pure_non_traversable_pointcloud_;
     //pcl::PointCloud<pcl::PointXYZRGB>::Ptr elevated_surfels_pointcloud_;
     // Pointcloud map is stroed here
     pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_pointcloud_;
@@ -252,10 +260,11 @@ namespace vox_nav_map_server
     std::string octomap_point_cloud_publish_topic_;
     std::string octomap_markers_publish_topic_;
     std::string traversable_pointcloud_publish_topic_;
+    std::string non_traversable_pointcloud_publish_topic_;
     // rclcpp parameters from yaml file: frame id for map typicall: "map"
     std::string map_frame_id_;
     std::string utm_frame_id_;
-    // rclcpp parameters from yaml file: vxel size for octomap
+    // rclcpp parameters from yaml file: voxel size for octomap
     double octomap_voxel_size_;
     // rclcpp parameters from yaml file: publish frequncy to publish map and transfroms
     int octomap_publish_frequency_;
