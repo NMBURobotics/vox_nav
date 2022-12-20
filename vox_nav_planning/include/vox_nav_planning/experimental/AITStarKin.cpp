@@ -165,17 +165,29 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     generateBatchofSamples(batch_size_, true, samples);
 
     // Add batch_size_ number of samples to graphs
-    for (auto && i : samples) {
-      vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_);
-      g_[this_vertex_descriptor].state = (i);
-      g_[this_vertex_descriptor].state_label = (reinterpret_cast<std::uintptr_t>(i));
-      g_[this_vertex_descriptor].id = (this_vertex_descriptor);
-      VertexProperty * this_vertex_property = new VertexProperty(g_[this_vertex_descriptor]);
-      nn_->add(this_vertex_property);
-    }
-
     // Create edges to construct an RGG, the vertices closer than radius_ will construct an edge
     // But too close vertices will be discarded in order for memory not to sink
+    for (auto && i : samples) {
+      VertexProperty * this_vertex_property = new VertexProperty();
+      this_vertex_property->state = (i);
+      this_vertex_property->state_label = (reinterpret_cast<std::uintptr_t>(i));
+      std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
+      nn_->nearestR(this_vertex_property, radius_, nbh);
+      bool does_vertice_exits{false};
+      for (auto && nb : nbh) {
+        double dist = distanceFunction(i, nb->state);
+        if (dist < 0.01 /*do not add same vertice twice*/) {
+          does_vertice_exits = true;
+        }
+      }
+      if (!does_vertice_exits) {
+        vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_);
+        this_vertex_property->id = this_vertex_descriptor;
+        g_[this_vertex_descriptor] = *this_vertex_property;
+        nn_->add(this_vertex_property);
+      }
+    }
+
     std::vector<vertex_descriptor> vertices_to_be_removed;
     for (auto vd : boost::make_iterator_range(vertices(g_))) {
       std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
@@ -185,7 +197,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         vertex_descriptor v = nb->id;
         double dist = distanceFunction(g_[u].state, g_[v].state);
         edge_descriptor e; bool edge_added;
-
         // not to construct edges with self, and if nbh is further than radius_, continue
         if (u == v || dist > radius_) {
           continue;
@@ -199,7 +210,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
             continue;
           }
         }
-
         // Once suitable edges are found, populate them over graphs
         boost::tie(e, edge_added) = boost::add_edge(u, v, WeightProperty(dist), g_);
         addEdgeApx(&g_[vd], nb, dist);
@@ -229,7 +239,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         getName().c_str());
       goto skip_this_cycle;
     }
-
+/*
     try {
       // Run A* qith Hueroistic being from ForwardPropogateHeuristic
       auto heuristic = ForwardPropogateHeuristic(this);
@@ -295,7 +305,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         }
       }
     }
-
+*/
 skip_this_cycle:
     OMPL_INFORM(
       "%s: Advancing with %d vertices and %d edges.\n",

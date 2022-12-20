@@ -168,7 +168,7 @@ namespace ompl
 
     private:
       int batch_size_{100};
-      double radius_{0.8};
+      double radius_{1.2};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_;
