@@ -333,6 +333,6 @@ void OctoCellValidStateSampler::updateSearchArea(
 
   int_distr_ = std::make_shared<std::uniform_int_distribution<int>>(
     0,
-    search_area_surfels_->points.size());
+    search_area_surfels_->points.size() - 1);
 
 }

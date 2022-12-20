@@ -94,12 +94,13 @@ namespace ompl
 
       struct VertexProperty
       {
-        std::string name;
-        ompl::base::State * state;
-        std::uintptr_t state_label;
-        std::size_t id;
-        double g;
-        double rhs;
+        std::string name{""};
+        ompl::base::State * state{nullptr};
+        std::uintptr_t state_label{0};
+        std::size_t id{0};
+        double g{0.0};
+        double rhs{0.0};
+        bool blacklisted{false};
       };
 
       double distanceFunction(const VertexProperty * a, const VertexProperty * b) const
@@ -138,15 +139,36 @@ namespace ompl
       {
         return &g_[id];
       }
+      bool edgeExistsApx(std::size_t a, std::size_t b)
+      {
+        return boost::edge(a, b, graphApx_).second;
+      }
+      bool edgeExistsLb(std::size_t a, std::size_t b)
+      {
+        return boost::edge(a, b, graphLb_).second;
+      }
 
+      void removeEdgeApx(std::size_t a, std::size_t b)
+      {
+        boost::remove_edge(a, b, graphApx_);
+        LPAstarCost2Come_->removeEdge(a, b);
+        LPAstarCost2Come_->removeEdge(b, a);
+      }
+
+      void removeEdgeLb(std::size_t a, std::size_t b)
+      {
+        boost::remove_edge(a, b, graphLb_);
+        LPAstarCost2Go_->removeEdge(a, b);
+        LPAstarCost2Go_->removeEdge(b, a);
+      }
       void generateBatchofSamples(
         int batch_size,
         bool use_valid_sampler,
         std::vector<ompl::base::State *> & samples);
 
     private:
-      int batch_size_{500};
-      double radius_{1.5};
+      int batch_size_{100};
+      double radius_{0.5};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_;
@@ -241,6 +263,43 @@ namespace ompl
       private:
         AITStarKin * alg_;
       };  // Cost2GoEstimator
+
+      // exception for termination
+      struct FoundGoal {};
+
+      template<class Vertex>
+      class custom_goal_visitor : public boost::default_astar_visitor
+      {
+      public:
+        custom_goal_visitor(Vertex goal_vertex, int * num_visits, AITStarKin * alg)
+        : goal_vertex_(goal_vertex),
+          num_visits_(num_visits),
+          alg_(alg)
+        {
+        }
+        template<class Graph>
+        void examine_vertex(Vertex u, Graph & g)
+        {
+          // If the vertex is in collsion or the cost is inf, blacklist it
+          bool is_vertex_ok = alg_->si_->getStateValidityChecker()->isValid(
+            alg_->getVertex(u)->state);
+          double u_estimate = (*(alg_->LPAstarCost2Go_))(alg_->g_[u].id); // cost to go
+          if (!is_vertex_ok || (u_estimate == std::numeric_limits<double>::infinity())) {
+            alg_->g_[u].blacklisted = true;
+          }
+
+          // check whether examined vertex was goal, if yes throw
+          ++(*num_visits_);
+          if (u == goal_vertex_) {
+            throw FoundGoal();
+          }
+        }
+
+      private:
+        Vertex goal_vertex_;
+        int * num_visits_;
+        AITStarKin * alg_;
+      };
 
       using LPAstarCost2Come = LPAstarOnGraph<GraphT, Cost2ComeEstimator>;
       using LPAstarCost2Go = LPAstarOnGraph<GraphT, Cost2GoEstimator>;

@@ -246,6 +246,15 @@ namespace vox_nav_planning
     const geometry_msgs::msg::PoseStamped & start_pose,
     const geometry_msgs::msg::PoseStamped & goal_pose)
   {
+    // Clear All previous markers
+    visualization_msgs::msg::MarkerArray clear_markers;
+    visualization_msgs::msg::Marker clear_path, rgg_costs, rgg_edges;
+    clear_path.id = 0;
+    clear_path.ns = "path";
+    clear_path.action = visualization_msgs::msg::Marker::DELETEALL;
+    clear_markers.markers.push_back(clear_path);
+    plan_publisher_->publish(clear_markers);
+
     visualization_msgs::msg::MarkerArray marker_array;
     visualization_msgs::msg::Marker start_marker, goal_marker;
     nav_msgs::msg::Path nav_msgs_path;
