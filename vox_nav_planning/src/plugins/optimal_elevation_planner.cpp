@@ -445,7 +445,8 @@ namespace vox_nav_planning
 
       auto heuristic =
         distance_heuristic<GraphT, Cost, SuperVoxelClusters *>(
-        &supervoxel_clusters_, goal_vertex, g);
+        &supervoxel_clusters_, goal_vertex,
+        g);
       auto c_visitor = custom_goal_visitor<vertex_descriptor>(goal_vertex, &num_visited_nodes);
 
       if (graph_search_method_ == "dijkstra") {

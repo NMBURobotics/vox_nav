@@ -104,7 +104,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
   auto a1 = std::chrono::high_resolution_clock::now();
 
-
   checkValidity();
   base::Goal * goal = pdef_->getGoal().get();
   auto * goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
@@ -175,7 +174,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       nn_->add(this_vertex_property);
     }
 
-    // create edges to construct an RGG, the vertices closer than radius_ will construct an edge
+    // Create edges to construct an RGG, the vertices closer than radius_ will construct an edge
+    // But too close vertices will be discarded in order for memory not to sink
     std::vector<vertex_descriptor> vertices_to_be_removed;
     for (auto vd : boost::make_iterator_range(vertices(g_))) {
       std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
@@ -186,29 +186,37 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         double dist = distanceFunction(g_[u].state, g_[v].state);
         edge_descriptor e; bool edge_added;
 
+        // not to construct edges with self, and if nbh is further than radius_, continue
         if (u == v || dist > radius_) {
           continue;
         }
+        // Too close vertice, remove it from g_ and do not construct the edge to it
         if (dist < 0.01 /*do not add same vertice twice*/) {
-          vertices_to_be_removed.push_back(v);
-          nn_->remove(nb);
-          continue;
+          bool is_nb_start_or_goal = (nb->id == start_vertex_.id || nb->id == goal_vertex_.id);
+          if (!is_nb_start_or_goal) {
+            vertices_to_be_removed.push_back(v);
+            nn_->remove(nb);
+            continue;
+          }
         }
 
+        // Once suitable edges are found, populate them over graphs
         boost::tie(e, edge_added) = boost::add_edge(u, v, WeightProperty(dist), g_);
         addEdgeApx(&g_[vd], nb, dist);
         addEdgeLb(&g_[vd], nb, dist);
       }
     }
+
+    // Remove close/duplicate vertices
     for (auto && i : vertices_to_be_removed) {
       boost::remove_vertex(i, g_);
     }
 
     forwardPath.clear(); reversePath.clear();
-    double costApx = LPAstarCost2Come_->computeShortestPath(forwardPath);
-    double costLb = LPAstarCost2Go_->computeShortestPath(reversePath);
+    double costApx = LPAstarCost2Come_->computeShortestPath(reversePath);
+    double costLb = LPAstarCost2Go_->computeShortestPath(forwardPath);
 
-    bool adaptive_h_available = (*(LPAstarCost2Go_))(goal_vertex_.id) !=
+    bool adaptive_h_available = (*(LPAstarCost2Go_))(start_vertex_.id) !=
       std::numeric_limits<double>::infinity();
 
     int num_visited_nodes = 0;
@@ -227,6 +235,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       auto heuristic = ForwardPropogateHeuristic(this);
       auto c_visitor = custom_goal_visitor<vertex_descriptor>(
         goal_vertex_.id, &num_visited_nodes, this);
+
       boost::astar_search_tree(
         g_, start_vertex_.id, heuristic,
         boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
@@ -265,8 +274,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
           continue;
         }
 
-        if ((g_[u].blacklisted || g_[v].blacklisted) ||
-          (u_estimate == std::numeric_limits<double>::infinity() &&
+        double edge_dist = distanceFunction(g_[u].state, g_[v].state);
+        if ((g_[u].blacklisted || g_[v].blacklisted) || (edge_dist > radius_) ||
+          (  u_estimate == std::numeric_limits<double>::infinity() &&
           v_estimate == std::numeric_limits<double>::infinity()))
         {
           edges_to_be_removed.push_back(std::make_pair(u, v));
