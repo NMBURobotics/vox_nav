@@ -113,62 +113,21 @@ namespace ompl
         return si_->distance(a, b);
       }
 
-      void addVertex(const VertexProperty * a)
-      {
-        boost::add_vertex(*a, graphApx_);
-        boost::add_vertex(*a, graphLb_);
-      }
-
-      void addEdgeApx(VertexProperty * a, VertexProperty * b, double c)
-      {
-        WeightProperty w(c);
-        boost::add_edge(a->id, b->id, w, graphApx_);
-        LPAstarCost2Come_->insertEdge(a->id, b->id, c);
-        LPAstarCost2Come_->insertEdge(b->id, a->id, c);
-      }
-
-      void addEdgeLb(const VertexProperty * a, const VertexProperty * b, double c)
-      {
-        WeightProperty w(c);
-        boost::add_edge(a->id, b->id, w, graphLb_);
-        LPAstarCost2Go_->insertEdge(a->id, b->id, c);
-        LPAstarCost2Go_->insertEdge(b->id, a->id, c);
-      }
-
       const VertexProperty * getVertex(std::size_t id)
       {
         return &g_[id];
       }
-      bool edgeExistsApx(std::size_t a, std::size_t b)
-      {
-        return boost::edge(a, b, graphApx_).second;
-      }
-      bool edgeExistsLb(std::size_t a, std::size_t b)
-      {
-        return boost::edge(a, b, graphLb_).second;
-      }
 
-      void removeEdgeApx(std::size_t a, std::size_t b)
-      {
-        boost::remove_edge(a, b, graphApx_);
-        LPAstarCost2Come_->removeEdge(a, b);
-        LPAstarCost2Come_->removeEdge(b, a);
-      }
-
-      void removeEdgeLb(std::size_t a, std::size_t b)
-      {
-        boost::remove_edge(a, b, graphLb_);
-        LPAstarCost2Go_->removeEdge(a, b);
-        LPAstarCost2Go_->removeEdge(b, a);
-      }
       void generateBatchofSamples(
         int batch_size,
         bool use_valid_sampler,
         std::vector<ompl::base::State *> & samples);
 
     private:
-      int batch_size_{100};
-      double radius_{0.4};
+      int batch_size_{500};
+      double radius_{1.5}; // max edge length
+      int max_neighbors_{10};
+      double min_dist_between_vertices_{0.025};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_;
@@ -185,7 +144,7 @@ namespace ompl
 
       typedef float Cost;
       typedef boost::adjacency_list<
-          boost::vecS,          // edge
+          boost::setS,          // edge
           boost::vecS,          // vertex
           boost::undirectedS,   // type
           VertexProperty,       // vertex property
@@ -203,48 +162,6 @@ namespace ompl
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rrt_nodes_pub_;
       rclcpp::Node::SharedPtr node_;
 
-      // allow Cost2ComeEstimator access to private members
-      friend class Cost2ComeEstimator;
-      class Cost2ComeEstimator
-      {
-      public:
-        Cost2ComeEstimator(AITStarKin * alg)
-        : alg_(alg)
-        {
-        }
-        double operator()(std::size_t i)
-        {
-          double lb_estimate = (*(alg_->LPAstarCost2Go_))(i);
-          if (lb_estimate != std::numeric_limits<double>::infinity()) {
-            return lb_estimate;
-          }
-          return alg_->distanceFunction(alg_->getVertex(i), &alg_->start_vertex_);
-        }
-
-      private:
-        AITStarKin * alg_;
-      };  // Cost2ComeEstimator
-
-      class Cost2GoEstimator
-      {
-      public:
-        Cost2GoEstimator(base::Goal * goal, AITStarKin * alg)
-        : goal_(goal), alg_(alg)
-        {
-        }
-        double operator()(std::size_t i)
-        {
-          double dist = 0.0;
-          goal_->isSatisfied(alg_->getVertex(i)->state, &dist);
-
-          return dist;
-        }
-
-      private:
-        base::Goal * goal_;
-        AITStarKin * alg_;
-      };  // Cost2GoEstimator
-
       friend class ForwardPropogateHeuristic;
       class ForwardPropogateHeuristic
       {
@@ -255,9 +172,7 @@ namespace ompl
         }
         double operator()(std::size_t i)
         {
-          double cost = (*(alg_->LPAstarCost2Go_))(i);
-
-          return cost;
+          return alg_->distanceFunction(alg_->getVertex(i), &alg_->goal_vertex_);
         }
 
       private:
@@ -299,21 +214,12 @@ namespace ompl
         AITStarKin * alg_;
       };
 
-      using LPAstarCost2Come = LPAstarOnGraph<GraphT, Cost2ComeEstimator>;
-      using LPAstarCost2Go = LPAstarOnGraph<GraphT, Cost2GoEstimator>;
-
-      LPAstarCost2Come * LPAstarCost2Come_{nullptr};
-      LPAstarCost2Go * LPAstarCost2Go_{nullptr};
-
       VertexProperty start_vertex_;
       VertexProperty goal_vertex_;
 
       GraphT g_;
-      GraphT graphLb_;
-      GraphT graphApx_;
 
       void visualizeRGG(const GraphT & g);
-
 
     };
   }   // namespace control

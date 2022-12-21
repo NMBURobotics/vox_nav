@@ -174,7 +174,8 @@ double ompl::base::ElevationStateSpace::distance(const State * state1, const Sta
   if (se2_state_type_ == SE2StateType::SE2) {
     return std::sqrt(
       std::pow(state1_se2->getX() - state2_se2->getX(), 2) +
-      std::pow(state1_se2->getY() - state2_se2->getY(), 2));
+      std::pow(state1_se2->getY() - state2_se2->getY(), 2) +
+      std::pow(state1_z->values[0] - state2_z->values[0], 2));
 
     //return se2_->distance(state1_se2, state2_se2);
   } else if (se2_state_type_ == SE2StateType::DUBINS) {

@@ -94,8 +94,6 @@ void ompl::control::AITStarKin::freeMemory()
     }
   }
 
-  //delete LPAstarCost2Come_;
-  //delete LPAstarCost2Go_;
 }
 
 ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
@@ -147,14 +145,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     "%s: Starting planning with %u states already in datastructure\n", getName().c_str(),
     nn_->size());
 
-  Cost2GoEstimator cost2GoEstimator(goal, this);
-  LPAstarCost2Go_ =
-    new LPAstarCost2Go(goal_vertex_.id, start_vertex_.id, graphLb_, cost2GoEstimator);       // rooted at source
-
-  Cost2ComeEstimator cost2ComeEstimator(this);
-  LPAstarCost2Come_ =
-    new LPAstarCost2Come(start_vertex_.id, goal_vertex_.id, graphApx_, cost2ComeEstimator);   // rooted at target
-
   bool goal_reached;
   std::list<std::size_t> forwardPath, reversePath;
 
@@ -162,85 +152,58 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   while (ptc == false) {
 
     std::vector<ompl::base::State *> samples;
-    generateBatchofSamples(batch_size_, true, samples);
+    generateBatchofSamples(batch_size_, false, samples);
 
     // Add batch_size_ number of samples to graphs
     // Create edges to construct an RGG, the vertices closer than radius_ will construct an edge
     // But too close vertices will be discarded in order for memory not to sink
     for (auto && i : samples) {
+
       VertexProperty * this_vertex_property = new VertexProperty();
       this_vertex_property->state = (i);
       this_vertex_property->state_label = (reinterpret_cast<std::uintptr_t>(i));
       std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
       nn_->nearestR(this_vertex_property, radius_, nbh);
+
+      if (nbh.size() > max_neighbors) {
+        nbh.resize(max_neighbors);
+      }
+
       bool does_vertice_exits{false};
       for (auto && nb : nbh) {
         double dist = distanceFunction(i, nb->state);
-        if (dist < 0.01 /*do not add same vertice twice*/) {
+        if (dist < 0.025 /*do not add same vertice twice*/) {
           does_vertice_exits = true;
         }
       }
+
       if (!does_vertice_exits) {
         vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_);
         this_vertex_property->id = this_vertex_descriptor;
         g_[this_vertex_descriptor] = *this_vertex_property;
         nn_->add(this_vertex_property);
-      }
-    }
-
-    std::vector<vertex_descriptor> vertices_to_be_removed;
-    for (auto vd : boost::make_iterator_range(vertices(g_))) {
-      std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
-      nn_->nearestR(&g_[vd], radius_, nbh);
-      for (auto && nb : nbh) {
-        vertex_descriptor u = g_[vd].id;
-        vertex_descriptor v = nb->id;
-        double dist = distanceFunction(g_[u].state, g_[v].state);
-        edge_descriptor e; bool edge_added;
-        // not to construct edges with self, and if nbh is further than radius_, continue
-        if (u == v || dist > radius_) {
-          continue;
-        }
-        // Too close vertice, remove it from g_ and do not construct the edge to it
-        if (dist < 0.025 /*do not add same vertice twice*/) {
-          bool is_nb_start_or_goal = (nb->id == start_vertex_.id || nb->id == goal_vertex_.id);
-          if (!is_nb_start_or_goal) {
-            vertices_to_be_removed.push_back(v);
-            nn_->remove(nb);
+        for (auto && nb : nbh) {
+          vertex_descriptor u = this_vertex_descriptor;
+          vertex_descriptor v = nb->id;
+          double dist = distanceFunction(g_[u].state, g_[v].state);
+          edge_descriptor e; bool edge_added;
+          // not to construct edges with self, and if nbh is further than radius_, continue
+          if (u == v || dist > radius_) {
             continue;
           }
+          if (boost::edge(u, v, g_).second || boost::edge(v, u, g_).second) {
+            continue;
+          }
+          // Once suitable edges are found, populate them over graphs
+          boost::tie(e, edge_added) = boost::add_edge(u, v, WeightProperty(dist), g_);
         }
-        // Once suitable edges are found, populate them over graphs
-        boost::tie(e, edge_added) = boost::add_edge(u, v, WeightProperty(dist), g_);
-        addEdgeApx(&g_[vd], nb, dist);
-        addEdgeLb(&g_[vd], nb, dist);
       }
     }
-
-    // Remove close/duplicate vertices
-    for (auto && i : vertices_to_be_removed) {
-      boost::clear_vertex(i, g_);
-      boost::remove_vertex(i, g_);
-    }
-
-    forwardPath.clear(); reversePath.clear();
-    double costApx = LPAstarCost2Come_->computeShortestPath(forwardPath);
-    double costLb = LPAstarCost2Go_->computeShortestPath(reversePath);
-
-    bool adaptive_h_available = (*(LPAstarCost2Go_))(start_vertex_.id) !=
-      std::numeric_limits<double>::infinity();
 
     int num_visited_nodes = 0;
     std::vector<vertex_descriptor> p(boost::num_vertices(g_));
     std::vector<Cost> d(boost::num_vertices(g_));
 
-    if (!adaptive_h_available) {
-      OMPL_INFORM(
-        "%s: Adaptive H function not available, skipping this cycle.\n",
-        getName().c_str());
-      goto skip_this_cycle;
-    }
-/*
     try {
       // Run A* qith Hueroistic being from ForwardPropogateHeuristic
       auto heuristic = ForwardPropogateHeuristic(this);
@@ -256,71 +219,20 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     } catch (FoundGoal found_goa) {
 
       OMPL_INFORM("%s: A valid geometric path has been found.\n", getName().c_str() );
-
       // Found a path to the goal, catch the exception
       std::list<vertex_descriptor> shortest_path;
       for (vertex_descriptor v = goal_vertex_.id;; v = p[v]) {
         shortest_path.push_front(v);
         if (p[v] == v) {break;}
       }
-
-      // Lets clean the graphs and remove useless vertex/edges
-      // The documentation is pretty clear that you cannot remove edges while iterating over them,
-      // as it invalidates the iterators. You need to store the edge descriptors, and remove them at later step.
-
-      std::vector<std::pair<vertex_descriptor, vertex_descriptor>> edges_to_be_removed;
-      auto es = boost::edges(g_);
-      for (auto eit = es.first; eit != es.second; ++eit) {
-        vertex_descriptor u, v;
-        u = boost::source(*eit, g_);
-        v = boost::target(*eit, g_);
-        double u_estimate = (*(LPAstarCost2Go_))(g_[u].id); // cost to come
-        double v_estimate = (*(LPAstarCost2Go_))(g_[v].id); // cost to go
-
-        bool is_u_or_v_start_or_goal =
-          (u == start_vertex_.id || u == goal_vertex_.id) ||
-          (v == start_vertex_.id || v == goal_vertex_.id);
-
-        if (is_u_or_v_start_or_goal) {
-          continue;
-        }
-
-        double edge_dist = distanceFunction(g_[u].state, g_[v].state);
-        if ((g_[u].blacklisted || g_[v].blacklisted) || (edge_dist > radius_) ||
-          (  u_estimate == std::numeric_limits<double>::infinity() &&
-          v_estimate == std::numeric_limits<double>::infinity()))
-        {
-          edges_to_be_removed.push_back(std::make_pair(u, v));
-        }
-      }
-
-      for (auto && i : edges_to_be_removed) {
-        if (edgeExistsApx(i.first, i.second)) {
-          removeEdgeApx(i.first, i.second);
-        }
-        if (edgeExistsLb(i.first, i.second)) {
-          removeEdgeLb(i.first, i.second);
-        }
-        if (boost::edge(i.first, i.second, g_).second) {
-          boost::remove_edge(i.first, i.second, g_);
-        }
-      }
     }
-*/
-skip_this_cycle:
+
     OMPL_INFORM(
       "%s: Advancing with %d vertices and %d edges.\n",
       getName().c_str(), boost::num_vertices(g_), boost::num_edges(g_));
-    OMPL_INFORM(
-      "%s: nn_ includes %d ver.\n",
-      getName().c_str(), nn_->size());
-
-    visualizeRGG(g_);
   }
 
-  goal_reached = (*(LPAstarCost2Go_))(goal_vertex_.id) !=
-    std::numeric_limits<double>::infinity();
-  if (goal_reached) {
+  if (true) {
     OMPL_INFORM("%s: Calculating Kinodynamic path.\n", getName().c_str());
     for (size_t i = 1; i < forwardPath.size(); i++) {
       auto c = siC_->allocControl();
@@ -337,6 +249,8 @@ skip_this_cycle:
       path->append(g_[i].state);
     }
   }
+
+  visualizeRGG(g_);
 
   pdef_->addSolutionPath(path, false, 0.0, getName());
 
@@ -386,7 +300,7 @@ void ompl::control::AITStarKin::generateBatchofSamples(
 void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
 {
 
-  bool show_infs = false;
+  bool show_infs = true;
 
   // Clear All previous markers
   visualization_msgs::msg::MarkerArray clear_markers;
@@ -409,16 +323,18 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
 
   // To make a graph of the supervoxel adjacency,
   // we need to iterate through the supervoxel adjacency multimap
-  int rgg_vertice_index = 0;
   for (auto vd : boost::make_iterator_range(vertices(g))) {
-    double apx_estimate = (*(LPAstarCost2Come_))(g[vd].id);   // cpst to come
-    double lb_estimate = (*(LPAstarCost2Go_))(g[vd].id);   // cost to go
+    double apx_estimate = 0;//(*(LPAstarCost2Come_))(g[vd].id);   // cpst to come
+    double lb_estimate = 0;//(*(LPAstarCost2Go_))(g[vd].id);   // cost to go
     std::stringstream ss_lb, ss_apx;
     ss_lb << std::setprecision(2) << lb_estimate;
     ss_apx << std::setprecision(2) << apx_estimate;
 
 
-    if (!show_infs && lb_estimate == std::numeric_limits<double>::infinity()) {
+    if (!show_infs &&
+      (lb_estimate == std::numeric_limits<double>::infinity() ||
+      apx_estimate == std::numeric_limits<double>::infinity() ))
+    {
       continue;
     }
 
@@ -463,25 +379,6 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
     text.color.a = 1.0;
     text.color.r = 1.0;
     marker_array.markers.push_back(text);
-
-    visualization_msgs::msg::Marker rgg_ids;
-    rgg_ids.header.frame_id = "map";
-    rgg_ids.header.stamp = rclcpp::Clock().now();
-    rgg_ids.ns = "rgg_ids";
-    rgg_ids.id = g[vd].id;
-    rgg_ids.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
-    rgg_ids.action = visualization_msgs::msg::Marker::ADD;
-    rgg_ids.lifetime = rclcpp::Duration::from_seconds(0);
-    rgg_ids.text = std::to_string(g[vd].id) + "/" + std::to_string(rgg_vertice_index);
-    rgg_ids.pose = sphere.pose;
-    rgg_ids.pose.position.z += 0.6;
-    rgg_ids.scale.x = 0.3;
-    rgg_ids.scale.y = 0.3;
-    rgg_ids.scale.z = 0.3;
-    rgg_ids.color.a = 1.0;
-    rgg_ids.color.b = 1.0;
-    marker_array.markers.push_back(rgg_ids);
-    rgg_vertice_index++;
   }
 
   auto es = boost::edges(g);
@@ -491,12 +388,16 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
 
     u = boost::source(*eit, g);
     v = boost::target(*eit, g);
-    double u_estimate = (*(LPAstarCost2Go_))(g[u].id);   // cost to come
-    double v_estimate = (*(LPAstarCost2Go_))(g[v].id);   // cost to go
+    double u_estimate = 0;//(*(LPAstarCost2Go_))(g[u].id);   // cpst to come
+    double v_estimate = 0;//(*(LPAstarCost2Go_))(g[v].id);   // cost to go
+    double apxu_estimate = 0;//(*(LPAstarCost2Come_))(g[u].id);       // cpst to come
+    double apxv_estimate = 0;//(*(LPAstarCost2Come_))(g[v].id);   // cost to go
 
     if (!show_infs &&
       (u_estimate == std::numeric_limits<double>::infinity() ||
-      v_estimate == std::numeric_limits<double>::infinity())  )
+      v_estimate == std::numeric_limits<double>::infinity() ||
+      apxu_estimate == std::numeric_limits<double>::infinity() ||
+      apxv_estimate == std::numeric_limits<double>::infinity() ))
     {
       continue;
     }
