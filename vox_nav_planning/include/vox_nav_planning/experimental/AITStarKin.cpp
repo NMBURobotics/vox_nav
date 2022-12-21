@@ -165,14 +165,14 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
       nn_->nearestR(this_vertex_property, radius_, nbh);
 
-      if (nbh.size() > max_neighbors) {
-        nbh.resize(max_neighbors);
+      if (nbh.size() > max_neighbors_) {
+        nbh.resize(max_neighbors_);
       }
 
       bool does_vertice_exits{false};
       for (auto && nb : nbh) {
         double dist = distanceFunction(i, nb->state);
-        if (dist < 0.025 /*do not add same vertice twice*/) {
+        if (dist < min_dist_between_vertices_ /*do not add same vertice twice*/) {
           does_vertice_exits = true;
         }
       }
