@@ -202,7 +202,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
           continue;
         }
         // Too close vertice, remove it from g_ and do not construct the edge to it
-        if (dist < 0.01 /*do not add same vertice twice*/) {
+        if (dist < 0.025 /*do not add same vertice twice*/) {
           bool is_nb_start_or_goal = (nb->id == start_vertex_.id || nb->id == goal_vertex_.id);
           if (!is_nb_start_or_goal) {
             vertices_to_be_removed.push_back(v);
@@ -219,12 +219,13 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
     // Remove close/duplicate vertices
     for (auto && i : vertices_to_be_removed) {
+      boost::clear_vertex(i, g_);
       boost::remove_vertex(i, g_);
     }
 
     forwardPath.clear(); reversePath.clear();
-    double costApx = LPAstarCost2Come_->computeShortestPath(reversePath);
-    double costLb = LPAstarCost2Go_->computeShortestPath(forwardPath);
+    double costApx = LPAstarCost2Come_->computeShortestPath(forwardPath);
+    double costLb = LPAstarCost2Go_->computeShortestPath(reversePath);
 
     bool adaptive_h_available = (*(LPAstarCost2Go_))(start_vertex_.id) !=
       std::numeric_limits<double>::infinity();
@@ -310,9 +311,11 @@ skip_this_cycle:
     OMPL_INFORM(
       "%s: Advancing with %d vertices and %d edges.\n",
       getName().c_str(), boost::num_vertices(g_), boost::num_edges(g_));
+    OMPL_INFORM(
+      "%s: nn_ includes %d ver.\n",
+      getName().c_str(), nn_->size());
 
     visualizeRGG(g_);
-
   }
 
   goal_reached = (*(LPAstarCost2Go_))(goal_vertex_.id) !=
@@ -406,6 +409,7 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
 
   // To make a graph of the supervoxel adjacency,
   // we need to iterate through the supervoxel adjacency multimap
+  int rgg_vertice_index = 0;
   for (auto vd : boost::make_iterator_range(vertices(g))) {
     double apx_estimate = (*(LPAstarCost2Come_))(g[vd].id);   // cpst to come
     double lb_estimate = (*(LPAstarCost2Go_))(g[vd].id);   // cost to go
@@ -459,6 +463,25 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
     text.color.a = 1.0;
     text.color.r = 1.0;
     marker_array.markers.push_back(text);
+
+    visualization_msgs::msg::Marker rgg_ids;
+    rgg_ids.header.frame_id = "map";
+    rgg_ids.header.stamp = rclcpp::Clock().now();
+    rgg_ids.ns = "rgg_ids";
+    rgg_ids.id = g[vd].id;
+    rgg_ids.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+    rgg_ids.action = visualization_msgs::msg::Marker::ADD;
+    rgg_ids.lifetime = rclcpp::Duration::from_seconds(0);
+    rgg_ids.text = std::to_string(g[vd].id) + "/" + std::to_string(rgg_vertice_index);
+    rgg_ids.pose = sphere.pose;
+    rgg_ids.pose.position.z += 0.6;
+    rgg_ids.scale.x = 0.3;
+    rgg_ids.scale.y = 0.3;
+    rgg_ids.scale.z = 0.3;
+    rgg_ids.color.a = 1.0;
+    rgg_ids.color.b = 1.0;
+    marker_array.markers.push_back(rgg_ids);
+    rgg_vertice_index++;
   }
 
   auto es = boost::edges(g);
@@ -468,7 +491,7 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
 
     u = boost::source(*eit, g);
     v = boost::target(*eit, g);
-    double u_estimate = (*(LPAstarCost2Go_))(g[u].id);   // cpst to come
+    double u_estimate = (*(LPAstarCost2Go_))(g[u].id);   // cost to come
     double v_estimate = (*(LPAstarCost2Go_))(g[v].id);   // cost to go
 
     if (!show_infs &&
