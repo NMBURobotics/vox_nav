@@ -68,6 +68,9 @@ void ompl::control::AITStarKin::setup()
     node_->create_publisher<visualization_msgs::msg::MarkerArray>(
     "vox_nav/rrtstar/nodes", rclcpp::SystemDefaultsQoS());
 
+  heur_pub_ = node_->create_publisher<visualization_msgs::msg::Marker>(
+    "vox_nav/rrtstar/heur", rclcpp::SystemDefaultsQoS());
+
 }
 
 void ompl::control::AITStarKin::clear()
@@ -93,14 +96,11 @@ void ompl::control::AITStarKin::freeMemory()
       delete node;
     }
   }
-
 }
 
 ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   const base::PlannerTerminationCondition & ptc)
 {
-
-  auto a1 = std::chrono::high_resolution_clock::now();
 
   checkValidity();
   base::Goal * goal = pdef_->getGoal().get();
@@ -130,6 +130,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   g_[start_vertex_descriptor].state = start_state;
   g_[start_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(start_state);
   g_[start_vertex_descriptor].id = start_vertex_descriptor;
+
   g_[goal_vertex_descriptor].state = goal_state;
   g_[goal_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(goal_state);
   g_[goal_vertex_descriptor].id = goal_vertex_descriptor;
@@ -148,23 +149,22 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   bool goal_reached;
   std::list<std::size_t> forwardPath, reversePath;
 
+  WeightMap weightmap = get(boost::edge_weight, g_);
 
   while (ptc == false) {
 
     std::vector<ompl::base::State *> samples;
-    generateBatchofSamples(batch_size_, false, samples);
+    generateBatchofSamples(batch_size_, true, samples);
 
     // Add batch_size_ number of samples to graphs
     // Create edges to construct an RGG, the vertices closer than radius_ will construct an edge
     // But too close vertices will be discarded in order for memory not to sink
     for (auto && i : samples) {
-
       VertexProperty * this_vertex_property = new VertexProperty();
       this_vertex_property->state = (i);
       this_vertex_property->state_label = (reinterpret_cast<std::uintptr_t>(i));
       std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
       nn_->nearestR(this_vertex_property, radius_, nbh);
-
       if (nbh.size() > max_neighbors_) {
         nbh.resize(max_neighbors_);
       }
@@ -195,33 +195,58 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
             continue;
           }
           // Once suitable edges are found, populate them over graphs
-          boost::tie(e, edge_added) = boost::add_edge(u, v, WeightProperty(dist), g_);
+          boost::tie(e, edge_added) = boost::add_edge(u, v, g_);
+          weightmap[e] = dist;
         }
       }
+    }
+
+    std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh;
+    nn_->nearestR(goal_vertex, radius_, goal_nbh);
+    if (goal_nbh.size() > max_neighbors_) {
+      goal_nbh.resize(max_neighbors_);
+    }
+    for (auto && nb : goal_nbh) {
+      vertex_descriptor u = goal_vertex_descriptor;
+      vertex_descriptor v = nb->id;
+      double dist = distanceFunction(g_[u].state, g_[v].state);
+      edge_descriptor e; bool edge_added;
+      // not to construct edges with self, and if nbh is further than radius_, continue
+      if (u == v || dist > radius_) {
+        continue;
+      }
+      if (boost::edge(u, v, g_).second || boost::edge(v, u, g_).second) {
+        continue;
+      }
+      // Once suitable edges are found, populate them over graphs
+      boost::tie(e, edge_added) = boost::add_edge(u, v, g_);
+      weightmap[e] = dist;
     }
 
     int num_visited_nodes = 0;
     std::vector<vertex_descriptor> p(boost::num_vertices(g_));
     std::vector<Cost> d(boost::num_vertices(g_));
+    std::list<vertex_descriptor> shortest_path;
 
     try {
-      // Run A* qith Hueroistic being from ForwardPropogateHeuristic
-      auto heuristic = ForwardPropogateHeuristic(this);
+      // Run A*
+      auto heuristic = ReverseSearchHeuristic<GraphT, Cost>(this);
       auto c_visitor = custom_goal_visitor<vertex_descriptor>(
-        goal_vertex_.id, &num_visited_nodes, this);
+        start_vertex_descriptor, &num_visited_nodes, this);
 
       boost::astar_search_tree(
-        g_, start_vertex_.id, heuristic,
+        g_, goal_vertex_descriptor, heuristic,
         boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
 
-      OMPL_INFORM("%s: A* Failed to produce final collision free path.\n", getName().c_str() );
+      OMPL_INFORM(
+        "%s: A* Failed to produce final collision free path after %d node visits.\n",
+        getName().c_str(), num_visited_nodes);
 
-    } catch (FoundGoal found_goa) {
+    } catch (FoundGoal found_goal) {
 
       OMPL_INFORM("%s: A valid geometric path has been found.\n", getName().c_str() );
       // Found a path to the goal, catch the exception
-      std::list<vertex_descriptor> shortest_path;
-      for (vertex_descriptor v = goal_vertex_.id;; v = p[v]) {
+      for (vertex_descriptor v = start_vertex_.id;; v = p[v]) {
         shortest_path.push_front(v);
         if (p[v] == v) {break;}
       }
@@ -230,6 +255,11 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     OMPL_INFORM(
       "%s: Advancing with %d vertices and %d edges.\n",
       getName().c_str(), boost::num_vertices(g_), boost::num_edges(g_));
+
+    visualizeLPAHuer(shortest_path);
+
+    visualizeRGG(g_);
+
   }
 
   if (true) {
@@ -250,14 +280,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     }
   }
 
-  visualizeRGG(g_);
 
   pdef_->addSolutionPath(path, false, 0.0, getName());
-
-  auto a2 = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> elapsed = a2 - a1;
-
-  //OMPL_INFORM("%s: Took  %.4f milliseconds.\n", getName().c_str(), elapsed.count());
 
   clear();
 
@@ -319,6 +343,18 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
   clear_markers.markers.push_back(rgg_edges);
   rrt_nodes_pub_->publish(clear_markers);
 
+
+  visualization_msgs::msg::Marker sphere;
+  sphere.header.frame_id = "map";
+  sphere.header.stamp = rclcpp::Clock().now();
+  sphere.ns = "rgg_vertex";
+  sphere.id = 0;
+  sphere.type = visualization_msgs::msg::Marker::SPHERE_LIST;
+  sphere.action = visualization_msgs::msg::Marker::ADD;
+  sphere.scale.x = 0.1;
+  sphere.scale.y = 0.1;
+  sphere.scale.z = 0.1;
+
   visualization_msgs::msg::MarkerArray marker_array;
 
   // To make a graph of the supervoxel adjacency,
@@ -338,29 +374,26 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
       continue;
     }
 
+    double is_goal_or_start{0.0};
+    if (g[vd].id == start_vertex_.id || g[vd].id == goal_vertex_.id) {
+      is_goal_or_start = 1.0;
+    }
+
     const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * target_se2 = target_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
     const auto * target_z = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
     geometry_msgs::msg::Point point;
     point.x = target_se2->getX();
     point.y = target_se2->getY();
     point.z = target_z->values[0];
-    visualization_msgs::msg::Marker sphere;
-    sphere.header.frame_id = "map";
-    sphere.header.stamp = rclcpp::Clock().now();
-    sphere.ns = "rgg_vertex";
-    sphere.id = g[vd].id;
-    sphere.type = visualization_msgs::msg::Marker::SPHERE;
-    sphere.action = visualization_msgs::msg::Marker::ADD;
-    sphere.text = std::to_string(g[vd].id);
-    sphere.pose.position = point;
-    sphere.scale.x = 0.1;
-    sphere.scale.y = 0.1;
-    sphere.scale.z = 0.1;
-    sphere.color.a = 1.0;
-    sphere.color.g = 1.0;
-    sphere.color.b = 1.0;
-    marker_array.markers.push_back(sphere);
+    std_msgs::msg::ColorRGBA color;
+    color.a = 1.0;
+    color.g = is_goal_or_start;
+    color.b = 1.0;
+    sphere.points.push_back(point);
+    sphere.colors.push_back(color);
+
 
     visualization_msgs::msg::Marker text;
     text.header.frame_id = "map";
@@ -378,12 +411,30 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
     text.scale.z = 0.3;
     text.color.a = 1.0;
     text.color.r = 1.0;
-    marker_array.markers.push_back(text);
+    //marker_array.markers.push_back(text);
   }
+  marker_array.markers.push_back(sphere);
 
   auto es = boost::edges(g);
   vertex_descriptor u, v;
   int edge_index = 0;
+  visualization_msgs::msg::Marker line_strip;
+  line_strip.header.frame_id = "map";
+  line_strip.ns = "rgg_edges";
+  line_strip.id = edge_index;
+  line_strip.type = visualization_msgs::msg::Marker::LINE_LIST;
+  line_strip.action = visualization_msgs::msg::Marker::ADD;
+  line_strip.lifetime = rclcpp::Duration::from_seconds(0);
+  line_strip.header.stamp = rclcpp::Clock().now();
+  line_strip.scale.x = 0.005;
+  line_strip.scale.y = 0.005;
+  line_strip.scale.z = 0.005;
+  line_strip.color.a = 1.0;
+  line_strip.color.r = 0.0;
+  line_strip.color.b = 1.0;
+  std_msgs::msg::ColorRGBA blue_color;
+  blue_color.b = 1.0;
+  blue_color.a = 1.0;
   for (auto eit = es.first; eit != es.second; ++eit) {
 
     u = boost::source(*eit, g);
@@ -403,46 +454,70 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
     }
 
     geometry_msgs::msg::Point source_point, target_point;
-
     const auto * source_cstate = g[u].state->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * source_se2 = source_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
     const auto * source_z = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
     source_point.x = source_se2->getX();
     source_point.y = source_se2->getY();
     source_point.z = source_z->values[0];
-
     const auto * target_cstate = g[v].state->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * target_se2 = target_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
     const auto * target_z = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
     target_point.x = target_se2->getX();
     target_point.y = target_se2->getY();
     target_point.z = target_z->values[0];
-
-    visualization_msgs::msg::Marker line_strip;
-    line_strip.header.frame_id = "map";
-    line_strip.ns = "rgg_edges";
-    line_strip.id = edge_index;
-    line_strip.type = visualization_msgs::msg::Marker::LINE_LIST;
-    line_strip.action = visualization_msgs::msg::Marker::ADD;
-    line_strip.lifetime = rclcpp::Duration::from_seconds(0);
-    line_strip.header.stamp = rclcpp::Clock().now();
-    line_strip.scale.x = 0.05;
-    line_strip.scale.y = 0.05;
-    line_strip.scale.z = 0.05;
-    line_strip.color.a = 1.0;
-    line_strip.color.r = 0.0;
-    line_strip.color.b = 1.0;
-    std_msgs::msg::ColorRGBA blue_color;
-    blue_color.b = 1.0;
-    blue_color.a = 1.0;
     line_strip.points.push_back(source_point);
     line_strip.colors.push_back(blue_color);
     line_strip.points.push_back(target_point);
     line_strip.colors.push_back(blue_color);
 
-    marker_array.markers.push_back(line_strip);
-    edge_index++;
   }
+  marker_array.markers.push_back(line_strip);
 
   rrt_nodes_pub_->publish(marker_array);
+}
+
+void ompl::control::AITStarKin::visualizeLPAHuer(const std::list<vertex_descriptor> & heur)
+{
+  visualization_msgs::msg::Marker line_strip;
+  line_strip.header.frame_id = "map";
+  line_strip.ns = "heur";
+  line_strip.id = 0;
+  line_strip.type = visualization_msgs::msg::Marker::LINE_LIST;
+  line_strip.action = visualization_msgs::msg::Marker::ADD;
+  line_strip.lifetime = rclcpp::Duration::from_seconds(0);
+  line_strip.header.stamp = rclcpp::Clock().now();
+  line_strip.scale.x = 0.05;
+  line_strip.scale.y = 0.05;
+  line_strip.scale.z = 0.05;
+  line_strip.color.a = 1.0;
+  line_strip.color.r = 1.0;
+  line_strip.color.b = 0.3;
+  std_msgs::msg::ColorRGBA blue_color;
+  blue_color.b = 1.0;
+  blue_color.a = 1.0;
+
+  for (size_t i = 1; i < heur.size(); i++) {
+    auto u = *std::next(heur.begin(), i - 1);
+    auto v = *std::next(heur.begin(), i);
+    geometry_msgs::msg::Point source_point, target_point;
+    const auto * source_cstate = g_[u].state->as<ompl::base::ElevationStateSpace::StateType>();
+    const auto * source_se2 = source_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+    const auto * source_z = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    source_point.x = source_se2->getX();
+    source_point.y = source_se2->getY();
+    source_point.z = source_z->values[0];
+    const auto * target_cstate = g_[v].state->as<ompl::base::ElevationStateSpace::StateType>();
+    const auto * target_se2 = target_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+    const auto * target_z = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    target_point.x = target_se2->getX();
+    target_point.y = target_se2->getY();
+    target_point.z = target_z->values[0];
+    line_strip.points.push_back(source_point);
+    line_strip.colors.push_back(blue_color);
+    line_strip.points.push_back(target_point);
+    line_strip.colors.push_back(blue_color);
+  }
+  heur_pub_->publish(line_strip);
 }

@@ -125,8 +125,8 @@ namespace ompl
 
     private:
       int batch_size_{500};
-      double radius_{1.5}; // max edge length
-      int max_neighbors_{10};
+      double radius_{0.5}; // max edge length
+      int max_neighbors_{5};
       double min_dist_between_vertices_{0.025};
 
       /** \brief State sampler */
@@ -144,7 +144,7 @@ namespace ompl
 
       typedef float Cost;
       typedef boost::adjacency_list<
-          boost::setS,          // edge
+          boost::vecS,          // edge
           boost::vecS,          // vertex
           boost::undirectedS,   // type
           VertexProperty,       // vertex property
@@ -160,13 +160,14 @@ namespace ompl
 
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> nn_;
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rrt_nodes_pub_;
+      rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr heur_pub_;
       rclcpp::Node::SharedPtr node_;
 
-      friend class ForwardPropogateHeuristic;
-      class ForwardPropogateHeuristic
+      friend class ForwardSearchHeuristic;
+      class ForwardSearchHeuristic
       {
       public:
-        ForwardPropogateHeuristic(AITStarKin * alg)
+        ForwardSearchHeuristic(AITStarKin * alg)
         : alg_(alg)
         {
         }
@@ -177,7 +178,29 @@ namespace ompl
 
       private:
         AITStarKin * alg_;
-      };  // Cost2GoEstimator
+      };  // ForwardSearchHeuristic
+
+
+      friend class ReverseSearchHeuristic;
+      template<class Graph, class CostType>
+      class ReverseSearchHeuristic : public boost::astar_heuristic<Graph, CostType>
+      {
+      public:
+        typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
+
+        ReverseSearchHeuristic(AITStarKin * alg)
+        : alg_(alg)
+        {
+        }
+        double operator()(Vertex i)
+        {
+          return alg_->distanceFunction(alg_->getVertex(i), &alg_->start_vertex_);
+        }
+
+      private:
+        AITStarKin * alg_;
+      };  // ReverseSearchHeuristic
+
 
       // exception for termination
       struct FoundGoal {};
@@ -186,8 +209,8 @@ namespace ompl
       class custom_goal_visitor : public boost::default_astar_visitor
       {
       public:
-        custom_goal_visitor(Vertex goal_vertex, int * num_visits, AITStarKin * alg)
-        : goal_vertex_(goal_vertex),
+        custom_goal_visitor(Vertex start_vertex, int * num_visits, AITStarKin * alg)
+        : start_vertex_(start_vertex),
           num_visits_(num_visits),
           alg_(alg)
         {
@@ -195,21 +218,15 @@ namespace ompl
         template<class Graph>
         void examine_vertex(Vertex u, Graph & g)
         {
-          // If the vertex is in collsion or the cost is inf, blacklist it
-          bool is_vertex_ok = alg_->si_->getStateValidityChecker()->isValid(
-            alg_->getVertex(u)->state);
-          if (!is_vertex_ok) {
-            alg_->g_[u].blacklisted = true;
-          }
           // check whether examined vertex was goal, if yes throw
           ++(*num_visits_);
-          if (u == goal_vertex_) {
+          if (u == start_vertex_) {
             throw FoundGoal();
           }
         }
 
       private:
-        Vertex goal_vertex_;
+        Vertex start_vertex_;
         int * num_visits_;
         AITStarKin * alg_;
       };
@@ -220,6 +237,8 @@ namespace ompl
       GraphT g_;
 
       void visualizeRGG(const GraphT & g);
+
+      void visualizeLPAHuer(const std::list<vertex_descriptor> & heur);
 
     };
   }   // namespace control
