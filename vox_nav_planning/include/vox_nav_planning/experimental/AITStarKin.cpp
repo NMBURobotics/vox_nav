@@ -48,7 +48,6 @@ void ompl::control::AITStarKin::setup()
     }
   }
 
-  // Use valid state sampler
   if (!valid_state_sampler_) {
     valid_state_sampler_ = si_->allocValidStateSampler();
   }
@@ -57,13 +56,18 @@ void ompl::control::AITStarKin::setup()
     sampler_ = si_->allocStateSampler();
   }
 
+  if (!informed_sampler_) {
+    /*informed_sampler_ = std::make_shared<base::PathLengthDirectInfSampler>(
+      pdef_,
+      std::numeric_limits<double>::infinity());*/
+  }
+
   if (!controlSampler_) {
     controlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, 100);
   }
 
-  // ros2 node to publish rrt nodes
+  // RVIZ VISUALIZATIONS
   node_ = std::make_shared<rclcpp::Node>("aitstarkin_rclcpp_node");
-
   rrt_nodes_pub_ =
     node_->create_publisher<visualization_msgs::msg::MarkerArray>(
     "vox_nav/rrtstar/nodes", rclcpp::SystemDefaultsQoS());
@@ -229,8 +233,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     std::list<vertex_descriptor> shortest_path;
 
     try {
-      // Run A*
-      auto heuristic = ReverseSearchHeuristic<GraphT, Cost>(this);
+      // Run A* backwards from goal to start
+      auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, Cost>(this, &start_vertex_);
       auto c_visitor = custom_goal_visitor<vertex_descriptor>(
         start_vertex_descriptor, &num_visited_nodes, this);
 
@@ -315,6 +319,7 @@ void ompl::control::AITStarKin::generateBatchofSamples(
       do{
         // Sample the associated state uniformly within the informed set.
         sampler_->sampleUniform(samples.back());
+        //informed_sampler_->sampleUniform()
         // Count how many states we've checked.
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));
     }

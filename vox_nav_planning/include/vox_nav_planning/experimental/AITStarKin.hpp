@@ -35,6 +35,7 @@
 #include "ompl/tools/config/SelfConfig.h"
 #include "ompl/datastructures/NearestNeighbors.h"
 #include "ompl/datastructures/LPAstarOnGraph.h"
+#include "ompl/base/samplers/informed/PathLengthDirectInfSampler.h"
 
 #include "rclcpp/rclcpp.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -85,7 +86,6 @@ namespace ompl
 
       struct VertexProperty
       {
-        std::string name{""};
         ompl::base::State * state{nullptr};
         std::uintptr_t state_label{0};
         std::size_t id{0};
@@ -109,11 +109,6 @@ namespace ompl
         return &g_[id];
       }
 
-      void generateBatchofSamples(
-        int batch_size,
-        bool use_valid_sampler,
-        std::vector<ompl::base::State *> & samples);
-
     private:
       int batch_size_{500};
       double radius_{1.5}; // max edge length
@@ -122,15 +117,17 @@ namespace ompl
       bool use_valid_sampler_{false};
 
       /** \brief State sampler */
-      base::StateSamplerPtr sampler_;
+      base::StateSamplerPtr sampler_{nullptr};
 
-      const SpaceInformation * siC_;
+      const SpaceInformation * siC_{nullptr};
 
       /** \brief State sampler */
-      base::ValidStateSamplerPtr valid_state_sampler_;
+      base::ValidStateSamplerPtr valid_state_sampler_{nullptr};
+
+      std::shared_ptr<base::PathLengthDirectInfSampler> informed_sampler_{nullptr};
 
       /** \brief The optimization objective. */
-      base::OptimizationObjectivePtr opt_;
+      base::OptimizationObjectivePtr opt_{nullptr};
 
       DirectedControlSamplerPtr controlSampler_;
 
@@ -155,43 +152,27 @@ namespace ompl
       rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr heur_pub_;
       rclcpp::Node::SharedPtr node_;
 
-      friend class ForwardSearchHeuristic;
-      class ForwardSearchHeuristic
+
+      friend class GenericDistanceHeuristic;
+      template<class Graph, class VertexProperty, class CostType>
+      class GenericDistanceHeuristic : public boost::astar_heuristic<Graph, CostType>
       {
       public:
-        ForwardSearchHeuristic(AITStarKin * alg)
-        : alg_(alg)
+        typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
+        GenericDistanceHeuristic(AITStarKin * alg, VertexProperty * goal)
+        : alg_(alg),
+          goal_(goal)
         {
         }
-        double operator()(std::size_t i)
+        double operator()(vertex_descriptor i)
         {
-          return alg_->distanceFunction(alg_->getVertex(i), &alg_->goal_vertex_);
+          return alg_->distanceFunction(alg_->getVertex(i), goal_);
         }
 
       private:
         AITStarKin * alg_;
-      };  // ForwardSearchHeuristic
-
-
-      friend class ReverseSearchHeuristic;
-      template<class Graph, class CostType>
-      class ReverseSearchHeuristic : public boost::astar_heuristic<Graph, CostType>
-      {
-      public:
-        typedef typename boost::graph_traits<Graph>::vertex_descriptor Vertex;
-
-        ReverseSearchHeuristic(AITStarKin * alg)
-        : alg_(alg)
-        {
-        }
-        double operator()(Vertex i)
-        {
-          return alg_->distanceFunction(alg_->getVertex(i), &alg_->start_vertex_);
-        }
-
-      private:
-        AITStarKin * alg_;
-      };  // ReverseSearchHeuristic
+        VertexProperty * goal_;
+      };  // GenericDistanceHeuristic
 
 
       // exception for termination
@@ -231,6 +212,11 @@ namespace ompl
       void visualizeRGG(const GraphT & g);
 
       void visualizeLPAHuer(const std::list<vertex_descriptor> & heur);
+
+      void generateBatchofSamples(
+        int batch_size,
+        bool use_valid_sampler,
+        std::vector<ompl::base::State *> & samples);
 
     };
   }   // namespace control
