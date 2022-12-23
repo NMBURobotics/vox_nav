@@ -37,14 +37,13 @@ OctoCostOptimizationObjective::~OctoCostOptimizationObjective()
 ompl::base::Cost OctoCostOptimizationObjective::stateCost(const ompl::base::State * s) const
 {
   float cost = 5.0;
-  const auto * s_se2 =
-    s->as<ElevationStateSpace::StateType>()->as<SE2StateSpace::StateType>(0);
-  const auto * s_z =
+  const auto * s_so2 = s->as<ElevationStateSpace::StateType>()->as<SO2StateSpace::StateType>(0);
+  const auto * s_xyzv =
     s->as<ElevationStateSpace::StateType>()->as<RealVectorStateSpace::StateType>(1);
   auto node_at_samppled_state = elevated_surfels_octree_->search(
-    s_se2->getX(),
-    s_se2->getY(),
-    s_z->values[0], 0);
+    s_xyzv->values[0],
+    s_xyzv->values[1],
+    s_xyzv->values[2], 0);
   if (node_at_samppled_state) {
     if (elevated_surfels_octree_->isNodeOccupied(node_at_samppled_state)) {
       cost = static_cast<double>(node_at_samppled_state->getValue());
@@ -81,6 +80,7 @@ ElevationStateSpace::ElevationStateSpace(
   se2_ = std::make_shared<ompl::base::SE2StateSpace>();
   dubins_ = std::make_shared<ompl::base::DubinsStateSpace>(rho_, isSymmetric_);
   reeds_sheep_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(rho_);
+  so2_ = std::make_shared<ompl::base::SO2StateSpace>();
 
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
@@ -252,7 +252,7 @@ void ompl::base::ElevationStateSpace::printState(const State * state, std::ostre
 {
   auto * so2 = state->as<StateType>()->as<SO2StateSpace::StateType>(0);
   auto * xyzv = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
-  se2_->printState(so2, out);
+  so2_->printState(so2, out);
   real_vector_->printState(xyzv, out);
 }
 

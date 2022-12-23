@@ -196,6 +196,7 @@ namespace ompl
       std::shared_ptr<ReedsSheppStateSpace> reeds_sheep_;
       std::shared_ptr<SE2StateSpace> se2_;
       std::shared_ptr<RealVectorStateSpace> real_vector_;
+      std::shared_ptr<SO2StateSpace> so2_;
 
       double rho_;
       bool isSymmetric_;
