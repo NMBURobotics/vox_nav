@@ -26,21 +26,12 @@
 #include "ompl/control/SimpleDirectedControlSampler.h"
 #include "ompl/control/spaces/RealVectorControlSpace.h"
 #include "ompl/control/SimpleSetup.h"
-#include "ompl/control/planners/sst/SST.h"
-#include "ompl/control/planners/rrt/RRT.h"
-#include "ompl/control/planners/est/EST.h"
-#include "ompl/control/planners/kpiece/KPIECE1.h"
-#include "ompl/control/planners/pdst/PDST.h"
-#include "ompl/control/planners/syclop/SyclopRRT.h"
 #include "ompl/control/planners/PlannerIncludes.h"
-#include "ompl/control/planners/PlannerIncludes.h"
-#include "ompl/base/spaces/SE2StateSpace.h"
 #include "ompl/base/spaces/RealVectorStateSpace.h"
 #include "ompl/base/goals/GoalSampleableRegion.h"
 #include "ompl/base/objectives/MinimaxObjective.h"
 #include "ompl/base/objectives/MaximizeMinClearanceObjective.h"
 #include "ompl/base/objectives/PathLengthOptimizationObjective.h"
-#include "ompl/base/objectives/MechanicalWorkOptimizationObjective.h"
 #include "ompl/tools/config/SelfConfig.h"
 #include "ompl/datastructures/NearestNeighbors.h"
 #include "ompl/datastructures/LPAstarOnGraph.h"
@@ -125,9 +116,10 @@ namespace ompl
 
     private:
       int batch_size_{500};
-      double radius_{0.5}; // max edge length
-      int max_neighbors_{5};
+      double radius_{1.5}; // max edge length
+      int max_neighbors_{10};
       double min_dist_between_vertices_{0.025};
+      bool use_valid_sampler_{false};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_;
@@ -144,7 +136,7 @@ namespace ompl
 
       typedef float Cost;
       typedef boost::adjacency_list<
-          boost::vecS,          // edge
+          boost::setS,          // edge
           boost::vecS,          // vertex
           boost::undirectedS,   // type
           VertexProperty,       // vertex property

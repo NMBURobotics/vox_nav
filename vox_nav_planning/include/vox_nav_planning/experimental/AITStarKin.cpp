@@ -154,7 +154,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   while (ptc == false) {
 
     std::vector<ompl::base::State *> samples;
-    generateBatchofSamples(batch_size_, true, samples);
+    generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
 
     // Add batch_size_ number of samples to graphs
     // Create edges to construct an RGG, the vertices closer than radius_ will construct an edge
