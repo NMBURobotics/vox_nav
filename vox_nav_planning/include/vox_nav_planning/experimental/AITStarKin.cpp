@@ -200,7 +200,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
           }
           // Once suitable edges are found, populate them over graphs
           boost::tie(e, edge_added) = boost::add_edge(u, v, g_);
-          weightmap[e] = dist;
+          weightmap[e] = opt_->motionCost(g_[u].state, g_[v].state).value();
         }
       }
     }
@@ -224,7 +224,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       }
       // Once suitable edges are found, populate them over graphs
       boost::tie(e, edge_added) = boost::add_edge(u, v, g_);
-      weightmap[e] = dist;
+      weightmap[e] = opt_->motionCost(g_[u].state, g_[v].state).value();
     }
 
     int num_visited_nodes = 0;
@@ -254,6 +254,30 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         shortest_path.push_front(v);
         if (p[v] == v) {break;}
       }
+
+      /* set the solution path */
+      auto path(std::make_shared<PathControl>(si_));
+      for (auto i : shortest_path) {
+        if (g_[i].state) {
+          path->append(g_[i].state);
+        }
+      }
+
+      bestCost_ = ompl::base::Cost(path->length());
+
+      // Create a solution.
+      ompl::base::PlannerSolution solution(path);
+      solution.setPlannerName(getName());
+
+      // Set the optimized flag.
+      solution.setOptimized(
+        opt_,
+        bestCost_,
+        opt_->isSatisfied(bestCost_));
+
+      // Let the problem definition know that a new solution exists.
+      pdef_->addSolutionPath(solution);
+
     }
 
     OMPL_INFORM(
@@ -283,7 +307,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       path->append(g_[i].state);
     }
   }
-
 
   pdef_->addSolutionPath(path, false, 0.0, getName());
 
@@ -318,8 +341,8 @@ void ompl::control::AITStarKin::generateBatchofSamples(
     } else {
       do{
         // Sample the associated state uniformly within the informed set.
-        sampler_->sampleUniform(samples.back());
-        //informed_sampler_->sampleUniform()
+        //sampler_->sampleUniform(samples.back());
+        informed_sampler_->sampleUniform(samples.back(), bestCost_);
         // Count how many states we've checked.
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));
     }
@@ -509,17 +532,19 @@ void ompl::control::AITStarKin::visualizeLPAHuer(const std::list<vertex_descript
     auto v = *std::next(heur.begin(), i);
     geometry_msgs::msg::Point source_point, target_point;
     const auto * source_cstate = g_[u].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * source_se2 = source_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-    const auto * source_z = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    source_point.x = source_se2->getX();
-    source_point.y = source_se2->getY();
-    source_point.z = source_z->values[0];
+    const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+    const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    source_point.x = source_xyzv->values[0];
+    source_point.y = source_xyzv->values[1];
+    source_point.z = source_xyzv->values[2];
+
     const auto * target_cstate = g_[v].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * target_se2 = target_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-    const auto * target_z = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    target_point.x = target_se2->getX();
-    target_point.y = target_se2->getY();
-    target_point.z = target_z->values[0];
+    const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+    target_point.x = target_xyzv->values[0];
+    target_point.y = target_xyzv->values[1];
+    target_point.z = target_xyzv->values[2];
     line_strip.points.push_back(source_point);
     line_strip.colors.push_back(blue_color);
     line_strip.points.push_back(target_point);

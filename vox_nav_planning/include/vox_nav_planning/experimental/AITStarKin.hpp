@@ -129,6 +129,8 @@ namespace ompl
       /** \brief The optimization objective. */
       base::OptimizationObjectivePtr opt_{nullptr};
 
+      ompl::base::Cost bestCost_{std::numeric_limits<double>::infinity()};
+
       DirectedControlSamplerPtr controlSampler_;
 
       typedef float Cost;
@@ -151,7 +153,6 @@ namespace ompl
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rrt_nodes_pub_;
       rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr heur_pub_;
       rclcpp::Node::SharedPtr node_;
-
 
       friend class GenericDistanceHeuristic;
       template<class Graph, class VertexProperty, class CostType>

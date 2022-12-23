@@ -176,16 +176,16 @@ namespace vox_nav_planning
     // select a optimizatio objective
     ompl::base::OptimizationObjectivePtr length_objective(
       new ompl::base::PathLengthOptimizationObjective(control_simple_setup_->getSpaceInformation()));
+
     ompl::base::OptimizationObjectivePtr octocost_objective(
       new ompl::base::OctoCostOptimizationObjective(
         control_simple_setup_->getSpaceInformation(), elevated_surfel_octomap_octree_));
-
     ompl::base::MultiOptimizationObjective * multi_optimization =
       new ompl::base::MultiOptimizationObjective(control_simple_setup_->getSpaceInformation());
     multi_optimization->addObjective(length_objective, 1.0);
     multi_optimization->addObjective(octocost_objective, 1.0);
 
-    return ompl::base::OptimizationObjectivePtr(multi_optimization);
+    return ompl::base::OptimizationObjectivePtr(length_objective);
   }
 
   std::vector<geometry_msgs::msg::PoseStamped> ElevationControlPlanner::createPlan(
