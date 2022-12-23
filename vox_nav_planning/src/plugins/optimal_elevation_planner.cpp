@@ -497,11 +497,15 @@ namespace vox_nav_planning
         auto solution_state = state_space_->allocState();
         auto * compound_elevation_state =
           solution_state->as<ompl::base::ElevationStateSpace::StateType>();
-        compound_elevation_state->setSE2(
+
+        compound_elevation_state->setXYZV(
           solution_state_position.x,
           solution_state_position.y,
-          0 /*assume a 0 yaw here*/);
-        compound_elevation_state->setZ(solution_state_position.z);
+          solution_state_position.z,
+          0 /*assume a 0 v here*/);
+        compound_elevation_state->setSO2(0);
+
+
         solution_path->append(compound_elevation_state);
       }
 
@@ -512,17 +516,20 @@ namespace vox_nav_planning
 
       // from OMPL to geometry_msgs
       for (std::size_t path_idx = 0; path_idx < solution_path->getStateCount(); path_idx++) {
-        const auto * compound_elevation_state =
+        const auto * cstate =
           solution_path->getState(path_idx)->as<ompl::base::ElevationStateSpace::StateType>();
-        const auto * se2 = compound_elevation_state->as<ompl::base::DubinsStateSpace::StateType>(0);
-        const auto * z =
-          compound_elevation_state->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        const auto * cstate_so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+        const auto * cstate_xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        double yaw = cstate_so2->value;
+        double x = cstate_xyzv->values[0];
+        double y = cstate_xyzv->values[1];
+        double z = cstate_xyzv->values[2];
         geometry_msgs::msg::PoseStamped pose;
         pose.header.frame_id = start.header.frame_id;
         pose.header.stamp = rclcpp::Clock().now();
-        pose.pose.position.x = se2->getX();
-        pose.pose.position.y = se2->getY();
-        pose.pose.position.z = z->values[0];
+        pose.pose.position.x = x;
+        pose.pose.position.y = y;
+        pose.pose.position.z = z;
         plan_poses.push_back(pose);
       }
     }
@@ -560,14 +567,14 @@ namespace vox_nav_planning
   {
     const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
     // cast the abstract state type to the type we expect
-    const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+    const auto * so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
     // extract the second component of the state and cast it to what we expect
-    const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    const auto * xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
     fcl::CollisionRequestf requestType(1, false, 1, false);
     // check validity of state Fdefined by pos & rot
-    fcl::Vector3f translation(se2->getX(), se2->getY(), z->values[0]);
+    fcl::Vector3f translation(xyzv->values[0], xyzv->values[1], xyzv->values[2]);
     tf2::Quaternion myQuaternion;
-    myQuaternion.setRPY(0, 0, se2->getYaw());
+    myQuaternion.setRPY(0, 0, so2->value);
     fcl::Quaternionf rotation(
       myQuaternion.getX(), myQuaternion.getY(),
       myQuaternion.getZ(), myQuaternion.getW());

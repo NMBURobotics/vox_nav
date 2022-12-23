@@ -170,16 +170,17 @@ namespace vox_nav_planning
     nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
     nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
 
-    se3_start->setSE2(
+    se3_start->setXYZV(
       nearest_elevated_surfel_to_start_.pose.position.x,
       nearest_elevated_surfel_to_start_.pose.position.y,
-      start_yaw);
-    se3_start->setZ(nearest_elevated_surfel_to_start_.pose.position.z);
+      nearest_elevated_surfel_to_start_.pose.position.z, 0);
+    se3_start->setSO2(start_yaw);
 
-    se3_goal->setSE2(
+    se3_goal->setXYZV(
       nearest_elevated_surfel_to_goal_.pose.position.x,
-      nearest_elevated_surfel_to_goal_.pose.position.y, goal_yaw);
-    se3_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
+      nearest_elevated_surfel_to_goal_.pose.position.y,
+      nearest_elevated_surfel_to_goal_.pose.position.z, 0);
+    se3_goal->setSO2(goal_yaw);
 
     simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
 
@@ -215,21 +216,21 @@ namespace vox_nav_planning
         path_idx++)
       {
         const auto * cstate =
-          solution_path.getState(path_idx)
-          ->as<ompl::base::ElevationStateSpace::StateType>();
-        // cast the abstract state type to the type we expect
-        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        // extract the second component of the state and cast it to what we expect
-        const auto * z =
-          cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+          solution_path.getState(path_idx)->as<ompl::base::ElevationStateSpace::StateType>();
+        const auto * cstate_so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+        const auto * cstate_xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        double yaw = cstate_so2->value;
+        double x = cstate_xyzv->values[0];
+        double y = cstate_xyzv->values[1];
+        double z = cstate_xyzv->values[2];
         tf2::Quaternion this_pose_quat;
-        this_pose_quat.setRPY(0, 0, se2->getYaw());
+        this_pose_quat.setRPY(0, 0, yaw);
         geometry_msgs::msg::PoseStamped pose;
         pose.header.frame_id = start.header.frame_id;
         pose.header.stamp = rclcpp::Clock().now();
-        pose.pose.position.x = se2->getX();
-        pose.pose.position.y = se2->getY();
-        pose.pose.position.z = z->values[0];
+        pose.pose.position.x = x;
+        pose.pose.position.y = y;
+        pose.pose.position.z = z;
         pose.pose.orientation.x = this_pose_quat.getX();
         pose.pose.orientation.y = this_pose_quat.getY();
         pose.pose.orientation.z = this_pose_quat.getZ();
@@ -263,14 +264,14 @@ namespace vox_nav_planning
   {
     const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
     // cast the abstract state type to the type we expect
-    const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+    const auto * so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
     // extract the second component of the state and cast it to what we expect
-    const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    const auto * xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
     fcl::CollisionRequestf requestType(1, false, 1, false);
     // check validity of state Fdefined by pos & rot
-    fcl::Vector3f translation(se2->getX(), se2->getY(), z->values[0]);
+    fcl::Vector3f translation(xyzv->values[0], xyzv->values[1], xyzv->values[2]);
     tf2::Quaternion myQuaternion;
-    myQuaternion.setRPY(0, 0, se2->getYaw());
+    myQuaternion.setRPY(0, 0, so2->value);
     fcl::Quaternionf rotation(myQuaternion.getX(), myQuaternion.getY(),
       myQuaternion.getZ(), myQuaternion.getW());
 

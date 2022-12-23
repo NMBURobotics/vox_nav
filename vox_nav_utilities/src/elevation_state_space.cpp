@@ -72,12 +72,12 @@ ElevationStateSpace::ElevationStateSpace(
   registerProjection(
     "ElevationStateSpaceProjection", std::make_shared<ElevationStateSpaceProjection>(this));
 
-  type_ = 32;
-  addSubspace(std::make_shared<SE2StateSpace>(), 1.0);
-  addSubspace(std::make_shared<RealVectorStateSpace>(2), 1.0);
+  type_ = STATE_SPACE_SE3; // Well, not exactly, but this is the closest, Infromed sampling requirement
+  addSubspace(std::make_shared<SO2StateSpace>(), 1.0);
+  addSubspace(std::make_shared<RealVectorStateSpace>(4), 1.0); // x, y, z, v(linear speed)
   lock();
 
-  real_vector_ = std::make_shared<ompl::base::RealVectorStateSpace>(2);
+  real_vector_ = std::make_shared<ompl::base::RealVectorStateSpace>(4); // x,y,z, v(linear speed)
   se2_ = std::make_shared<ompl::base::SE2StateSpace>();
   dubins_ = std::make_shared<ompl::base::DubinsStateSpace>(rho_, isSymmetric_);
   reeds_sheep_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(rho_);
@@ -109,42 +109,46 @@ void ElevationStateSpace::setBounds(
   const RealVectorBounds & z_bounds,
   const RealVectorBounds & v_bounds)
 {
-  as<SE2StateSpace>(0)->setBounds(se2_bounds);
 
-  auto z_and_v_bounds = std::make_shared<ompl::base::RealVectorBounds>(2);
-  z_and_v_bounds->setLow(0, z_bounds.low[0]);
-  z_and_v_bounds->setHigh(0, z_bounds.high[0]);
-  z_and_v_bounds->setLow(1, v_bounds.low[0]);
-  z_and_v_bounds->setHigh(1, v_bounds.high[0]);
-  as<RealVectorStateSpace>(1)->setBounds(*z_and_v_bounds);
+  auto xyzv_bounds = std::make_shared<ompl::base::RealVectorBounds>(4);
+  xyzv_bounds->setLow(0, se2_bounds.low[0]);    // x-
+  xyzv_bounds->setHigh(0, se2_bounds.high[0]);  // x+
+  xyzv_bounds->setLow(1, se2_bounds.low[0]);    // y-
+  xyzv_bounds->setHigh(1, se2_bounds.high[0]);  // y+
+  xyzv_bounds->setLow(2, z_bounds.low[0]);      // z-
+  xyzv_bounds->setHigh(2, z_bounds.high[0]);    // z+
+  xyzv_bounds->setLow(3, v_bounds.low[0]);      // v-
+  xyzv_bounds->setHigh(3, v_bounds.high[0]);    // v+
+
+  as<RealVectorStateSpace>(1)->setBounds(*xyzv_bounds);
 
   se2_->setBounds(se2_bounds);
   dubins_->setBounds(se2_bounds);
   reeds_sheep_->setBounds(se2_bounds);
-  real_vector_->setBounds(*z_and_v_bounds);
+  real_vector_->setBounds(*xyzv_bounds);
 }
 
 void ElevationStateSpace::enforceBounds(State * state) const
 {
-  auto * se2 = state->as<StateType>()->as<SE2StateSpace::StateType>(0);
-  auto * z_and_v = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+  auto * xyzv = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  se2_->enforceBounds(se2);
-  real_vector_->enforceBounds(z_and_v);
+  real_vector_->enforceBounds(xyzv);
 }
 
 
 const RealVectorBounds ElevationStateSpace::getBounds() const
 {
-  auto merged_bounds = std::make_shared<ompl::base::RealVectorBounds>(4);
-  merged_bounds->setLow(0, as<SE2StateSpace>(0)->getBounds().low[0]);
-  merged_bounds->setHigh(0, as<SE2StateSpace>(0)->getBounds().high[0]);
-  merged_bounds->setLow(1, as<SE2StateSpace>(0)->getBounds().low[1]);
-  merged_bounds->setHigh(1, as<SE2StateSpace>(0)->getBounds().high[1]);
-  merged_bounds->setLow(2, as<RealVectorStateSpace>(1)->getBounds().low[0]);
-  merged_bounds->setHigh(2, as<RealVectorStateSpace>(1)->getBounds().high[0]);
-  merged_bounds->setLow(3, as<RealVectorStateSpace>(1)->getBounds().low[1]);
-  merged_bounds->setHigh(3, as<RealVectorStateSpace>(1)->getBounds().high[1]);
+  auto merged_bounds = std::make_shared<ompl::base::RealVectorBounds>(5);
+  merged_bounds->setLow(0, -M_PI);
+  merged_bounds->setHigh(0, M_PI);
+  merged_bounds->setLow(1, as<RealVectorStateSpace>(1)->getBounds().low[0]);
+  merged_bounds->setHigh(1, as<RealVectorStateSpace>(1)->getBounds().high[0]);
+  merged_bounds->setLow(2, as<RealVectorStateSpace>(1)->getBounds().low[1]);
+  merged_bounds->setHigh(2, as<RealVectorStateSpace>(1)->getBounds().high[1]);
+  merged_bounds->setLow(3, as<RealVectorStateSpace>(1)->getBounds().low[0]);
+  merged_bounds->setHigh(3, as<RealVectorStateSpace>(1)->getBounds().high[0]);
+  merged_bounds->setLow(4, as<RealVectorStateSpace>(1)->getBounds().low[1]);
+  merged_bounds->setHigh(4, as<RealVectorStateSpace>(1)->getBounds().high[1]);
   return *merged_bounds;
 }
 
@@ -162,22 +166,25 @@ void ElevationStateSpace::freeState(State * state) const
 
 double ompl::base::ElevationStateSpace::distance(const State * state1, const State * state2) const
 {
-  const auto * state1_se2 =
-    state1->as<StateType>()->as<SE2StateSpace::StateType>(0);
-  const auto * state1_z =
-    state1->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
-  const auto * state2_se2 =
-    state2->as<StateType>()->as<SE2StateSpace::StateType>(0);
-  const auto * state2_z =
-    state2->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+
+  const auto * state1_so2 = state1->as<StateType>()->as<SO2StateSpace::StateType>(0);
+  const auto * state1_xyzv = state1->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+
+  const auto * state2_so2 = state2->as<StateType>()->as<SO2StateSpace::StateType>(0);
+  const auto * state2_xyzv = state2->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+
+  auto state1_se2 = se2_->allocState(); auto state2_se2 = se2_->allocState();
+  state1_se2->as<SE2StateSpace::StateType>()->setXY(state1_xyzv->values[0], state1_xyzv->values[1]);
+  state1_se2->as<SE2StateSpace::StateType>()->setYaw(state1_so2->value);
+  state2_se2->as<SE2StateSpace::StateType>()->setXY(state2_xyzv->values[0], state2_xyzv->values[1]);
+  state2_se2->as<SE2StateSpace::StateType>()->setYaw(state2_so2->value);
 
   if (se2_state_type_ == SE2StateType::SE2) {
     return std::sqrt(
-      std::pow(state1_se2->getX() - state2_se2->getX(), 2) +
-      std::pow(state1_se2->getY() - state2_se2->getY(), 2) +
-      std::pow(state1_z->values[0] - state2_z->values[0], 2));
+      std::pow(state1_xyzv->values[0] - state2_xyzv->values[0], 2) +
+      std::pow(state1_xyzv->values[1] - state2_xyzv->values[1], 2) +
+      std::pow(state1_xyzv->values[2] - state2_xyzv->values[2], 2));
 
-    //return se2_->distance(state1_se2, state2_se2);
   } else if (se2_state_type_ == SE2StateType::DUBINS) {
     if (isSymmetric_) {
       return rho_ * std::min(
@@ -195,45 +202,58 @@ void ompl::base::ElevationStateSpace::interpolate(
   const State * from, const State * to, double t,
   State * state) const
 {
-  const auto * from_dubins = from->as<StateType>()->as<SE2StateSpace::StateType>(0);
-  const auto * from_z = from->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+  const auto * from_so2 = from->as<StateType>()->as<SO2StateSpace::StateType>(0);
+  const auto * from_xyzv = from->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  const auto * to_dubins = to->as<StateType>()->as<SE2StateSpace::StateType>(0);
-  const auto * to_z = to->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+  const auto * to_so2 = to->as<StateType>()->as<SO2StateSpace::StateType>(0);
+  const auto * to_xyzv = to->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  auto * state_dubins = state->as<StateType>()->as<SE2StateSpace::StateType>(0);
-  auto * state_z = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+  auto * interpolated_so2 = state->as<StateType>()->as<SO2StateSpace::StateType>(0);
+  auto * interpolated_xyzv = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+
+  auto from_se2 = se2_->allocState(); auto to_se2 = se2_->allocState();
+  from_se2->as<SE2StateSpace::StateType>()->setXY(from_xyzv->values[0], from_xyzv->values[1]);
+  from_se2->as<SE2StateSpace::StateType>()->setYaw(from_so2->value);
+  to_se2->as<SE2StateSpace::StateType>()->setXY(to_xyzv->values[0], to_xyzv->values[1]);
+  to_se2->as<SE2StateSpace::StateType>()->setYaw(to_so2->value);
+
+  auto interpolated_se2 = se2_->allocState();  // This has X, Y , SO2
 
   if (se2_state_type_ == SE2StateType::SE2) {
-    se2_->interpolate(from_dubins, to_dubins, t, state_dubins);
+    se2_->interpolate(from_se2, to_se2, t, interpolated_se2);
   } else if (se2_state_type_ == SE2StateType::DUBINS) {
-    dubins_->interpolate(from_dubins, to_dubins, t, state_dubins);
+    dubins_->interpolate(from_se2, to_se2, t, interpolated_se2);
   } else {
-    reeds_sheep_->interpolate(from_dubins, to_dubins, t, state_dubins);
+    reeds_sheep_->interpolate(from_se2, to_se2, t, interpolated_se2);
   }
 
-  pcl::PointSurfel dubins_surfel, nearest_intermediate_surfel;
+  interpolated_so2->value = interpolated_se2->as<SE2StateSpace::StateType>()->getYaw();     // so2
+  interpolated_xyzv->values[0] = interpolated_se2->as<SE2StateSpace::StateType>()->getX();  // x
+  interpolated_xyzv->values[1] = interpolated_se2->as<SE2StateSpace::StateType>()->getY();  // y
+  interpolated_xyzv->values[2] = (from_xyzv->values[2] + to_xyzv->values[2]) / 2.0;         // z
+  interpolated_xyzv->values[3] = (from_xyzv->values[3] + to_xyzv->values[3]) / 2.0;         // v
+
+  /*pcl::PointSurfel dubins_surfel, nearest_intermediate_surfel;
   dubins_surfel.x = state_dubins->getX();
   dubins_surfel.y = state_dubins->getY();
   dubins_surfel.z = from_z->values[0];
 
   // WARN , This is too expensive
-  /*nearest_intermediate_surfel = vox_nav_utilities::getNearstPoint<
+  nearest_intermediate_surfel = vox_nav_utilities::getNearstPoint<
     pcl::PointSurfel,
     pcl::PointCloud<pcl::PointSurfel>::Ptr>(
     dubins_surfel,
     workspace_surfels_);
   state_z->values[0] = nearest_intermediate_surfel.z;*/
 
-  state_z->values[0] = (from_z->values[0] + to_z->values[0]) / 2.0;
 }
 
 void ompl::base::ElevationStateSpace::printState(const State * state, std::ostream & out) const
 {
-  auto * se2 = state->as<StateType>()->as<SE2StateSpace::StateType>(0);
-  auto * z_and_v = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
-  se2_->printState(se2, out);
-  real_vector_->printState(z_and_v, out);
+  auto * so2 = state->as<StateType>()->as<SO2StateSpace::StateType>(0);
+  auto * xyzv = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
+  se2_->printState(so2, out);
+  real_vector_->printState(xyzv, out);
 }
 
 
@@ -264,10 +284,8 @@ bool OctoCellValidStateSampler::sample(ompl::base::State * state)
   auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
   auto val = (*int_distr_)(rng_);
   auto out_sample = search_area_surfels_->points.at(val);
-  cstate->setSE2(
-    out_sample.x,
-    out_sample.y, 0);
-  cstate->setZ(out_sample.z);
+  cstate->setXYZV(out_sample.x, out_sample.y, out_sample.z, 0);
+  cstate->setSO2(0);
   return true;
 }
 
@@ -277,13 +295,13 @@ bool OctoCellValidStateSampler::sampleNear(
 {
   auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
   auto * near_cstate = near->as<ompl::base::ElevationStateSpace::StateType>();
-  const auto * se2 = near_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-  const auto * z = near_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+  const auto * so2 = near_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+  const auto * xyzv = near_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
 
   pcl::PointSurfel surfel;
-  surfel.x = se2->getX();
-  surfel.y = se2->getY();
-  surfel.z = z->values[0];
+  surfel.x = xyzv->values[0];
+  surfel.y = xyzv->values[1];
+  surfel.z = xyzv->values[2];
 
   auto out_sample = vox_nav_utilities::getNearstRPoints<
     pcl::PointSurfel,
@@ -292,10 +310,8 @@ bool OctoCellValidStateSampler::sampleNear(
     surfel,
     search_area_surfels_);
 
-  cstate->setSE2(
-    out_sample.x,
-    out_sample.y, 0);
-  cstate->setZ(out_sample.z);
+  cstate->setXYZV(out_sample.x, out_sample.y, out_sample.z, 0);
+  cstate->setSO2(0);
 
   return true;
 }

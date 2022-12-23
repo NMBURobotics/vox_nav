@@ -57,9 +57,9 @@ void ompl::control::AITStarKin::setup()
   }
 
   if (!informed_sampler_) {
-    /*informed_sampler_ = std::make_shared<base::PathLengthDirectInfSampler>(
+    informed_sampler_ = std::make_shared<base::PathLengthDirectInfSampler>(
       pdef_,
-      std::numeric_limits<double>::infinity());*/
+      std::numeric_limits<double>::infinity());
   }
 
   if (!controlSampler_) {
@@ -385,13 +385,13 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
     }
 
     const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * target_se2 = target_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-    const auto * target_z = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
 
     geometry_msgs::msg::Point point;
-    point.x = target_se2->getX();
-    point.y = target_se2->getY();
-    point.z = target_z->values[0];
+    point.x = target_xyzv->values[0];
+    point.y = target_xyzv->values[1];
+    point.z = target_xyzv->values[2];
     std_msgs::msg::ColorRGBA color;
     color.a = 1.0;
     color.g = is_goal_or_start;
@@ -460,18 +460,19 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
 
     geometry_msgs::msg::Point source_point, target_point;
     const auto * source_cstate = g[u].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * source_se2 = source_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-    const auto * source_z = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    source_point.x = source_se2->getX();
-    source_point.y = source_se2->getY();
-    source_point.z = source_z->values[0];
-    const auto * target_cstate = g[v].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * target_se2 = target_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-    const auto * target_z = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+    const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    source_point.x = source_xyzv->values[0];
+    source_point.y = source_xyzv->values[1];
+    source_point.z = source_xyzv->values[2];
 
-    target_point.x = target_se2->getX();
-    target_point.y = target_se2->getY();
-    target_point.z = target_z->values[0];
+    const auto * target_cstate = g[v].state->as<ompl::base::ElevationStateSpace::StateType>();
+    const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+    target_point.x = target_xyzv->values[0];
+    target_point.y = target_xyzv->values[1];
+    target_point.z = target_xyzv->values[2];
     line_strip.points.push_back(source_point);
     line_strip.colors.push_back(blue_color);
     line_strip.points.push_back(target_point);

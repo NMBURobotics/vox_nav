@@ -173,19 +173,22 @@ namespace vox_nav_planning
     ompl::base::State * result)
   {
     const auto * ee_start = start->as<ompl::base::ElevationStateSpace::StateType>();
-    // cast the abstract state type to the type we expect
-    const auto * se2 = ee_start->as<ompl::base::SE2StateSpace::StateType>(0);
-    // extract the second component of the state and cast it to what we expect
-    const double z = ee_start->as<ompl::base::RealVectorStateSpace::StateType>(1)->values[0];
-    const double v = ee_start->as<ompl::base::RealVectorStateSpace::StateType>(1)->values[1];
+    const auto * ee_start_so2 = ee_start->as<ompl::base::SO2StateSpace::StateType>(0);
+    const auto * ee_start_xyzv = ee_start->as<ompl::base::RealVectorStateSpace::StateType>(1);
     const double * ctrl = control->as<ompl::control::RealVectorControlSpace::ControlType>()->values;
 
-    result->as<ompl::base::ElevationStateSpace::StateType>()->setSE2(
-      se2->getX() + duration * v * std::cos(se2->getYaw()) /*X*/,
-      se2->getY() + duration * v * std::sin(se2->getYaw()) /*Y*/,
-      se2->getYaw() + duration * ctrl[1] /*Yaw*/);
-    result->as<ompl::base::ElevationStateSpace::StateType>()->setZ(z);
-    result->as<ompl::base::ElevationStateSpace::StateType>()->setVelocity(v + duration * ctrl[0]);
+    auto x = ee_start_xyzv->values[0];
+    auto y = ee_start_xyzv->values[1];
+    auto z = ee_start_xyzv->values[2];
+    auto v = ee_start_xyzv->values[3];
+    auto yaw = ee_start_so2->value;
+
+    result->as<ompl::base::ElevationStateSpace::StateType>()->setXYZV(
+      x + duration * v * std::cos(yaw) /*X*/,
+      y + duration * v * std::sin(yaw) /*Y*/,
+      z /*Z*/,
+      v + duration * ctrl[0] /*V*/);
+    result->as<ompl::base::ElevationStateSpace::StateType>()->setSO2(yaw + duration * ctrl[1]);
 
     si->enforceBounds(result);
   }
@@ -249,25 +252,20 @@ namespace vox_nav_planning
         nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
         nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
 
-        random_start->setSE2(
+        random_start->setXYZV(
           nearest_elevated_surfel_to_start_.pose.position.x,
-          nearest_elevated_surfel_to_start_.pose.position.y, 0);
-        random_start->setYaw(start_yaw);
-        random_start->setZ(nearest_elevated_surfel_to_start_.pose.position.z);
-        random_start->setVelocity(0);
+          nearest_elevated_surfel_to_start_.pose.position.y,
+          nearest_elevated_surfel_to_start_.pose.position.z, 0);
+        random_start->setSO2(start_yaw);
 
-        random_goal->setSE2(
+        random_goal->setXYZV(
           nearest_elevated_surfel_to_goal_.pose.position.x,
-          nearest_elevated_surfel_to_goal_.pose.position.y, 0);
-        random_goal->setYaw(goal_yaw);
-        random_goal->setZ(nearest_elevated_surfel_to_goal_.pose.position.z);
-        random_goal->setVelocity(0);
+          nearest_elevated_surfel_to_goal_.pose.position.y,
+          nearest_elevated_surfel_to_goal_.pose.position.z, 0);
+        random_goal->setSO2(goal_yaw);
 
         // the distance should be above a certain threshold
-        double distance =
-          std::sqrt(
-          std::pow(random_goal->getSE2()->getX() - random_start->getSE2()->getX(), 2) +
-          std::pow(random_goal->getSE2()->getY() - random_start->getSE2()->getY(), 2));
+        double distance = state_space_->distance(random_start.get(), random_goal.get());
 
         // create a planner for the defined space
         ompl::base::PlannerPtr rrtstar_planner;
@@ -315,15 +313,15 @@ namespace vox_nav_planning
         this->get_logger(),
         "A valid random start and goal states has been found.");*/
 
-      start_.x = random_start->getSE2()->getX();
-      start_.y = random_start->getSE2()->getY();
-      start_.z = random_start->getZ()->values[0];
-      start_.yaw = random_start->getSE2()->getYaw();
+      start_.x = random_start->getXYZV()->values[0];
+      start_.y = random_start->getXYZV()->values[1];
+      start_.z = random_start->getXYZV()->values[2];
+      start_.yaw = random_start->getSO2()->value;
 
-      goal_.x = random_goal->getSE2()->getX();
-      goal_.y = random_goal->getSE2()->getY();
-      goal_.z = random_goal->getZ()->values[0];
-      goal_.yaw = random_goal->getSE2()->getYaw();
+      goal_.x = random_goal->getXYZV()->values[0];
+      goal_.y = random_goal->getXYZV()->values[1];
+      goal_.z = random_goal->getXYZV()->values[2];
+      goal_.yaw = random_goal->getSO2()->value;
 
       // ompl::tools::Benchmark benchmark(*control_simple_setup_, "benchmark");
       std::mutex plan_mutex;
@@ -405,14 +403,14 @@ namespace vox_nav_planning
   {
     const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
     // cast the abstract state type to the type we expect
-    const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+    const auto * so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
     // extract the second component of the state and cast it to what we expect
-    const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    const auto * xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
     fcl::CollisionRequestf requestType(1, false, 1, false);
     // check validity of state Fdefined by pos & rot
-    fcl::Vector3f translation(se2->getX(), se2->getY(), z->values[0]);
+    fcl::Vector3f translation(xyzv->values[0], xyzv->values[1], xyzv->values[2]);
     tf2::Quaternion myQuaternion;
-    myQuaternion.setRPY(0, 0, se2->getYaw());
+    myQuaternion.setRPY(0, 0, so2->value);
     fcl::Quaternionf rotation(
       myQuaternion.getX(), myQuaternion.getY(),
       myQuaternion.getZ(), myQuaternion.getW());
@@ -462,13 +460,13 @@ namespace vox_nav_planning
         const auto * cstate =
           it->second.getState(curr_path_state)->as<ompl::base::ElevationStateSpace::StateType>();
         // cast the abstract state type to the type we expect
-        const auto * se2 = cstate->as<ompl::base::SE2StateSpace::StateType>(0);
+        const auto * so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
         // extract the second component of the state and cast it to what we expect
-        const auto * z = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        const auto * xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
         geometry_msgs::msg::Point p;
-        p.x = se2->getX();
-        p.y = se2->getY();
-        p.z = z->values[0];
+        p.x = xyzv->values[0];
+        p.y = xyzv->values[1];
+        p.z = xyzv->values[2];
         //marker.points.push_back(p);
         //marker.colors.push_back(getColorByIndex(it->first));
 

@@ -131,11 +131,12 @@ namespace ompl
         for (int i = 0; i < n_expand; i++) {
           auto * new_node_cstate =
             new_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
-          double x = new_node_cstate->getSE2()->getX() + path_resolution_ * std::cos(theta);
-          double y = new_node_cstate->getSE2()->getY() + path_resolution_ * std::sin(theta);
-          double z = new_node_cstate->getZ()->values[0] + path_resolution_ * std::sin(beta);
-          new_node_cstate->setSE2(x, y, 0);
-          new_node_cstate->setZ(z);
+
+          double x = new_node_cstate->getXYZV()->values[0] + path_resolution_ * std::cos(theta);
+          double y = new_node_cstate->getXYZV()->values[1] + path_resolution_ * std::sin(theta);
+          double z = new_node_cstate->getXYZV()->values[2] + path_resolution_ * std::sin(beta);
+          new_node_cstate->setXYZV(x, y, z, 0);
+          new_node_cstate->setSO2(0);
           new_node->path_.push_back(new_node->state_);
         }
 
@@ -150,11 +151,13 @@ namespace ompl
           auto * to_node_cstate =
             to_node->state_->as<ompl::base::ElevationStateSpace::StateType>();
 
-          auto * to_node_se2 = to_node_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-
           new_node->path_.push_back(to_node->state_);
-          new_node_cstate->setSE2(to_node_se2->getX(), to_node_se2->getY(), 0);
-          new_node_cstate->setZ(to_node_cstate->getZ()->values[0]);
+          new_node_cstate->setXYZV(
+            to_node_cstate->getXYZV()->values[0],
+            to_node_cstate->getXYZV()->values[1],
+            to_node_cstate->getXYZV()->values[2],
+            to_node_cstate->getXYZV()->values[3]);
+          new_node_cstate->setSO2(to_node_cstate->getSO2()->value);
         }
 
         new_node->parent_ = from_node;
@@ -164,21 +167,14 @@ namespace ompl
 
       std::tuple<double, double, double> calc_distance_and_angle(Node * from_node, Node * to_node)
       {
-        const auto * from_node_se2 =
-          from_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
-          0);
-        const auto * from_node_z =
-          from_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
-          1);
-        const auto * to_node_se2 =
-          to_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::SE2StateSpace::StateType>(
-          0);
-        const auto * to_node_z =
-          to_node->state_->as<base::ElevationStateSpace::StateType>()->as<base::RealVectorStateSpace::StateType>(
-          1);
-        double dx = to_node_se2->getX() - from_node_se2->getX();
-        double dy = to_node_se2->getY() - from_node_se2->getY();
-        double dz = to_node_z->values[0] - from_node_z->values[0];
+        auto * from_node_cstate =
+          from_node->state_->as<base::ElevationStateSpace::StateType>();
+        auto * to_node_cstate = to_node->state_->as<base::ElevationStateSpace::StateType>();
+
+        double dx = to_node_cstate->getXYZV()->values[0] - from_node_cstate->getXYZV()->values[0];
+        double dy = to_node_cstate->getXYZV()->values[1] - from_node_cstate->getXYZV()->values[1];
+        double dz = to_node_cstate->getXYZV()->values[2] - from_node_cstate->getXYZV()->values[2];
+
         double d = std::hypot(dx, dy, dz);
         double theta = std::atan2(dy, dx);
         double beta = std::atan2(dz, std::hypot(dx, dy));
@@ -353,7 +349,7 @@ namespace ompl
               prev_node->as<ompl::base::ElevationStateSpace::StateType>();
             auto * latest_arrived_cstate =
               lqr_path_states.back()->as<ompl::base::ElevationStateSpace::StateType>();
-            prev_node_cstate->setYaw(latest_arrived_cstate->getSE2()->getYaw());
+            prev_node_cstate->setSO2(latest_arrived_cstate->getSO2()->value);
             lqr_planner_->compute_LQR_plan(
               prev_node, cur_node, resulting_path);
           }

@@ -121,41 +121,29 @@ namespace ompl
       public:
         StateType() = default;
 
-        void setSE2(double x, double y, double yaw)
+        void setXYZV(double x, double y, double z, double v)
         {
-          as<SE2StateSpace::StateType>(0)->setXY(x, y);
-          as<SE2StateSpace::StateType>(0)->setYaw(yaw);
+          as<RealVectorStateSpace::StateType>(1)->values[0] = x;
+          as<RealVectorStateSpace::StateType>(1)->values[1] = y;
+          as<RealVectorStateSpace::StateType>(1)->values[2] = z;
+          as<RealVectorStateSpace::StateType>(1)->values[3] = v;
         }
 
-        void setYaw(double yaw)
+        void setSO2(double yaw)
         {
-          as<SE2StateSpace::StateType>(0)->setYaw(yaw);
+          as<SO2StateSpace::StateType>(0)->value = yaw;
         }
 
-        void setZ(double z)
+        SO2StateSpace::StateType * getSO2()
         {
-          as<RealVectorStateSpace::StateType>(1)->values[0] = z;
+          return as<SO2StateSpace::StateType>(0);
         }
 
-        void setVelocity(double v)
-        {
-          as<RealVectorStateSpace::StateType>(1)->values[1] = v;
-        }
-
-        SE2StateSpace::StateType * getSE2()
-        {
-          return as<SE2StateSpace::StateType>(0);
-        }
-
-        RealVectorStateSpace::StateType * getZ()
+        RealVectorStateSpace::StateType * getXYZV()
         {
           return as<RealVectorStateSpace::StateType>(1);
         }
 
-        RealVectorStateSpace::StateType * getVelocity()
-        {
-          return as<RealVectorStateSpace::StateType>(1);
-        }
       };
 
       enum SE2StateType

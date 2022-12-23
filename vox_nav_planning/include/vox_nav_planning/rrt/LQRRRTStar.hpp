@@ -136,11 +136,12 @@ namespace ompl
           auto * last_node_cstate =
             resulting_path.back()->as<ompl::base::ElevationStateSpace::StateType>();
 
-          new_node_cstate->setSE2(
-            last_node_cstate->getSE2()->getX(),
-            last_node_cstate->getSE2()->getY(),
-            last_node_cstate->getSE2()->getYaw());
-          new_node_cstate->setZ(last_node_cstate->getZ()->values[0]);
+          new_node_cstate->setXYZV(
+            last_node_cstate->getXYZV()->values[0],
+            last_node_cstate->getXYZV()->values[1],
+            last_node_cstate->getXYZV()->values[2],
+            last_node_cstate->getXYZV()->values[3]);
+          new_node_cstate->setSO2(last_node_cstate->getSO2()->value);
 
           double cost = std::accumulate(clen.begin(), clen.end(), 0.0);
           *relative_cost = cost;

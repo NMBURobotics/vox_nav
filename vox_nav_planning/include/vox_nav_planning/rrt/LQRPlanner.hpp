@@ -147,11 +147,12 @@ namespace ompl
         resulting_path.push_back(start_state);
 
         const auto * start_cstate = start_state->as<ompl::base::ElevationStateSpace::StateType>();
-        const auto * start_se2 = start_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        const auto * start_z = start_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        const auto * start_so2 = start_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+        const auto * start_xyzv = start_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
         const auto * goal_cstate = goal_state->as<ompl::base::ElevationStateSpace::StateType>();
-        const auto * goal_se2 = goal_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-        const auto * goal_z = goal_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+        const auto * goal_so2 = goal_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+        const auto * goal_xyzv = goal_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
 
         std::tuple<Eigen::Matrix2d, Eigen::Vector2d,
           Eigen::Matrix2d, double> ABQR = getABQR();
@@ -166,16 +167,17 @@ namespace ompl
 
           auto * latest_cstate =
             resulting_path.back()->as<ompl::base::ElevationStateSpace::StateType>();
-          const auto * latest_se2 = latest_cstate->as<ompl::base::SE2StateSpace::StateType>(0);
-          const auto * latest_z = latest_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+          const auto * latest_so2 = latest_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+          const auto * latest_xyzv = latest_cstate->as<ompl::base::RealVectorStateSpace::StateType>(
+            1);
 
-          double xc = latest_se2->getX();
-          double yc = latest_se2->getY();
-          double thetac = latest_se2->getYaw();
+          double xc = latest_xyzv->values[0];
+          double yc = latest_xyzv->values[1];
+          double thetac = latest_so2->value;
 
           double theta_r = std::atan2(
-            (yc - start_se2->getY()),
-            (xc - start_se2->getX()));
+            (yc - start_xyzv->values[1]),
+            (xc - start_xyzv->values[0]));
 
           Eigen::MatrixXd T(3, 3);
           T <<
@@ -184,8 +186,8 @@ namespace ompl
             0, 0, 1;
 
           Eigen::VectorXd e(3);
-          e(0) = xc - goal_se2->getX();
-          e(1) = yc - goal_se2->getY();
+          e(0) = xc - goal_xyzv->values[0];
+          e(1) = yc - goal_xyzv->values[1];
           e(2) = thetac - theta_r;
 
           Eigen::Vector3d Te_dynamics = T * e;
@@ -204,22 +206,23 @@ namespace ompl
           auto * this_cstate = this_state->as<ompl::base::ElevationStateSpace::StateType>();
 
           /*propogate according to car-like dynamics*/
-          this_cstate->setSE2(
-            xc + dt_ * U(0) * std::cos(thetac),
-            yc + dt_ * U(0) * std::sin(thetac),
-            thetac + dt_ * (U(0) * std::tan(U(1)) / L_)
-          );
-          // linear inetrpolation for intermediate z values
-          double z_avg = (goal_z->values[0] + start_z->values[0]) / 2.0;
-          this_cstate->setZ(z_avg);
-
           auto d_to_goal = si_->distance(this_state, goal_state);
           auto d_to_start = si_->distance(this_state, start_state);
 
           // linear inetrpolation for intermediate z values
-          double true_z = ((start_z->values[0] * d_to_goal) + (goal_z->values[0] * d_to_start)) /
+          double true_z =
+            ((start_xyzv->values[2] * d_to_goal) + (goal_xyzv->values[2] * d_to_start)) /
             (d_to_start + d_to_goal );
-          this_cstate->setZ(true_z);
+          this_cstate->setXYZV(
+            xc + dt_ * U(0) * std::cos(thetac),
+            yc + dt_ * U(0) * std::sin(thetac),
+            true_z,
+            U(0)
+          );
+
+          this_cstate->setSO2(
+            thetac + dt_ * (U(0) * std::tan(U(1)) / L_)
+          );
 
           if (si_->distance(this_state, goal_state) < goal_tolerance_) {
             // if Reached the goal or max time reached, break the loop
