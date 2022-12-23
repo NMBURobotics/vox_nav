@@ -255,7 +255,7 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
       pdef_->addSolutionPath(path, approximate, approxdif, getName());
       OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
     } else if (!solv && (path->length() > 1.0 )) { // approx
-      solved = false;
+      solved = true;
       approximate = true;
       pdef_->addSolutionPath(path, approximate, approxdif, getName());
       OMPL_INFORM(
