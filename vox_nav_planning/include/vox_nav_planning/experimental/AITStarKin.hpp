@@ -36,6 +36,7 @@
 #include "ompl/datastructures/NearestNeighbors.h"
 #include "ompl/datastructures/LPAstarOnGraph.h"
 #include "ompl/base/samplers/informed/PathLengthDirectInfSampler.h"
+#include "ompl/base/samplers/informed/RejectionInfSampler.h"
 
 #include "rclcpp/rclcpp.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -124,7 +125,9 @@ namespace ompl
       /** \brief State sampler */
       base::ValidStateSamplerPtr valid_state_sampler_{nullptr};
 
-      std::shared_ptr<base::PathLengthDirectInfSampler> informed_sampler_{nullptr};
+      std::shared_ptr<base::PathLengthDirectInfSampler> path_informed_sampler_{nullptr};
+
+      std::shared_ptr<base::RejectionInfSampler> rejection_informed_sampler_{nullptr};
 
       /** \brief The optimization objective. */
       base::OptimizationObjectivePtr opt_{nullptr};

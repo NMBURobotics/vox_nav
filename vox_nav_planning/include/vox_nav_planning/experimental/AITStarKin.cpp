@@ -56,8 +56,14 @@ void ompl::control::AITStarKin::setup()
     sampler_ = si_->allocStateSampler();
   }
 
-  if (!informed_sampler_) {
-    informed_sampler_ = std::make_shared<base::PathLengthDirectInfSampler>(
+  if (!path_informed_sampler_) {
+    path_informed_sampler_ = std::make_shared<base::PathLengthDirectInfSampler>(
+      pdef_,
+      std::numeric_limits<double>::infinity());
+  }
+
+  if (!rejection_informed_sampler_) {
+    rejection_informed_sampler_ = std::make_shared<base::RejectionInfSampler>(
       pdef_,
       std::numeric_limits<double>::infinity());
   }
@@ -342,7 +348,9 @@ void ompl::control::AITStarKin::generateBatchofSamples(
       do{
         // Sample the associated state uniformly within the informed set.
         //sampler_->sampleUniform(samples.back());
-        informed_sampler_->sampleUniform(samples.back(), bestCost_);
+        //path_informed_sampler_->sampleUniform(samples.back(), bestCost_);
+        rejection_informed_sampler_->sampleUniform(samples.back(), bestCost_);
+
         // Count how many states we've checked.
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));
     }
