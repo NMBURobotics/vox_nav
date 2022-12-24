@@ -88,9 +88,8 @@ namespace ompl
       struct VertexProperty
       {
         ompl::base::State * state{nullptr};
-        std::uintptr_t state_label{0};
         std::size_t id{0};
-        double g{0.0};
+        double g{std::numeric_limits<double>::infinity()};
         double rhs{0.0};
         bool blacklisted{false};
       };
@@ -106,6 +105,11 @@ namespace ompl
       }
 
       const VertexProperty * getVertex(std::size_t id)
+      {
+        return &g_[id];
+      }
+
+      VertexProperty * getVertexMutable(std::size_t id)
       {
         return &g_[id];
       }
@@ -154,7 +158,7 @@ namespace ompl
 
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> nn_;
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rrt_nodes_pub_;
-      rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr heur_pub_;
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr heur_pub_;
       rclcpp::Node::SharedPtr node_;
 
       friend class GenericDistanceHeuristic;
@@ -178,38 +182,69 @@ namespace ompl
         VertexProperty * goal_;
       };  // GenericDistanceHeuristic
 
-
-      // exception for termination
-      struct FoundGoal {};
-
-      template<class Vertex>
-      class custom_goal_visitor : public boost::default_astar_visitor
+      friend class PrecomputedCostHeuristic;
+      template<class Graph, class CostType>
+      class PrecomputedCostHeuristic : public boost::astar_heuristic<Graph, CostType>
       {
       public:
-        custom_goal_visitor(Vertex start_vertex, int * num_visits, AITStarKin * alg)
-        : start_vertex_(start_vertex),
+        typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
+        PrecomputedCostHeuristic(AITStarKin * alg)
+        : alg_(alg)
+        {
+        }
+        double operator()(vertex_descriptor i)
+        {
+          double cost{std::numeric_limits<double>::infinity()};
+          // verify that the state is valid
+          if (alg_->si_->isValid(alg_->getVertex(i)->state)) {
+            cost = alg_->getVertex(i)->g;
+          } else {
+            alg_->getVertexMutable(i)->blacklisted = true;
+            alg_->getVertexMutable(i)->g = std::numeric_limits<double>::infinity();
+          }
+          return cost;
+        }
+
+      private:
+        AITStarKin * alg_;
+      };  // PrecomputedCostHeuristic
+
+
+      // exception for termination
+      struct FoundVertex {};
+
+      friend class SimpleVertexVisitor;
+      template<class Vertex>
+      class SimpleVertexVisitor : public boost::default_astar_visitor
+      {
+      public:
+        SimpleVertexVisitor(Vertex goal_vertex, int * num_visits, AITStarKin * alg)
+        : goal_vertex_(goal_vertex),
           num_visits_(num_visits),
           alg_(alg)
         {
         }
+
         template<class Graph>
         void examine_vertex(Vertex u, Graph & g)
         {
           // check whether examined vertex was goal, if yes throw
           ++(*num_visits_);
-          if (u == start_vertex_) {
-            throw FoundGoal();
+
+          if (u == goal_vertex_) {
+            throw FoundVertex();
           }
         }
 
       private:
-        Vertex start_vertex_;
+        Vertex goal_vertex_;
         int * num_visits_;
         AITStarKin * alg_;
-      };
+      };  // SimpleVertexVisitor
 
-      VertexProperty start_vertex_;
-      VertexProperty goal_vertex_;
+
+      VertexProperty * start_vertex_{nullptr};
+      VertexProperty * goal_vertex_{nullptr};
 
       GraphT g_;
 

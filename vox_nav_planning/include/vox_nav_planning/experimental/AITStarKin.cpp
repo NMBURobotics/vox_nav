@@ -51,23 +51,19 @@ void ompl::control::AITStarKin::setup()
   if (!valid_state_sampler_) {
     valid_state_sampler_ = si_->allocValidStateSampler();
   }
-
   if (!sampler_) {
     sampler_ = si_->allocStateSampler();
   }
-
   if (!path_informed_sampler_) {
     path_informed_sampler_ = std::make_shared<base::PathLengthDirectInfSampler>(
       pdef_,
       std::numeric_limits<double>::infinity());
   }
-
   if (!rejection_informed_sampler_) {
     rejection_informed_sampler_ = std::make_shared<base::RejectionInfSampler>(
       pdef_,
       std::numeric_limits<double>::infinity());
   }
-
   if (!controlSampler_) {
     controlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, 100);
   }
@@ -78,7 +74,7 @@ void ompl::control::AITStarKin::setup()
     node_->create_publisher<visualization_msgs::msg::MarkerArray>(
     "vox_nav/rrtstar/nodes", rclcpp::SystemDefaultsQoS());
 
-  heur_pub_ = node_->create_publisher<visualization_msgs::msg::Marker>(
+  heur_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
     "vox_nav/rrtstar/heur", rclcpp::SystemDefaultsQoS());
 
 }
@@ -88,10 +84,19 @@ void ompl::control::AITStarKin::clear()
   Planner::clear();
   sampler_.reset();
   valid_state_sampler_.reset();
+  path_informed_sampler_.reset();
+  rejection_informed_sampler_.reset();
+
+  bestCost_ = opt_->infiniteCost();
+
   freeMemory();
   if (nn_) {
     nn_->clear();
   }
+  g_.clear();
+  g_ = GraphT();
+
+
 }
 
 void ompl::control::AITStarKin::freeMemory()
@@ -113,39 +118,37 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 {
 
   checkValidity();
+
+  goal_vertex_ = new VertexProperty();
+  start_vertex_ = new VertexProperty();
+
   base::Goal * goal = pdef_->getGoal().get();
   auto * goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
 
   // get the goal node and state
   auto * goal_state = si_->allocState();
-  VertexProperty * goal_vertex = new VertexProperty();
   while (const base::State * goal = pis_.nextGoal()) {
     si_->copyState(goal_state, goal);
   }
-  goal_vertex->state = goal_state;
-  nn_->add(goal_vertex);
+  goal_vertex_->state = goal_state;
+  nn_->add(goal_vertex_);
 
   // get start node and state,push  the node inton nn_ as well
   auto * start_state = si_->allocState();
-  VertexProperty * start_vertex = new VertexProperty();
   while (const base::State * st = pis_.nextStart()) {
     si_->copyState(start_state, st);
   }
-  start_vertex->state = start_state;
-  nn_->add(start_vertex);
+  start_vertex_->state = start_state;
+  nn_->add(start_vertex_);
 
   // Add goal and start to graph
   vertex_descriptor start_vertex_descriptor = boost::add_vertex(g_);
   vertex_descriptor goal_vertex_descriptor = boost::add_vertex(g_);
-  g_[start_vertex_descriptor].state = start_state;
-  g_[start_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(start_state);
-  g_[start_vertex_descriptor].id = start_vertex_descriptor;
+  start_vertex_->id = start_vertex_descriptor;
+  goal_vertex_->id = goal_vertex_descriptor;
+  g_[start_vertex_descriptor] = *start_vertex_;
+  g_[goal_vertex_descriptor] = *goal_vertex_;
 
-  g_[goal_vertex_descriptor].state = goal_state;
-  g_[goal_vertex_descriptor].state_label = reinterpret_cast<std::uintptr_t>(goal_state);
-  g_[goal_vertex_descriptor].id = goal_vertex_descriptor;
-  start_vertex_ = g_[start_vertex_descriptor];
-  goal_vertex_ = g_[goal_vertex_descriptor];
 
   if (nn_->size() == 0) {
     OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
@@ -172,7 +175,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     for (auto && i : samples) {
       VertexProperty * this_vertex_property = new VertexProperty();
       this_vertex_property->state = (i);
-      this_vertex_property->state_label = (reinterpret_cast<std::uintptr_t>(i));
       std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
       nn_->nearestR(this_vertex_property, radius_, nbh);
       if (nbh.size() > max_neighbors_) {
@@ -212,7 +214,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     }
 
     std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh;
-    nn_->nearestR(goal_vertex, radius_, goal_nbh);
+    nn_->nearestR(goal_vertex_, radius_, goal_nbh);
     if (goal_nbh.size() > max_neighbors_) {
       goal_nbh.resize(max_neighbors_);
     }
@@ -238,51 +240,71 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     std::vector<Cost> d(boost::num_vertices(g_));
     std::list<vertex_descriptor> shortest_path;
 
+    // Run A* backwards from goal to start
     try {
-      // Run A* backwards from goal to start
-      auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, Cost>(this, &start_vertex_);
-      auto c_visitor = custom_goal_visitor<vertex_descriptor>(
+      auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, Cost>(this, start_vertex_);
+      auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
         start_vertex_descriptor, &num_visited_nodes, this);
 
       boost::astar_search_tree(
         g_, goal_vertex_descriptor, heuristic,
         boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
 
-      OMPL_INFORM(
-        "%s: A* Failed to produce final collision free path after %d node visits.\n",
+      OMPL_WARN(
+        "%s: A* Failed to produce Heuristic that connects goal to start vertex after %d vertex visits.\n",
         getName().c_str(), num_visited_nodes);
 
-    } catch (FoundGoal found_goal) {
+    } catch (FoundVertex found_goal) {
 
-      OMPL_INFORM("%s: A valid geometric path has been found.\n", getName().c_str() );
-      // Found a path to the goal, catch the exception
-      for (vertex_descriptor v = start_vertex_.id;; v = p[v]) {
-        shortest_path.push_front(v);
-        if (p[v] == v) {break;}
+      // Catch the exception
+      // Found a Heuristic from start to the goal (no collision checks),
+      // We now have H function
+      for (auto vd : boost::make_iterator_range(vertices(g_))) {
+        g_[vd].g = d[vd];
       }
 
-      /* set the solution path */
-      auto path(std::make_shared<PathControl>(si_));
-      for (auto i : shortest_path) {
-        if (g_[i].state) {
-          path->append(g_[i].state);
+      p.clear(); d.clear();
+      p.resize(boost::num_vertices(g_));  d.resize(boost::num_vertices(g_));
+      num_visited_nodes = 0;
+
+      // Now we can run A* forwards from start to goal and check for collisions
+      try {
+        auto heuristic = PrecomputedCostHeuristic<GraphT, Cost>(this);
+        auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
+          goal_vertex_descriptor, &num_visited_nodes, this);
+
+        boost::astar_search_tree(
+          g_, start_vertex_descriptor, heuristic,
+          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+
+        OMPL_INFORM(
+          "%s: A* Failed to produce final collision free path after %d node visits.\n",
+          getName().c_str(), num_visited_nodes);
+
+      } catch (FoundVertex found_goal) {
+
+        // Found a collision free path to the goal, catch the exception
+        for (vertex_descriptor v = goal_vertex_->id;; v = p[v]) {
+          shortest_path.push_front(v);
+          if (p[v] == v) {break;}
         }
+
+        /* set the solution path */
+        auto path(std::make_shared<PathControl>(si_));
+        for (auto i : shortest_path) {
+          if (g_[i].state) {
+            path->append(g_[i].state);
+          }
+        }
+
+        bestCost_ = ompl::base::Cost(path->length());
+
+        // Create a solution.
+        ompl::base::PlannerSolution solution(path);
+        solution.setPlannerName(getName());
+        solution.setOptimized(opt_, bestCost_, opt_->isSatisfied(bestCost_));
+        pdef_->addSolutionPath(solution);
       }
-
-      bestCost_ = ompl::base::Cost(path->length());
-
-      // Create a solution.
-      ompl::base::PlannerSolution solution(path);
-      solution.setPlannerName(getName());
-
-      // Set the optimized flag.
-      solution.setOptimized(
-        opt_,
-        bestCost_,
-        opt_->isSatisfied(bestCost_));
-
-      // Let the problem definition know that a new solution exists.
-      pdef_->addSolutionPath(solution);
 
     }
 
@@ -411,7 +433,7 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
     }
 
     double is_goal_or_start{0.0};
-    if (g[vd].id == start_vertex_.id || g[vd].id == goal_vertex_.id) {
+    if (g[vd].id == start_vertex_->id || g[vd].id == goal_vertex_->id) {
       is_goal_or_start = 1.0;
     }
 
@@ -517,6 +539,7 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
 
 void ompl::control::AITStarKin::visualizeLPAHuer(const std::list<vertex_descriptor> & heur)
 {
+  visualization_msgs::msg::MarkerArray marker_array;
   visualization_msgs::msg::Marker line_strip;
   line_strip.header.frame_id = "map";
   line_strip.ns = "heur";
@@ -557,6 +580,26 @@ void ompl::control::AITStarKin::visualizeLPAHuer(const std::list<vertex_descript
     line_strip.colors.push_back(blue_color);
     line_strip.points.push_back(target_point);
     line_strip.colors.push_back(blue_color);
+
+    visualization_msgs::msg::Marker text;
+    text.header.frame_id = "map";
+    text.header.stamp = rclcpp::Clock().now();
+    text.ns = "rgg_costs";
+    text.id = g_[u].id;
+    text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+    text.action = visualization_msgs::msg::Marker::ADD;
+    text.lifetime = rclcpp::Duration::from_seconds(0);
+    text.text = std::to_string(g_[u].g);
+    text.pose.position = source_point;
+    text.pose.position.z += 0.5;
+    text.scale.x = 0.3;
+    text.scale.y = 0.3;
+    text.scale.z = 0.3;
+    text.color.a = 1.0;
+    text.color.r = 1.0;
+    marker_array.markers.push_back(text);
   }
-  heur_pub_->publish(line_strip);
+  marker_array.markers.push_back(line_strip);
+
+  heur_pub_->publish(marker_array);
 }
