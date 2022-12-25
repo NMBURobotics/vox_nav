@@ -231,11 +231,11 @@ namespace vox_nav_planning
       nearest_elevated_surfel_to_goal_.pose.position.z, 0);
     se3_goal->setSO2(goal_yaw);
 
-    control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, 0.5);
+    control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, 0.1);
 
     auto si = control_simple_setup_->getSpaceInformation();
-    si->setMinMaxControlDuration(1, 10);
-    si->setPropagationStepSize(0.1);
+    si->setMinMaxControlDuration(1, 100);
+    si->setPropagationStepSize(0.025);
 
     control_simple_setup_->setStatePropagator(
       [this, si](const ompl::base::State * state, const ompl::control::Control * control,

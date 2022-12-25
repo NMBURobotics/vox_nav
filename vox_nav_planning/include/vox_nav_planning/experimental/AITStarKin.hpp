@@ -89,8 +89,7 @@ namespace ompl
       {
         ompl::base::State * state{nullptr};
         std::size_t id{0};
-        double g{std::numeric_limits<double>::infinity()};
-        double rhs{0.0};
+        double g{1.0e+3};
         bool blacklisted{false};
       };
 
@@ -118,8 +117,10 @@ namespace ompl
       int batch_size_{500};
       double radius_{1.5}; // max edge length
       int max_neighbors_{10};
-      double min_dist_between_vertices_{0.025};
-      bool use_valid_sampler_{false};
+      double min_dist_between_vertices_{0.1};
+      bool use_valid_sampler_{true};
+      int k_number_of_controls_{10};
+      static bool const use_astar_hueristic_{false};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_{nullptr};
@@ -200,7 +201,6 @@ namespace ompl
             cost = alg_->getVertex(i)->g;
           } else {
             alg_->getVertexMutable(i)->blacklisted = true;
-            alg_->getVertexMutable(i)->g = std::numeric_limits<double>::infinity();
           }
           return cost;
         }

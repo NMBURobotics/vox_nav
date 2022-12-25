@@ -65,7 +65,7 @@ void ompl::control::AITStarKin::setup()
       std::numeric_limits<double>::infinity());
   }
   if (!controlSampler_) {
-    controlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, 100);
+    controlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, k_number_of_controls_);
   }
 
   // RVIZ VISUALIZATIONS
@@ -159,10 +159,12 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     "%s: Starting planning with %u states already in datastructure\n", getName().c_str(),
     nn_->size());
 
-  bool goal_reached;
   std::list<std::size_t> forwardPath, reversePath;
 
   WeightMap weightmap = get(boost::edge_weight, g_);
+
+  auto path(std::make_shared<PathControl>(si_));
+  bool goal_reached{false};
 
   while (ptc == false) {
 
@@ -246,9 +248,15 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
         start_vertex_descriptor, &num_visited_nodes, this);
 
-      boost::astar_search_tree(
-        g_, goal_vertex_descriptor, heuristic,
-        boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+      if constexpr (use_astar_hueristic_) {
+        boost::astar_search_tree(
+          g_, goal_vertex_descriptor, heuristic,
+          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+      } else {
+        boost::dijkstra_shortest_paths(
+          g_, goal_vertex_descriptor,
+          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+      }
 
       OMPL_WARN(
         "%s: A* Failed to produce Heuristic that connects goal to start vertex after %d vertex visits.\n",
@@ -269,13 +277,13 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
       // Now we can run A* forwards from start to goal and check for collisions
       try {
-        auto heuristic = PrecomputedCostHeuristic<GraphT, Cost>(this);
-        auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
+        auto h_heuristic = PrecomputedCostHeuristic<GraphT, Cost>(this);
+        auto generic_visitor = SimpleVertexVisitor<vertex_descriptor>(
           goal_vertex_descriptor, &num_visited_nodes, this);
 
         boost::astar_search_tree(
-          g_, start_vertex_descriptor, heuristic,
-          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+          g_, start_vertex_descriptor, h_heuristic,
+          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(generic_visitor));
 
         OMPL_INFORM(
           "%s: A* Failed to produce final collision free path after %d node visits.\n",
@@ -284,17 +292,49 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       } catch (FoundVertex found_goal) {
 
         // Found a collision free path to the goal, catch the exception
+        shortest_path.clear();
         for (vertex_descriptor v = goal_vertex_->id;; v = p[v]) {
+          if (g_[v].blacklisted) {
+            OMPL_WARN(
+              "%s: Found a blacklisted node most likely due to collision, this path is invalid but we will find another one.\n",
+              getName().c_str());
+            for (auto ed : boost::make_iterator_range(boost::out_edges(v, g_))) {
+              weightmap[ed] = std::numeric_limits<double>::infinity();
+            }
+          }
           shortest_path.push_front(v);
           if (p[v] == v) {break;}
         }
 
+        std::vector<base::State *> copy_shortest_path(shortest_path.size(), si_->allocState());
+        for (size_t i = 0; i < shortest_path.size(); i++) {
+          si_->copyState(copy_shortest_path[i], g_[*std::next(shortest_path.begin(), i)].state);
+        }
+
+        goal_reached = true;
+        std::reverse(copy_shortest_path.begin(), copy_shortest_path.end());
+
+        OMPL_INFORM("%s: Calculating Kinodynamic path.\n", getName().c_str());
+        /*for (size_t i = 1; i < copy_shortest_path.size(); i++) {
+          auto c = siC_->allocControl();
+          auto steps =
+            controlSampler_->sampleTo(c, copy_shortest_path[i - 1], copy_shortest_path[i]);
+        }*/
+
         /* set the solution path */
-        auto path(std::make_shared<PathControl>(si_));
-        for (auto i : shortest_path) {
-          if (g_[i].state) {
-            path->append(g_[i].state);
+        path = std::make_shared<PathControl>(si_);
+        for (auto i : copy_shortest_path) {
+          if (i) {
+            path->append(i);
           }
+        }
+
+        if (path->length() > bestCost_.value()) {
+          // This solution is worse than the previous one.
+          OMPL_INFORM(
+            "%s: Found suboptimal solution with cost %f > best cost %f.\n",
+            getName().c_str(), path->length(), bestCost_.value());
+          continue;
         }
 
         bestCost_ = ompl::base::Cost(path->length());
@@ -316,24 +356,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
     visualizeRGG(g_);
 
-  }
-
-  if (true) {
-    OMPL_INFORM("%s: Calculating Kinodynamic path.\n", getName().c_str());
-    for (size_t i = 1; i < forwardPath.size(); i++) {
-      auto c = siC_->allocControl();
-      auto prev_state_it = *std::next(forwardPath.begin(), i - 1);
-      auto curr_state_it = *std::next(forwardPath.begin(), i);
-      auto steps = controlSampler_->sampleTo(c, g_[prev_state_it].state, g_[curr_state_it].state);
-    }
-  }
-
-  /* set the solution path */
-  auto path(std::make_shared<PathControl>(si_));
-  for (auto i : forwardPath) {
-    if (g_[i].state) {
-      path->append(g_[i].state);
-    }
   }
 
   pdef_->addSolutionPath(path, false, 0.0, getName());
