@@ -95,8 +95,6 @@ void ompl::control::AITStarKin::clear()
   }
   g_.clear();
   g_ = GraphT();
-
-
 }
 
 void ompl::control::AITStarKin::freeMemory()
@@ -306,37 +304,50 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
           if (p[v] == v) {break;}
         }
 
-        std::vector<base::State *> copy_shortest_path(shortest_path.size(), si_->allocState());
+        std::vector<VertexProperty> copy_shortest_path(shortest_path.size(), VertexProperty());
+
         for (size_t i = 0; i < shortest_path.size(); i++) {
-          si_->copyState(copy_shortest_path[i], g_[*std::next(shortest_path.begin(), i)].state);
+          copy_shortest_path[i].id = g_[*std::next(shortest_path.begin(), i)].id;
+          copy_shortest_path[i].state = si_->allocState();
+          copy_shortest_path[i].blacklisted = g_[*std::next(shortest_path.begin(), i)].blacklisted;
+          copy_shortest_path[i].g = g_[*std::next(shortest_path.begin(), i)].g;
+          copy_shortest_path[i].control = siC_->allocControl();
+          si_->copyState(
+            copy_shortest_path[i].state,
+            g_[*std::next(shortest_path.begin(), i)].state);
         }
 
         goal_reached = true;
-        std::reverse(copy_shortest_path.begin(), copy_shortest_path.end());
 
         OMPL_INFORM("%s: Calculating Kinodynamic path.\n", getName().c_str());
-        /*for (size_t i = 1; i < copy_shortest_path.size(); i++) {
-          auto c = siC_->allocControl();
-          auto steps =
-            controlSampler_->sampleTo(c, copy_shortest_path[i - 1], copy_shortest_path[i]);
-        }*/
+        for (size_t i = 1; i < copy_shortest_path.size(); i++) {
+          auto duration = controlSampler_->sampleTo(
+            copy_shortest_path[i - 1].control,
+            copy_shortest_path[i - 1].state,
+            copy_shortest_path[i].state);
 
-        /* set the solution path */
-        path = std::make_shared<PathControl>(si_);
-        for (auto i : copy_shortest_path) {
-          if (i) {
-            path->append(i);
+          copy_shortest_path[i - 1].control_duration = duration;
+
+          if (duration == 0) {
+            OMPL_WARN(
+              "%s: Control sampler failed to find a valid control between two states.\n",
+              getName().c_str());
           }
         }
 
-        if (path->length() > bestCost_.value()) {
-          // This solution is worse than the previous one.
-          OMPL_INFORM(
-            "%s: Found suboptimal solution with cost %f > best cost %f.\n",
-            getName().c_str(), path->length(), bestCost_.value());
-          continue;
+        /* set the solution path */
+        path = std::make_shared<PathControl>(si_);
+        for (int i = 0; i < copy_shortest_path.size(); i++) {
+          if (i == 0) {
+            path->append(copy_shortest_path[i].state);
+          } else {
+            path->append(
+              copy_shortest_path[i].state, copy_shortest_path[i].control,
+              copy_shortest_path[i].control_duration * siC_->getPropagationStepSize());
+          }
         }
 
+        // Set the cost of the solution.
         bestCost_ = ompl::base::Cost(path->length());
 
         // Create a solution.

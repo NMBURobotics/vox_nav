@@ -88,6 +88,8 @@ namespace ompl
       struct VertexProperty
       {
         ompl::base::State * state{nullptr};
+        ompl::control::Control * control{nullptr};
+        unsigned int control_duration{0};
         std::size_t id{0};
         double g{1.0e+3};
         bool blacklisted{false};
@@ -119,7 +121,7 @@ namespace ompl
       int max_neighbors_{10};
       double min_dist_between_vertices_{0.1};
       bool use_valid_sampler_{true};
-      int k_number_of_controls_{10};
+      int k_number_of_controls_{100};
       static bool const use_astar_hueristic_{false};
 
       /** \brief State sampler */

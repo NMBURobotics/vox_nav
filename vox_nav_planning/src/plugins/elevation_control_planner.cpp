@@ -166,7 +166,9 @@ namespace vox_nav_planning
       y + duration * v * std::sin(yaw) /*Y*/,
       z /*Z*/,
       v + duration * ctrl[0] /*V*/);
-    result->as<ompl::base::ElevationStateSpace::StateType>()->setSO2(yaw + duration * ctrl[1]);
+    result->as<ompl::base::ElevationStateSpace::StateType>()->setSO2(
+      yaw + duration *
+      ctrl[1] /*W*/);
 
     si->enforceBounds(result);
   }
@@ -234,8 +236,8 @@ namespace vox_nav_planning
     control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, 0.1);
 
     auto si = control_simple_setup_->getSpaceInformation();
-    si->setMinMaxControlDuration(1, 100);
-    si->setPropagationStepSize(0.025);
+    si->setMinMaxControlDuration(5, 20);
+    si->setPropagationStepSize(0.05);
 
     control_simple_setup_->setStatePropagator(
       [this, si](const ompl::base::State * state, const ompl::control::Control * control,
