@@ -111,6 +111,8 @@ void ompl::control::AITStarKin::clear()
   }
   g_.clear();
   g_ = GraphT();
+  g_control_.clear();
+  g_control_ = GraphT();
 }
 
 void ompl::control::AITStarKin::freeMemory()
@@ -332,63 +334,101 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         // Add all samples to the control NN and contol graph
         for (auto && i : samples) {
           VertexProperty * this_vertex_property = new VertexProperty();
-          // Do not modiy original sample, as that will affect geometric RGG
-          auto deep_copy_sample_state = si_->allocState();
-          si_->copyState(deep_copy_sample_state, i);
-          this_vertex_property->state = deep_copy_sample_state;
+          this_vertex_property->state = i;
           std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
-          control_nn_->nearestK(this_vertex_property, 1, nbh);
+          control_nn_->nearestR(this_vertex_property, radius_, nbh);
 
           if (nbh.size() == 0) {
             continue;
           }
+          if (nbh.size() > max_neighbors_) {
+            nbh.resize(max_neighbors_);
+          }
 
           bool does_vertice_exits{false};
-          double dist = distanceFunction(i, nbh.front()->state);
-          if (dist < min_dist_between_vertices_ /*do not add same vertice twice*/) {
-            does_vertice_exits = true;
+          for (auto && nb : nbh) {
+            double dist = distanceFunction(i, nb->state);
+            if (dist < min_dist_between_vertices_ /*do not add same vertice twice*/) {
+              does_vertice_exits = true;
+            }
           }
 
           if (!does_vertice_exits) {
-            // Attempt to drive towards newly added sample
-            // modify the sample to latest arrived state
-            auto c = siC_->allocControl();
-            auto duration = controlSampler_->sampleTo(
-              c,
-              nbh.front()->state,
-              this_vertex_property->state);
-
-            if (duration == 0) {
-              // perhaprs due to invalidy of the state, we cannot proceed
-              siC_->freeControl(c);
-              si_->freeState(this_vertex_property->state);
-              continue;
-            }
-
             vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_control_);
             this_vertex_property->id = this_vertex_descriptor;
+            this_vertex_property->state = i;
             g_control_[this_vertex_descriptor] = *this_vertex_property;
-            g_control_[this_vertex_descriptor].control = c;
-            g_control_[this_vertex_descriptor].control_duration = duration;
-
             control_nn_->add(this_vertex_property);
-            vertex_descriptor u = this_vertex_descriptor;
-            vertex_descriptor v = nbh.front()->id;
-            double dist = distanceFunction(g_control_[u].state, g_control_[v].state);
-            edge_descriptor e; bool edge_added;
-            // not to construct edges with self, and if nbh is further than radius_, continue
-            if (u == v || dist > radius_) {
-              continue;
+            for (auto && nb : nbh) {
+              // Do not modify original sample, as that will affect geometric RGG
+              auto deep_copy_sample_state = si_->allocState();
+              si_->copyState(deep_copy_sample_state, i);
+              // Attempt to drive towards newly added sample
+              // modify the sample to latest arrived state
+              auto c = siC_->allocControl();
+              auto duration = controlSampler_->sampleTo(
+                c,
+                nb->state,
+                deep_copy_sample_state);
+
+              if (duration == 0) {
+                // perhaprs due to invalidy of the state, we cannot proceed
+                siC_->freeControl(c);
+                si_->freeState(deep_copy_sample_state);
+                continue;
+              }
+
+              vertex_descriptor drived_vertex_descriptor = boost::add_vertex(g_control_);
+              auto drived_towards_nb = new VertexProperty();
+              drived_towards_nb->id = drived_vertex_descriptor;
+              drived_towards_nb->state = deep_copy_sample_state;
+              g_control_[drived_vertex_descriptor] = *drived_towards_nb;
+              g_control_[drived_vertex_descriptor].state = deep_copy_sample_state;
+              g_control_[drived_vertex_descriptor].control = c;
+              g_control_[drived_vertex_descriptor].control_duration = duration;
+              control_nn_->add(drived_towards_nb);
+
+              vertex_descriptor u = drived_vertex_descriptor;
+              vertex_descriptor v = nb->id;
+              double dist = distanceFunction(g_control_[u].state, g_control_[v].state);
+              edge_descriptor e; bool edge_added;
+              // not to construct edges with self, and if nbh is further than radius_, continue
+              if (u == v || dist > radius_) {
+                continue;
+              }
+              if (boost::edge(u, v, g_control_).second || boost::edge(v, u, g_control_).second) {
+                continue;
+              }
+              // Once suitable edges are found, populate them over graphs
+              boost::tie(e, edge_added) = boost::add_edge(u, v, g_control_);
+              weightmap_control[e] =
+                opt_->motionCost(g_control_[u].state, g_control_[v].state).value();
             }
-            if (boost::edge(u, v, g_control_).second || boost::edge(v, u, g_control_).second) {
-              continue;
-            }
-            // Once suitable edges are found, populate them over graphs
-            boost::tie(e, edge_added) = boost::add_edge(u, v, g_control_);
-            weightmap_control[e] =
-              opt_->motionCost(g_control_[u].state, g_control_[v].state).value();
           }
         }
+
+        std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh_control;
+        control_nn_->nearestR(goal_vertex_, radius_, goal_nbh);
+        if (goal_nbh.size() > max_neighbors_) {
+          goal_nbh.resize(max_neighbors_);
+        }
+        for (auto && nb : goal_nbh) {
+          vertex_descriptor u = goal_vertex_descriptor;
+          vertex_descriptor v = nb->id;
+          double dist = distanceFunction(g_control_[u].state, g_control_[v].state);
+          edge_descriptor e; bool edge_added;
+          // not to construct edges with self, and if nbh is further than radius_, continue
+          if (u == v || dist > radius_) {
+            continue;
+          }
+          if (boost::edge(u, v, g_control_).second || boost::edge(v, u, g_control_).second) {
+            continue;
+          }
+          // Once suitable edges are found, populate them over graphs
+          boost::tie(e, edge_added) = boost::add_edge(u, v, g_control_);
+          weightmap_control[e] = opt_->motionCost(g_control_[u].state, g_control_[v].state).value();
+        }
+
 
         p.clear(); d.clear();
         p.resize(boost::num_vertices(g_control_));  d.resize(boost::num_vertices(g_control_));
