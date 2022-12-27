@@ -31,8 +31,15 @@ void ompl::control::AITStarKin::setup()
   base::Planner::setup();
   if (!nn_) {
     nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
+    control_nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
   }
   nn_->setDistanceFunction(
+    [this](const VertexProperty * a, const VertexProperty * b)
+    {
+      return distanceFunction(a, b);
+    });
+
+  control_nn_->setDistanceFunction(
     [this](const VertexProperty * a, const VertexProperty * b)
     {
       return distanceFunction(a, b);
@@ -70,12 +77,20 @@ void ompl::control::AITStarKin::setup()
 
   // RVIZ VISUALIZATIONS
   node_ = std::make_shared<rclcpp::Node>("aitstarkin_rclcpp_node");
-  rrt_nodes_pub_ =
-    node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "vox_nav/rrtstar/nodes", rclcpp::SystemDefaultsQoS());
 
-  heur_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "vox_nav/rrtstar/heur", rclcpp::SystemDefaultsQoS());
+  rgg_graph_pub_ =
+    node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "vox_nav/aitstarkin/rgg", rclcpp::SystemDefaultsQoS());
+
+  geometric_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "vox_nav/aitstarkin/g_plan", rclcpp::SystemDefaultsQoS());
+
+  control_graph_pub_ =
+    node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "vox_nav/aitstarkin/control_rgg", rclcpp::SystemDefaultsQoS());
+
+  control_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "vox_nav/aitstarkin/c_plan", rclcpp::SystemDefaultsQoS());
 
 }
 
@@ -92,6 +107,7 @@ void ompl::control::AITStarKin::clear()
   freeMemory();
   if (nn_) {
     nn_->clear();
+    control_nn_->clear();
   }
   g_.clear();
   g_ = GraphT();
@@ -130,6 +146,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
   goal_vertex_->state = goal_state;
   nn_->add(goal_vertex_);
+  control_nn_->add(goal_vertex_);
 
   // get start node and state,push  the node inton nn_ as well
   auto * start_state = si_->allocState();
@@ -138,6 +155,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
   start_vertex_->state = start_state;
   nn_->add(start_vertex_);
+  control_nn_->add(start_vertex_);
 
   // Add goal and start to graph
   vertex_descriptor start_vertex_descriptor = boost::add_vertex(g_);
@@ -147,6 +165,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   g_[start_vertex_descriptor] = *start_vertex_;
   g_[goal_vertex_descriptor] = *goal_vertex_;
 
+  vertex_descriptor start_vertex_descriptor_control = boost::add_vertex(g_control_);
+  vertex_descriptor goal_vertex_descriptor_control = boost::add_vertex(g_control_);
+  g_control_[start_vertex_descriptor_control] = *start_vertex_;
+  g_control_[goal_vertex_descriptor_control] = *goal_vertex_;
 
   if (nn_->size() == 0) {
     OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
@@ -160,6 +182,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   std::list<std::size_t> forwardPath, reversePath;
 
   WeightMap weightmap = get(boost::edge_weight, g_);
+  WeightMap weightmap_control = get(boost::edge_weight, g_control_);
 
   auto path(std::make_shared<PathControl>(si_));
   bool goal_reached{false};
@@ -239,12 +262,13 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     std::vector<vertex_descriptor> p(boost::num_vertices(g_));
     std::vector<Cost> d(boost::num_vertices(g_));
     std::list<vertex_descriptor> shortest_path;
+    std::list<vertex_descriptor> shortest_path_control;
 
     // Run A* backwards from goal to start
     try {
       auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, Cost>(this, start_vertex_);
       auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
-        start_vertex_descriptor, &num_visited_nodes, this);
+        start_vertex_descriptor, &num_visited_nodes);
 
       if constexpr (use_astar_hueristic_) {
         boost::astar_search_tree(
@@ -277,7 +301,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       try {
         auto h_heuristic = PrecomputedCostHeuristic<GraphT, Cost>(this);
         auto generic_visitor = SimpleVertexVisitor<vertex_descriptor>(
-          goal_vertex_descriptor, &num_visited_nodes, this);
+          goal_vertex_descriptor, &num_visited_nodes);
 
         boost::astar_search_tree(
           g_, start_vertex_descriptor, h_heuristic,
@@ -304,8 +328,99 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
           if (p[v] == v) {break;}
         }
 
-        std::vector<VertexProperty> copy_shortest_path(shortest_path.size(), VertexProperty());
+        // Now we have a collision free path, we can now find a control path
+        // Add all samples to the control NN and contol graph
+        for (auto && i : samples) {
+          VertexProperty * this_vertex_property = new VertexProperty();
+          // Do not modiy original sample, as that will affect geometric RGG
+          auto deep_copy_sample_state = si_->allocState();
+          si_->copyState(deep_copy_sample_state, i);
+          this_vertex_property->state = deep_copy_sample_state;
+          std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
+          control_nn_->nearestK(this_vertex_property, 1, nbh);
 
+          if (nbh.size() == 0) {
+            continue;
+          }
+
+          bool does_vertice_exits{false};
+          double dist = distanceFunction(i, nbh.front()->state);
+          if (dist < min_dist_between_vertices_ /*do not add same vertice twice*/) {
+            does_vertice_exits = true;
+          }
+
+          if (!does_vertice_exits) {
+            // Attempt to drive towards newly added sample
+            // modify the sample to latest arrived state
+            auto c = siC_->allocControl();
+            auto duration = controlSampler_->sampleTo(
+              c,
+              nbh.front()->state,
+              this_vertex_property->state);
+
+            if (duration == 0) {
+              // perhaprs due to invalidy of the state, we cannot proceed
+              siC_->freeControl(c);
+              si_->freeState(this_vertex_property->state);
+              continue;
+            }
+
+            vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_control_);
+            this_vertex_property->id = this_vertex_descriptor;
+            g_control_[this_vertex_descriptor] = *this_vertex_property;
+            g_control_[this_vertex_descriptor].control = c;
+            g_control_[this_vertex_descriptor].control_duration = duration;
+
+            control_nn_->add(this_vertex_property);
+            vertex_descriptor u = this_vertex_descriptor;
+            vertex_descriptor v = nbh.front()->id;
+            double dist = distanceFunction(g_control_[u].state, g_control_[v].state);
+            edge_descriptor e; bool edge_added;
+            // not to construct edges with self, and if nbh is further than radius_, continue
+            if (u == v || dist > radius_) {
+              continue;
+            }
+            if (boost::edge(u, v, g_control_).second || boost::edge(v, u, g_control_).second) {
+              continue;
+            }
+            // Once suitable edges are found, populate them over graphs
+            boost::tie(e, edge_added) = boost::add_edge(u, v, g_control_);
+            weightmap_control[e] =
+              opt_->motionCost(g_control_[u].state, g_control_[v].state).value();
+          }
+        }
+
+        p.clear(); d.clear();
+        p.resize(boost::num_vertices(g_control_));  d.resize(boost::num_vertices(g_control_));
+        num_visited_nodes = 0;
+
+        try {
+
+          auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, Cost>(
+            this,
+            &g_control_[goal_vertex_descriptor_control]);
+          auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
+            goal_vertex_descriptor_control, &num_visited_nodes);
+
+          boost::astar_search_tree(
+            g_control_, start_vertex_descriptor_control, heuristic,
+            boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+
+          OMPL_INFORM(
+            "%s: A* Failed to produce Kinodynamic path after %d node visits.\n",
+            getName().c_str(), num_visited_nodes);
+
+        } catch (FoundVertex found_goal_control) {
+
+          // Found a collision free path to the goal, catch the exception
+          shortest_path_control.clear();
+          for (vertex_descriptor v = goal_vertex_descriptor_control;; v = p[v]) {
+            shortest_path_control.push_front(v);
+            if (p[v] == v) {break;}
+          }
+        }
+
+        /*std::vector<VertexProperty> copy_shortest_path(shortest_path.size(), VertexProperty());
         for (size_t i = 0; i < shortest_path.size(); i++) {
           copy_shortest_path[i].id = g_[*std::next(shortest_path.begin(), i)].id;
           copy_shortest_path[i].state = si_->allocState();
@@ -316,26 +431,21 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
             copy_shortest_path[i].state,
             g_[*std::next(shortest_path.begin(), i)].state);
         }
-
         goal_reached = true;
-
         OMPL_INFORM("%s: Calculating Kinodynamic path.\n", getName().c_str());
         for (size_t i = 1; i < copy_shortest_path.size(); i++) {
           auto duration = controlSampler_->sampleTo(
             copy_shortest_path[i - 1].control,
             copy_shortest_path[i - 1].state,
             copy_shortest_path[i].state);
-
           copy_shortest_path[i - 1].control_duration = duration;
-
           if (duration == 0) {
             OMPL_WARN(
               "%s: Control sampler failed to find a valid control between two states.\n",
               getName().c_str());
           }
         }
-
-        /* set the solution path */
+        //
         path = std::make_shared<PathControl>(si_);
         for (int i = 0; i < copy_shortest_path.size(); i++) {
           if (i == 0) {
@@ -346,7 +456,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
               copy_shortest_path[i].control_duration * siC_->getPropagationStepSize());
           }
         }
-
         // Set the cost of the solution.
         bestCost_ = ompl::base::Cost(path->length());
 
@@ -354,7 +463,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         ompl::base::PlannerSolution solution(path);
         solution.setPlannerName(getName());
         solution.setOptimized(opt_, bestCost_, opt_->isSatisfied(bestCost_));
-        pdef_->addSolutionPath(solution);
+        pdef_->addSolutionPath(solution); */
+
       }
 
     }
@@ -363,9 +473,24 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       "%s: Advancing with %d vertices and %d edges.\n",
       getName().c_str(), boost::num_vertices(g_), boost::num_edges(g_));
 
-    visualizeLPAHuer(shortest_path);
+    visualizePath(g_, shortest_path, geometric_path_pub_, "g");
+    visualizePath(g_control_, shortest_path_control, control_path_pub_, "c");
 
-    visualizeRGG(g_);
+    visualizeRGG(
+      g_,
+      rgg_graph_pub_,
+      "g",
+      0.87 /*only for color of vis*/,
+      start_vertex_descriptor,
+      goal_vertex_descriptor);
+
+    visualizeRGG(
+      g_control_,
+      control_graph_pub_,
+      "c",
+      0.24,
+      start_vertex_descriptor_control,
+      goal_vertex_descriptor_control);
 
   }
 
@@ -412,33 +537,32 @@ void ompl::control::AITStarKin::generateBatchofSamples(
   } while (samples.size() < batch_size);
 }
 
-void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
+void ompl::control::AITStarKin::visualizeRGG(
+  const GraphT & g,
+  const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
+  const std::string & ns,
+  const double & blue_color,
+  const vertex_descriptor & start_vertex,
+  const vertex_descriptor & goal_vertex)
 {
-
-  bool show_infs = true;
 
   // Clear All previous markers
   visualization_msgs::msg::MarkerArray clear_markers;
-  visualization_msgs::msg::Marker rgg_vertex, rgg_costs, rgg_edges;
+  visualization_msgs::msg::Marker rgg_vertex, rgg_edges;
   rgg_vertex.id = 0;
-  rgg_costs.id = 0;
   rgg_edges.id = 0;
-  rgg_vertex.ns = "rgg_vertex";
-  rgg_costs.ns = "rgg_costs";
-  rgg_edges.ns = "rgg_edges";
+  rgg_vertex.ns = ns + "rgg_vertex";
+  rgg_edges.ns = ns + "rgg_edges";
   rgg_vertex.action = visualization_msgs::msg::Marker::DELETEALL;
-  rgg_costs.action = visualization_msgs::msg::Marker::DELETEALL;
   rgg_edges.action = visualization_msgs::msg::Marker::DELETEALL;
   clear_markers.markers.push_back(rgg_vertex);
-  clear_markers.markers.push_back(rgg_costs);
   clear_markers.markers.push_back(rgg_edges);
-  rrt_nodes_pub_->publish(clear_markers);
-
+  publisher->publish(clear_markers);
 
   visualization_msgs::msg::Marker sphere;
   sphere.header.frame_id = "map";
   sphere.header.stamp = rclcpp::Clock().now();
-  sphere.ns = "rgg_vertex";
+  sphere.ns = ns + "rgg_vertex";
   sphere.id = 0;
   sphere.type = visualization_msgs::msg::Marker::SPHERE_LIST;
   sphere.action = visualization_msgs::msg::Marker::ADD;
@@ -447,33 +571,17 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
   sphere.scale.z = 0.1;
 
   visualization_msgs::msg::MarkerArray marker_array;
-
   // To make a graph of the supervoxel adjacency,
   // we need to iterate through the supervoxel adjacency multimap
   for (auto vd : boost::make_iterator_range(vertices(g))) {
-    double apx_estimate = 0;//(*(LPAstarCost2Come_))(g[vd].id);   // cpst to come
-    double lb_estimate = 0;//(*(LPAstarCost2Go_))(g[vd].id);   // cost to go
-    std::stringstream ss_lb, ss_apx;
-    ss_lb << std::setprecision(2) << lb_estimate;
-    ss_apx << std::setprecision(2) << apx_estimate;
-
-
-    if (!show_infs &&
-      (lb_estimate == std::numeric_limits<double>::infinity() ||
-      apx_estimate == std::numeric_limits<double>::infinity() ))
-    {
-      continue;
-    }
-
+    // Paint the start and goal vertices differently.
     double is_goal_or_start{0.0};
-    if (g[vd].id == start_vertex_->id || g[vd].id == goal_vertex_->id) {
+    if (g[vd].id == start_vertex || g[vd].id == goal_vertex) {
       is_goal_or_start = 1.0;
     }
-
     const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
     const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-
     geometry_msgs::msg::Point point;
     point.x = target_xyzv->values[0];
     point.y = target_xyzv->values[1];
@@ -481,28 +589,9 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
     std_msgs::msg::ColorRGBA color;
     color.a = 1.0;
     color.g = is_goal_or_start;
-    color.b = 1.0;
+    color.b = blue_color;
     sphere.points.push_back(point);
     sphere.colors.push_back(color);
-
-
-    visualization_msgs::msg::Marker text;
-    text.header.frame_id = "map";
-    text.header.stamp = rclcpp::Clock().now();
-    text.ns = "rgg_costs";
-    text.id = g[vd].id;
-    text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
-    text.action = visualization_msgs::msg::Marker::ADD;
-    text.lifetime = rclcpp::Duration::from_seconds(0);
-    text.text = ss_apx.str() + "/" + ss_lb.str();
-    text.pose = sphere.pose;
-    text.pose.position.z += 0.5;
-    text.scale.x = 0.3;
-    text.scale.y = 0.3;
-    text.scale.z = 0.3;
-    text.color.a = 1.0;
-    text.color.r = 1.0;
-    //marker_array.markers.push_back(text);
   }
   marker_array.markers.push_back(sphere);
 
@@ -511,7 +600,7 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
   int edge_index = 0;
   visualization_msgs::msg::Marker line_strip;
   line_strip.header.frame_id = "map";
-  line_strip.ns = "rgg_edges";
+  line_strip.ns = ns + "rgg_edges";
   line_strip.id = edge_index;
   line_strip.type = visualization_msgs::msg::Marker::LINE_LIST;
   line_strip.action = visualization_msgs::msg::Marker::ADD;
@@ -522,28 +611,69 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
   line_strip.scale.z = 0.005;
   line_strip.color.a = 1.0;
   line_strip.color.r = 0.0;
-  line_strip.color.b = 1.0;
+  line_strip.color.b = blue_color;
+  std_msgs::msg::ColorRGBA color;
+  color.b = blue_color;
+  color.a = 1.0;
+
+  for (auto eit = es.first; eit != es.second; ++eit) {
+    u = boost::source(*eit, g);
+    v = boost::target(*eit, g);
+
+    geometry_msgs::msg::Point source_point, target_point;
+    const auto * source_cstate = g[u].state->as<ompl::base::ElevationStateSpace::StateType>();
+    const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+    const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    source_point.x = source_xyzv->values[0];
+    source_point.y = source_xyzv->values[1];
+    source_point.z = source_xyzv->values[2];
+
+    const auto * target_cstate = g[v].state->as<ompl::base::ElevationStateSpace::StateType>();
+    const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+    target_point.x = target_xyzv->values[0];
+    target_point.y = target_xyzv->values[1];
+    target_point.z = target_xyzv->values[2];
+    line_strip.points.push_back(source_point);
+    line_strip.colors.push_back(color);
+    line_strip.points.push_back(target_point);
+    line_strip.colors.push_back(color);
+  }
+  marker_array.markers.push_back(line_strip);
+
+  publisher->publish(marker_array);
+}
+
+void ompl::control::AITStarKin::visualizePath(
+  const GraphT & g,
+  const std::list<vertex_descriptor> & path,
+  const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
+  const std::string & ns
+)
+{
+  visualization_msgs::msg::MarkerArray marker_array;
+  visualization_msgs::msg::Marker line_strip;
+  line_strip.header.frame_id = "map";
+  line_strip.ns = ns + "path";
+  line_strip.id = 0;
+  line_strip.type = visualization_msgs::msg::Marker::LINE_LIST;
+  line_strip.action = visualization_msgs::msg::Marker::ADD;
+  line_strip.lifetime = rclcpp::Duration::from_seconds(0);
+  line_strip.header.stamp = rclcpp::Clock().now();
+  line_strip.scale.x = 0.05;
+  line_strip.scale.y = 0.05;
+  line_strip.scale.z = 0.05;
+  line_strip.color.a = 1.0;
+  line_strip.color.r = 1.0;
+  line_strip.color.b = 0.3;
   std_msgs::msg::ColorRGBA blue_color;
   blue_color.b = 1.0;
   blue_color.a = 1.0;
-  for (auto eit = es.first; eit != es.second; ++eit) {
 
-    u = boost::source(*eit, g);
-    v = boost::target(*eit, g);
-    double u_estimate = 0;//(*(LPAstarCost2Go_))(g[u].id);   // cpst to come
-    double v_estimate = 0;//(*(LPAstarCost2Go_))(g[v].id);   // cost to go
-    double apxu_estimate = 0;//(*(LPAstarCost2Come_))(g[u].id);       // cpst to come
-    double apxv_estimate = 0;//(*(LPAstarCost2Come_))(g[v].id);   // cost to go
-
-    if (!show_infs &&
-      (u_estimate == std::numeric_limits<double>::infinity() ||
-      v_estimate == std::numeric_limits<double>::infinity() ||
-      apxu_estimate == std::numeric_limits<double>::infinity() ||
-      apxv_estimate == std::numeric_limits<double>::infinity() ))
-    {
-      continue;
-    }
-
+  for (size_t i = 1; i < path.size(); i++) {
+    auto u = *std::next(path.begin(), i - 1);
+    auto v = *std::next(path.begin(), i);
     geometry_msgs::msg::Point source_point, target_point;
     const auto * source_cstate = g[u].state->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
@@ -564,65 +694,15 @@ void ompl::control::AITStarKin::visualizeRGG(const GraphT & g)
     line_strip.points.push_back(target_point);
     line_strip.colors.push_back(blue_color);
 
-  }
-  marker_array.markers.push_back(line_strip);
-
-  rrt_nodes_pub_->publish(marker_array);
-}
-
-void ompl::control::AITStarKin::visualizeLPAHuer(const std::list<vertex_descriptor> & heur)
-{
-  visualization_msgs::msg::MarkerArray marker_array;
-  visualization_msgs::msg::Marker line_strip;
-  line_strip.header.frame_id = "map";
-  line_strip.ns = "heur";
-  line_strip.id = 0;
-  line_strip.type = visualization_msgs::msg::Marker::LINE_LIST;
-  line_strip.action = visualization_msgs::msg::Marker::ADD;
-  line_strip.lifetime = rclcpp::Duration::from_seconds(0);
-  line_strip.header.stamp = rclcpp::Clock().now();
-  line_strip.scale.x = 0.05;
-  line_strip.scale.y = 0.05;
-  line_strip.scale.z = 0.05;
-  line_strip.color.a = 1.0;
-  line_strip.color.r = 1.0;
-  line_strip.color.b = 0.3;
-  std_msgs::msg::ColorRGBA blue_color;
-  blue_color.b = 1.0;
-  blue_color.a = 1.0;
-
-  for (size_t i = 1; i < heur.size(); i++) {
-    auto u = *std::next(heur.begin(), i - 1);
-    auto v = *std::next(heur.begin(), i);
-    geometry_msgs::msg::Point source_point, target_point;
-    const auto * source_cstate = g_[u].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    source_point.x = source_xyzv->values[0];
-    source_point.y = source_xyzv->values[1];
-    source_point.z = source_xyzv->values[2];
-
-    const auto * target_cstate = g_[v].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-
-    target_point.x = target_xyzv->values[0];
-    target_point.y = target_xyzv->values[1];
-    target_point.z = target_xyzv->values[2];
-    line_strip.points.push_back(source_point);
-    line_strip.colors.push_back(blue_color);
-    line_strip.points.push_back(target_point);
-    line_strip.colors.push_back(blue_color);
-
     visualization_msgs::msg::Marker text;
     text.header.frame_id = "map";
     text.header.stamp = rclcpp::Clock().now();
     text.ns = "rgg_costs";
-    text.id = g_[u].id;
+    text.id = g[u].id;
     text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     text.action = visualization_msgs::msg::Marker::ADD;
     text.lifetime = rclcpp::Duration::from_seconds(0);
-    text.text = std::to_string(g_[u].g);
+    text.text = std::to_string(g[u].g);
     text.pose.position = source_point;
     text.pose.position.z += 0.5;
     text.scale.x = 0.3;
@@ -634,5 +714,5 @@ void ompl::control::AITStarKin::visualizeLPAHuer(const std::list<vertex_descript
   }
   marker_array.markers.push_back(line_strip);
 
-  heur_pub_->publish(marker_array);
+  publisher->publish(marker_array);
 }

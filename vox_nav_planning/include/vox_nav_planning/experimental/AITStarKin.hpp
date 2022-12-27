@@ -82,11 +82,13 @@ namespace ompl
         }
         clear();
         nn_ = std::make_shared<NN<VertexProperty *>>();
+        control_nn_ = std::make_shared<NN<VertexProperty *>>();
         setup();
       }
 
       struct VertexProperty
       {
+        std::vector<ompl::base::State *> path;
         ompl::base::State * state{nullptr};
         ompl::control::Control * control{nullptr};
         unsigned int control_duration{0};
@@ -121,7 +123,7 @@ namespace ompl
       int max_neighbors_{10};
       double min_dist_between_vertices_{0.1};
       bool use_valid_sampler_{true};
-      int k_number_of_controls_{100};
+      int k_number_of_controls_{1};
       static bool const use_astar_hueristic_{false};
 
       /** \brief State sampler */
@@ -160,8 +162,12 @@ namespace ompl
       using WeightProperty = boost::property<boost::edge_weight_t, Cost>;
 
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> nn_;
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rrt_nodes_pub_;
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr heur_pub_;
+      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> control_nn_;
+
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr geometric_path_pub_;
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_graph_pub_;
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_path_pub_;
       rclcpp::Node::SharedPtr node_;
 
       friend class GenericDistanceHeuristic;
@@ -170,9 +176,10 @@ namespace ompl
       {
       public:
         typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-        GenericDistanceHeuristic(AITStarKin * alg, VertexProperty * goal)
+        GenericDistanceHeuristic(AITStarKin * alg, VertexProperty * goal, bool control = false)
         : alg_(alg),
-          goal_(goal)
+          goal_(goal),
+          control_(control)
         {
         }
         double operator()(vertex_descriptor i)
@@ -181,8 +188,9 @@ namespace ompl
         }
 
       private:
-        AITStarKin * alg_;
-        VertexProperty * goal_;
+        AITStarKin * alg_{nullptr};
+        VertexProperty * goal_{nullptr};
+        bool control_{false};
       };  // GenericDistanceHeuristic
 
       friend class PrecomputedCostHeuristic;
@@ -214,25 +222,20 @@ namespace ompl
 
       // exception for termination
       struct FoundVertex {};
-
-      friend class SimpleVertexVisitor;
       template<class Vertex>
       class SimpleVertexVisitor : public boost::default_astar_visitor
       {
       public:
-        SimpleVertexVisitor(Vertex goal_vertex, int * num_visits, AITStarKin * alg)
+        SimpleVertexVisitor(Vertex goal_vertex, int * num_visits)
         : goal_vertex_(goal_vertex),
-          num_visits_(num_visits),
-          alg_(alg)
+          num_visits_(num_visits)
         {
         }
-
         template<class Graph>
         void examine_vertex(Vertex u, Graph & g)
         {
           // check whether examined vertex was goal, if yes throw
           ++(*num_visits_);
-
           if (u == goal_vertex_) {
             throw FoundVertex();
           }
@@ -241,7 +244,6 @@ namespace ompl
       private:
         Vertex goal_vertex_;
         int * num_visits_;
-        AITStarKin * alg_;
       };  // SimpleVertexVisitor
 
 
@@ -249,10 +251,21 @@ namespace ompl
       VertexProperty * goal_vertex_{nullptr};
 
       GraphT g_;
+      GraphT g_control_;
 
-      void visualizeRGG(const GraphT & g);
+      static void visualizeRGG(
+        const GraphT & g,
+        const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
+        const std::string & ns,
+        const double & blue_color,
+        const vertex_descriptor & start_vertex,
+        const vertex_descriptor & goal_vertex);
 
-      void visualizeLPAHuer(const std::list<vertex_descriptor> & heur);
+      static void visualizePath(
+        const GraphT & g,
+        const std::list<vertex_descriptor> & path,
+        const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
+        const std::string & ns);
 
       void generateBatchofSamples(
         int batch_size,
