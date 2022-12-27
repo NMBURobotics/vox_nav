@@ -112,6 +112,11 @@ namespace ompl
         return &g_[id];
       }
 
+      const VertexProperty * getVertexControl(std::size_t id)
+      {
+        return &g_control_[id];
+      }
+
       VertexProperty * getVertexMutable(std::size_t id)
       {
         return &g_[id];
@@ -184,7 +189,11 @@ namespace ompl
         }
         double operator()(vertex_descriptor i)
         {
-          return alg_->distanceFunction(alg_->getVertex(i), goal_);
+          if (control_) {
+            return alg_->distanceFunction(alg_->getVertexControl(i), goal_);
+          } else {
+            return alg_->distanceFunction(alg_->getVertex(i), goal_);
+          }
         }
 
       private:

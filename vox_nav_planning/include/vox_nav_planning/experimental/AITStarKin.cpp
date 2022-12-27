@@ -393,12 +393,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         p.clear(); d.clear();
         p.resize(boost::num_vertices(g_control_));  d.resize(boost::num_vertices(g_control_));
         num_visited_nodes = 0;
-
         try {
-
           auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, Cost>(
             this,
-            &g_control_[goal_vertex_descriptor_control]);
+            &g_control_[goal_vertex_descriptor_control], true);
           auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
             goal_vertex_descriptor_control, &num_visited_nodes);
 
