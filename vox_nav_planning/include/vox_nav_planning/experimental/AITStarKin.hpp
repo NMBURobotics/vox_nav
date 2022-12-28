@@ -137,6 +137,7 @@ namespace ompl
       bool use_valid_sampler_{true};
       int k_number_of_controls_{1};
       static bool const use_astar_hueristic_{false};
+      double goal_bias_{0.05};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_{nullptr};
@@ -308,9 +309,21 @@ namespace ompl
       {
         // Now we have a collision free path, we can now find a control path
         // Add all samples to the control NN and contol graph
+        int ith_sample = static_cast<int>(1.0 / goal_bias_);
+        int index_of_goal_bias{0};
+
         for (auto && i : samples) {
           VertexProperty * this_vertex_property = new VertexProperty();
           this_vertex_property->state = i;
+
+          // Every ith sample is goal biasing
+          if ((index_of_goal_bias & ith_sample) == 0) {
+            auto deep_copy_target_state = si_->allocState();
+            si_->copyState(deep_copy_target_state, target_vertex_state);
+            this_vertex_property->state = deep_copy_target_state;
+          }
+          index_of_goal_bias++;
+
           std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
           control_nn->nearestR(this_vertex_property, radius_, nbh);
 
