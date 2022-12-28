@@ -443,14 +443,28 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       "%s: Advancing with %d vertices and %d edges.\n",
       getName().c_str(), boost::num_vertices(g_), boost::num_edges(g_));
 
-    visualizePath(g_, shortest_path, geometric_path_pub_, "g");
-    visualizePath(g_forward_control_, shortest_path_control, control_path_pub_, "c");
+    std::string red("red");
+    std::string green("green");
+
+    visualizePath(
+      g_,
+      shortest_path,
+      geometric_path_pub_,
+      "g",
+      getColor(green));
+
+    visualizePath(
+      g_forward_control_,
+      shortest_path_control,
+      control_path_pub_,
+      "c",
+      getColor(red));
 
     visualizeRGG(
       g_,
       rgg_graph_pub_,
       "g",
-      0.87 /*only for color of vis*/,
+      getColor(green),
       start_vertex_descriptor,
       goal_vertex_descriptor);
 
@@ -458,7 +472,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       g_forward_control_,
       control_graph_pub_,
       "c",
-      0.9,
+      getColor(red),
       forward_control_g_root,
       forward_control_g_target);
 
@@ -511,11 +525,10 @@ void ompl::control::AITStarKin::visualizeRGG(
   const GraphT & g,
   const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
   const std::string & ns,
-  const double & blue_color,
+  const std_msgs::msg::ColorRGBA & color,
   const vertex_descriptor & start_vertex,
   const vertex_descriptor & goal_vertex)
 {
-
   // Clear All previous markers
   visualization_msgs::msg::MarkerArray clear_markers;
   visualization_msgs::msg::Marker rgg_vertex, rgg_edges;
@@ -545,9 +558,10 @@ void ompl::control::AITStarKin::visualizeRGG(
   // we need to iterate through the supervoxel adjacency multimap
   for (auto vd : boost::make_iterator_range(vertices(g))) {
     // Paint the start and goal vertices differently.
+    std_msgs::msg::ColorRGBA color_vd = color;
     double is_goal_or_start{0.0};
     if (g[vd].id == start_vertex || g[vd].id == goal_vertex) {
-      is_goal_or_start = 1.0;
+      color_vd.b *= 0.5;
     }
     const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
@@ -556,10 +570,6 @@ void ompl::control::AITStarKin::visualizeRGG(
     point.x = target_xyzv->values[0];
     point.y = target_xyzv->values[1];
     point.z = target_xyzv->values[2];
-    std_msgs::msg::ColorRGBA color;
-    color.a = 1.0;
-    color.g = is_goal_or_start;
-    color.b = blue_color;
     sphere.points.push_back(point);
     sphere.colors.push_back(color);
   }
@@ -579,12 +589,7 @@ void ompl::control::AITStarKin::visualizeRGG(
   line_strip.scale.x = 0.005;
   line_strip.scale.y = 0.005;
   line_strip.scale.z = 0.005;
-  line_strip.color.a = 1.0;
-  line_strip.color.r = 0.0;
-  line_strip.color.b = blue_color;
-  std_msgs::msg::ColorRGBA color;
-  color.b = blue_color;
-  color.a = 1.0;
+  line_strip.color = color;
 
   for (auto eit = es.first; eit != es.second; ++eit) {
     u = boost::source(*eit, g);
@@ -619,7 +624,8 @@ void ompl::control::AITStarKin::visualizePath(
   const GraphT & g,
   const std::list<vertex_descriptor> & path,
   const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
-  const std::string & ns
+  const std::string & ns,
+  const std_msgs::msg::ColorRGBA & color
 )
 {
   visualization_msgs::msg::MarkerArray marker_array;
@@ -634,12 +640,7 @@ void ompl::control::AITStarKin::visualizePath(
   line_strip.scale.x = 0.05;
   line_strip.scale.y = 0.05;
   line_strip.scale.z = 0.05;
-  line_strip.color.a = 1.0;
-  line_strip.color.r = 1.0;
-  line_strip.color.b = 0.3;
-  std_msgs::msg::ColorRGBA blue_color;
-  blue_color.b = 1.0;
-  blue_color.a = 1.0;
+  line_strip.color = color;
 
   for (size_t i = 1; i < path.size(); i++) {
     auto u = *std::next(path.begin(), i - 1);
@@ -660,9 +661,9 @@ void ompl::control::AITStarKin::visualizePath(
     target_point.y = target_xyzv->values[1];
     target_point.z = target_xyzv->values[2];
     line_strip.points.push_back(source_point);
-    line_strip.colors.push_back(blue_color);
+    line_strip.colors.push_back(color);
     line_strip.points.push_back(target_point);
-    line_strip.colors.push_back(blue_color);
+    line_strip.colors.push_back(color);
 
     visualization_msgs::msg::Marker text;
     text.header.frame_id = "map";

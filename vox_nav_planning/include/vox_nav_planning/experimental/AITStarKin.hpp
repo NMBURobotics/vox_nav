@@ -284,7 +284,7 @@ namespace ompl
         const GraphT & g,
         const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
         const std::string & ns,
-        const double & blue_color,
+        const std_msgs::msg::ColorRGBA & color,
         const vertex_descriptor & start_vertex,
         const vertex_descriptor & goal_vertex);
 
@@ -292,7 +292,9 @@ namespace ompl
         const GraphT & g,
         const std::list<vertex_descriptor> & path,
         const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
-        const std::string & ns);
+        const std::string & ns,
+        const std_msgs::msg::ColorRGBA & color
+      );
 
       void generateBatchofSamples(
         int batch_size,
@@ -426,6 +428,58 @@ namespace ompl
             }
           }
         }
+      }
+
+      std_msgs::msg::ColorRGBA getColor(std::string & color) const
+      {
+        std_msgs::msg::ColorRGBA color_rgba;
+        if (color == "red") {
+          color_rgba.r = 1.0;
+          color_rgba.g = 0.0;
+          color_rgba.b = 0.0;
+          color_rgba.a = 1.0;
+        } else if (color == "green") {
+          color_rgba.r = 0.0;
+          color_rgba.g = 1.0;
+          color_rgba.b = 0.0;
+          color_rgba.a = 1.0;
+        } else if (color == "blue") {
+          color_rgba.r = 0.0;
+          color_rgba.g = 0.0;
+          color_rgba.b = 1.0;
+          color_rgba.a = 1.0;
+        } else if (color == "yellow") {
+          color_rgba.r = 1.0;
+          color_rgba.g = 1.0;
+          color_rgba.b = 0.0;
+          color_rgba.a = 1.0;
+        } else if (color == "magenta") {
+          color_rgba.r = 1.0;
+          color_rgba.g = 0.0;
+          color_rgba.b = 1.0;
+          color_rgba.a = 1.0;
+        } else if (color == "cyan") {
+          color_rgba.r = 0.0;
+          color_rgba.g = 1.0;
+          color_rgba.b = 1.0;
+          color_rgba.a = 1.0;
+        } else if (color == "white") {
+          color_rgba.r = 1.0;
+          color_rgba.g = 1.0;
+          color_rgba.b = 1.0;
+          color_rgba.a = 1.0;
+        } else if (color == "black") {
+          color_rgba.r = 0.0;
+          color_rgba.g = 0.0;
+          color_rgba.b = 0.0;
+          color_rgba.a = 1.0;
+        } else {
+          color_rgba.r = 0.0;
+          color_rgba.g = 0.0;
+          color_rgba.b = 0.0;
+          color_rgba.a = 1.0;
+        }
+        return color_rgba;
       }
 
     };
