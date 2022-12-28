@@ -330,11 +330,6 @@ namespace ompl
           }
 
           if (!does_vertice_exits) {
-            vertex_descriptor this_vertex_descriptor = boost::add_vertex(control_graph);
-            this_vertex_property->id = this_vertex_descriptor;
-            this_vertex_property->state = i;
-            control_graph[this_vertex_descriptor] = *this_vertex_property;
-            control_nn->add(this_vertex_property);
             for (auto && nb : nbh) {
               if (nb->id == target_vertex_descriptor) {
                 // Do not add edge to target vertex
