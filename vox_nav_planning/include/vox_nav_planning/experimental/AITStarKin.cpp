@@ -31,7 +31,8 @@ void ompl::control::AITStarKin::setup()
   base::Planner::setup();
   if (!nn_) {
     nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
-    control_nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
+    forward_control_nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
+    backward_control_nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
   }
   nn_->setDistanceFunction(
     [this](const VertexProperty * a, const VertexProperty * b)
@@ -39,7 +40,12 @@ void ompl::control::AITStarKin::setup()
       return distanceFunction(a, b);
     });
 
-  control_nn_->setDistanceFunction(
+  forward_control_nn_->setDistanceFunction(
+    [this](const VertexProperty * a, const VertexProperty * b)
+    {
+      return distanceFunction(a, b);
+    });
+  backward_control_nn_->setDistanceFunction(
     [this](const VertexProperty * a, const VertexProperty * b)
     {
       return distanceFunction(a, b);
@@ -74,6 +80,9 @@ void ompl::control::AITStarKin::setup()
   if (!controlSampler_) {
     controlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, k_number_of_controls_);
   }
+  if (!preciseControlSampler_) {
+    preciseControlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, 100);
+  }
 
   // RVIZ VISUALIZATIONS
   node_ = std::make_shared<rclcpp::Node>("aitstarkin_rclcpp_node");
@@ -107,12 +116,16 @@ void ompl::control::AITStarKin::clear()
   freeMemory();
   if (nn_) {
     nn_->clear();
-    control_nn_->clear();
+    forward_control_nn_->clear();
+    backward_control_nn_->clear();
   }
   g_.clear();
   g_ = GraphT();
-  g_control_.clear();
-  g_control_ = GraphT();
+
+  g_backward_control_.clear();
+  g_backward_control_ = GraphT();
+  g_forward_control_.clear();
+  g_forward_control_ = GraphT();
 }
 
 void ompl::control::AITStarKin::freeMemory()
@@ -148,7 +161,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
   goal_vertex_->state = goal_state;
   nn_->add(goal_vertex_);
-  control_nn_->add(goal_vertex_);
+  backward_control_nn_->add(goal_vertex_);
 
   // get start node and state,push  the node inton nn_ as well
   auto * start_state = si_->allocState();
@@ -157,7 +170,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
   start_vertex_->state = start_state;
   nn_->add(start_vertex_);
-  control_nn_->add(start_vertex_);
+  forward_control_nn_->add(start_vertex_);
 
   // Add goal and start to graph
   vertex_descriptor start_vertex_descriptor = boost::add_vertex(g_);
@@ -167,10 +180,16 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   g_[start_vertex_descriptor] = *start_vertex_;
   g_[goal_vertex_descriptor] = *goal_vertex_;
 
-  vertex_descriptor start_vertex_descriptor_control = boost::add_vertex(g_control_);
-  vertex_descriptor goal_vertex_descriptor_control = boost::add_vertex(g_control_);
-  g_control_[start_vertex_descriptor_control] = *start_vertex_;
-  g_control_[goal_vertex_descriptor_control] = *goal_vertex_;
+  vertex_descriptor forward_control_g_root = boost::add_vertex(g_forward_control_);
+  vertex_descriptor forward_control_g_target = boost::add_vertex(g_forward_control_);
+  g_forward_control_[forward_control_g_root] = *start_vertex_;
+  g_forward_control_[forward_control_g_root].id = forward_control_g_root;
+  g_forward_control_[forward_control_g_target] = *goal_vertex_;
+  g_forward_control_[forward_control_g_target].id = forward_control_g_target;
+
+  vertex_descriptor backward_control_g_root = boost::add_vertex(g_backward_control_);
+  g_backward_control_[backward_control_g_root] = *goal_vertex_; // rooted in goal, aims for start
+  g_backward_control_[backward_control_g_root].id = backward_control_g_root; // rooted in goal, aims for start
 
   if (nn_->size() == 0) {
     OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
@@ -184,7 +203,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   std::list<std::size_t> forwardPath, reversePath;
 
   WeightMap weightmap = get(boost::edge_weight, g_);
-  WeightMap weightmap_control = get(boost::edge_weight, g_control_);
+  WeightMap weightmap_forward_control = get(boost::edge_weight, g_forward_control_);
+  WeightMap weightmap_backward_control = get(boost::edge_weight, g_backward_control_);
 
   auto path(std::make_shared<PathControl>(si_));
   bool goal_reached{false};
@@ -330,118 +350,30 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
           if (p[v] == v) {break;}
         }
 
-        // Now we have a collision free path, we can now find a control path
-        // Add all samples to the control NN and contol graph
-        for (auto && i : samples) {
-          VertexProperty * this_vertex_property = new VertexProperty();
-          this_vertex_property->state = i;
-          std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
-          control_nn_->nearestR(this_vertex_property, radius_, nbh);
-
-          if (nbh.size() == 0) {
-            continue;
-          }
-          if (nbh.size() > max_neighbors_) {
-            nbh.resize(max_neighbors_);
-          }
-
-          bool does_vertice_exits{false};
-          for (auto && nb : nbh) {
-            double dist = distanceFunction(i, nb->state);
-            if (dist < min_dist_between_vertices_ /*do not add same vertice twice*/) {
-              does_vertice_exits = true;
-            }
-          }
-
-          if (!does_vertice_exits) {
-            vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_control_);
-            this_vertex_property->id = this_vertex_descriptor;
-            this_vertex_property->state = i;
-            g_control_[this_vertex_descriptor] = *this_vertex_property;
-            control_nn_->add(this_vertex_property);
-            for (auto && nb : nbh) {
-              // Do not modify original sample, as that will affect geometric RGG
-              auto deep_copy_sample_state = si_->allocState();
-              si_->copyState(deep_copy_sample_state, i);
-              // Attempt to drive towards newly added sample
-              // modify the sample to latest arrived state
-              auto c = siC_->allocControl();
-              auto duration = controlSampler_->sampleTo(
-                c,
-                nb->state,
-                deep_copy_sample_state);
-
-              if (duration == 0) {
-                // perhaprs due to invalidy of the state, we cannot proceed
-                siC_->freeControl(c);
-                si_->freeState(deep_copy_sample_state);
-                continue;
-              }
-
-              vertex_descriptor drived_vertex_descriptor = boost::add_vertex(g_control_);
-              auto drived_towards_nb = new VertexProperty();
-              drived_towards_nb->id = drived_vertex_descriptor;
-              drived_towards_nb->state = deep_copy_sample_state;
-              g_control_[drived_vertex_descriptor] = *drived_towards_nb;
-              g_control_[drived_vertex_descriptor].state = deep_copy_sample_state;
-              g_control_[drived_vertex_descriptor].control = c;
-              g_control_[drived_vertex_descriptor].control_duration = duration;
-              control_nn_->add(drived_towards_nb);
-
-              vertex_descriptor u = drived_vertex_descriptor;
-              vertex_descriptor v = nb->id;
-              double dist = distanceFunction(g_control_[u].state, g_control_[v].state);
-              edge_descriptor e; bool edge_added;
-              // not to construct edges with self, and if nbh is further than radius_, continue
-              if (u == v || dist > radius_) {
-                continue;
-              }
-              if (boost::edge(u, v, g_control_).second || boost::edge(v, u, g_control_).second) {
-                continue;
-              }
-              // Once suitable edges are found, populate them over graphs
-              boost::tie(e, edge_added) = boost::add_edge(u, v, g_control_);
-              weightmap_control[e] =
-                opt_->motionCost(g_control_[u].state, g_control_[v].state).value();
-            }
-          }
-        }
-
-        std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh_control;
-        control_nn_->nearestR(goal_vertex_, radius_, goal_nbh);
-        if (goal_nbh.size() > max_neighbors_) {
-          goal_nbh.resize(max_neighbors_);
-        }
-        for (auto && nb : goal_nbh) {
-          vertex_descriptor u = goal_vertex_descriptor;
-          vertex_descriptor v = nb->id;
-          double dist = distanceFunction(g_control_[u].state, g_control_[v].state);
-          edge_descriptor e; bool edge_added;
-          // not to construct edges with self, and if nbh is further than radius_, continue
-          if (u == v || dist > radius_) {
-            continue;
-          }
-          if (boost::edge(u, v, g_control_).second || boost::edge(v, u, g_control_).second) {
-            continue;
-          }
-          // Once suitable edges are found, populate them over graphs
-          boost::tie(e, edge_added) = boost::add_edge(u, v, g_control_);
-          weightmap_control[e] = opt_->motionCost(g_control_[u].state, g_control_[v].state).value();
-        }
-
+        populateControlGraph(
+          samples,
+          goal_state /*goal vertex state*/,
+          forward_control_g_target /*goal vertex desc*/,
+          g_forward_control_,
+          forward_control_nn_,
+          weightmap_forward_control);
 
         p.clear(); d.clear();
-        p.resize(boost::num_vertices(g_control_));  d.resize(boost::num_vertices(g_control_));
+        p.resize(boost::num_vertices(g_forward_control_));
+        d.resize(boost::num_vertices(g_forward_control_));
         num_visited_nodes = 0;
         try {
+
           auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, Cost>(
             this,
-            &g_control_[goal_vertex_descriptor_control], true);
+            &g_forward_control_[forward_control_g_target], true, false);
+
+
           auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
-            goal_vertex_descriptor_control, &num_visited_nodes);
+            forward_control_g_target, &num_visited_nodes);
 
           boost::astar_search_tree(
-            g_control_, start_vertex_descriptor_control, heuristic,
+            g_forward_control_, forward_control_g_root, heuristic,
             boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
 
           OMPL_INFORM(
@@ -452,7 +384,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
           // Found a collision free path to the goal, catch the exception
           shortest_path_control.clear();
-          for (vertex_descriptor v = goal_vertex_descriptor_control;; v = p[v]) {
+          for (vertex_descriptor v = forward_control_g_target;; v = p[v]) {
             shortest_path_control.push_front(v);
             if (p[v] == v) {break;}
           }
@@ -512,7 +444,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       getName().c_str(), boost::num_vertices(g_), boost::num_edges(g_));
 
     visualizePath(g_, shortest_path, geometric_path_pub_, "g");
-    visualizePath(g_control_, shortest_path_control, control_path_pub_, "c");
+    visualizePath(g_forward_control_, shortest_path_control, control_path_pub_, "c");
 
     visualizeRGG(
       g_,
@@ -523,12 +455,12 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       goal_vertex_descriptor);
 
     visualizeRGG(
-      g_control_,
+      g_forward_control_,
       control_graph_pub_,
       "c",
-      0.24,
-      start_vertex_descriptor_control,
-      goal_vertex_descriptor_control);
+      0.9,
+      forward_control_g_root,
+      forward_control_g_target);
 
   }
 
