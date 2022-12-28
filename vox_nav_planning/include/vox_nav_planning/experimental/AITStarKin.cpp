@@ -368,7 +368,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
             this,
             &g_forward_control_[forward_control_g_target], true, false);
 
-
           auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
             forward_control_g_target, &num_visited_nodes);
 
@@ -381,6 +380,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
             getName().c_str(), num_visited_nodes);
 
         } catch (FoundVertex found_goal_control) {
+
+          for (auto vd : boost::make_iterator_range(vertices(g_forward_control_))) {
+            g_forward_control_[vd].g = d[vd];
+          }
 
           // Found a collision free path to the goal, catch the exception
           shortest_path_control.clear();
