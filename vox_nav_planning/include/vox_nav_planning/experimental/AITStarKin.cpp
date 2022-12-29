@@ -631,6 +631,19 @@ void ompl::control::AITStarKin::visualizePath(
   const std_msgs::msg::ColorRGBA & color
 )
 {
+  // Clear All previous markers
+  visualization_msgs::msg::MarkerArray clear_markers;
+  visualization_msgs::msg::Marker path_marker, cost_marker;
+  path_marker.id = 0;
+  cost_marker.id = 0;
+  path_marker.ns = ns + "path";
+  cost_marker.ns = ns + "costs";
+  path_marker.action = visualization_msgs::msg::Marker::DELETEALL;
+  cost_marker.action = visualization_msgs::msg::Marker::DELETEALL;
+  clear_markers.markers.push_back(path_marker);
+  clear_markers.markers.push_back(cost_marker);
+  publisher->publish(clear_markers);
+
   visualization_msgs::msg::MarkerArray marker_array;
   visualization_msgs::msg::Marker line_strip;
   line_strip.header.frame_id = "map";
@@ -671,7 +684,7 @@ void ompl::control::AITStarKin::visualizePath(
     visualization_msgs::msg::Marker text;
     text.header.frame_id = "map";
     text.header.stamp = rclcpp::Clock().now();
-    text.ns = "rgg_costs";
+    text.ns = ns + "costs";
     text.id = g[u].id;
     text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     text.action = visualization_msgs::msg::Marker::ADD;
