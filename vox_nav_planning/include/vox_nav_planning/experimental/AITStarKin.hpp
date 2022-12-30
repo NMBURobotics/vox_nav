@@ -383,6 +383,74 @@ namespace ompl
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
         WeightMap & control_weightmap);
 
+      template<class Heuristic>
+      std::list<vertex_descriptor> computeShortestPath(
+        GraphT & g,
+        WeightMap & weightmap,
+        const Heuristic & heuristic,
+        const vertex_descriptor & start_vertex,
+        const vertex_descriptor & goal_vertex,
+        const bool & precompute_heuristic = false,
+        const bool & use_full_collision_check = false)
+      {
+        std::list<vertex_descriptor> shortest_path;
+        std::vector<vertex_descriptor> p(boost::num_vertices(g));
+        std::vector<GraphEdgeCost> d(boost::num_vertices(g));
+        int num_visited_nodes{0};
+        auto visitor = SimpleVertexVisitor<vertex_descriptor>(goal_vertex, &num_visited_nodes);
+
+        // Now we can run A* forwards from start to goal and check for collisions
+        try {
+          if (precompute_heuristic) {
+            if constexpr (use_astar_hueristic_) {
+              boost::astar_search_tree(
+                g, start_vertex, heuristic,
+                boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
+            } else {
+              boost::dijkstra_shortest_paths(
+                g, start_vertex,
+                boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
+            }
+          } else {
+            boost::astar_search_tree(
+              g, start_vertex, heuristic,
+              boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
+          }
+
+          OMPL_INFORM(
+            "%s: A call made to A* was failed after %d node visits.\n",
+            getName().c_str(), num_visited_nodes);
+
+          return shortest_path;
+
+        } catch (FoundVertex found_goal) {
+
+          // Catch the exception
+          // Found a Heuristic from start to the goal (no collision checks),
+          // We now have H function
+          for (auto vd : boost::make_iterator_range(vertices(g))) {
+            g[vd].g = d[vd];
+          }
+
+          // Found a collision free path to the goal, catch the exception
+          for (vertex_descriptor v = goal_vertex;; v = p[v]) {
+            if (use_full_collision_check) {
+              if (g[v].blacklisted) {
+                OMPL_WARN(
+                  "%s: Found a blacklisted vertex most likely due to collision, Marking in/out edges as invalid for this vertex.\n",
+                  getName().c_str());
+                for (auto ed : boost::make_iterator_range(boost::out_edges(v, g))) {
+                  weightmap[ed] = opt_->infiniteCost().value();
+                }
+              }
+            }
+            shortest_path.push_front(v);
+            if (p[v] == v) {break;}
+          }
+          return shortest_path;
+        }
+      }
+
       /** \brief static method to visulize a graph in RVIZ*/
       static void visualizeRGG(
         const GraphT & g,
@@ -404,9 +472,9 @@ namespace ompl
       /** \brief get std_msgs::msg::ColorRGBA given the color name with a std::string*/
       static std_msgs::msg::ColorRGBA getColor(std::string & color);
 
-    };
+    };     // class AITStarKin
   }   // namespace control
-}  // namespace ompl
+}   // namespace ompl
 
 
 #endif  // VOX_NAV_PLANNING__RRT__AITSTARKIN_HPP_

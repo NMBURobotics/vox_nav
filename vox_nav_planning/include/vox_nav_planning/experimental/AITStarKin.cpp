@@ -209,175 +209,92 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   while (ptc == false) {
 
     std::vector<ompl::base::State *> samples;
+
     generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
 
     expandGeometricGraph(samples, g_, nn_, weightmap);
 
     ensureGoalVertexConnectivity(goal_vertex_, g_, nn_, weightmap);
 
-    int num_visited_nodes = 0;
-    std::vector<vertex_descriptor> p(boost::num_vertices(g_));
-    std::vector<GraphEdgeCost> d(boost::num_vertices(g_));
-    std::list<vertex_descriptor> shortest_path;
-    std::list<vertex_descriptor> shortest_path_control;
+    expandControlGraph(
+      samples,
+      goal_state /*goal vertex state*/,
+      forward_control_g_target /*goal vertex desc*/,
+      g_forward_control_,
+      forward_control_nn_,
+      weightmap_forward_control);
 
-    // Run A* backwards from goal to start
-    try {
-      auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
-        this,
-        start_vertex_);
-      auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
-        start_vertex_descriptor, &num_visited_nodes);
+    // First lets compute an heuristic working backward from goal -> start
+    // This is done by running A*/Dijstra backwards from goal to start with no collision checking
+    auto heuristic =
+      GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(this, start_vertex_);
+    auto shortest_path =
+      computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
+      g_, weightmap, heuristic, goal_vertex_descriptor, start_vertex_descriptor, true, false);
 
-      if constexpr (use_astar_hueristic_) {
-        boost::astar_search_tree(
-          g_, goal_vertex_descriptor, heuristic,
-          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
-      } else {
-        boost::dijkstra_shortest_paths(
-          g_, goal_vertex_descriptor,
-          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
-      }
-
-      OMPL_WARN(
-        "%s: A* Failed to produce Heuristic that connects goal to start vertex after %d vertex visits.\n",
-        getName().c_str(), num_visited_nodes);
-
-    } catch (FoundVertex found_goal) {
-
-      // Catch the exception
-      // Found a Heuristic from start to the goal (no collision checks),
-      // We now have H function
-      for (auto vd : boost::make_iterator_range(vertices(g_))) {
-        g_[vd].g = d[vd];
-      }
-
-      p.clear(); d.clear();
-      p.resize(boost::num_vertices(g_));  d.resize(boost::num_vertices(g_));
-      num_visited_nodes = 0;
-
-      // Now we can run A* forwards from start to goal and check for collisions
-      try {
-        auto h_heuristic = PrecomputedCostHeuristic<GraphT, GraphEdgeCost>(this);
-        auto generic_visitor = SimpleVertexVisitor<vertex_descriptor>(
-          goal_vertex_descriptor, &num_visited_nodes);
-
-        boost::astar_search_tree(
-          g_, start_vertex_descriptor, h_heuristic,
-          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(generic_visitor));
-
-        OMPL_INFORM(
-          "%s: A* Failed to produce final collision free path after %d node visits.\n",
-          getName().c_str(), num_visited_nodes);
-
-      } catch (FoundVertex found_goal) {
-
-        // Found a collision free path to the goal, catch the exception
-        shortest_path.clear();
-        for (vertex_descriptor v = goal_vertex_->id;; v = p[v]) {
-          if (g_[v].blacklisted) {
-            OMPL_WARN(
-              "%s: Found a blacklisted node most likely due to collision, this path is invalid but we will find another one.\n",
-              getName().c_str());
-            for (auto ed : boost::make_iterator_range(boost::out_edges(v, g_))) {
-              weightmap[ed] = opt_->infiniteCost().value();
-            }
-          }
-          shortest_path.push_front(v);
-          if (p[v] == v) {break;}
-        }
-
-        expandControlGraph(
-          samples,
-          goal_state /*goal vertex state*/,
-          forward_control_g_target /*goal vertex desc*/,
-          g_forward_control_,
-          forward_control_nn_,
-          weightmap_forward_control);
-
-        p.clear(); d.clear();
-        p.resize(boost::num_vertices(g_forward_control_));
-        d.resize(boost::num_vertices(g_forward_control_));
-        num_visited_nodes = 0;
-        try {
-
-          auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
-            this,
-            &g_forward_control_[forward_control_g_target], true, false);
-
-          auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
-            forward_control_g_target, &num_visited_nodes);
-
-          boost::astar_search_tree(
-            g_forward_control_, forward_control_g_root, heuristic,
-            boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
-
-          OMPL_INFORM(
-            "%s: A* Failed to produce Kinodynamic path after %d node visits.\n",
-            getName().c_str(), num_visited_nodes);
-
-        } catch (FoundVertex found_goal_control) {
-
-          for (auto vd : boost::make_iterator_range(vertices(g_forward_control_))) {
-            g_forward_control_[vd].g = d[vd];
-          }
-
-          // Found a collision free path to the goal, catch the exception
-          shortest_path_control.clear();
-          for (vertex_descriptor v = forward_control_g_target;; v = p[v]) {
-            shortest_path_control.push_front(v);
-            if (p[v] == v) {break;}
-          }
-        }
-
-        /*std::vector<VertexProperty> copy_shortest_path(shortest_path.size(), VertexProperty());
-        for (size_t i = 0; i < shortest_path.size(); i++) {
-          copy_shortest_path[i].id = g_[*std::next(shortest_path.begin(), i)].id;
-          copy_shortest_path[i].state = si_->allocState();
-          copy_shortest_path[i].blacklisted = g_[*std::next(shortest_path.begin(), i)].blacklisted;
-          copy_shortest_path[i].g = g_[*std::next(shortest_path.begin(), i)].g;
-          copy_shortest_path[i].control = siC_->allocControl();
-          si_->copyState(
-            copy_shortest_path[i].state,
-            g_[*std::next(shortest_path.begin(), i)].state);
-        }
-        goal_reached = true;
-        OMPL_INFORM("%s: Calculating Kinodynamic path.\n", getName().c_str());
-        for (size_t i = 1; i < copy_shortest_path.size(); i++) {
-          auto duration = controlSampler_->sampleTo(
-            copy_shortest_path[i - 1].control,
-            copy_shortest_path[i - 1].state,
-            copy_shortest_path[i].state);
-          copy_shortest_path[i - 1].control_duration = duration;
-          if (duration == 0) {
-            OMPL_WARN(
-              "%s: Control sampler failed to find a valid control between two states.\n",
-              getName().c_str());
-          }
-        }
-        //
-        path = std::make_shared<PathControl>(si_);
-        for (int i = 0; i < copy_shortest_path.size(); i++) {
-          if (i == 0) {
-            path->append(copy_shortest_path[i].state);
-          } else {
-            path->append(
-              copy_shortest_path[i].state, copy_shortest_path[i].control,
-              copy_shortest_path[i].control_duration * siC_->getPropagationStepSize());
-          }
-        }
-        // Set the cost of the solution.
-        bestCost_ = ompl::base::Cost(path->length());
-
-        // Create a solution.
-        ompl::base::PlannerSolution solution(path);
-        solution.setPlannerName(getName());
-        solution.setOptimized(opt_, bestCost_, opt_->isSatisfied(bestCost_));
-        pdef_->addSolutionPath(solution); */
-
-      }
-
+    if (shortest_path.size() > 0) {
+      // precomputed heuristic is available, lets use it for actual path search with collision checking
+      auto precomputed_heuristic = PrecomputedCostHeuristic<GraphT, GraphEdgeCost>(this);
+      shortest_path =
+        computeShortestPath<PrecomputedCostHeuristic<GraphT, GraphEdgeCost>>(
+        g_, weightmap, precomputed_heuristic, start_vertex_descriptor, goal_vertex_descriptor,
+        false, true);
     }
+
+    // Run A* for control graph
+    auto control_forward_heuristic =
+      GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
+      this, &g_forward_control_[forward_control_g_target], true, false);
+    auto shortest_path_control =
+      computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
+      g_forward_control_, weightmap_forward_control, control_forward_heuristic,
+      forward_control_g_root, forward_control_g_target, false, false);
+
+    /*std::vector<VertexProperty> copy_shortest_path(shortest_path.size(), VertexProperty());
+    for (size_t i = 0; i < shortest_path.size(); i++) {
+      copy_shortest_path[i].id = g_[*std::next(shortest_path.begin(), i)].id;
+      copy_shortest_path[i].state = si_->allocState();
+      copy_shortest_path[i].blacklisted = g_[*std::next(shortest_path.begin(), i)].blacklisted;
+      copy_shortest_path[i].g = g_[*std::next(shortest_path.begin(), i)].g;
+      copy_shortest_path[i].control = siC_->allocControl();
+      si_->copyState(
+        copy_shortest_path[i].state,
+        g_[*std::next(shortest_path.begin(), i)].state);
+    }
+    goal_reached = true;
+    OMPL_INFORM("%s: Calculating Kinodynamic path.\n", getName().c_str());
+    for (size_t i = 1; i < copy_shortest_path.size(); i++) {
+      auto duration = controlSampler_->sampleTo(
+        copy_shortest_path[i - 1].control,
+        copy_shortest_path[i - 1].state,
+        copy_shortest_path[i].state);
+      copy_shortest_path[i - 1].control_duration = duration;
+      if (duration == 0) {
+        OMPL_WARN(
+          "%s: Control sampler failed to find a valid control between two states.\n",
+          getName().c_str());
+      }
+    }
+    //
+    path = std::make_shared<PathControl>(si_);
+    for (int i = 0; i < copy_shortest_path.size(); i++) {
+      if (i == 0) {
+        path->append(copy_shortest_path[i].state);
+      } else {
+        path->append(
+          copy_shortest_path[i].state, copy_shortest_path[i].control,
+          copy_shortest_path[i].control_duration * siC_->getPropagationStepSize());
+      }
+    }
+    // Set the cost of the solution.
+    bestCost_ = ompl::base::Cost(path->length());
+
+    // Create a solution.
+    ompl::base::PlannerSolution solution(path);
+    solution.setPlannerName(getName());
+    solution.setOptimized(opt_, bestCost_, opt_->isSatisfied(bestCost_));
+    pdef_->addSolutionPath(solution); */
+
 
     OMPL_INFORM(
       "%s: Advancing with %d vertices and %d edges.\n",
