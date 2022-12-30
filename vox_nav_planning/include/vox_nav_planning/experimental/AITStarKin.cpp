@@ -349,7 +349,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
           if (p[v] == v) {break;}
         }
 
-        populateControlGraph(
+        expandControlGraph(
           samples,
           goal_state /*goal vertex state*/,
           forward_control_g_target /*goal vertex desc*/,

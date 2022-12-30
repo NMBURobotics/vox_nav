@@ -377,7 +377,7 @@ namespace ompl
       /** \brief Keep expanding control graph with generated samples.
        * Note that only non-violating states will be added, the rest are discaded
        * TODO(@atas), add more description here*/
-      void populateControlGraph(
+      void expandControlGraph(
         const std::vector<ompl::base::State *> & samples,
         const ompl::base::State * target_vertex_state,
         const vertex_descriptor & target_vertex_descriptor,
