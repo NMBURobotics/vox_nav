@@ -198,11 +198,20 @@ namespace ompl
       /** \brief Directed control sampler to expand control graph */
       DirectedControlSamplerPtr controlSampler_;
 
+      /** \brief The NN datastructure for geometric graph */
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> nn_;
+
+      /** \brief The NN datastructure for forward control graph */
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> forward_control_nn_;
+
+      /** \brief The NN datastructure for backward control graph */
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> backward_control_nn_;
 
+      /** \brief The typedef of Edge cost as double,
+       * note that ompl::base::Cost wont work as some operators are not provided (e.g. +) */
       typedef double GraphEdgeCost;
+
+      /** \brief The typedef of Graph, note that we use setS for edge container, as we want to avoid duplicate edges */
       typedef boost::adjacency_list<
           boost::setS,          // edge
           boost::vecS,          // vertex
@@ -211,17 +220,18 @@ namespace ompl
           boost::property<boost::edge_weight_t, GraphEdgeCost>> // edge property
         GraphT;
 
+      /** \brief The typedef of Graph, note that we use setS for edge container, as we want to avoid duplicate edges */
       typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
+
+      /** \brief The typedef of vertex_descriptor, note that we keep a copy of vertex_descriptor in VertexProperty as "id" */
       typedef GraphT::vertex_descriptor vertex_descriptor;
+
+      /** \brief The typedef of edge_descriptor. */
       typedef GraphT::edge_descriptor edge_descriptor;
 
-
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr geometric_path_pub_;
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_graph_pub_;
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_path_pub_;
-      rclcpp::Node::SharedPtr node_;
-
+      /** \brief The generic eucledean distance heuristic, this is used for all graphs when we perform A* on them.
+       * Make it a friend of AITStarKin so it can access private members of AITStarKin.
+      */
       friend class GenericDistanceHeuristic;
       template<class Graph, class VertexProperty, class CostType>
       class GenericDistanceHeuristic : public boost::astar_heuristic<Graph, CostType>
@@ -258,6 +268,9 @@ namespace ompl
         bool backward_control_{false};
       };  // GenericDistanceHeuristic
 
+      /** \brief The precomputed cost heuristic, this is used for geometric graph when we perform A* with collision checks.
+       * Make it a friend of AITStarKin so it can access private members of AITStarKin.
+      */
       friend class PrecomputedCostHeuristic;
       template<class Graph, class CostType>
       class PrecomputedCostHeuristic : public boost::astar_heuristic<Graph, CostType>
@@ -284,9 +297,11 @@ namespace ompl
         AITStarKin * alg_;
       };  // PrecomputedCostHeuristic
 
-
-      // exception for termination
+      /** \brief Exception thrown when goal vertex is found */
       struct FoundVertex {};
+
+      /** \brief The visitor class for A* search, this is used for all graphs when we perform A* on them.
+      */
       template<class Vertex>
       class SimpleVertexVisitor : public boost::default_astar_visitor
       {
@@ -311,14 +326,31 @@ namespace ompl
         int * num_visits_;
       };  // SimpleVertexVisitor
 
-
+      /** \brief Keep a global copy of start and goal vertex properties*/
       VertexProperty * start_vertex_{nullptr};
       VertexProperty * goal_vertex_{nullptr};
 
+      /** \brief The graphs are global too */
       GraphT g_;
       GraphT g_forward_control_;
       GraphT g_backward_control_;
 
+      /** \brief The publishers for the geometric and control graph/path visulization*/
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;
+
+      /** \brief The publishers for the geometric and control graph/path visulization*/
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr geometric_path_pub_;
+
+      /** \brief The publishers for the geometric and control graph/path visulization*/
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_graph_pub_;
+
+      /** \brief The publishers for the geometric and control graph/path visulization*/
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_path_pub_;
+
+      /** \brief The node*/
+      rclcpp::Node::SharedPtr node_;
+
+      /** \brief static method to visulize a graph in RVIZ*/
       static void visualizeRGG(
         const GraphT & g,
         const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
@@ -327,6 +359,7 @@ namespace ompl
         const vertex_descriptor & start_vertex,
         const vertex_descriptor & goal_vertex);
 
+      /** \brief static method to visulize a path in RVIZ*/
       static void visualizePath(
         const GraphT & g,
         const std::list<vertex_descriptor> & path,
@@ -335,11 +368,15 @@ namespace ompl
         const std_msgs::msg::ColorRGBA & color
       );
 
+      /** \brief generate a requested amound of states with preffered state sampler*/
       void generateBatchofSamples(
         int batch_size,
         bool use_valid_sampler,
         std::vector<ompl::base::State *> & samples);
 
+      /** \brief Keep expanding control graph with generated samples.
+       * Note that only non-violating states will be added, the rest are discaded
+       * TODO(@atas), add more description here*/
       void populateControlGraph(
         const std::vector<ompl::base::State *> & samples,
         const ompl::base::State * target_vertex_state,
@@ -469,6 +506,7 @@ namespace ompl
         }
       }
 
+      /** \brief get std_msgs::msg::ColorRGBA given the color name with a std::string*/
       std_msgs::msg::ColorRGBA getColor(std::string & color) const
       {
         std_msgs::msg::ColorRGBA color_rgba;
