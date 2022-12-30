@@ -213,27 +213,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
     expandGeometricGraph(samples, g_, nn_, weightmap);
 
-    std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh;
-    nn_->nearestR(goal_vertex_, radius_, goal_nbh);
-    if (goal_nbh.size() > max_neighbors_) {
-      goal_nbh.resize(max_neighbors_);
-    }
-    for (auto && nb : goal_nbh) {
-      vertex_descriptor u = goal_vertex_descriptor;
-      vertex_descriptor v = nb->id;
-      double dist = distanceFunction(g_[u].state, g_[v].state);
-      edge_descriptor e; bool edge_added;
-      // not to construct edges with self, and if nbh is further than radius_, continue
-      if (u == v || dist > radius_) {
-        continue;
-      }
-      if (boost::edge(u, v, g_).second || boost::edge(v, u, g_).second) {
-        continue;
-      }
-      // Once suitable edges are found, populate them over graphs
-      boost::tie(e, edge_added) = boost::add_edge(u, v, g_);
-      weightmap[e] = opt_->motionCost(g_[u].state, g_[v].state).value();
-    }
+    ensureGoalVertexConnectivity(goal_vertex_, g_, nn_, weightmap);
 
     int num_visited_nodes = 0;
     std::vector<vertex_descriptor> p(boost::num_vertices(g_));
@@ -533,6 +513,37 @@ void ompl::control::AITStarKin::expandGeometricGraph(
           opt_->motionCost(geometric_graph[u].state, geometric_graph[v].state).value();
       }
     }
+  }
+}
+
+void ompl::control::AITStarKin::ensureGoalVertexConnectivity(
+  VertexProperty * target_vertex_property,
+  GraphT & geometric_graph,
+  std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
+  WeightMap & geometric_weightmap)
+{
+  // Neihbors of goal vertex
+  std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh;
+  geometric_nn->nearestR(target_vertex_property, radius_, goal_nbh);
+  if (goal_nbh.size() > max_neighbors_) {
+    goal_nbh.resize(max_neighbors_);
+  }
+  for (auto && nb : goal_nbh) {
+    vertex_descriptor u = target_vertex_property->id;
+    vertex_descriptor v = nb->id;
+    double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
+    edge_descriptor e; bool edge_added;
+    // not to construct edges with self, and if nbh is further than radius_, continue
+    if (u == v || dist > radius_) {
+      continue;
+    }
+    if (boost::edge(u, v, geometric_graph).second || boost::edge(v, u, geometric_graph).second) {
+      continue;
+    }
+    // Once suitable edges are found, populate them over graphs
+    boost::tie(e, edge_added) = boost::add_edge(u, v, geometric_graph);
+    geometric_weightmap[e] =
+      opt_->motionCost(geometric_graph[u].state, geometric_graph[v].state).value();
   }
 }
 

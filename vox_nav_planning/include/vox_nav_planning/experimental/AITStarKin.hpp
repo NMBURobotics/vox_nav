@@ -356,11 +356,18 @@ namespace ompl
         bool use_valid_sampler,
         std::vector<ompl::base::State *> & samples);
 
-      /** \brief Keep expanding control graph with generated samples.
-     * Note that only non-violating states will be added, the rest are discaded
-     * TODO(@atas), add more description here*/
+      /** \brief Keep expanding geometric graph with generated samples.
+       * TODO(@atas), add more description here*/
       void expandGeometricGraph(
         const std::vector<ompl::base::State *> & samples,
+        GraphT & geometric_graph,
+        std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
+        WeightMap & geometric_weightmap);
+
+      /** \brief In each iteration, make sure that goal vertex is connected to its nn.
+       * TODO(@atas), add more description here*/
+      void ensureGoalVertexConnectivity(
+        VertexProperty * target_vertex_property,
         GraphT & geometric_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
         WeightMap & geometric_weightmap);
