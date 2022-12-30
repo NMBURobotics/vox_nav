@@ -198,6 +198,9 @@ namespace ompl
       std::shared_ptr<RealVectorStateSpace> real_vector_;
       std::shared_ptr<SO2StateSpace> so2_;
 
+      ompl::base::State * state1_se2_;
+      ompl::base::State * state2_se2_;
+
       double rho_;
       bool isSymmetric_;
     };

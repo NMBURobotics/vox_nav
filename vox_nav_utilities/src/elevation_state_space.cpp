@@ -82,6 +82,9 @@ ElevationStateSpace::ElevationStateSpace(
   reeds_sheep_ = std::make_shared<ompl::base::ReedsSheppStateSpace>(rho_);
   so2_ = std::make_shared<ompl::base::SO2StateSpace>();
 
+  state1_se2_ = se2_->allocState();
+  state2_se2_ = se2_->allocState();
+
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
 
@@ -173,11 +176,15 @@ double ompl::base::ElevationStateSpace::distance(const State * state1, const Sta
   const auto * state2_so2 = state2->as<StateType>()->as<SO2StateSpace::StateType>(0);
   const auto * state2_xyzv = state2->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  auto state1_se2 = se2_->allocState(); auto state2_se2 = se2_->allocState();
-  state1_se2->as<SE2StateSpace::StateType>()->setXY(state1_xyzv->values[0], state1_xyzv->values[1]);
-  state1_se2->as<SE2StateSpace::StateType>()->setYaw(state1_so2->value);
-  state2_se2->as<SE2StateSpace::StateType>()->setXY(state2_xyzv->values[0], state2_xyzv->values[1]);
-  state2_se2->as<SE2StateSpace::StateType>()->setYaw(state2_so2->value);
+  state1_se2_->as<SE2StateSpace::StateType>()->setXY(
+    state1_xyzv->values[0],
+    state1_xyzv->values[1]);
+  state1_se2_->as<SE2StateSpace::StateType>()->setYaw(state1_so2->value);
+
+  state2_se2_->as<SE2StateSpace::StateType>()->setXY(
+    state2_xyzv->values[0],
+    state2_xyzv->values[1]);
+  state2_se2_->as<SE2StateSpace::StateType>()->setYaw(state2_so2->value);
 
   if (se2_state_type_ == SE2StateType::SE2) {
     return std::sqrt(
@@ -188,12 +195,12 @@ double ompl::base::ElevationStateSpace::distance(const State * state1, const Sta
   } else if (se2_state_type_ == SE2StateType::DUBINS) {
     if (isSymmetric_) {
       return rho_ * std::min(
-        dubins_->dubins(state1_se2, state2_se2).length(),
-        dubins_->dubins(state2_se2, state1_se2).length());
+        dubins_->dubins(state1_se2_, state2_se2_).length(),
+        dubins_->dubins(state2_se2_, state1_se2_).length());
     }
-    return rho_ * dubins_->dubins(state1_se2, state2_se2).length();
+    return rho_ * dubins_->dubins(state1_se2_, state2_se2_).length();
   } else {
-    return rho_ * reeds_sheep_->reedsShepp(state1_se2, state2_se2).length();
+    return rho_ * reeds_sheep_->reedsShepp(state1_se2_, state2_se2_).length();
   }
   return 0;
 }
