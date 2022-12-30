@@ -80,9 +80,6 @@ void ompl::control::AITStarKin::setup()
   if (!controlSampler_) {
     controlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, k_number_of_controls_);
   }
-  if (!preciseControlSampler_) {
-    preciseControlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, 100);
-  }
 
   // RVIZ VISUALIZATIONS
   node_ = std::make_shared<rclcpp::Node>("aitstarkin_rclcpp_node");
@@ -282,13 +279,15 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
     int num_visited_nodes = 0;
     std::vector<vertex_descriptor> p(boost::num_vertices(g_));
-    std::vector<Cost> d(boost::num_vertices(g_));
+    std::vector<GraphEdgeCost> d(boost::num_vertices(g_));
     std::list<vertex_descriptor> shortest_path;
     std::list<vertex_descriptor> shortest_path_control;
 
     // Run A* backwards from goal to start
     try {
-      auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, Cost>(this, start_vertex_);
+      auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
+        this,
+        start_vertex_);
       auto c_visitor = SimpleVertexVisitor<vertex_descriptor>(
         start_vertex_descriptor, &num_visited_nodes);
 
@@ -321,7 +320,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
       // Now we can run A* forwards from start to goal and check for collisions
       try {
-        auto h_heuristic = PrecomputedCostHeuristic<GraphT, Cost>(this);
+        auto h_heuristic = PrecomputedCostHeuristic<GraphT, GraphEdgeCost>(this);
         auto generic_visitor = SimpleVertexVisitor<vertex_descriptor>(
           goal_vertex_descriptor, &num_visited_nodes);
 
@@ -343,7 +342,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
               "%s: Found a blacklisted node most likely due to collision, this path is invalid but we will find another one.\n",
               getName().c_str());
             for (auto ed : boost::make_iterator_range(boost::out_edges(v, g_))) {
-              weightmap[ed] = std::numeric_limits<double>::infinity();
+              weightmap[ed] = opt_->infiniteCost().value();
             }
           }
           shortest_path.push_front(v);
@@ -364,7 +363,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         num_visited_nodes = 0;
         try {
 
-          auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, Cost>(
+          auto heuristic = GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
             this,
             &g_forward_control_[forward_control_g_target], true, false);
 

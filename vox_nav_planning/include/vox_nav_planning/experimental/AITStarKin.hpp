@@ -49,7 +49,14 @@ namespace ompl
 {
   namespace control
   {
-
+    /**
+       @anchor cAITStarKin
+       @par Short description
+       \ref A kinodynamic extension of AITStar. This implementation is based on boost graph library.
+       An accompanying paper explaning novelities of this implementation will be published soon.
+       @par External documentation
+       TBD
+    */
     class AITStarKin : public base::Planner
     {
     public:
@@ -70,7 +77,7 @@ namespace ompl
           want to continue planning */
       void clear() override;
 
-      /** \brief Free the memory allocated by this planner */
+      /** \brief Free the memory allocated by this planner. That is mostly in nearest neihbours. */
       void freeMemory();
 
       /** \brief Set a different nearest neighbors datastructure */
@@ -87,97 +94,127 @@ namespace ompl
         setup();
       }
 
+      /** \brief Properties of boost graph vertex, both geometriuc and control graphes share this vertex property.
+       *  Some of the elements are not used in geometric graph (e.g., control, control_duration). */
       struct VertexProperty
       {
-        std::vector<ompl::base::State *> path;
         ompl::base::State * state{nullptr};
         ompl::control::Control * control{nullptr};
         unsigned int control_duration{0};
         std::size_t id{0};
         double g{1.0e+3};
         bool blacklisted{false};
-        bool has_children{false};
       };
 
+      /** \brief Compute distance between Vertexes (actually distance between contained states) */
       double distanceFunction(const VertexProperty * a, const VertexProperty * b) const
       {
         return si_->distance(a->state, b->state);
       }
 
+      /** \brief Compute distance between states */
       double distanceFunction(const base::State * a, const base::State * b) const
       {
         return si_->distance(a, b);
       }
 
+      /** \brief Given its vertex_descriptor (id),
+       * return a const pointer to VertexProperty in geometric graph g_  */
       const VertexProperty * getVertex(std::size_t id)
       {
         return &g_[id];
       }
 
-      const VertexProperty * getVertexForwardControl(std::size_t id)
-      {
-        return &g_forward_control_[id];
-      }
-
-      const VertexProperty * getVertexBackwardControl(std::size_t id)
-      {
-        return &g_backward_control_[id];
-      }
-
+      /** \brief Given its vertex_descriptor (id),
+       * return a mutable pointer to VertexProperty in geometric graph g_  */
       VertexProperty * getVertexMutable(std::size_t id)
       {
         return &g_[id];
       }
 
+      /** \brief Given its vertex_descriptor (id),
+       * return a const pointer to VertexProperty in control graph g_forward_control_  */
+      const VertexProperty * getVertexForwardControl(std::size_t id)
+      {
+        return &g_forward_control_[id];
+      }
+
+      /** \brief Given its vertex_descriptor (id),
+       * return a const pointer to VertexProperty in control graph g_backward_control_  */
+      const VertexProperty * getVertexBackwardControl(std::size_t id)
+      {
+        return &g_backward_control_[id];
+      }
+
     private:
+      /** \brief All configurable parameters of AITStarKin, TODO(@atas), add getters and setters for each. */
+
+      /** \brief The number of samples to be added to graph in each iteration. */
       int batch_size_{500};
-      double radius_{1.5}; // max edge length
+
+      /** \brief The radius to construct edges in construction of RGG, this is meant to be used in geometric graph, determines max edge length. */
+      double radius_{1.5}; //
+
+      /** \brief The a single vertex, do not construct more edges (neighbours) more than max_neighbors_. */
       int max_neighbors_{10};
+
+      /** \brief Adding almost identical samples does not help much, so we regulate this by min_dist_between_vertices_. */
       double min_dist_between_vertices_{0.1};
+
+      /** \brief If available, use valid sampler. */
       bool use_valid_sampler_{true};
+
+      /** \brief For directed control, set a number of samples to iterate though, to get a more accurate sampleTo behviour. It comes as costy!. */
       int k_number_of_controls_{1};
+
+      /** \brief For adaptive heuristic, there is two options, dijkstra and astar.
+       *  Default is dijkstra as it computes shortest path from each vertex to specified one */
       static bool const use_astar_hueristic_{false};
+
+      /** \brief Frequently push goal to graph. It is used in control graph */
       double goal_bias_{0.05};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_{nullptr};
 
-      const SpaceInformation * siC_{nullptr};
-
-      /** \brief State sampler */
-      base::ValidStateSamplerPtr valid_state_sampler_{nullptr};
-
+      /** \brief Informed sampling strategy */
       std::shared_ptr<base::PathLengthDirectInfSampler> path_informed_sampler_{nullptr};
 
+      /** \brief Informed sampling strategy */
       std::shared_ptr<base::RejectionInfSampler> rejection_informed_sampler_{nullptr};
+
+      /** \brief Valid state sampler */
+      base::ValidStateSamplerPtr valid_state_sampler_{nullptr};
+
+      /** \brief Control space information */
+      const SpaceInformation * siC_{nullptr};
 
       /** \brief The optimization objective. */
       base::OptimizationObjectivePtr opt_{nullptr};
 
+      /** \brief Current cost of best path. The informed sampling strategy needs it. */
       ompl::base::Cost bestCost_{std::numeric_limits<double>::infinity()};
 
+      /** \brief Directed control sampler to expand control graph */
       DirectedControlSamplerPtr controlSampler_;
-      DirectedControlSamplerPtr preciseControlSampler_;
 
-      typedef float Cost;
+      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> nn_;
+      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> forward_control_nn_;
+      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> backward_control_nn_;
+
+      typedef double GraphEdgeCost;
       typedef boost::adjacency_list<
           boost::setS,          // edge
           boost::vecS,          // vertex
           boost::undirectedS,   // type
           VertexProperty,       // vertex property
-          boost::property<boost::edge_weight_t, Cost>> // edge property
+          boost::property<boost::edge_weight_t, GraphEdgeCost>> // edge property
         GraphT;
 
       typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
       typedef GraphT::vertex_descriptor vertex_descriptor;
       typedef GraphT::edge_descriptor edge_descriptor;
-      typedef GraphT::vertex_iterator vertex_iterator;
-      typedef std::pair<int, int> edge;
-      using WeightProperty = boost::property<boost::edge_weight_t, Cost>;
 
-      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> nn_;
-      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> forward_control_nn_;
-      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> backward_control_nn_;
 
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr geometric_path_pub_;
@@ -204,11 +241,13 @@ namespace ompl
         double operator()(vertex_descriptor i)
         {
           if (forward_control_) {
-            return alg_->distanceFunction(alg_->getVertexForwardControl(i), goal_);
+            return alg_->opt_->motionCost(
+              alg_->getVertexForwardControl(i)->state, goal_->state).value();
           } else if (backward_control_) {
-            return alg_->distanceFunction(alg_->getVertexBackwardControl(i), goal_);
+            return alg_->opt_->motionCost(
+              alg_->getVertexBackwardControl(i)->state, goal_->state).value();
           } else {
-            return alg_->distanceFunction(alg_->getVertex(i), goal_);
+            return alg_->opt_->motionCost(alg_->getVertex(i)->state, goal_->state).value();
           }
         }
 
