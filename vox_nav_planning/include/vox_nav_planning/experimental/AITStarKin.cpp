@@ -211,49 +211,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     std::vector<ompl::base::State *> samples;
     generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
 
-    // Add batch_size_ number of samples to graphs
-    // Create edges to construct an RGG, the vertices closer than radius_ will construct an edge
-    // But too close vertices will be discarded in order for memory not to sink
-    for (auto && i : samples) {
-      VertexProperty * this_vertex_property = new VertexProperty();
-      this_vertex_property->state = (i);
-      std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
-      nn_->nearestR(this_vertex_property, radius_, nbh);
-      if (nbh.size() > max_neighbors_) {
-        nbh.resize(max_neighbors_);
-      }
-
-      bool does_vertice_exits{false};
-      for (auto && nb : nbh) {
-        double dist = distanceFunction(i, nb->state);
-        if (dist < min_dist_between_vertices_ /*do not add same vertice twice*/) {
-          does_vertice_exits = true;
-        }
-      }
-
-      if (!does_vertice_exits) {
-        vertex_descriptor this_vertex_descriptor = boost::add_vertex(g_);
-        this_vertex_property->id = this_vertex_descriptor;
-        g_[this_vertex_descriptor] = *this_vertex_property;
-        nn_->add(this_vertex_property);
-        for (auto && nb : nbh) {
-          vertex_descriptor u = this_vertex_descriptor;
-          vertex_descriptor v = nb->id;
-          double dist = distanceFunction(g_[u].state, g_[v].state);
-          edge_descriptor e; bool edge_added;
-          // not to construct edges with self, and if nbh is further than radius_, continue
-          if (u == v || dist > radius_) {
-            continue;
-          }
-          if (boost::edge(u, v, g_).second || boost::edge(v, u, g_).second) {
-            continue;
-          }
-          // Once suitable edges are found, populate them over graphs
-          boost::tie(e, edge_added) = boost::add_edge(u, v, g_);
-          weightmap[e] = opt_->motionCost(g_[u].state, g_[v].state).value();
-        }
-      }
-    }
+    expandGeometricGraph(samples, g_, nn_, weightmap);
 
     std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh;
     nn_->nearestR(goal_vertex_, radius_, goal_nbh);
@@ -523,6 +481,190 @@ void ompl::control::AITStarKin::generateBatchofSamples(
   } while (samples.size() < batch_size);
 }
 
+void ompl::control::AITStarKin::expandGeometricGraph(
+  const std::vector<ompl::base::State *> & samples,
+  GraphT & geometric_graph,
+  std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
+  WeightMap & geometric_weightmap)
+{
+  // Add batch_size_ number of samples to graphs
+  // Create edges to construct an RGG, the vertices closer than radius_ will construct an edge
+  // But too close vertices will be discarded in order for memory not to sink
+  for (auto && i : samples) {
+    VertexProperty * this_vertex_property = new VertexProperty();
+    this_vertex_property->state = (i);
+    std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
+    geometric_nn->nearestR(this_vertex_property, radius_, nbh);
+    if (nbh.size() > max_neighbors_) {
+      nbh.resize(max_neighbors_);
+    }
+
+    bool does_vertice_exits{false};
+    for (auto && nb : nbh) {
+      double dist = distanceFunction(i, nb->state);
+      if (dist < min_dist_between_vertices_ /*do not add same vertice twice*/) {
+        does_vertice_exits = true;
+      }
+    }
+
+    if (!does_vertice_exits) {
+      vertex_descriptor this_vertex_descriptor = boost::add_vertex(geometric_graph);
+      this_vertex_property->id = this_vertex_descriptor;
+      geometric_graph[this_vertex_descriptor] = *this_vertex_property;
+      geometric_nn->add(this_vertex_property);
+      for (auto && nb : nbh) {
+        vertex_descriptor u = this_vertex_descriptor;
+        vertex_descriptor v = nb->id;
+        double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
+        edge_descriptor e; bool edge_added;
+        // not to construct edges with self, and if nbh is further than radius_, continue
+        if (u == v || dist > radius_) {
+          continue;
+        }
+        if (boost::edge(
+            u, v,
+            geometric_graph).second || boost::edge(v, u, geometric_graph).second)
+        {
+          continue;
+        }
+        // Once suitable edges are found, populate them over graphs
+        boost::tie(e, edge_added) = boost::add_edge(u, v, geometric_graph);
+        geometric_weightmap[e] =
+          opt_->motionCost(geometric_graph[u].state, geometric_graph[v].state).value();
+      }
+    }
+  }
+}
+
+void ompl::control::AITStarKin::expandControlGraph(
+  const std::vector<ompl::base::State *> & samples,
+  const ompl::base::State * target_vertex_state,
+  const vertex_descriptor & target_vertex_descriptor,
+  GraphT & control_graph,
+  std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
+  WeightMap & control_weightmap)
+{
+  // Now we have a collision free path, we can now find a control path
+  // Add all samples to the control NN and contol graph
+  int ith_sample = static_cast<int>(1.0 / goal_bias_);
+  int index_of_goal_bias{0};
+
+  for (auto && i : samples) {
+    VertexProperty * this_vertex_property = new VertexProperty();
+    this_vertex_property->state = i;
+
+    // Every ith sample is goal biasing
+    if ((index_of_goal_bias & ith_sample) == 0) {
+      auto deep_copy_target_state = si_->allocState();
+      si_->copyState(deep_copy_target_state, target_vertex_state);
+      this_vertex_property->state = deep_copy_target_state;
+    }
+    index_of_goal_bias++;
+
+    std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
+    control_nn->nearestR(this_vertex_property, radius_, nbh);
+
+    if (nbh.size() == 0) {
+      continue;
+    }
+    if (nbh.size() > max_neighbors_) {
+      nbh.resize(max_neighbors_);
+    }
+
+    bool does_vertice_exits{false};
+    for (auto && nb : nbh) {
+      double dist = distanceFunction(i, nb->state);
+      if (dist < min_dist_between_vertices_ /*do not add same vertice twice*/) {
+        does_vertice_exits = true;
+      }
+    }
+
+    if (!does_vertice_exits) {
+      for (auto && nb : nbh) {
+        if (nb->id == target_vertex_descriptor) {
+          // Do not add edge to target vertex
+          continue;
+        }
+        // Do not modify original sample, as that will affect geometric RGG
+        auto deep_copy_sample_state = si_->allocState();
+        si_->copyState(deep_copy_sample_state, i);
+        // Attempt to drive towards newly added sample
+        // modify the sample to latest arrived state
+        auto c = siC_->allocControl();
+        auto duration = controlSampler_->sampleTo(
+          c,
+          nb->state,
+          deep_copy_sample_state);
+
+        if (duration == 0) {
+          // perhaprs due to invalidy of the state, we cannot proceed
+          siC_->freeControl(c);
+          si_->freeState(deep_copy_sample_state);
+          continue;
+        }
+
+        vertex_descriptor arrived_vertex_descriptor = boost::add_vertex(control_graph);
+        auto arrived_vertex_property = new VertexProperty();
+        arrived_vertex_property->id = arrived_vertex_descriptor;
+        arrived_vertex_property->state = deep_copy_sample_state;
+        control_graph[arrived_vertex_descriptor] = *arrived_vertex_property;
+        control_graph[arrived_vertex_descriptor].state = deep_copy_sample_state;
+        control_graph[arrived_vertex_descriptor].control = c;
+        control_graph[arrived_vertex_descriptor].control_duration = duration;
+        control_nn->add(arrived_vertex_property);
+
+        vertex_descriptor u = arrived_vertex_descriptor;
+        vertex_descriptor v = nb->id;
+        double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
+        edge_descriptor e; bool edge_added;
+        // not to construct edges with self, and if nbh is further than radius_, continue
+        if (u == v || dist > radius_) {
+          continue;
+        }
+        if (boost::edge(
+            u, v,
+            control_graph).second || boost::edge(v, u, control_graph).second)
+        {
+          continue;
+        }
+        // Once suitable edges are found, populate them over graphs
+        boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
+        control_weightmap[e] =
+          opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
+
+        // calculate the distance between the arrived state and the start/goal
+
+        double dist_to_target = distanceFunction(
+          arrived_vertex_property->state,
+          target_vertex_state);
+
+        // if the distance is less than the radius to target, then add the edge
+        if (dist_to_target < radius_ / 2.0) {
+
+          vertex_descriptor u = arrived_vertex_property->id;
+          vertex_descriptor v = target_vertex_descriptor;
+          double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
+          edge_descriptor e; bool edge_added;
+          // not to construct edges with self, and if nbh is further than radius_, continue
+          if (u == v || dist > radius_) {
+            continue;
+          }
+          if (boost::edge(u, v, control_graph).second ||
+            boost::edge(v, u, control_graph).second)
+          {
+            continue;
+          }
+          // Once suitable edges are found, populate them over graphs
+          boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
+          control_weightmap[e] =
+            opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
+        }
+
+      }
+    }
+  }
+}
+
 void ompl::control::AITStarKin::visualizeRGG(
   const GraphT & g,
   const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
@@ -701,4 +843,56 @@ void ompl::control::AITStarKin::visualizePath(
   marker_array.markers.push_back(line_strip);
 
   publisher->publish(marker_array);
+}
+
+std_msgs::msg::ColorRGBA ompl::control::AITStarKin::getColor(std::string & color)
+{
+  std_msgs::msg::ColorRGBA color_rgba;
+  if (color == "red") {
+    color_rgba.r = 1.0;
+    color_rgba.g = 0.0;
+    color_rgba.b = 0.0;
+    color_rgba.a = 1.0;
+  } else if (color == "green") {
+    color_rgba.r = 0.0;
+    color_rgba.g = 1.0;
+    color_rgba.b = 0.0;
+    color_rgba.a = 1.0;
+  } else if (color == "blue") {
+    color_rgba.r = 0.0;
+    color_rgba.g = 0.0;
+    color_rgba.b = 1.0;
+    color_rgba.a = 1.0;
+  } else if (color == "yellow") {
+    color_rgba.r = 1.0;
+    color_rgba.g = 1.0;
+    color_rgba.b = 0.0;
+    color_rgba.a = 1.0;
+  } else if (color == "magenta") {
+    color_rgba.r = 1.0;
+    color_rgba.g = 0.0;
+    color_rgba.b = 1.0;
+    color_rgba.a = 1.0;
+  } else if (color == "cyan") {
+    color_rgba.r = 0.0;
+    color_rgba.g = 1.0;
+    color_rgba.b = 1.0;
+    color_rgba.a = 1.0;
+  } else if (color == "white") {
+    color_rgba.r = 1.0;
+    color_rgba.g = 1.0;
+    color_rgba.b = 1.0;
+    color_rgba.a = 1.0;
+  } else if (color == "black") {
+    color_rgba.r = 0.0;
+    color_rgba.g = 0.0;
+    color_rgba.b = 0.0;
+    color_rgba.a = 1.0;
+  } else {
+    color_rgba.r = 0.0;
+    color_rgba.g = 0.0;
+    color_rgba.b = 0.0;
+    color_rgba.a = 1.0;
+  }
+  return color_rgba;
 }
