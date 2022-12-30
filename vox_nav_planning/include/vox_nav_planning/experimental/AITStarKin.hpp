@@ -150,7 +150,7 @@ namespace ompl
       /** \brief All configurable parameters of AITStarKin, TODO(@atas), add getters and setters for each. */
 
       /** \brief The number of samples to be added to graph in each iteration. */
-      int batch_size_{500};
+      int batch_size_{1000};
 
       /** \brief The radius to construct edges in construction of RGG, this is meant to be used in geometric graph, determines max edge length. */
       double radius_{1.5}; //
@@ -334,6 +334,9 @@ namespace ompl
       GraphT g_;
       GraphT g_forward_control_;
       GraphT g_backward_control_;
+
+      std::thread * geometric_thread_{nullptr};
+      std::thread * forward_control_thread_{nullptr};
 
       /** \brief The publishers for the geometric and control graph/path visulization*/
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;

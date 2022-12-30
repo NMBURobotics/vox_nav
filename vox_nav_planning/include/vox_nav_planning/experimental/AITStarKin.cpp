@@ -197,7 +197,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     "%s: Starting planning with %u states already in datastructure\n", getName().c_str(),
     nn_->size());
 
-  std::list<std::size_t> forwardPath, reversePath;
+  std::list<std::size_t> shortest_path, shortest_path_control;
 
   WeightMap weightmap = get(boost::edge_weight, g_);
   WeightMap weightmap_forward_control = get(boost::edge_weight, g_forward_control_);
@@ -212,43 +212,74 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
     generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
 
-    expandGeometricGraph(samples, g_, nn_, weightmap);
+    // Geometric graph Thread
+    geometric_thread_ = new std::thread(
+      [this,
+      &samples,
+      &weightmap,
+      &shortest_path,
+      &goal_vertex_descriptor,
+      &start_vertex_descriptor
+      ]
+      {
+        expandGeometricGraph(samples, g_, nn_, weightmap);
 
-    ensureGoalVertexConnectivity(goal_vertex_, g_, nn_, weightmap);
+        ensureGoalVertexConnectivity(goal_vertex_, g_, nn_, weightmap);
 
-    expandControlGraph(
-      samples,
-      goal_state /*goal vertex state*/,
-      forward_control_g_target /*goal vertex desc*/,
-      g_forward_control_,
-      forward_control_nn_,
-      weightmap_forward_control);
+        // First lets compute an heuristic working backward from goal -> start
+        // This is done by running A*/Dijstra backwards from goal to start with no collision checking
+        auto heuristic =
+        GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(this, start_vertex_);
+        shortest_path =
+        computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
+          g_, weightmap, heuristic, goal_vertex_descriptor, start_vertex_descriptor, true, false);
 
-    // First lets compute an heuristic working backward from goal -> start
-    // This is done by running A*/Dijstra backwards from goal to start with no collision checking
-    auto heuristic =
-      GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(this, start_vertex_);
-    auto shortest_path =
-      computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
-      g_, weightmap, heuristic, goal_vertex_descriptor, start_vertex_descriptor, true, false);
+        if (shortest_path.size() > 0) {
+          // precomputed heuristic is available, lets use it for actual path search with collision checking
+          auto precomputed_heuristic = PrecomputedCostHeuristic<GraphT, GraphEdgeCost>(this);
+          shortest_path =
+          computeShortestPath<PrecomputedCostHeuristic<GraphT, GraphEdgeCost>>(
+            g_, weightmap, precomputed_heuristic, start_vertex_descriptor, goal_vertex_descriptor,
+            false, true);
+        }
+      });
 
-    if (shortest_path.size() > 0) {
-      // precomputed heuristic is available, lets use it for actual path search with collision checking
-      auto precomputed_heuristic = PrecomputedCostHeuristic<GraphT, GraphEdgeCost>(this);
-      shortest_path =
-        computeShortestPath<PrecomputedCostHeuristic<GraphT, GraphEdgeCost>>(
-        g_, weightmap, precomputed_heuristic, start_vertex_descriptor, goal_vertex_descriptor,
-        false, true);
-    }
+    // Control graph Thread
+    forward_control_thread_ = new std::thread(
+      [this,
+      &samples,
+      &goal_state,
+      &forward_control_g_target,
+      &forward_control_g_root,
+      &weightmap_forward_control,
+      &shortest_path_control
+      ]
+      {
+        expandControlGraph(
+          samples,
+          goal_state,
+          forward_control_g_target,
+          g_forward_control_,
+          forward_control_nn_,
+          weightmap_forward_control);
 
-    // Run A* for control graph
-    auto control_forward_heuristic =
-      GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
-      this, &g_forward_control_[forward_control_g_target], true, false);
-    auto shortest_path_control =
-      computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
-      g_forward_control_, weightmap_forward_control, control_forward_heuristic,
-      forward_control_g_root, forward_control_g_target, false, false);
+        // Run A* for control graph
+        auto control_forward_heuristic =
+        GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
+          this, &g_forward_control_[forward_control_g_target], true, false);
+        shortest_path_control =
+        computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
+          g_forward_control_, weightmap_forward_control, control_forward_heuristic,
+          forward_control_g_root, forward_control_g_target, false, false);
+      });
+
+    // Let the threads finish
+    geometric_thread_->join();
+    forward_control_thread_->join();
+
+    // Delete the threads
+    delete geometric_thread_;
+    delete forward_control_thread_;
 
     /*std::vector<VertexProperty> copy_shortest_path(shortest_path.size(), VertexProperty());
     for (size_t i = 0; i < shortest_path.size(); i++) {
