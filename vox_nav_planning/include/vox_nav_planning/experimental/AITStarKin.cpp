@@ -203,7 +203,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   WeightMap weightmap_forward_control = get(boost::edge_weight, g_forward_control_);
   WeightMap weightmap_backward_control = get(boost::edge_weight, g_backward_control_);
 
-  auto path(std::make_shared<PathControl>(si_));
+  auto control_path(std::make_shared<PathControl>(si_));
+  auto geometric_path(std::make_shared<PathControl>(si_));
+
   bool goal_reached{false};
 
   while (ptc == false) {
@@ -281,51 +283,45 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     delete geometric_thread_;
     delete forward_control_thread_;
 
-    /*std::vector<VertexProperty> copy_shortest_path(shortest_path.size(), VertexProperty());
-    for (size_t i = 0; i < shortest_path.size(); i++) {
-      copy_shortest_path[i].id = g_[*std::next(shortest_path.begin(), i)].id;
-      copy_shortest_path[i].state = si_->allocState();
-      copy_shortest_path[i].blacklisted = g_[*std::next(shortest_path.begin(), i)].blacklisted;
-      copy_shortest_path[i].g = g_[*std::next(shortest_path.begin(), i)].g;
-      copy_shortest_path[i].control = siC_->allocControl();
-      si_->copyState(
-        copy_shortest_path[i].state,
-        g_[*std::next(shortest_path.begin(), i)].state);
-    }
-    goal_reached = true;
-    OMPL_INFORM("%s: Calculating Kinodynamic path.\n", getName().c_str());
-    for (size_t i = 1; i < copy_shortest_path.size(); i++) {
-      auto duration = controlSampler_->sampleTo(
-        copy_shortest_path[i - 1].control,
-        copy_shortest_path[i - 1].state,
-        copy_shortest_path[i].state);
-      copy_shortest_path[i - 1].control_duration = duration;
-      if (duration == 0) {
+    // add intermediate solution
+    control_path = std::make_shared<PathControl>(si_);
+    int index{0};
+    for (auto && i : shortest_path_control) {
+
+      if (g_forward_control_[i].control == nullptr) {
         OMPL_WARN(
-          "%s: Control sampler failed to find a valid control between two states.\n",
-          getName().c_str());
+          "%s: Control of %dth state is nullptr, allocating zeros", getName().c_str(), index);
+        g_forward_control_[i].control = siC_->allocControl();
       }
-    }
-    //
-    path = std::make_shared<PathControl>(si_);
-    for (int i = 0; i < copy_shortest_path.size(); i++) {
-      if (i == 0) {
-        path->append(copy_shortest_path[i].state);
+
+      if (index == 0) {
+        control_path->append(g_forward_control_[i].state);
       } else {
-        path->append(
-          copy_shortest_path[i].state, copy_shortest_path[i].control,
-          copy_shortest_path[i].control_duration * siC_->getPropagationStepSize());
+        control_path->append(
+          g_forward_control_[i].state, g_forward_control_[i].control,
+          g_forward_control_[i].control_duration * siC_->getPropagationStepSize());
       }
+      index++;
     }
+    if (shortest_path_control.size() > 0) {
+      goal_reached = true;
+    }
+
+    geometric_path = std::make_shared<PathControl>(si_);
+    index = 0;
+    for (auto && i : shortest_path) {
+      geometric_path->append(g_[i].state);
+      index++;
+    }
+
     // Set the cost of the solution.
-    bestCost_ = ompl::base::Cost(path->length());
-
-    // Create a solution.
-    ompl::base::PlannerSolution solution(path);
-    solution.setPlannerName(getName());
-    solution.setOptimized(opt_, bestCost_, opt_->isSatisfied(bestCost_));
-    pdef_->addSolutionPath(solution); */
-
+    if (geometric_path->length() < distanceFunction(start_state, goal_state)) {
+      // This solution is most likely invalid
+      bestCost_ = opt_->infiniteCost();
+    } else {
+      // This solution is valid
+      bestCost_ = ompl::base::Cost(geometric_path->length());
+    }
 
     OMPL_INFORM(
       "%s: Advancing with %d vertices and %d edges.\n",
@@ -366,7 +362,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
   }
 
-  pdef_->addSolutionPath(path, false, 0.0, getName());
+  pdef_->addSolutionPath(control_path, false, 0.0, getName());
 
   clear();
 

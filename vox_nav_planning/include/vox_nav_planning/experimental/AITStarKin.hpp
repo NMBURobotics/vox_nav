@@ -162,7 +162,7 @@ namespace ompl
       double min_dist_between_vertices_{0.1};
 
       /** \brief If available, use valid sampler. */
-      bool use_valid_sampler_{true};
+      bool use_valid_sampler_{false};
 
       /** \brief For directed control, set a number of samples to iterate though, to get a more accurate sampleTo behviour. It comes as costy!. */
       int k_number_of_controls_{1};
