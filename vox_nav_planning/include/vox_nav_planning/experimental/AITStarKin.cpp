@@ -81,6 +81,9 @@ void ompl::control::AITStarKin::setup()
     controlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, k_number_of_controls_);
   }
 
+  k_rgg_ = boost::math::constants::e<double>() +
+    (boost::math::constants::e<double>() / si_->getStateDimension());
+
   // RVIZ VISUALIZATIONS
   node_ = std::make_shared<rclcpp::Node>("aitstarkin_rclcpp_node");
 
@@ -107,6 +110,8 @@ void ompl::control::AITStarKin::clear()
   valid_state_sampler_.reset();
   path_informed_sampler_.reset();
   rejection_informed_sampler_.reset();
+  radius_ = std::numeric_limits<double>::infinity();
+  numNeighbors_ = std::numeric_limits<std::size_t>::max();
 
   bestCost_ = opt_->infiniteCost();
 
@@ -320,12 +325,17 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       bestCost_ = opt_->infiniteCost();
     } else {
       // This solution is valid
-      bestCost_ = ompl::base::Cost(geometric_path->length());
+      //bestCost_ = ompl::base::Cost(geometric_path->length());
+      bestCost_ = ompl::base::Cost(control_path->length());
     }
 
     OMPL_INFORM(
       "%s: Advancing with %d vertices and %d edges.\n",
       getName().c_str(), boost::num_vertices(g_), boost::num_edges(g_));
+
+    OMPL_INFORM(
+      "%s: For this iteration auto calculated radius_ was %.2f and numNeighbors_ %d.\n",
+      getName().c_str(), radius_, numNeighbors_);
 
     std::string red("red");
     std::string green("green");
@@ -403,6 +413,17 @@ void ompl::control::AITStarKin::generateBatchofSamples(
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));
     }
   } while (samples.size() < batch_size);
+
+  auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
+
+  if (use_k_nearest_) {
+    numNeighbors_ = computeNumberOfNeighbors(
+      numSamplesInInformedSet + samples.size() - 2 /*goal and start */);
+  } else {
+    radius_ = computeConnectionRadius(
+      numSamplesInInformedSet + samples.size() - 2 /*goal and start*/);
+  }
+
 }
 
 void ompl::control::AITStarKin::expandGeometricGraph(
@@ -418,7 +439,13 @@ void ompl::control::AITStarKin::expandGeometricGraph(
     VertexProperty * this_vertex_property = new VertexProperty();
     this_vertex_property->state = (i);
     std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
-    geometric_nn->nearestR(this_vertex_property, radius_, nbh);
+
+    if constexpr (use_k_nearest_) {
+      geometric_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
+    } else {
+      geometric_nn->nearestR(this_vertex_property, radius_, nbh);
+    }
+
     if (nbh.size() > max_neighbors_) {
       nbh.resize(max_neighbors_);
     }
@@ -468,7 +495,13 @@ void ompl::control::AITStarKin::ensureGoalVertexConnectivity(
 {
   // Neihbors of goal vertex
   std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh;
-  geometric_nn->nearestR(target_vertex_property, radius_, goal_nbh);
+
+  if constexpr (use_k_nearest_) {
+    geometric_nn->nearestK(target_vertex_property, numNeighbors_, goal_nbh);
+  } else {
+    geometric_nn->nearestR(target_vertex_property, radius_, goal_nbh);
+  }
+
   if (goal_nbh.size() > max_neighbors_) {
     goal_nbh.resize(max_neighbors_);
   }
@@ -517,7 +550,12 @@ void ompl::control::AITStarKin::expandControlGraph(
     index_of_goal_bias++;
 
     std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
-    control_nn->nearestR(this_vertex_property, radius_, nbh);
+
+    if constexpr (use_k_nearest_) {
+      control_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
+    } else {
+      control_nn->nearestR(this_vertex_property, radius_, nbh);
+    }
 
     if (nbh.size() == 0) {
       continue;

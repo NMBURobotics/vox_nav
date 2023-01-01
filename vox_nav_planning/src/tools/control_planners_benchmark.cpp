@@ -188,7 +188,9 @@ namespace vox_nav_planning
       y + duration * v * std::sin(yaw) /*Y*/,
       z /*Z*/,
       v + duration * ctrl[0] /*V*/);
-    result->as<ompl::base::ElevationStateSpace::StateType>()->setSO2(yaw + duration * ctrl[1]);
+    result->as<ompl::base::ElevationStateSpace::StateType>()->setSO2(
+      yaw + duration *
+      ctrl[1] /*W*/);
 
     si->enforceBounds(result);
   }
@@ -207,7 +209,7 @@ namespace vox_nav_planning
     multi_optimization->addObjective(length_objective, 1.0);
     multi_optimization->addObjective(octocost_objective, 1.0);
 
-    return ompl::base::OptimizationObjectivePtr(multi_optimization);
+    return ompl::base::OptimizationObjectivePtr(length_objective);
   }
 
   std::map<int, ompl::control::PathControl>
@@ -234,8 +236,8 @@ namespace vox_nav_planning
         start_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
         goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
 
-        start.pose.position.x = 5;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-        start.pose.position.y = -12; //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+        start.pose.position.x = 1;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+        start.pose.position.y = 0; //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
         start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 
         goal.pose.position.x = 35;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
@@ -299,8 +301,8 @@ namespace vox_nav_planning
       control_simple_setup_->setStartAndGoalStates(random_start, random_goal, goal_tolerance_);
 
       auto si = control_simple_setup_->getSpaceInformation();
-      si->setMinMaxControlDuration(1, 2);
-      si->setPropagationStepSize(0.25);
+      si->setMinMaxControlDuration(20, 30);
+      si->setPropagationStepSize(0.025);
 
       control_simple_setup_->setStatePropagator(
         [this, si](const ompl::base::State * state, const ompl::control::Control * control,
@@ -323,7 +325,7 @@ namespace vox_nav_planning
       goal_.z = random_goal->getXYZV()->values[2];
       goal_.yaw = random_goal->getSO2()->value;
 
-      // ompl::tools::Benchmark benchmark(*control_simple_setup_, "benchmark");
+      ompl::tools::Benchmark benchmark(*control_simple_setup_, "benchmark");
       std::mutex plan_mutex;
       int index(0);
       for (auto && planner_name : selected_planners_) {
@@ -334,14 +336,14 @@ namespace vox_nav_planning
           si,
           logger_);
 
-        //benchmark.addPlanner(planner_ptr);
+        benchmark.addPlanner(planner_ptr);
 
         if (publish_a_sample_bencmark_) {
           std::lock_guard<std::mutex> guard(plan_mutex);
 
-          /*RCLCPP_INFO(
+          RCLCPP_INFO(
             this->get_logger(),
-            "Creating sample plans.");*/
+            "Creating sample plans.");
 
           si->setValidStateSamplerAllocator(
             std::bind(
@@ -373,7 +375,7 @@ namespace vox_nav_planning
 
       std::cout << ss.str() << std::endl;
 
-      /*ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_,
+      ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_,
         batch_size_);
       request.displayProgress = true;
 
@@ -392,7 +394,7 @@ namespace vox_nav_planning
       RCLCPP_INFO(
         this->get_logger(),
         "Bencmarking results saved to given directory: %s",
-        results_output_dir_.c_str());*/
+        results_output_dir_.c_str());
 
       control_simple_setup_->clear();
     }

@@ -37,6 +37,7 @@
 #include "ompl/datastructures/LPAstarOnGraph.h"
 #include "ompl/base/samplers/informed/PathLengthDirectInfSampler.h"
 #include "ompl/base/samplers/informed/RejectionInfSampler.h"
+#include "ompl/util/GeometricEquations.h"
 
 #include "rclcpp/rclcpp.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -153,10 +154,10 @@ namespace ompl
       int batch_size_{1000};
 
       /** \brief The radius to construct edges in construction of RGG, this is meant to be used in geometric graph, determines max edge length. */
-      double radius_{1.5}; //
+      double radius_{std::numeric_limits<double>::infinity()};
 
       /** \brief The a single vertex, do not construct more edges (neighbours) more than max_neighbors_. */
-      int max_neighbors_{10};
+      int max_neighbors_{5};
 
       /** \brief Adding almost identical samples does not help much, so we regulate this by min_dist_between_vertices_. */
       double min_dist_between_vertices_{0.1};
@@ -173,6 +174,15 @@ namespace ompl
 
       /** \brief Frequently push goal to graph. It is used in control graph */
       double goal_bias_{0.05};
+
+      double rewire_factor_{1.0};
+
+      /** \brief A constant for the computation of the number of neighbors when using a k-nearest model. */
+      std::size_t k_rgg_{std::numeric_limits<std::size_t>::max()};
+
+      std::size_t numNeighbors_{std::numeric_limits<std::size_t>::max()};
+
+      static bool const use_k_nearest_{false};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_{nullptr};
@@ -452,6 +462,56 @@ namespace ompl
           }
           return shortest_path;
         }
+      }
+
+      std::size_t computeNumberOfSamplesInInformedSet() const
+      {
+        // Loop over all vertices and count the ones in the informed set.
+        std::size_t numberOfSamplesInInformedSet{0u};
+        for (auto vd : boost::make_iterator_range(vertices(g_))) {
+
+          auto vertex = g_[vd].state;
+          // Get the best cost to come from any start.
+          auto costToCome = opt_->infiniteCost();
+          costToCome = opt_->betterCost(
+            costToCome, opt_->motionCostHeuristic(start_vertex_->state, vertex));
+
+
+          // Get the best cost to go to any goal.
+          auto costToGo = opt_->infiniteCost();
+          costToGo = opt_->betterCost(
+            costToCome, opt_->motionCostHeuristic(vertex, goal_vertex_->state));
+
+          // If this can possibly improve the current solution, it is in the informed set.
+          if (opt_->isCostBetterThan(
+              opt_->combineCosts(costToCome, costToGo),
+              bestCost_))
+          {
+            ++numberOfSamplesInInformedSet;
+          }
+        }
+
+        return numberOfSamplesInInformedSet;
+      }
+
+      double  computeConnectionRadius(std::size_t numSamples) const
+      {
+        // Define the dimension as a helper variable.
+        auto dimension = static_cast<double>(si_->getStateDimension());
+
+        // Compute the RRT* factor.
+        return
+          rewire_factor_ * std::pow(
+          2.0 * (1.0 + 1.0 / dimension) *
+          (rejection_informed_sampler_->getInformedMeasure(bestCost_) /
+          unitNBallMeasure(si_->getStateDimension())) *
+          (std::log(static_cast<double>(numSamples)) / static_cast<double>(numSamples)),
+          1.0 / dimension);
+      }
+
+      std::size_t computeNumberOfNeighbors(std::size_t numSamples) const
+      {
+        return std::ceil(rewire_factor_ * k_rgg_ * std::log(static_cast<double>(numSamples)));
       }
 
       /** \brief static method to visulize a graph in RVIZ*/
