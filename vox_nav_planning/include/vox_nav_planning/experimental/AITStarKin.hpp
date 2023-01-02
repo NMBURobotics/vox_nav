@@ -85,11 +85,11 @@ namespace ompl
       template<template<typename T> class NN>
       void setNearestNeighbors()
       {
-        if (nn_ && nn_->size() != 0) {
+        if (geometric_nn_ && geometric_nn_->size() != 0) {
           OMPL_WARN("Calling setNearestNeighbors will clear all states.");
         }
         clear();
-        nn_ = std::make_shared<NN<VertexProperty *>>();
+        geometric_nn_ = std::make_shared<NN<VertexProperty *>>();
         forward_control_nn_ = std::make_shared<NN<VertexProperty *>>();
         backward_control_nn_ = std::make_shared<NN<VertexProperty *>>();
         setup();
@@ -120,17 +120,17 @@ namespace ompl
       }
 
       /** \brief Given its vertex_descriptor (id),
-       * return a const pointer to VertexProperty in geometric graph g_  */
+       * return a const pointer to VertexProperty in geometric graph g_geometric_  */
       const VertexProperty * getVertex(std::size_t id)
       {
-        return &g_[id];
+        return &g_geometric_[id];
       }
 
       /** \brief Given its vertex_descriptor (id),
        * return a mutable pointer to VertexProperty in geometric graph g_  */
       VertexProperty * getVertexMutable(std::size_t id)
       {
-        return &g_[id];
+        return &g_geometric_[id];
       }
 
       /** \brief Given its vertex_descriptor (id),
@@ -213,7 +213,7 @@ namespace ompl
       DirectedControlSamplerPtr controlSampler_;
 
       /** \brief The NN datastructure for geometric graph */
-      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> nn_;
+      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> geometric_nn_;
 
       /** \brief The NN datastructure for forward control graph */
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> forward_control_nn_;
@@ -345,7 +345,7 @@ namespace ompl
       VertexProperty * goal_vertex_{nullptr};
 
       /** \brief The graphs are global too */
-      GraphT g_;
+      GraphT g_geometric_;
       GraphT g_forward_control_;
       GraphT g_backward_control_;
 
@@ -468,54 +468,14 @@ namespace ompl
         }
       }
 
-      std::size_t computeNumberOfSamplesInInformedSet() const
-      {
-        // Loop over all vertices and count the ones in the informed set.
-        std::size_t numberOfSamplesInInformedSet{0u};
-        for (auto vd : boost::make_iterator_range(vertices(g_forward_control_))) {
+      /** \brief original AIT* function */
+      std::size_t computeNumberOfSamplesInInformedSet() const;
 
-          auto vertex = g_forward_control_[vd].state;
-          // Get the best cost to come from any start.
-          auto costToCome = opt_->infiniteCost();
-          costToCome = opt_->betterCost(
-            costToCome, opt_->motionCostHeuristic(start_vertex_->state, vertex));
+      /** \brief original AIT* function */
+      double  computeConnectionRadius(std::size_t numSamples) const;
 
-          // Get the best cost to go to any goal.
-          auto costToGo = opt_->infiniteCost();
-          costToGo = opt_->betterCost(
-            costToCome, opt_->motionCostHeuristic(vertex, goal_vertex_->state));
-
-          // If this can possibly improve the current solution, it is in the informed set.
-          if (opt_->isCostBetterThan(
-              opt_->combineCosts(costToCome, costToGo),
-              bestCost_))
-          {
-            ++numberOfSamplesInInformedSet;
-          }
-        }
-
-        return numberOfSamplesInInformedSet;
-      }
-
-      double  computeConnectionRadius(std::size_t numSamples) const
-      {
-        // Define the dimension as a helper variable.
-        auto dimension = static_cast<double>(si_->getStateDimension());
-
-        // Compute the RRT* factor.
-        return
-          rewire_factor_ * std::pow(
-          2.0 * (1.0 + 1.0 / dimension) *
-          (rejection_informed_sampler_->getInformedMeasure(bestCost_) /
-          unitNBallMeasure(si_->getStateDimension())) *
-          (std::log(static_cast<double>(numSamples)) / static_cast<double>(numSamples)),
-          1.0 / dimension);
-      }
-
-      std::size_t computeNumberOfNeighbors(std::size_t numSamples) const
-      {
-        return std::ceil(rewire_factor_ * k_rgg_ * std::log(static_cast<double>(numSamples)));
-      }
+      /** \brief original AIT* function */
+      std::size_t computeNumberOfNeighbors(std::size_t numSamples) const;
 
       /** \brief static method to visulize a graph in RVIZ*/
       static void visualizeRGG(
