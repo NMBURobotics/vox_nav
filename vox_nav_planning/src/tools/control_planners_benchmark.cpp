@@ -336,7 +336,6 @@ namespace vox_nav_planning
           si,
           logger_);
 
-        benchmark.addPlanner(planner_ptr);
 
         if (publish_a_sample_bencmark_) {
           std::lock_guard<std::mutex> guard(plan_mutex);
@@ -375,6 +374,10 @@ namespace vox_nav_planning
 
       std::cout << ss.str() << std::endl;
 
+      /*
+      benchmark.addPlanner(planner_ptr);
+
+
       ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_,
         batch_size_);
       request.displayProgress = true;
@@ -394,9 +397,11 @@ namespace vox_nav_planning
       RCLCPP_INFO(
         this->get_logger(),
         "Bencmarking results saved to given directory: %s",
-        results_output_dir_.c_str());
+        results_output_dir_.c_str());*/
 
       control_simple_setup_->clear();
+
+      publishSamplePlans(paths_map);
     }
     return paths_map;
   }

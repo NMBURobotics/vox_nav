@@ -84,6 +84,8 @@ void ompl::control::AITStarKin::setup()
   k_rgg_ = boost::math::constants::e<double>() +
     (boost::math::constants::e<double>() / si_->getStateDimension());
 
+  bestPath_ = std::make_shared<PathControl>(si_);
+
   // RVIZ VISUALIZATIONS
   node_ = std::make_shared<rclcpp::Node>("aitstarkin_rclcpp_node");
 
@@ -308,6 +310,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       }
       index++;
     }
+
     if (shortest_path_control.size() > 0) {
       goal_reached = true;
     }
@@ -320,13 +323,28 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     }
 
     // Set the cost of the solution.
-    if (geometric_path->length() < distanceFunction(start_state, goal_state)) {
-      // This solution is most likely invalid
-      bestCost_ = opt_->infiniteCost();
-    } else {
+    if (control_path->length() > distanceFunction(start_state, goal_state)) {
       // This solution is valid
       //bestCost_ = ompl::base::Cost(geometric_path->length());
-      bestCost_ = ompl::base::Cost(control_path->length());
+      auto current_solution_cost = ompl::base::Cost(control_path->length());
+      if (opt_->isCostBetterThan(current_solution_cost, bestCost_)) {
+        bestCost_ = current_solution_cost;
+        bestPath_ = control_path;
+      }
+
+      // Reset Control Graph
+      g_forward_control_.clear();
+      forward_control_nn_->clear();
+      g_backward_control_ = GraphT();
+      // Add the start and goal vertex to the control graph
+      forward_control_nn_->add(start_vertex_);
+      // Add goal and start to graph
+      forward_control_g_root = boost::add_vertex(g_forward_control_);
+      forward_control_g_target = boost::add_vertex(g_forward_control_);
+      g_forward_control_[forward_control_g_root] = *start_vertex_;
+      g_forward_control_[forward_control_g_root].id = forward_control_g_root;
+      g_forward_control_[forward_control_g_target] = *goal_vertex_;
+      g_forward_control_[forward_control_g_target].id = forward_control_g_target;
     }
 
     OMPL_INFORM(
@@ -334,8 +352,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       getName().c_str(), boost::num_vertices(g_), boost::num_edges(g_));
 
     OMPL_INFORM(
-      "%s: For this iteration auto calculated radius_ was %.2f and numNeighbors_ %d.\n",
-      getName().c_str(), radius_, numNeighbors_);
+      "%s: For this iteration auto calculated radius_ was %.2f and numNeighbors_ %d, bestPath_ cost %.2f.\n",
+      getName().c_str(), radius_, numNeighbors_, bestCost_.value());
 
     std::string red("red");
     std::string green("green");
@@ -348,8 +366,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       getColor(green));
 
     visualizePath(
-      g_forward_control_,
-      shortest_path_control,
+      bestPath_,
       control_path_pub_,
       "c",
       getColor(red));
@@ -372,7 +389,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
   }
 
-  pdef_->addSolutionPath(control_path, false, 0.0, getName());
+  pdef_->addSolutionPath(bestPath_, false, 0.0, getName());
 
   clear();
 
@@ -418,10 +435,10 @@ void ompl::control::AITStarKin::generateBatchofSamples(
 
   if (use_k_nearest_) {
     numNeighbors_ = computeNumberOfNeighbors(
-      numSamplesInInformedSet + samples.size() - 2 /*goal and start */);
+      numSamplesInInformedSet + samples.size() /*- 2 goal and start */);
   } else {
     radius_ = computeConnectionRadius(
-      numSamplesInInformedSet + samples.size() - 2 /*goal and start*/);
+      numSamplesInInformedSet + samples.size() /*- 2 goal and start*/);
   }
 
 }
@@ -469,7 +486,7 @@ void ompl::control::AITStarKin::expandGeometricGraph(
         double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
         edge_descriptor e; bool edge_added;
         // not to construct edges with self, and if nbh is further than radius_, continue
-        if (u == v || dist > radius_) {
+        if (u == v || dist > max_edge_length_) {
           continue;
         }
         if (boost::edge(
@@ -511,7 +528,7 @@ void ompl::control::AITStarKin::ensureGoalVertexConnectivity(
     double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
     edge_descriptor e; bool edge_added;
     // not to construct edges with self, and if nbh is further than radius_, continue
-    if (u == v || dist > radius_) {
+    if (u == v || dist > max_edge_length_) {
       continue;
     }
     if (boost::edge(u, v, geometric_graph).second || boost::edge(v, u, geometric_graph).second) {
@@ -611,7 +628,7 @@ void ompl::control::AITStarKin::expandControlGraph(
         double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
         edge_descriptor e; bool edge_added;
         // not to construct edges with self, and if nbh is further than radius_, continue
-        if (u == v || dist > radius_) {
+        if (u == v || dist > max_edge_length_) {
           continue;
         }
         if (boost::edge(
@@ -632,14 +649,14 @@ void ompl::control::AITStarKin::expandControlGraph(
           target_vertex_state);
 
         // if the distance is less than the radius to target, then add the edge
-        if (dist_to_target < radius_ / 2.0) {
+        if (dist_to_target < max_edge_length_) {
 
           vertex_descriptor u = arrived_vertex_property->id;
           vertex_descriptor v = target_vertex_descriptor;
           double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
           edge_descriptor e; bool edge_added;
           // not to construct edges with self, and if nbh is further than radius_, continue
-          if (u == v || dist > radius_) {
+          if (u == v || dist > max_edge_length_) {
             continue;
           }
           if (boost::edge(u, v, control_graph).second ||
@@ -824,6 +841,88 @@ void ompl::control::AITStarKin::visualizePath(
     text.action = visualization_msgs::msg::Marker::ADD;
     text.lifetime = rclcpp::Duration::from_seconds(0);
     text.text = std::to_string(g[u].g);
+    text.pose.position = source_point;
+    text.pose.position.z += 0.5;
+    text.scale.x = 0.3;
+    text.scale.y = 0.3;
+    text.scale.z = 0.3;
+    text.color.a = 1.0;
+    text.color.r = 1.0;
+    marker_array.markers.push_back(text);
+  }
+  marker_array.markers.push_back(line_strip);
+
+  publisher->publish(marker_array);
+}
+
+void ompl::control::AITStarKin::visualizePath(
+  const std::shared_ptr<PathControl> & path,
+  const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
+  const std::string & ns,
+  const std_msgs::msg::ColorRGBA & color
+)
+{
+  // Clear All previous markers
+  visualization_msgs::msg::MarkerArray clear_markers;
+  visualization_msgs::msg::Marker path_marker, cost_marker;
+  path_marker.id = 0;
+  cost_marker.id = 0;
+  path_marker.ns = ns + "path";
+  cost_marker.ns = ns + "costs";
+  path_marker.action = visualization_msgs::msg::Marker::DELETEALL;
+  cost_marker.action = visualization_msgs::msg::Marker::DELETEALL;
+  clear_markers.markers.push_back(path_marker);
+  clear_markers.markers.push_back(cost_marker);
+  publisher->publish(clear_markers);
+
+  visualization_msgs::msg::MarkerArray marker_array;
+  visualization_msgs::msg::Marker line_strip;
+  line_strip.header.frame_id = "map";
+  line_strip.ns = ns + "path";
+  line_strip.id = 0;
+  line_strip.type = visualization_msgs::msg::Marker::LINE_LIST;
+  line_strip.action = visualization_msgs::msg::Marker::ADD;
+  line_strip.lifetime = rclcpp::Duration::from_seconds(0);
+  line_strip.header.stamp = rclcpp::Clock().now();
+  line_strip.scale.x = 0.05;
+  line_strip.scale.y = 0.05;
+  line_strip.scale.z = 0.05;
+  line_strip.color = color;
+
+  for (size_t i = 1; i < path->getStateCount(); i++) {
+
+    auto u = path->getState(i - 1);
+    auto v = path->getState(i);
+
+    geometry_msgs::msg::Point source_point, target_point;
+    const auto * source_cstate = u->as<ompl::base::ElevationStateSpace::StateType>();
+    const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+    const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    source_point.x = source_xyzv->values[0];
+    source_point.y = source_xyzv->values[1];
+    source_point.z = source_xyzv->values[2];
+
+    const auto * target_cstate = v->as<ompl::base::ElevationStateSpace::StateType>();
+    const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+    target_point.x = target_xyzv->values[0];
+    target_point.y = target_xyzv->values[1];
+    target_point.z = target_xyzv->values[2];
+    line_strip.points.push_back(source_point);
+    line_strip.colors.push_back(color);
+    line_strip.points.push_back(target_point);
+    line_strip.colors.push_back(color);
+
+    visualization_msgs::msg::Marker text;
+    text.header.frame_id = "map";
+    text.header.stamp = rclcpp::Clock().now();
+    text.ns = ns + "costs";
+    text.id = i - 1; //g[u].id;
+    text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+    text.action = visualization_msgs::msg::Marker::ADD;
+    text.lifetime = rclcpp::Duration::from_seconds(0);
+    text.text = std::to_string(i - 1);
     text.pose.position = source_point;
     text.pose.position.z += 0.5;
     text.scale.x = 0.3;

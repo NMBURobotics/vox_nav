@@ -182,7 +182,9 @@ namespace ompl
 
       std::size_t numNeighbors_{std::numeric_limits<std::size_t>::max()};
 
-      static bool const use_k_nearest_{false};
+      static bool const use_k_nearest_{true};
+
+      double max_edge_length_{2.0};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_{nullptr};
@@ -204,6 +206,8 @@ namespace ompl
 
       /** \brief Current cost of best path. The informed sampling strategy needs it. */
       ompl::base::Cost bestCost_{std::numeric_limits<double>::infinity()};
+
+      std::shared_ptr<ompl::control::PathControl> bestPath_{nullptr};
 
       /** \brief Directed control sampler to expand control graph */
       DirectedControlSamplerPtr controlSampler_;
@@ -468,14 +472,13 @@ namespace ompl
       {
         // Loop over all vertices and count the ones in the informed set.
         std::size_t numberOfSamplesInInformedSet{0u};
-        for (auto vd : boost::make_iterator_range(vertices(g_))) {
+        for (auto vd : boost::make_iterator_range(vertices(g_forward_control_))) {
 
-          auto vertex = g_[vd].state;
+          auto vertex = g_forward_control_[vd].state;
           // Get the best cost to come from any start.
           auto costToCome = opt_->infiniteCost();
           costToCome = opt_->betterCost(
             costToCome, opt_->motionCostHeuristic(start_vertex_->state, vertex));
-
 
           // Get the best cost to go to any goal.
           auto costToGo = opt_->infiniteCost();
@@ -527,6 +530,13 @@ namespace ompl
       static void visualizePath(
         const GraphT & g,
         const std::list<vertex_descriptor> & path,
+        const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
+        const std::string & ns,
+        const std_msgs::msg::ColorRGBA & color
+      );
+
+      static void visualizePath(
+        const std::shared_ptr<PathControl> & path,
         const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
         const std::string & ns,
         const std_msgs::msg::ColorRGBA & color
