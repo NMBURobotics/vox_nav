@@ -120,6 +120,11 @@ add_executable(control_planners_benchmark src/tools/control_planners_benchmark.c
 ament_target_dependencies(control_planners_benchmark ${dependencies})
 target_link_libraries(control_planners_benchmark ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} vox_nav_ompl_planners ompl)
 
+# QUADROTOR CONTROL PLANNERS BENCHMARKS ####################################
+add_executable(quadrotor_control_planners_benchmark src/tools/quadrotor_planners_benchmark.cpp)
+ament_target_dependencies(quadrotor_control_planners_benchmark ${dependencies})
+target_link_libraries(quadrotor_control_planners_benchmark ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} vox_nav_ompl_planners ompl)
+
 install(TARGETS optimal_elevation_planner 
                 elevation_planner
                 elevation_control_planner
@@ -132,6 +137,7 @@ install(TARGETS optimal_elevation_planner
 
 install(TARGETS planner_server
                 control_planners_benchmark
+                quadrotor_control_planners_benchmark
                 
   RUNTIME DESTINATION lib/${PROJECT_NAME})
 

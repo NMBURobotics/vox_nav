@@ -435,10 +435,7 @@ namespace ompl
               boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
           }
 
-          OMPL_INFORM(
-            "%s: A call made to A* was failed after %d node visits.\n",
-            getName().c_str(), num_visited_nodes);
-
+          // No path found
           return shortest_path;
 
         } catch (FoundVertex found_goal) {
@@ -454,9 +451,7 @@ namespace ompl
           for (vertex_descriptor v = goal_vertex;; v = p[v]) {
             if (use_full_collision_check) {
               if (g[v].blacklisted) {
-                OMPL_WARN(
-                  "%s: Found a blacklisted vertex most likely due to collision, Marking in/out edges as invalid for this vertex.\n",
-                  getName().c_str());
+                //   Found a blacklisted vertex most likely due to collision, Marking in/out edges as invalid for this vertex
                 for (auto ed : boost::make_iterator_range(boost::out_edges(v, g))) {
                   weightmap[ed] = opt_->infiniteCost().value();
                 }
@@ -489,8 +484,9 @@ namespace ompl
         for (auto && i : vertex_path) {
 
           if (g[i].control == nullptr) {
-            OMPL_WARN(
-              "%s: Control of %dth state is nullptr, allocating zeros", getName().c_str(), index);
+            // This most likely a start or goal vertex
+            // The control has not been allocated for this vertex
+            // Allocate a control and set it to zero
             g[i].control = siC_->allocControl();
           }
 

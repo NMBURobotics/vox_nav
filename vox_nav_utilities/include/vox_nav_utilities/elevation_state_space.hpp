@@ -259,10 +259,12 @@ namespace ompl
 
       virtual void project(const base::State * state, Eigen::Ref<Eigen::VectorXd> projection) const
       {
-        const auto * s_se2 =
-          state->as<ElevationStateSpace::StateType>()->as<SE2StateSpace::StateType>(0);
-        projection(0) = s_se2->getX();
-        projection(1) = s_se2->getY();
+        const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
+        const auto * so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+        const auto * xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+
+        projection(0) = xyzv->values[0];
+        projection(1) = xyzv->values[1];
       }
     };
 

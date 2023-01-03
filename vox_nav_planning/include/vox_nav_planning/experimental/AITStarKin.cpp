@@ -352,10 +352,14 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         // Both paths are valid
         if (forward_control_path->length() < backward_control_path->length()) {
           best_control_path = forward_control_path;
-          OMPL_INFORM("%s: Better path in forward graph.\n", getName().c_str());
+          OMPL_INFORM(
+            "%s: Better path in forward graph with %.2f length.\n",
+            getName().c_str(), forward_control_path->length());
         } else {
           best_control_path = backward_control_path;
-          OMPL_INFORM("%s: Better path in backward graph.\n", getName().c_str());
+          OMPL_INFORM(
+            "%s: Better path in backward graph with %.2f length.\n",
+            getName().c_str(), backward_control_path->length());
         }
       }
     }
