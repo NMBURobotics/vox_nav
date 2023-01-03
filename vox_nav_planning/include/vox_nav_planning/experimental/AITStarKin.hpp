@@ -21,7 +21,6 @@
 #include <boost/graph/random.hpp>
 #include <boost/random.hpp>
 #include <boost/graph/graphviz.hpp>
-
 #include "ompl/control/DirectedControlSampler.h"
 #include "ompl/control/SimpleDirectedControlSampler.h"
 #include "ompl/control/spaces/RealVectorControlSpace.h"
@@ -38,11 +37,9 @@
 #include "ompl/base/samplers/informed/PathLengthDirectInfSampler.h"
 #include "ompl/base/samplers/informed/RejectionInfSampler.h"
 #include "ompl/util/GeometricEquations.h"
-
 #include "rclcpp/rclcpp.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
-
 #include <limits>
 #include <cstdint>
 
@@ -180,10 +177,13 @@ namespace ompl
       /** \brief A constant for the computation of the number of neighbors when using a k-nearest model. */
       std::size_t k_rgg_{std::numeric_limits<std::size_t>::max()};
 
+      /** \brief Auto calculate neighbours to connect. */
       std::size_t numNeighbors_{std::numeric_limits<std::size_t>::max()};
 
+      /** \brief Whether to use nearest neighbor or radius as connection strategy. */
       static bool const use_k_nearest_{true};
 
+      /** \brief The edges connecting samples in geometric and control graphs cannot be longer than this */
       double max_edge_length_{2.0};
 
       /** \brief State sampler */
@@ -351,6 +351,7 @@ namespace ompl
 
       std::thread * geometric_thread_{nullptr};
       std::thread * forward_control_thread_{nullptr};
+      std::thread * backward_control_thread_{nullptr};
 
       /** \brief The publishers for the geometric and control graph/path visulization*/
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;
@@ -476,6 +477,34 @@ namespace ompl
 
       /** \brief original AIT* function */
       std::size_t computeNumberOfNeighbors(std::size_t numSamples) const;
+
+      void populateOmplPathfromVertexPath(
+        const std::list<vertex_descriptor> & vertex_path,
+        GraphT & g,
+        std::shared_ptr<ompl::control::PathControl> & path) const
+      {
+        // add intermediate solution
+        path = std::make_shared<PathControl>(si_);
+        int index{0};
+        for (auto && i : vertex_path) {
+
+          if (g[i].control == nullptr) {
+            OMPL_WARN(
+              "%s: Control of %dth state is nullptr, allocating zeros", getName().c_str(), index);
+            g[i].control = siC_->allocControl();
+          }
+
+          if (index == 0) {
+            path->append(g[i].state);
+          } else {
+            path->append(
+              g[i].state, g[i].control,
+              g[i].control_duration * siC_->getPropagationStepSize());
+          }
+          index++;
+        }
+
+      }
 
       /** \brief static method to visulize a graph in RVIZ*/
       static void visualizeRGG(
