@@ -69,7 +69,6 @@ public:
     double des_x_acc, // desired x acc
     double des_y_acc, // desired y acc
     double des_z_acc, // desired z acc
-
     double dt // time step size
   )
   {
@@ -81,12 +80,12 @@ public:
       (((des_x_acc * cos(des_yaw) - des_y_acc * sin(des_yaw)) / g) - pitch);
     double yaw_torque = Kp_yaw * (des_yaw - yaw);
 
-    // Update ang velocities
+    // Update the ang velocities
     roll_vel += roll_torque * dt / Ixx;
     pitch_vel += pitch_torque * dt / Iyy;
     yaw_vel += yaw_torque * dt / Izz;
 
-    // Update angles
+    // Update the angles
     roll += roll_vel * dt;
     pitch += pitch_vel * dt;
     yaw += yaw_vel * dt;

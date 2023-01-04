@@ -415,7 +415,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     std::string green("green");
     std::string blue("blue");
 
-    // geometric path
+    /*// geometric path
     visualizePath(
       g_geometric_,
       shortest_path_geometric,
@@ -444,7 +444,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       "c",
       getColor(red),
       forward_control_g_root,
-      forward_control_g_target);
+      forward_control_g_target);*/
 
   }
 

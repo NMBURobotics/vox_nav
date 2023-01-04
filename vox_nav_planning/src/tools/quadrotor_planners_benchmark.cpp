@@ -249,9 +249,9 @@ namespace vox_nav_planning
     const auto * controls = control->as<ompl::control::RealVectorControlSpace::ControlType>();
 
     // Extract all the states and propagate them
-    double x = states->values[0];
-    double y = states->values[1];
-    double z = states->values[2];
+    double x_pos = states->values[0];
+    double y_pos = states->values[1];
+    double z_pos = states->values[2];
     double roll = states->values[3];
     double pitch = states->values[4];
     double yaw = states->values[5];
@@ -273,6 +273,17 @@ namespace vox_nav_planning
     double c_y_acc = controls->values[4];
     double c_z_acc = controls->values[5];
 
+    // Propagate the states
+    auto propogated_states = quadrotor_controller_.step(
+      x_pos, y_pos, z_pos, roll, pitch, yaw, x_vel, y_vel, z_vel,
+      roll_vel, pitch_vel, yaw_vel, x_acc, y_acc, z_acc,
+      c_z_pos, c_z_vel, c_yaw_vel, c_x_acc, c_y_acc, c_z_acc, duration);
+
+    // Set the result
+    auto * result_states = result->as<ompl::base::RealVectorStateSpace::StateType>();
+    std::copy(propogated_states.begin(), propogated_states.end(), result_states->values);
+
+    // Enforce the bounds
     si->enforceBounds(result);
   }
 
@@ -315,10 +326,14 @@ namespace vox_nav_planning
 
         start.pose.position.x = 1;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
         start.pose.position.y = 0; //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+        start.pose.position.z = 2;         //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+
         start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 
         goal.pose.position.x = 35;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
         goal.pose.position.y = 35;//getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+        goal.pose.position.z = 3;        //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+
         goal.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 
         random_start->values[0] = start.pose.position.x;
