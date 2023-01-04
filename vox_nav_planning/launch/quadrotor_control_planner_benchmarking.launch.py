@@ -16,7 +16,7 @@ def generate_launch_description():
     planner_benchmarking_node_config_cmd = DeclareLaunchArgument(
         'planner_benchmarking_node_config',
         default_value=os.path.join(package_dir, 'config',
-                                   'quadrotor_control_planner_benchmarking copy.yaml'),
+                                   'quadrotor_control_planner_benchmarking.yaml'),
         description='Full path to the pcl2octomap rclcpp node config')
 
     # Declare node actions

@@ -825,13 +825,14 @@ void ompl::control::AITStarKin::visualizeRGG(
     if (g[vd].id == start_vertex || g[vd].id == goal_vertex) {
       color_vd.b *= 0.5;
     }
-    const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
+    /*const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
     const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);*/
+    const auto * target_cstate = g[vd].state->as<ompl::base::RealVectorStateSpace::StateType>();
     geometry_msgs::msg::Point point;
-    point.x = target_xyzv->values[0];
-    point.y = target_xyzv->values[1];
-    point.z = target_xyzv->values[2];
+    point.x = target_cstate->values[0];
+    point.y = target_cstate->values[1];
+    point.z = target_cstate->values[2];
     sphere.points.push_back(point);
     sphere.colors.push_back(color);
   }
@@ -858,20 +859,17 @@ void ompl::control::AITStarKin::visualizeRGG(
     v = boost::target(*eit, g);
 
     geometry_msgs::msg::Point source_point, target_point;
-    const auto * source_cstate = g[u].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    source_point.x = source_xyzv->values[0];
-    source_point.y = source_xyzv->values[1];
-    source_point.z = source_xyzv->values[2];
 
-    const auto * target_cstate = g[v].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    const auto * source_cstate = g[u].state->as<ompl::base::RealVectorStateSpace::StateType>();
+    source_point.x = source_cstate->values[0];
+    source_point.y = source_cstate->values[1];
+    source_point.z = source_cstate->values[2];
 
-    target_point.x = target_xyzv->values[0];
-    target_point.y = target_xyzv->values[1];
-    target_point.z = target_xyzv->values[2];
+    const auto * target_cstate = g[v].state->as<ompl::base::RealVectorStateSpace::StateType>();
+    target_point.x = target_cstate->values[0];
+    target_point.y = target_cstate->values[1];
+    target_point.z = target_cstate->values[2];
+
     line_strip.points.push_back(source_point);
     line_strip.colors.push_back(color);
     line_strip.points.push_back(target_point);
@@ -921,20 +919,17 @@ void ompl::control::AITStarKin::visualizePath(
     auto u = *std::next(path.begin(), i - 1);
     auto v = *std::next(path.begin(), i);
     geometry_msgs::msg::Point source_point, target_point;
-    const auto * source_cstate = g[u].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    source_point.x = source_xyzv->values[0];
-    source_point.y = source_xyzv->values[1];
-    source_point.z = source_xyzv->values[2];
 
-    const auto * target_cstate = g[v].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    const auto * source_cstate = g[u].state->as<ompl::base::RealVectorStateSpace::StateType>();
+    source_point.x = source_cstate->values[0];
+    source_point.y = source_cstate->values[1];
+    source_point.z = source_cstate->values[2];
 
-    target_point.x = target_xyzv->values[0];
-    target_point.y = target_xyzv->values[1];
-    target_point.z = target_xyzv->values[2];
+    const auto * target_cstate = g[v].state->as<ompl::base::RealVectorStateSpace::StateType>();
+    target_point.x = target_cstate->values[0];
+    target_point.y = target_cstate->values[1];
+    target_point.z = target_cstate->values[2];
+
     line_strip.points.push_back(source_point);
     line_strip.colors.push_back(color);
     line_strip.points.push_back(target_point);
@@ -1003,20 +998,17 @@ void ompl::control::AITStarKin::visualizePath(
     auto v = path->getState(i);
 
     geometry_msgs::msg::Point source_point, target_point;
-    const auto * source_cstate = u->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    source_point.x = source_xyzv->values[0];
-    source_point.y = source_xyzv->values[1];
-    source_point.z = source_xyzv->values[2];
 
-    const auto * target_cstate = v->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    const auto * source_cstate = u->as<ompl::base::RealVectorStateSpace::StateType>();
+    source_point.x = source_cstate->values[0];
+    source_point.y = source_cstate->values[1];
+    source_point.z = source_cstate->values[2];
 
-    target_point.x = target_xyzv->values[0];
-    target_point.y = target_xyzv->values[1];
-    target_point.z = target_xyzv->values[2];
+    const auto * target_cstate = v->as<ompl::base::RealVectorStateSpace::StateType>();
+    target_point.x = target_cstate->values[0];
+    target_point.y = target_cstate->values[1];
+    target_point.z = target_cstate->values[2];
+
     line_strip.points.push_back(source_point);
     line_strip.colors.push_back(color);
     line_strip.points.push_back(target_point);
