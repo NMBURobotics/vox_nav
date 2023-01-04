@@ -143,14 +143,14 @@ namespace vox_nav_planning
     ompl::base::StateSpacePtr state_space_;
     ompl::control::ControlSpacePtr control_state_space_;
     ompl::control::SimpleSetupPtr control_simple_setup_;
-    double rho_;
+
+    QuadrotorControl quadrotor_controller_;
 
     std::vector<std::string> selected_planners_;
     std::string results_output_dir_;
     std::string results_file_regex_;
     double octomap_voxel_size_;
     double planner_timeout_;
-    // Only used for REEDS or DUBINS
     double goal_tolerance_;
     double min_euclidean_dist_start_to_goal_;
     int interpolation_parameter_;
@@ -177,13 +177,6 @@ namespace vox_nav_planning
     rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
 
     std::mutex octomap_mutex_;
-
-    std::shared_ptr<octomap::OcTree> elevated_surfel_octomap_octree_;
-    std::shared_ptr<fcl::CollisionObjectf> elevated_surfels_collision_object_;
-    geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
-    pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
-    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
-    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
 
   public:
     volatile bool is_map_ready_;

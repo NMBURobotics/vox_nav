@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2023 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 // credit: Daniel Ingram (daniel-s-ingram)
 
 #include <Eigen/Dense>
-
 
 class QuadrotorControl
 {

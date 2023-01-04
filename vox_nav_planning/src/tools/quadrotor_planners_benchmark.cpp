@@ -28,7 +28,6 @@ namespace vox_nav_planning
     this->declare_parameter("state_bounds.max_pitch", 3.14);
     this->declare_parameter("state_bounds.min_yaw", -3.14);
     this->declare_parameter("state_bounds.max_yaw", 3.14);
-
     this->declare_parameter("state_bounds.min_x_vel", -1.0);
     this->declare_parameter("state_bounds.max_x_vel", 1.0);
     this->declare_parameter("state_bounds.min_y_vel", -1.0);
@@ -41,7 +40,6 @@ namespace vox_nav_planning
     this->declare_parameter("state_bounds.max_pitch_vel", 1.14);
     this->declare_parameter("state_bounds.min_yaw_vel", -1.14);
     this->declare_parameter("state_bounds.max_yaw_vel", 1.14);
-
     this->declare_parameter("state_bounds.min_x_acc", -1.0);
     this->declare_parameter("state_bounds.max_x_acc", 1.0);
     this->declare_parameter("state_bounds.min_y_acc", -1.0);
@@ -102,30 +100,30 @@ namespace vox_nav_planning
     this->get_parameter("state_bounds.max_y_pos", state_bounds_.y_pos.second);
     this->get_parameter("state_bounds.min_z_pos", state_bounds_.z_pos.first);
     this->get_parameter("state_bounds.max_z_pos", state_bounds_.z_pos.second);
-    this->get_parameter("state_bounds.min_x_vel", state_bounds_.x_vel.first);
-    this->get_parameter("state_bounds.max_x_vel", state_bounds_.x_vel.second);
-    this->get_parameter("state_bounds.min_y_vel", state_bounds_.y_vel.first);
-    this->get_parameter("state_bounds.max_y_vel", state_bounds_.y_vel.second);
-    this->get_parameter("state_bounds.min_z_vel", state_bounds_.z_vel.first);
-    this->get_parameter("state_bounds.max_z_vel", state_bounds_.z_vel.second);
-    this->get_parameter("state_bounds.min_x_acc", state_bounds_.x_acc.first);
-    this->get_parameter("state_bounds.max_x_acc", state_bounds_.x_acc.second);
-    this->get_parameter("state_bounds.min_y_acc", state_bounds_.y_acc.first);
-    this->get_parameter("state_bounds.max_y_acc", state_bounds_.y_acc.second);
-    this->get_parameter("state_bounds.min_z_acc", state_bounds_.z_acc.first);
-    this->get_parameter("state_bounds.max_z_acc", state_bounds_.z_acc.second);
     this->get_parameter("state_bounds.min_roll", state_bounds_.roll.first);
     this->get_parameter("state_bounds.max_roll", state_bounds_.roll.second);
     this->get_parameter("state_bounds.min_pitch", state_bounds_.pitch.first);
     this->get_parameter("state_bounds.max_pitch", state_bounds_.pitch.second);
     this->get_parameter("state_bounds.min_yaw", state_bounds_.yaw.first);
     this->get_parameter("state_bounds.max_yaw", state_bounds_.yaw.second);
+    this->get_parameter("state_bounds.min_x_vel", state_bounds_.x_vel.first);
+    this->get_parameter("state_bounds.max_x_vel", state_bounds_.x_vel.second);
+    this->get_parameter("state_bounds.min_y_vel", state_bounds_.y_vel.first);
+    this->get_parameter("state_bounds.max_y_vel", state_bounds_.y_vel.second);
+    this->get_parameter("state_bounds.min_z_vel", state_bounds_.z_vel.first);
+    this->get_parameter("state_bounds.max_z_vel", state_bounds_.z_vel.second);
     this->get_parameter("state_bounds.min_roll_vel", state_bounds_.roll_vel.first);
     this->get_parameter("state_bounds.max_roll_vel", state_bounds_.roll_vel.second);
     this->get_parameter("state_bounds.min_pitch_vel", state_bounds_.pitch_vel.first);
     this->get_parameter("state_bounds.max_pitch_vel", state_bounds_.pitch_vel.second);
     this->get_parameter("state_bounds.min_yaw_vel", state_bounds_.yaw_vel.first);
     this->get_parameter("state_bounds.max_yaw_vel", state_bounds_.yaw_vel.second);
+    this->get_parameter("state_bounds.min_x_acc", state_bounds_.x_acc.first);
+    this->get_parameter("state_bounds.max_x_acc", state_bounds_.x_acc.second);
+    this->get_parameter("state_bounds.min_y_acc", state_bounds_.y_acc.first);
+    this->get_parameter("state_bounds.max_y_acc", state_bounds_.y_acc.second);
+    this->get_parameter("state_bounds.min_z_acc", state_bounds_.z_acc.first);
+    this->get_parameter("state_bounds.max_z_acc", state_bounds_.z_acc.second);
 
     // Place all control bounds in a struct
     this->get_parameter("control_bounds.min_z_pos", control_bounds_.z_pos.first);
@@ -150,7 +148,6 @@ namespace vox_nav_planning
 
     fcl::CollisionObjectf robot_body_box_object(robot_body_box, fcl::Transform3f());
     robot_collision_object_ = std::make_shared<fcl::CollisionObjectf>(robot_body_box_object);
-    elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
     original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
     get_maps_and_surfels_client_node_ = std::make_shared
       <rclcpp::Node>("get_maps_and_surfels_client_node");
@@ -210,7 +207,6 @@ namespace vox_nav_planning
     control_bounds->setLow(5, control_bounds_.z_acc.first);
     control_bounds->setHigh(5, control_bounds_.z_acc.second);
 
-    // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
     state_space_ = std::make_shared<ompl::base::RealVectorStateSpace>(15);
     state_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(*state_bounds);
 
@@ -249,25 +245,33 @@ namespace vox_nav_planning
     const double duration,
     ompl::base::State * result)
   {
-    const auto * ee_start = start->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * ee_start_so2 = ee_start->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * ee_start_xyzv = ee_start->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    const double * ctrl = control->as<ompl::control::RealVectorControlSpace::ControlType>()->values;
+    const auto * states = start->as<ompl::base::RealVectorStateSpace::StateType>();
+    const auto * controls = control->as<ompl::control::RealVectorControlSpace::ControlType>();
 
-    auto x = ee_start_xyzv->values[0];
-    auto y = ee_start_xyzv->values[1];
-    auto z = ee_start_xyzv->values[2];
-    auto v = ee_start_xyzv->values[3];
-    auto yaw = ee_start_so2->value;
+    // Extract all the states and propagate them
+    double x = states->values[0];
+    double y = states->values[1];
+    double z = states->values[2];
+    double roll = states->values[3];
+    double pitch = states->values[4];
+    double yaw = states->values[5];
+    double x_vel = states->values[6];
+    double y_vel = states->values[7];
+    double z_vel = states->values[8];
+    double roll_vel = states->values[9];
+    double pitch_vel = states->values[10];
+    double yaw_vel = states->values[11];
+    double x_acc = states->values[12];
+    double y_acc = states->values[13];
+    double z_acc = states->values[14];
 
-    result->as<ompl::base::ElevationStateSpace::StateType>()->setXYZV(
-      x + duration * v * std::cos(yaw) /*X*/,
-      y + duration * v * std::sin(yaw) /*Y*/,
-      z /*Z*/,
-      v + duration * ctrl[0] /*V*/);
-    result->as<ompl::base::ElevationStateSpace::StateType>()->setSO2(
-      yaw + duration *
-      ctrl[1] /*W*/);
+    // Extract all the controls and propagate them
+    double c_z_pos = controls->values[0];
+    double c_z_vel = controls->values[1];
+    double c_yaw_vel = controls->values[2];
+    double c_x_acc = controls->values[3];
+    double c_y_acc = controls->values[4];
+    double c_z_acc = controls->values[5];
 
     si->enforceBounds(result);
   }
@@ -278,14 +282,6 @@ namespace vox_nav_planning
     // select a optimizatio objective
     ompl::base::OptimizationObjectivePtr length_objective(
       new ompl::base::PathLengthOptimizationObjective(control_simple_setup_->getSpaceInformation()));
-    ompl::base::OptimizationObjectivePtr octocost_objective(
-      new ompl::base::OctoCostOptimizationObjective(
-        control_simple_setup_->getSpaceInformation(), elevated_surfel_octomap_octree_));
-
-    ompl::base::MultiOptimizationObjective * multi_optimization =
-      new ompl::base::MultiOptimizationObjective(control_simple_setup_->getSpaceInformation());
-    multi_optimization->addObjective(length_objective, 1.0);
-    multi_optimization->addObjective(octocost_objective, 1.0);
 
     return ompl::base::OptimizationObjectivePtr(length_objective);
   }
@@ -466,16 +462,19 @@ namespace vox_nav_planning
 
   bool QuadrotorControlPlannersBenchMarking::isStateValid(const ompl::base::State * state)
   {
-    const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
-    // cast the abstract state type to the type we expect
-    const auto * so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    // extract the second component of the state and cast it to what we expect
-    const auto * xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+    const auto * cstate = state->as<ompl::base::RealVectorStateSpace::StateType>();
+    auto x = cstate->values[0];
+    auto y = cstate->values[1];
+    auto z = cstate->values[2];
+    auto roll = cstate->values[3];
+    auto pitch = cstate->values[4];
+    auto yaw = cstate->values[5];
+
     fcl::CollisionRequestf requestType(1, false, 1, false);
     // check validity of state Fdefined by pos & rot
-    fcl::Vector3f translation(xyzv->values[0], xyzv->values[1], xyzv->values[2]);
+    fcl::Vector3f translation(x, y, z);
     tf2::Quaternion myQuaternion;
-    myQuaternion.setRPY(0, 0, so2->value);
+    myQuaternion.setRPY(roll, pitch, yaw);
     fcl::Quaternionf rotation(
       myQuaternion.getX(), myQuaternion.getY(),
       myQuaternion.getZ(), myQuaternion.getW());
@@ -523,15 +522,12 @@ namespace vox_nav_planning
         marker.ns = "path" + std::to_string(it->first);
 
         const auto * cstate =
-          it->second.getState(curr_path_state)->as<ompl::base::ElevationStateSpace::StateType>();
-        // cast the abstract state type to the type we expect
-        const auto * so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-        // extract the second component of the state and cast it to what we expect
-        const auto * xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+          it->second.getState(curr_path_state)->as<ompl::base::RealVectorStateSpace::StateType>();
+
         geometry_msgs::msg::Point p;
-        p.x = xyzv->values[0];
-        p.y = xyzv->values[1];
-        p.z = xyzv->values[2];
+        p.x = cstate->values[0];
+        p.y = cstate->values[1];
+        p.z = cstate->values[2];
         //marker.points.push_back(p);
         //marker.colors.push_back(getColorByIndex(it->first));
 
@@ -628,50 +624,16 @@ namespace vox_nav_planning
         dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(response->original_octomap));
       original_octomap_octree_ = std::make_shared<octomap::OcTree>(*original_octomap_octree);
 
-      auto elevated_surfel_octomap_octree =
-        dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(
-          response->elevated_surfel_octomap));
-      elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(
-        *elevated_surfel_octomap_octree);
-
       delete original_octomap_octree;
-      delete elevated_surfel_octomap_octree;
-
-      auto elevated_surfels_fcl_octree =
-        std::make_shared<fcl::OcTreef>(elevated_surfel_octomap_octree_);
-      elevated_surfels_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
-        std::shared_ptr<fcl::CollisionGeometryf>(elevated_surfels_fcl_octree));
 
       auto original_octomap_fcl_octree = std::make_shared<fcl::OcTreef>(original_octomap_octree_);
       original_octomap_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
         std::shared_ptr<fcl::CollisionGeometryf>(original_octomap_fcl_octree));
 
-      elevated_surfel_poses_msg_ = std::make_shared<geometry_msgs::msg::PoseArray>(
-        response->elevated_surfel_poses);
-      for (auto && i : elevated_surfel_poses_msg_->poses) {
-        pcl::PointSurfel surfel;
-        surfel.x = i.position.x;
-        surfel.y = i.position.y;
-        surfel.z = i.position.z;
-        double r, p, y;
-        vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
-        surfel.normal_x = r;
-        surfel.normal_y = p;
-        surfel.normal_z = y;
-        elevated_surfel_cloud_->points.push_back(surfel);
-      }
-
       RCLCPP_INFO(
         logger_,
         "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
         "octomap for state validity (aka collision check)", original_octomap_octree_->size());
-
-      RCLCPP_INFO(
-        logger_,
-        "Recieved a valid Octomap which represents Elevated surfels with %d nodes,"
-        " A FCL collision tree will be created from this "
-        "octomap for state validity (aka collision check)",
-        elevated_surfel_octomap_octree_->size());
 
     }
   }
