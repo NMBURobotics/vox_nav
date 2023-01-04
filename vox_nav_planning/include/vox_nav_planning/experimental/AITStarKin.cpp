@@ -169,7 +169,15 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   geometric_nn_->add(start_vertex_);
   forward_control_nn_->add(start_vertex_);
 
-  max_dist_between_vertices_ = distanceFunction(start_vertex_->state, goal_vertex_->state) / 10.0;
+  if (max_dist_between_vertices_ == 0.0) {
+    // Set max distance between vertices to 1/50th of the distance between start and goal (if not set
+    // by user)
+    max_dist_between_vertices_ = distanceFunction(start_vertex_->state, goal_vertex_->state) / 50.0;
+    OMPL_WARN(
+      "%s: Setting max edge distance to 1/50th of the distance between start and goal (%.2f)"
+      "though this value is not optimal.",
+      getName(), max_dist_between_vertices_);
+  }
 
   // Add goal and start to geomteric graph
   vertex_descriptor start_vertex_descriptor = boost::add_vertex(g_geometric_);
@@ -484,8 +492,8 @@ void ompl::control::AITStarKin::generateBatchofSamples(
       do{
         // Sample the associated state uniformly within the informed set.
         //sampler_->sampleUniform(samples.back());
-        path_informed_sampler_->sampleUniform(samples.back(), bestCost_);
-        //rejection_informed_sampler_->sampleUniform(samples.back(), bestCost_);
+        //path_informed_sampler_->sampleUniform(samples.back(), bestCost_);
+        rejection_informed_sampler_->sampleUniform(samples.back(), bestCost_);
 
         // Count how many states we've checked.
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));

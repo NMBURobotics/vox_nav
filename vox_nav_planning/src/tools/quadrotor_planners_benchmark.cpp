@@ -10,10 +10,9 @@ namespace vox_nav_planning
     is_map_ready_ = false;
 
     this->declare_parameter(
-      "selected_planners",
-      std::vector<std::string>({"RRTstar", "PRMstar"}));
+      "selected_planners", std::vector<std::string>({"RRTstar", "PRMstar"}));
+    this->declare_parameter("robot_mesh_path", "");
     this->declare_parameter("planner_timeout", 5.0);
-    this->declare_parameter("octomap_voxel_size", 0.2);
 
     //  state bounds
     this->declare_parameter("state_bounds.min_x_pos", -50.0);
@@ -60,7 +59,6 @@ namespace vox_nav_planning
     this->declare_parameter("control_bounds.max_y_acc", 1.14);
     this->declare_parameter("control_bounds.min_z_acc", -1.14);
     this->declare_parameter("control_bounds.max_z_acc", 1.14);
-
     this->declare_parameter("robot_body_dimens.x", 1.5);
     this->declare_parameter("robot_body_dimens.y", 1.5);
     this->declare_parameter("robot_body_dimens.z", 0.4);
@@ -75,9 +73,9 @@ namespace vox_nav_planning
     this->declare_parameter("sample_bencmark_plans_topic", "benchmark_plan");
 
     this->get_parameter("selected_planners", selected_planners_);
+    this->get_parameter("robot_mesh_path", robot_mesh_path_);
     this->get_parameter("planner_timeout", planner_timeout_);
     this->get_parameter("interpolation_parameter", interpolation_parameter_);
-    this->get_parameter("octomap_voxel_size", octomap_voxel_size_);
     this->get_parameter("robot_body_dimens.x", robot_body_dimensions_.x);
     this->get_parameter("robot_body_dimens.y", robot_body_dimensions_.y);
     this->get_parameter("robot_body_dimens.z", robot_body_dimensions_.z);
@@ -148,7 +146,6 @@ namespace vox_nav_planning
 
     fcl::CollisionObjectf robot_body_box_object(robot_body_box, fcl::Transform3f());
     robot_collision_object_ = std::make_shared<fcl::CollisionObjectf>(robot_body_box_object);
-    original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
     get_maps_and_surfels_client_node_ = std::make_shared
       <rclcpp::Node>("get_maps_and_surfels_client_node");
 
@@ -414,9 +411,7 @@ namespace vox_nav_planning
         if (publish_a_sample_bencmark_) {
           std::lock_guard<std::mutex> guard(plan_mutex);
 
-          RCLCPP_INFO(
-            this->get_logger(),
-            "Creating sample plans.");
+          RCLCPP_INFO(this->get_logger(), "Creating sample plans.");
 
           control_simple_setup_->setPlanner(planner_ptr);
           control_simple_setup_->setup();
@@ -527,12 +522,19 @@ namespace vox_nav_planning
         visualization_msgs::msg::Marker marker;
         marker.header.frame_id = "map";
         marker.header.stamp = rclcpp::Clock().now();
-        marker.type = visualization_msgs::msg::Marker::SPHERE;
+
+        if (!robot_mesh_path_.empty()) {
+          marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
+          marker.mesh_resource = robot_mesh_path_;
+        } else {
+          marker.type = visualization_msgs::msg::Marker::CUBE;
+        }
+
         marker.action = visualization_msgs::msg::Marker::ADD;
         marker.lifetime = rclcpp::Duration::from_seconds(0);
-        marker.scale.x = 0.4;
-        marker.scale.y = 0.4;
-        marker.scale.z = 0.3;
+        marker.scale.x = robot_body_dimensions_.x;
+        marker.scale.y = robot_body_dimensions_.y;
+        marker.scale.z = robot_body_dimensions_.z;
         marker.id = total_poses;
         marker.color = getColorByIndex(it->first);
         marker.ns = "path" + std::to_string(it->first);
@@ -650,7 +652,6 @@ namespace vox_nav_planning
         logger_,
         "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
         "octomap for state validity (aka collision check)", original_octomap_octree_->size());
-
     }
   }
 

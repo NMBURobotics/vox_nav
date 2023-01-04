@@ -161,7 +161,7 @@ namespace ompl
       double min_dist_between_vertices_{0.1};
 
       /** \brief The edges connecting samples in geometric and control graphs cannot be longer than this */
-      double max_dist_between_vertices_{2.0}; // works ok for elevation
+      double max_dist_between_vertices_{0.0}; // works ok for elevation
 
       /** \brief If available, use valid sampler. */
       bool use_valid_sampler_{false};

@@ -147,9 +147,9 @@ namespace vox_nav_planning
     QuadrotorControl quadrotor_controller_;
 
     std::vector<std::string> selected_planners_;
+    std::string robot_mesh_path_;
     std::string results_output_dir_;
     std::string results_file_regex_;
-    double octomap_voxel_size_;
     double planner_timeout_;
     double goal_tolerance_;
     double min_euclidean_dist_start_to_goal_;
