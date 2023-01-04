@@ -25,49 +25,41 @@ namespace vox_nav_utilities
     const std::shared_ptr<octomap::OcTree> & octree)
   {
     auto tree_depth = octree->getTreeDepth();
-    marker_array->markers.resize(tree_depth + 1);
+    marker_array->markers.clear();
+
+    visualization_msgs::msg::Marker marker;
+    marker.header = *header;
+    marker.ns = header->frame_id;
+    marker.id = 0;
+    marker.type = visualization_msgs::msg::Marker::CUBE_LIST;
+    marker.scale.x = octree->getResolution();
+    marker.scale.y = octree->getResolution();
+    marker.scale.z = octree->getResolution();
+    marker.action = visualization_msgs::msg::Marker::ADD;
+
     // now, traverse all leafs in the tree:
     for (auto it = octree->begin(tree_depth),
       end = octree->end(); it != end; ++it)
     {
       if (octree->isNodeOccupied(*it)) {
-        unsigned idx = it.getDepth();
-        assert(idx < marker_array->markers.size());
         geometry_msgs::msg::Point cubeCenter;
         cubeCenter.x = it.getCoordinate().x();
         cubeCenter.y = it.getCoordinate().y();
         cubeCenter.z = it.getCoordinate().z();
-        marker_array->markers[idx].points.push_back(cubeCenter);
+        marker.points.push_back(cubeCenter);
         std_msgs::msg::ColorRGBA color;
         color.g = 1.0 - it->getValue();
         color.b = it->getValue();
-        color.a = 1.0;
+        color.a = 0.8;
         if (it->getValue() > 1.0) {
           color.r = 1.0;
           color.g = 0.0;
           color.b = 0.0;
         }
-        marker_array->markers[idx].colors.push_back(color);
+        marker.colors.push_back(color);
       }
     }
-    for (unsigned i = 0; i < marker_array->markers.size(); ++i) {
-      double size = octree->getNodeSize(i);
-      marker_array->markers[i].header = *header;
-      marker_array->markers[i].ns = header->frame_id;
-      marker_array->markers[i].id = i;
-      marker_array->markers[i].type =
-        visualization_msgs::msg::Marker::CUBE_LIST;
-      marker_array->markers[i].scale.x = size;
-      marker_array->markers[i].scale.y = size;
-      marker_array->markers[i].scale.z = size;
-      if (marker_array->markers[i].points.size() > 0) {
-        marker_array->markers[i].action =
-          visualization_msgs::msg::Marker::ADD;
-      } else {
-        marker_array->markers[i].action =
-          visualization_msgs::msg::Marker::DELETE;
-      }
-    }
+    marker_array->markers.push_back(marker);
   }
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr denoise_segmented_cloud(

@@ -169,6 +169,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   geometric_nn_->add(start_vertex_);
   forward_control_nn_->add(start_vertex_);
 
+  max_dist_between_vertices_ = distanceFunction(start_vertex_->state, goal_vertex_->state) / 10.0;
+
   // Add goal and start to geomteric graph
   vertex_descriptor start_vertex_descriptor = boost::add_vertex(g_geometric_);
   vertex_descriptor goal_vertex_descriptor = boost::add_vertex(g_geometric_);
@@ -415,7 +417,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     std::string green("green");
     std::string blue("blue");
 
-    /*// geometric path
+    // geometric path
     visualizePath(
       g_geometric_,
       shortest_path_geometric,
@@ -444,7 +446,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       "c",
       getColor(red),
       forward_control_g_root,
-      forward_control_g_target);*/
+      forward_control_g_target);
 
   }
 
@@ -482,8 +484,8 @@ void ompl::control::AITStarKin::generateBatchofSamples(
       do{
         // Sample the associated state uniformly within the informed set.
         //sampler_->sampleUniform(samples.back());
-        //path_informed_sampler_->sampleUniform(samples.back(), bestCost_);
-        rejection_informed_sampler_->sampleUniform(samples.back(), bestCost_);
+        path_informed_sampler_->sampleUniform(samples.back(), bestCost_);
+        //rejection_informed_sampler_->sampleUniform(samples.back(), bestCost_);
 
         // Count how many states we've checked.
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));
@@ -545,7 +547,7 @@ void ompl::control::AITStarKin::expandGeometricGraph(
         double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
         edge_descriptor e; bool edge_added;
         // not to construct edges with self, and if nbh is further than radius_, continue
-        if (u == v || dist > max_edge_length_) {
+        if (u == v || dist > max_dist_between_vertices_) {
           continue;
         }
         if (boost::edge(
@@ -587,7 +589,7 @@ void ompl::control::AITStarKin::ensureGoalVertexConnectivity(
     double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
     edge_descriptor e; bool edge_added;
     // not to construct edges with self, and if nbh is further than radius_, continue
-    if (u == v || dist > max_edge_length_) {
+    if (u == v || dist > max_dist_between_vertices_) {
       continue;
     }
     if (boost::edge(u, v, geometric_graph).second || boost::edge(v, u, geometric_graph).second) {
@@ -687,7 +689,7 @@ void ompl::control::AITStarKin::expandControlGraph(
         double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
         edge_descriptor e; bool edge_added;
         // not to construct edges with self, and if nbh is further than radius_, continue
-        if (u == v || dist > max_edge_length_) {
+        if (u == v || dist > max_dist_between_vertices_) {
           continue;
         }
         if (boost::edge(
@@ -708,14 +710,14 @@ void ompl::control::AITStarKin::expandControlGraph(
           target_vertex_state);
 
         // if the distance is less than the radius to target, then add the edge
-        if (dist_to_target < max_edge_length_) {
+        if (dist_to_target < max_dist_between_vertices_) {
 
           vertex_descriptor u = arrived_vertex_property->id;
           vertex_descriptor v = target_vertex_descriptor;
           double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
           edge_descriptor e; bool edge_added;
           // not to construct edges with self, and if nbh is further than radius_, continue
-          if (u == v || dist > max_edge_length_) {
+          if (u == v || dist > max_dist_between_vertices_) {
             continue;
           }
           if (boost::edge(u, v, control_graph).second ||

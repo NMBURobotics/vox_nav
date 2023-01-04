@@ -386,7 +386,8 @@ namespace vox_nav_planning
 
       auto si = control_simple_setup_->getSpaceInformation();
       si->setMinMaxControlDuration(20, 30);
-      si->setPropagationStepSize(0.025);
+      si->setPropagationStepSize(0.01);
+
 
       control_simple_setup_->setStatePropagator(
         [this, si](const ompl::base::State * state, const ompl::control::Control * control,

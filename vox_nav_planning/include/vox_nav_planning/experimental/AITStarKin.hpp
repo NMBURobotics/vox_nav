@@ -116,6 +116,7 @@ namespace ompl
         return si_->distance(a, b);
       }
 
+
       /** \brief Given its vertex_descriptor (id),
        * return a const pointer to VertexProperty in geometric graph g_geometric_  */
       const VertexProperty * getVertex(std::size_t id)
@@ -159,6 +160,9 @@ namespace ompl
       /** \brief Adding almost identical samples does not help much, so we regulate this by min_dist_between_vertices_. */
       double min_dist_between_vertices_{0.1};
 
+      /** \brief The edges connecting samples in geometric and control graphs cannot be longer than this */
+      double max_dist_between_vertices_{2.0}; // works ok for elevation
+
       /** \brief If available, use valid sampler. */
       bool use_valid_sampler_{false};
 
@@ -168,6 +172,8 @@ namespace ompl
       /** \brief For adaptive heuristic, there is two options, dijkstra and astar.
        *  Default is dijkstra as it computes shortest path from each vertex to specified one */
       static bool const use_astar_hueristic_{false};
+
+      bool using_real_vector_state_space_{true};
 
       /** \brief Frequently push goal to graph. It is used in control graph */
       double goal_bias_{0.05};
@@ -182,9 +188,6 @@ namespace ompl
 
       /** \brief Whether to use nearest neighbor or radius as connection strategy. */
       static bool const use_k_nearest_{true};
-
-      /** \brief The edges connecting samples in geometric and control graphs cannot be longer than this */
-      double max_edge_length_{2.0};
 
       /** \brief State sampler */
       base::StateSamplerPtr sampler_{nullptr};
