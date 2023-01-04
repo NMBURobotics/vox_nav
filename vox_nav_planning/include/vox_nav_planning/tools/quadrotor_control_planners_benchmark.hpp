@@ -137,7 +137,7 @@ namespace vox_nav_planning
   class QuadrotorControlPlannersBenchMarking : public rclcpp::Node
   {
   private:
-    rclcpp::Logger logger_{rclcpp::get_logger("quadrotor_control_planners_benchmarks")};
+    rclcpp::Logger logger_{rclcpp::get_logger("quadrotor_control_benchmarking_rclcpp_node")};
     StateBounds state_bounds_;             // struct for keeping things clean
     ControlBounds control_bounds_;         // struct for keeping things clean
     ompl::base::StateSpacePtr state_space_;

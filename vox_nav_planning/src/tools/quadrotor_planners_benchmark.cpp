@@ -3,7 +3,7 @@
 namespace vox_nav_planning
 {
   QuadrotorControlPlannersBenchMarking::QuadrotorControlPlannersBenchMarking()
-  : Node("planner_benchmarking_rclcpp_node")
+  : Node("quadrotor_control_benchmarking_rclcpp_node")
   {
     RCLCPP_INFO(this->get_logger(), "Creating:");
 

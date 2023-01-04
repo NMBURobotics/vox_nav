@@ -1,0 +1,63 @@
+quadrotor_control_benchmarking_rclcpp_node:
+  ros__parameters:
+    planner_timeout: 30.0
+    interpolation_parameter: 50
+    octomap_voxel_size: 0.2
+    selected_planners: [SST, AITStarKin, EST]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
+    state_bounds:
+      min_x_pos: -50.0
+      max_x_pos: 50.0
+      min_y_pos: -50.0
+      max_y_pos: 50.0
+      min_z_pos: -50.0
+      max_z_pos: 50.0
+      min_roll: -3.14
+      max_roll: 3.14
+      min_pitch: -3.14
+      max_pitch: 3.14
+      min_yaw: -3.14
+      max_yaw: 3.14
+      min_x_vel: -1.0
+      max_x_vel: 1.0
+      min_y_vel: -1.0
+      max_y_vel: 1.0
+      min_z_vel: -1.0
+      max_z_vel: 1.0
+      min_roll_vel: -1.14
+      max_roll_vel: 1.14
+      min_pitch_vel: -1.14
+      max_pitch_vel: 1.14
+      min_yaw_vel: -1.14
+      max_yaw_vel: 1.14
+      min_x_acc: -1.0
+      max_x_acc: 1.0
+      min_y_acc: -1.0
+      max_y_acc: 1.0
+      min_z_acc: -1.0
+      max_z_acc: 1.0
+    control_bounds:
+      min_z_pos: -1.0
+      max_z_pos: 1.0
+      min_z_vel: -1.0
+      max_z_vel: 1.0
+      min_yaw_vel: -1.14
+      max_yaw_vel: 1.14
+      min_x_acc: -1.0
+      max_x_acc: 1.0
+      min_y_acc: -1.14
+      max_y_acc: 1.14
+      min_z_acc: -1.14
+      max_z_acc: 1.14
+    robot_body_dimens:
+      x: 0.5
+      y: 0.5
+      z: 0.4
+    goal_tolerance: 3.0
+    min_euclidean_dist_start_to_goal: 25.0
+    batch_size: 1
+    epochs: 2
+    max_memory: 4096
+    results_output_dir: "/home/atas/test/"
+    results_file_regex: "control"
+    publish_a_sample_bencmark: true
+    sample_bencmark_plans_topic: "benchmark_plan"
