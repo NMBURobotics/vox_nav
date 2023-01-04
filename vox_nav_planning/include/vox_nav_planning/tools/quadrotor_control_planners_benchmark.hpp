@@ -69,7 +69,7 @@
 #include "vox_nav_planning/rrt/LQRPlanner.hpp"
 #include "vox_nav_planning/rrt/LQRRRTStar.hpp"
 #include "vox_nav_planning/experimental/AITStarKin.hpp"
-#include "vox_nav_planning/experimental/Quadrotor.hpp"
+#include "vox_nav_planning/tools/Quadrotor.hpp"
 // OMPL BASE
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/objectives/MaximizeMinClearanceObjective.h>
@@ -110,18 +110,18 @@ namespace vox_nav_planning
     std::pair<double, double> x_pos = std::make_pair<double, double>(0.0, 0.0);
     std::pair<double, double> y_pos = std::make_pair<double, double>(0.0, 0.0);
     std::pair<double, double> z_pos = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> x_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> y_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> z_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> x_acc = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> y_acc = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> z_acc = std::make_pair<double, double>(0.0, 0.0);
     std::pair<double, double> roll = std::make_pair<double, double>(0.0, 0.0);
     std::pair<double, double> pitch = std::make_pair<double, double>(0.0, 0.0);
     std::pair<double, double> yaw = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> x_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> y_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> z_vel = std::make_pair<double, double>(0.0, 0.0);
     std::pair<double, double> roll_vel = std::make_pair<double, double>(0.0, 0.0);
     std::pair<double, double> pitch_vel = std::make_pair<double, double>(0.0, 0.0);
     std::pair<double, double> yaw_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> x_acc = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> y_acc = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> z_acc = std::make_pair<double, double>(0.0, 0.0);
   };
 
   struct ControlBounds

@@ -28,28 +28,30 @@ namespace vox_nav_planning
     this->declare_parameter("state_bounds.max_pitch", 3.14);
     this->declare_parameter("state_bounds.min_yaw", -3.14);
     this->declare_parameter("state_bounds.max_yaw", 3.14);
-    this->declare_parameter("state_bounds.min_x_vel", -50.0);
-    this->declare_parameter("state_bounds.max_x_vel", 50.0);
-    this->declare_parameter("state_bounds.min_y_vel", -50.0);
-    this->declare_parameter("state_bounds.max_y_vel", 50.0);
-    this->declare_parameter("state_bounds.min_z_vel", -50.0);
-    this->declare_parameter("state_bounds.max_z_vel", 50.0);
-    this->declare_parameter("state_bounds.min_roll_vel", -3.14);
-    this->declare_parameter("state_bounds.max_roll_vel", 3.14);
-    this->declare_parameter("state_bounds.min_pitch_vel", -3.14);
-    this->declare_parameter("state_bounds.max_pitch_vel", 3.14);
-    this->declare_parameter("state_bounds.min_yaw_vel", -3.14);
-    this->declare_parameter("state_bounds.max_yaw_vel", 3.14);
-    this->declare_parameter("state_bounds.min_x_acc", -50.0);
-    this->declare_parameter("state_bounds.max_x_acc", 50.0);
-    this->declare_parameter("state_bounds.min_y_acc", -50.0);
-    this->declare_parameter("state_bounds.max_y_acc", 50.0);
-    this->declare_parameter("state_bounds.min_z_acc", -50.0);
-    this->declare_parameter("state_bounds.max_z_acc", 50.0);
+
+    this->declare_parameter("state_bounds.min_x_vel", -1.0);
+    this->declare_parameter("state_bounds.max_x_vel", 1.0);
+    this->declare_parameter("state_bounds.min_y_vel", -1.0);
+    this->declare_parameter("state_bounds.max_y_vel", 1.0);
+    this->declare_parameter("state_bounds.min_z_vel", -1.0);
+    this->declare_parameter("state_bounds.max_z_vel", 1.0);
+    this->declare_parameter("state_bounds.min_roll_vel", -1.14);
+    this->declare_parameter("state_bounds.max_roll_vel", 1.14);
+    this->declare_parameter("state_bounds.min_pitch_vel", -1.14);
+    this->declare_parameter("state_bounds.max_pitch_vel", 1.14);
+    this->declare_parameter("state_bounds.min_yaw_vel", -1.14);
+    this->declare_parameter("state_bounds.max_yaw_vel", 1.14);
+
+    this->declare_parameter("state_bounds.min_x_acc", -1.0);
+    this->declare_parameter("state_bounds.max_x_acc", 1.0);
+    this->declare_parameter("state_bounds.min_y_acc", -1.0);
+    this->declare_parameter("state_bounds.max_y_acc", 1.0);
+    this->declare_parameter("state_bounds.min_z_acc", -1.0);
+    this->declare_parameter("state_bounds.max_z_acc", 1.0);
 
     // Control Bounds
-    this->declare_parameter("control_bounds.min_z_pos", -5.0);
-    this->declare_parameter("control_bounds.max_z_pos", 5.0);
+    this->declare_parameter("control_bounds.min_z_pos", -1.0);
+    this->declare_parameter("control_bounds.max_z_pos", 1.0);
     this->declare_parameter("control_bounds.min_z_vel", -1.0);
     this->declare_parameter("control_bounds.max_z_vel", 1.0);
     this->declare_parameter("control_bounds.min_yaw_vel", -1.14);
