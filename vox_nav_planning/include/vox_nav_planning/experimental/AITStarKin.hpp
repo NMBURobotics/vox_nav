@@ -78,20 +78,6 @@ namespace ompl
       /** \brief Free the memory allocated by this planner. That is mostly in nearest neihbours. */
       void freeMemory();
 
-      /** \brief Set a different nearest neighbors datastructure */
-      template<template<typename T> class NN>
-      void setNearestNeighbors()
-      {
-        if (geometric_nn_ && geometric_nn_->size() != 0) {
-          OMPL_WARN("Calling setNearestNeighbors will clear all states.");
-        }
-        clear();
-        geometric_nn_ = std::make_shared<NN<VertexProperty *>>();
-        forward_control_nn_ = std::make_shared<NN<VertexProperty *>>();
-        backward_control_nn_ = std::make_shared<NN<VertexProperty *>>();
-        setup();
-      }
-
       /** \brief Properties of boost graph vertex, both geometriuc and control graphes share this vertex property.
        *  Some of the elements are not used in geometric graph (e.g., control, control_duration). */
       struct VertexProperty
@@ -133,20 +119,16 @@ namespace ompl
 
       /** \brief Given its vertex_descriptor (id),
        * return a const pointer to VertexProperty in control graph g_forward_control_  */
-      const VertexProperty * getVertexForwardControl(std::size_t id)
+      const VertexProperty * getVertexControls(std::size_t id, int thread_id)
       {
-        return &g_forward_control_[id];
-      }
-
-      /** \brief Given its vertex_descriptor (id),
-       * return a const pointer to VertexProperty in control graph g_backward_control_  */
-      const VertexProperty * getVertexBackwardControl(std::size_t id)
-      {
-        return &g_backward_control_[id];
+        return &g_controls_[thread_id][id];
       }
 
     private:
       /** \brief All configurable parameters of AITStarKin, TODO(@atas), add getters and setters for each. */
+
+      /** \brief The number of threads to be used in parallel for control. */
+      int num_threads_{8};
 
       /** \brief The number of samples to be added to graph in each iteration. */
       int batch_size_{1000};
@@ -218,11 +200,8 @@ namespace ompl
       /** \brief The NN datastructure for geometric graph */
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> geometric_nn_;
 
-      /** \brief The NN datastructure for forward control graph */
-      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> forward_control_nn_;
-
-      /** \brief The NN datastructure for backward control graph */
-      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> backward_control_nn_;
+      /** \brief The NN datastructure for control graph */
+      std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>>> controls_nn_;
 
       /** \brief The typedef of Edge cost as double,
        * note that ompl::base::Cost wont work as some operators are not provided (e.g. +) */
@@ -257,22 +236,19 @@ namespace ompl
         typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
         GenericDistanceHeuristic(
           AITStarKin * alg, VertexProperty * goal,
-          bool forward_control = false,
-          bool backward_control = false)
+          bool control = false,
+          int thread_id = 0)
         : alg_(alg),
           goal_(goal),
-          forward_control_(forward_control),
-          backward_control_(backward_control)
+          control_(control),
+          thread_id_(thread_id)
         {
         }
         double operator()(vertex_descriptor i)
         {
-          if (forward_control_) {
+          if (control_) {
             return alg_->opt_->motionCost(
-              alg_->getVertexForwardControl(i)->state, goal_->state).value();
-          } else if (backward_control_) {
-            return alg_->opt_->motionCost(
-              alg_->getVertexBackwardControl(i)->state, goal_->state).value();
+              alg_->getVertexControls(i, thread_id_)->state, goal_->state).value();
           } else {
             return alg_->opt_->motionCost(alg_->getVertex(i)->state, goal_->state).value();
           }
@@ -281,8 +257,8 @@ namespace ompl
       private:
         AITStarKin * alg_{nullptr};
         VertexProperty * goal_{nullptr};
-        bool forward_control_{false};
-        bool backward_control_{false};
+        bool control_{false};
+        int thread_id_{0};
       };  // GenericDistanceHeuristic
 
       /** \brief The precomputed cost heuristic, this is used for geometric graph when we perform A* with collision checks.
@@ -349,12 +325,12 @@ namespace ompl
 
       /** \brief The graphs are global too */
       GraphT g_geometric_;
-      GraphT g_forward_control_;
-      GraphT g_backward_control_;
+
+      std::vector<GraphT> g_controls_;
 
       std::thread * geometric_thread_{nullptr};
-      std::thread * forward_control_thread_{nullptr};
-      std::thread * backward_control_thread_{nullptr};
+
+      std::vector<std::thread *> control_threads_;
 
       /** \brief The publishers for the geometric and control graph/path visulization*/
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;

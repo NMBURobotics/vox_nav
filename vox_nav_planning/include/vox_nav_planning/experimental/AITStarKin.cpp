@@ -19,6 +19,9 @@ ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
 {
   specs_.approximateSolutions = true;
   siC_ = si.get();
+
+  g_controls_ = std::vector<GraphT>(num_threads_, GraphT());
+
 }
 
 ompl::control::AITStarKin::~AITStarKin()
@@ -31,8 +34,14 @@ void ompl::control::AITStarKin::setup()
   base::Planner::setup();
   if (!geometric_nn_) {
     geometric_nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
-    forward_control_nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
-    backward_control_nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
+
+    // reset nns in all control threads
+    controls_nn_.clear();
+    for (int i = 0; i < num_threads_; i++) {
+      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> this_nn;
+      this_nn.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
+      controls_nn_.push_back(this_nn);
+    }
   }
 
   geometric_nn_->setDistanceFunction(
@@ -40,16 +49,15 @@ void ompl::control::AITStarKin::setup()
     {
       return distanceFunction(a, b);
     });
-  forward_control_nn_->setDistanceFunction(
-    [this](const VertexProperty * a, const VertexProperty * b)
-    {
-      return distanceFunction(a, b);
-    });
-  backward_control_nn_->setDistanceFunction(
-    [this](const VertexProperty * a, const VertexProperty * b)
-    {
-      return distanceFunction(a, b);
-    });
+
+  // set distance function for all nns control threads
+  for (auto & nn : controls_nn_) {
+    nn->setDistanceFunction(
+      [this](const VertexProperty * a, const VertexProperty * b)
+      {
+        return distanceFunction(a, b);
+      });
+  }
 
   if (pdef_) {
     if (pdef_->hasOptimizationObjective()) {
@@ -115,16 +123,20 @@ void ompl::control::AITStarKin::clear()
   freeMemory();
   if (geometric_nn_) {
     geometric_nn_->clear();
-    forward_control_nn_->clear();
-    backward_control_nn_->clear();
+    // clear all nns in control threads
+    for (auto & nn : controls_nn_) {
+      nn->clear();
+    }
+
   }
   // clear the graphs
   g_geometric_.clear();
   g_geometric_ = GraphT();
-  g_backward_control_.clear();
-  g_backward_control_ = GraphT();
-  g_forward_control_.clear();
-  g_forward_control_ = GraphT();
+  // clear all graphs in control threads
+  for (auto & graph : g_controls_) {
+    graph.clear();
+    graph = GraphT();
+  }
 }
 
 void ompl::control::AITStarKin::freeMemory()
@@ -138,6 +150,19 @@ void ompl::control::AITStarKin::freeMemory()
       }
       delete node;
     }
+
+    // free memory for all nns in control threads
+    for (auto & nn : controls_nn_) {
+      std::vector<VertexProperty *> nodes;
+      nn->list(nodes);
+      for (auto & node : nodes) {
+        if (node->state) {
+          si_->freeState(node->state);
+        }
+        delete node;
+      }
+    }
+
   }
 }
 
@@ -158,7 +183,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
   goal_vertex_->state = goal_state;
   geometric_nn_->add(goal_vertex_);
-  backward_control_nn_->add(goal_vertex_);
 
   // get start node and state
   auto * start_state = si_->allocState();
@@ -167,7 +191,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
   start_vertex_->state = start_state;
   geometric_nn_->add(start_vertex_);
-  forward_control_nn_->add(start_vertex_);
+  // add start to all control nns
+  for (auto & nn : controls_nn_) {
+    nn->add(start_vertex_);
+  }
 
   if (max_dist_between_vertices_ == 0.0) {
     // Set max distance between vertices to 1/50th of the distance between start and goal (if not set
@@ -187,21 +214,17 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   g_geometric_[start_vertex_descriptor] = *start_vertex_;
   g_geometric_[goal_vertex_descriptor] = *goal_vertex_;
 
-  // Add goal and start to forward control graph
-  vertex_descriptor forward_control_g_root = boost::add_vertex(g_forward_control_);
-  vertex_descriptor forward_control_g_target = boost::add_vertex(g_forward_control_);
-  g_forward_control_[forward_control_g_root] = *start_vertex_;
-  g_forward_control_[forward_control_g_root].id = forward_control_g_root;
-  g_forward_control_[forward_control_g_target] = *goal_vertex_;
-  g_forward_control_[forward_control_g_target].id = forward_control_g_target;
-
-  // Add goal and start to backward control graph
-  vertex_descriptor backward_control_g_root = boost::add_vertex(g_backward_control_);
-  vertex_descriptor backward_control_g_target = boost::add_vertex(g_backward_control_);
-  g_backward_control_[backward_control_g_root] = *goal_vertex_; // rooted in goal, aims for start
-  g_backward_control_[backward_control_g_root].id = backward_control_g_root; // rooted in goal, aims for start
-  g_backward_control_[backward_control_g_target] = *start_vertex_; // rooted in goal, aims for start
-  g_backward_control_[backward_control_g_target].id = backward_control_g_target; // rooted in goal, aims for start
+  // Add goal and start to forward control graphs
+  std::vector<std::pair<vertex_descriptor, vertex_descriptor>> start_goal_descriptors;
+  for (auto & graph : g_controls_) {
+    vertex_descriptor control_g_root = boost::add_vertex(graph);
+    vertex_descriptor control_g_target = boost::add_vertex(graph);
+    graph[control_g_root] = *start_vertex_;
+    graph[control_g_root].id = control_g_root;
+    graph[control_g_target] = *goal_vertex_;
+    graph[control_g_target].id = control_g_target;
+    start_goal_descriptors.push_back(std::make_pair(control_g_root, control_g_target));
+  }
 
   if (geometric_nn_->size() == 0) {
     OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
@@ -212,16 +235,21 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     "%s: Starting planning with %u states already in datastructure\n", getName().c_str(),
     geometric_nn_->size());
 
-  std::list<std::size_t>
-  shortest_path_geometric, shortest_path_forward_control, shortest_path_backward_control;
+  std::list<std::size_t> shortest_path_geometric;
+  std::vector<std::list<std::size_t>>
+  shortest_paths_controls(num_threads_, std::list<std::size_t>());
 
   WeightMap weightmap_geometric = get(boost::edge_weight, g_geometric_);
-  WeightMap weightmap_forward_control = get(boost::edge_weight, g_forward_control_);
-  WeightMap weightmap_backward_control = get(boost::edge_weight, g_backward_control_);
+  std::vector<WeightMap> weightmap_controls;
+  for (auto & graph : g_controls_) {
+    weightmap_controls.push_back(get(boost::edge_weight, graph));
+  }
 
   auto geometric_path(std::make_shared<PathControl>(si_));
-  auto forward_control_path(std::make_shared<PathControl>(si_));
-  auto backward_control_path(std::make_shared<PathControl>(si_));
+
+  // Create a vector of shared pointers to PathControl to be filled by each thread
+  std::vector<std::shared_ptr<PathControl>>
+  controls_paths(num_threads_, std::make_shared<PathControl>(si_));
 
   bool goal_reached{false};
 
@@ -267,83 +295,63 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         }
       });
 
-    // Forward Control graph Thread
-    forward_control_thread_ = new std::thread(
-      [this,
-      &samples,
-      &goal_state,
-      &forward_control_g_target,
-      &forward_control_g_root,
-      &weightmap_forward_control,
-      &shortest_path_forward_control
-      ]
-      {
-        expandControlGraph(
-          samples,
-          goal_state,
-          forward_control_g_target,
-          g_forward_control_,
-          forward_control_nn_,
-          weightmap_forward_control);
+    control_threads_.clear();
 
-        // Run A* for control graph
-        auto control_forward_heuristic =
-        GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
-          this, &g_forward_control_[forward_control_g_target], true, false);
-        shortest_path_forward_control =
-        computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
-          g_forward_control_, weightmap_forward_control, control_forward_heuristic,
-          forward_control_g_root, forward_control_g_target, false, false);
-      });
+    for (size_t t = 0; t < num_threads_; t++) {
+      // Forward Control graph Thread
+      auto current_thread = new std::thread(
+        [this,
+        &samples,
+        &goal_state,
+        &start_goal_descriptors,
+        &weightmap_controls,
+        &shortest_paths_controls,
+        &t
+        ]
+        {
+          expandControlGraph(
+            samples,
+            goal_state,
+            start_goal_descriptors[t].first,
+            g_controls_[t],
+            controls_nn_[t],
+            weightmap_controls[t]);
 
-    // Backward Control graph Thread
-    backward_control_thread_ = new std::thread(
-      [this,
-      &samples,
-      &start_state,
-      &backward_control_g_target,
-      &backward_control_g_root,
-      &weightmap_backward_control,
-      &shortest_path_backward_control
-      ]
-      {
-        expandControlGraph(
-          samples,
-          start_state,
-          backward_control_g_target,
-          g_backward_control_,
-          backward_control_nn_,
-          weightmap_backward_control);
-
-        // Run A* for control graph
-        auto control_backward_heuristic =
-        GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
-          this, &g_backward_control_[backward_control_g_target], false, true);
-        shortest_path_backward_control =
-        computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
-          g_backward_control_, weightmap_backward_control, control_backward_heuristic,
-          backward_control_g_root, backward_control_g_target, false, false);
-      });
+          // Run A* for control graph
+          auto control_forward_heuristic =
+          GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
+            this, &g_controls_[t][start_goal_descriptors[t].second], true, t);
+          shortest_paths_controls[t] =
+          computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
+            g_controls_[t], weightmap_controls[t], control_forward_heuristic,
+            start_goal_descriptors[t].first, start_goal_descriptors[t].second, false, false);
+        });
+    }
 
     // Let the threads finish
     geometric_thread_->join();
-    forward_control_thread_->join();
-    backward_control_thread_->join();
+    for (auto & thread : control_threads_) {
+      thread->join();
+    }
 
     // Delete the threads
     delete geometric_thread_;
-    delete forward_control_thread_;
-    delete backward_control_thread_;
+    for (auto & thread : control_threads_) {
+      delete thread;
+    }
 
     // Popolate the OMPL paths from vertexes found by A*
-    populateOmplPathfromVertexPath(
-      shortest_path_forward_control, g_forward_control_, forward_control_path);
-    populateOmplPathfromVertexPath(
-      shortest_path_backward_control, g_backward_control_, backward_control_path);
+    for (size_t i = 0; i < shortest_paths_controls.size(); i++) {
+      populateOmplPathfromVertexPath(
+        shortest_paths_controls[i], g_controls_[i], controls_paths[i]);
+    }
 
-    // Check if we have a solution from either backward or forward control graph
-    if (shortest_path_forward_control.size() > 0 || shortest_path_backward_control.size() > 0) {
-      goal_reached = true;
+    // Check if any of the control threads found an A* path
+    for (auto & path : shortest_paths_controls) {
+      if (path.size() > 0) {
+        goal_reached = true;
+        break;
+      }
     }
 
     // Also populate the geometric path from vertexes found by A*
@@ -353,73 +361,58 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       geometric_path->append(g_geometric_[i].state);
       index++;
     }
-    // Determine best control path
+
+    // Determine best control path found by current threads
     auto best_control_path(std::make_shared<PathControl>(si_));
-
-    auto forward_control_path_cost = computePathCost(forward_control_path);
-    auto backward_control_path_cost = computePathCost(backward_control_path);
+    auto best_control_path_cost = opt_->infiniteCost();
     auto start_goal_l2_distance = opt_->motionCost(start_state, goal_state);
+    int best_path_index = 0; int counter = 0;
 
-    if (opt_->isCostBetterThan(start_goal_l2_distance, forward_control_path_cost)) {
-      best_control_path = forward_control_path;
-      if (opt_->isCostBetterThan(start_goal_l2_distance, backward_control_path_cost)) {
-        // Both paths are valid
-        if (opt_->isCostBetterThan(forward_control_path_cost, backward_control_path_cost)) {
-          best_control_path = forward_control_path;
-          OMPL_INFORM(
-            "%s: Better path in forward graph with %.2f cost.\n",
-            getName().c_str(), forward_control_path_cost.value());
-        } else {
-          best_control_path = backward_control_path;
-          OMPL_INFORM(
-            "%s: Better path in backward graph with %.2f cost.\n",
-            getName().c_str(), backward_control_path_cost.value());
+    for (auto && curr_path : controls_paths) {
+      auto path_cost = computePathCost(curr_path);
+      if (opt_->isCostBetterThan(path_cost, start_goal_l2_distance)) {
+        // Aight, this path seems legit
+        if (opt_->isCostBetterThan(path_cost, best_control_path_cost)) {
+          best_control_path = curr_path;
+          best_path_index = counter;
+          best_control_path_cost = path_cost;
         }
       }
+      counter++;
     }
 
-    // compute the cost of the solution
-    auto current_solution_cost = computePathCost(best_control_path);
+    OMPL_INFORM(
+      "%s: Better path in backward graph with %.2f cost.\n",
+      getName().c_str(), bestCost_.value());
 
     // If the cost is less than L2 norm of start and goal, this is likely an useless one.
     // make sure the current cost is not less than L2 norm of start and goal
-    if (opt_->isCostBetterThan(start_goal_l2_distance, current_solution_cost)) {
+    if (opt_->isCostBetterThan(start_goal_l2_distance, best_control_path_cost)) {
 
       // This is a valid solution
       // Now we need to check if it is better than the previous one
-      if (opt_->isCostBetterThan(current_solution_cost, bestCost_)) {
+      if (opt_->isCostBetterThan(best_control_path_cost, bestCost_)) {
         // This is a better solution, update the best cost and path
-        bestCost_ = current_solution_cost;
+        bestCost_ = best_control_path_cost;
         bestPath_ = best_control_path;
       }
-      // Reset Control Graph anyway
-      g_forward_control_.clear();
-      g_forward_control_ = GraphT();
-      forward_control_nn_->clear();
-      g_backward_control_.clear();
-      g_backward_control_ = GraphT();
-      backward_control_nn_->clear();
+      // Reset graphs
+      for (size_t i = 0; i < num_threads_; i++) {
+        g_controls_[i].clear();
+        g_controls_[i] = GraphT();
+        controls_nn_[i]->clear();
 
-      // Add the start and goal vertex to the control graph
-      forward_control_nn_->add(start_vertex_);
-      backward_control_nn_->add(goal_vertex_);
+        // Add the start and goal vertex to the control graph
+        controls_nn_[i]->add(start_vertex_);
 
-      // Add goal and start to forward control graph
-      forward_control_g_root = boost::add_vertex(g_forward_control_);
-      forward_control_g_target = boost::add_vertex(g_forward_control_);
-      g_forward_control_[forward_control_g_root] = *start_vertex_;
-      g_forward_control_[forward_control_g_root].id = forward_control_g_root;
-      g_forward_control_[forward_control_g_target] = *goal_vertex_;
-      g_forward_control_[forward_control_g_target].id = forward_control_g_target;
-
-      // Add goal and start to backward control graph
-      backward_control_g_root = boost::add_vertex(g_backward_control_);
-      backward_control_g_target = boost::add_vertex(g_backward_control_);
-      g_backward_control_[backward_control_g_root] = *goal_vertex_;   // rooted in goal, aims for start
-      g_backward_control_[backward_control_g_root].id = backward_control_g_root;   // rooted in goal, aims for start
-      g_backward_control_[backward_control_g_target] = *start_vertex_;   // rooted in goal, aims for start
-      g_backward_control_[backward_control_g_target].id = backward_control_g_target;   // rooted in goal, aims for start
-
+        // Add goal and start to forward control graph
+        auto control_g_root = boost::add_vertex(g_controls_[i]);
+        auto control_g_target = boost::add_vertex(g_controls_[i]);
+        g_controls_[i][control_g_root] = *start_vertex_;
+        g_controls_[i][control_g_root].id = control_g_root;
+        g_controls_[i][control_g_target] = *goal_vertex_;
+        g_controls_[i][control_g_target].id = control_g_target;
+      }
     }
 
     OMPL_INFORM(
@@ -458,12 +451,12 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       goal_vertex_descriptor);
 
     visualizeRGG(
-      g_forward_control_,
+      g_controls_[best_path_index],
       control_graph_pub_,
       "c",
       getColor(red),
-      forward_control_g_root,
-      forward_control_g_target);
+      start_goal_descriptors[best_path_index].first,
+      start_goal_descriptors[best_path_index].second);
 
   }
 
@@ -765,9 +758,9 @@ std::size_t ompl::control::AITStarKin::computeNumberOfSamplesInInformedSet() con
 {
   // Loop over all vertices and count the ones in the informed set.
   std::size_t numberOfSamplesInInformedSet{0u};
-  for (auto vd : boost::make_iterator_range(vertices(g_forward_control_))) {
+  for (auto vd : boost::make_iterator_range(vertices(g_controls_[0]))) {
 
-    auto vertex = g_forward_control_[vd].state;
+    auto vertex = g_controls_[0][vd].state;
     // Get the best cost to come from any start.
     auto costToCome = opt_->infiniteCost();
     costToCome = opt_->betterCost(
