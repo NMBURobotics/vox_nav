@@ -155,7 +155,7 @@ namespace ompl
       double radius_{std::numeric_limits<double>::infinity()};
 
       /** \brief The a single vertex, do not construct more edges (neighbours) more than max_neighbors_. */
-      int max_neighbors_{5};
+      int max_neighbors_{10};
 
       /** \brief Adding almost identical samples does not help much, so we regulate this by min_dist_between_vertices_. */
       double min_dist_between_vertices_{0.1};
@@ -475,6 +475,10 @@ namespace ompl
 
       /** \brief original AIT* function */
       std::size_t computeNumberOfNeighbors(std::size_t numSamples) const;
+
+      /** \brief compute path cost */
+      ompl::base::Cost computePathCost(
+        std::shared_ptr<ompl::control::PathControl> & path) const;
 
       void populateOmplPathfromVertexPath(
         const std::list<vertex_descriptor> & vertex_path,

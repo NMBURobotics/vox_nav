@@ -2,8 +2,8 @@ quadrotor_control_benchmarking_rclcpp_node:
   ros__parameters:
     planner_timeout: 20.0
     interpolation_parameter: 50
-    selected_planners: [ AITStarKin]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
-    robot_mesh_path: "" # leave empty if you do not have one, robot_mesh_path: ""
+    selected_planners: [SST, AITStarKin]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
+    robot_mesh_path: "package://vox_nav_planning/config/drone.stl" # leave empty if you do not have one, robot_mesh_path: ""
     state_bounds:
       min_x_pos: -50.0
       max_x_pos: 50.0
@@ -11,30 +11,30 @@ quadrotor_control_benchmarking_rclcpp_node:
       max_y_pos: 50.0
       min_z_pos: 0.0
       max_z_pos: 10.0
-      min_roll: -0.3
-      max_roll: 0.3
-      min_pitch: -0.3
-      max_pitch: 0.3
+      min_roll: -0.5
+      max_roll: 0.5
+      min_pitch: -0.4
+      max_pitch: 0.4
       min_yaw: -3.14
       max_yaw: 3.14
-      min_x_vel: -1.0
-      max_x_vel: 1.0
-      min_y_vel: -1.0
-      max_y_vel: 1.0
-      min_z_vel: -1.0
-      max_z_vel: 1.0
-      min_roll_vel: -0.1
-      max_roll_vel: 0.1
-      min_pitch_vel: -0.1
-      max_pitch_vel: 0.1
-      min_yaw_vel: -0.1
-      max_yaw_vel: 0.1
-      min_x_acc: -1.0
-      max_x_acc: 1.0
-      min_y_acc: -1.0
-      max_y_acc: 1.0
-      min_z_acc: -0.2
-      max_z_acc: 0.2
+      min_x_vel: -1.5
+      max_x_vel: 1.5
+      min_y_vel: -1.5
+      max_y_vel: 1.5
+      min_z_vel: -1.5
+      max_z_vel: 1.5
+      min_roll_vel: -0.5
+      max_roll_vel: 0.5
+      min_pitch_vel: -0.5
+      max_pitch_vel: 0.5
+      min_yaw_vel: -0.5
+      max_yaw_vel: 0.5
+      min_x_acc: -1.5
+      max_x_acc: 1.5
+      min_y_acc: -1.5
+      max_y_acc: 1.5
+      min_z_acc: -0.5
+      max_z_acc: 0.5
     control_bounds:
       min_z_pos: -0.0
       max_z_pos: 6.0
@@ -42,12 +42,12 @@ quadrotor_control_benchmarking_rclcpp_node:
       max_z_vel: 1.0
       min_yaw_vel: -0.5
       max_yaw_vel: 0.5
-      min_x_acc: -1.0
-      max_x_acc: 1.0
-      min_y_acc: -1.0
-      max_y_acc: 1.0
+      min_x_acc: -1.5
+      max_x_acc: 1.5
+      min_y_acc: -1.5
+      max_y_acc: 1.5
       min_z_acc: -0.1
-      max_z_acc: 1.0
+      max_z_acc: 1.5
     robot_body_dimens:
       x: 0.4
       y: 0.4

@@ -159,6 +159,7 @@ namespace vox_nav_planning
     int max_memory_;
     bool publish_a_sample_bencmark_;
     std::string sample_bencmark_plans_topic_;
+    geometry_msgs::msg::PoseArray start_and_goal_poses_;
 
     geometry_msgs::msg::Vector3 robot_body_dimensions_;
 

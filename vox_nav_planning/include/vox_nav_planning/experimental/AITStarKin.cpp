@@ -172,11 +172,11 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   if (max_dist_between_vertices_ == 0.0) {
     // Set max distance between vertices to 1/50th of the distance between start and goal (if not set
     // by user)
-    max_dist_between_vertices_ = distanceFunction(start_vertex_->state, goal_vertex_->state) / 50.0;
+    max_dist_between_vertices_ = distanceFunction(start_vertex_->state, goal_vertex_->state) / 10.0;
     OMPL_WARN(
-      "%s: Setting max edge distance to 1/50th of the distance between start and goal (%.2f)"
+      "%s: Setting max edge distance to 1/10th of the distance between start and goal (%.2f) "
       "though this value is not optimal.",
-      getName(), max_dist_between_vertices_);
+      getName().c_str(), max_dist_between_vertices_);
   }
 
   // Add goal and start to geomteric graph
@@ -356,34 +356,43 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     // Determine best control path
     auto best_control_path(std::make_shared<PathControl>(si_));
 
-    if (forward_control_path->length() > distanceFunction(start_state, goal_state)  ) {
+    auto forward_control_path_cost = computePathCost(forward_control_path);
+    auto backward_control_path_cost = computePathCost(backward_control_path);
+    auto start_goal_l2_distance = opt_->motionCost(start_state, goal_state);
+
+    if (opt_->isCostBetterThan(start_goal_l2_distance, forward_control_path_cost)) {
       best_control_path = forward_control_path;
-      if (backward_control_path->length() > distanceFunction(start_state, goal_state) ) {
+      if (opt_->isCostBetterThan(start_goal_l2_distance, backward_control_path_cost)) {
         // Both paths are valid
-        if (forward_control_path->length() < backward_control_path->length()) {
+        if (opt_->isCostBetterThan(forward_control_path_cost, backward_control_path_cost)) {
           best_control_path = forward_control_path;
           OMPL_INFORM(
-            "%s: Better path in forward graph with %.2f length.\n",
-            getName().c_str(), forward_control_path->length());
+            "%s: Better path in forward graph with %.2f cost.\n",
+            getName().c_str(), forward_control_path_cost.value());
         } else {
           best_control_path = backward_control_path;
           OMPL_INFORM(
-            "%s: Better path in backward graph with %.2f length.\n",
-            getName().c_str(), backward_control_path->length());
+            "%s: Better path in backward graph with %.2f cost.\n",
+            getName().c_str(), backward_control_path_cost.value());
         }
       }
     }
 
-    // Set the cost of the solution.
-    if (best_control_path->length() > distanceFunction(start_state, goal_state)) {
+    // compute the cost of the solution
+    auto current_solution_cost = computePathCost(best_control_path);
 
-      // This solution is valid
-      auto current_solution_cost = ompl::base::Cost(best_control_path->length());
+    // If the cost is less than L2 norm of start and goal, this is likely an useless one.
+    // make sure the current cost is not less than L2 norm of start and goal
+    if (opt_->isCostBetterThan(start_goal_l2_distance, current_solution_cost)) {
+
+      // This is a valid solution
+      // Now we need to check if it is better than the previous one
       if (opt_->isCostBetterThan(current_solution_cost, bestCost_)) {
+        // This is a better solution, update the best cost and path
         bestCost_ = current_solution_cost;
         bestPath_ = best_control_path;
       }
-      // Reset Control Graph
+      // Reset Control Graph anyway
       g_forward_control_.clear();
       g_forward_control_ = GraphT();
       forward_control_nn_->clear();
@@ -490,10 +499,18 @@ void ompl::control::AITStarKin::generateBatchofSamples(
       valid_state_sampler_->sample(samples.back());
     } else {
       do{
+        ompl::base::Cost min_cost = opt_->infiniteCost();
+        if (opt_->isCostBetterThan(bestCost_, opt_->infiniteCost())) {
+          // A valid solution was found
+          // Sample in the informed set, and I mean tightly
+          min_cost = opt_->motionCost(start_vertex_->state, goal_vertex_->state);
+        }
         // Sample the associated state uniformly within the informed set.
         //sampler_->sampleUniform(samples.back());
-        //path_informed_sampler_->sampleUniform(samples.back(), bestCost_);
-        rejection_informed_sampler_->sampleUniform(samples.back(), bestCost_);
+        //path_informed_sampler_->sampleUniform(samples.back(), min_cost);
+        rejection_informed_sampler_->sampleUniform(
+          samples.back(),
+          min_cost);
 
         // Count how many states we've checked.
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));
@@ -791,6 +808,22 @@ double ompl::control::AITStarKin::computeConnectionRadius(std::size_t numSamples
 std::size_t ompl::control::AITStarKin::computeNumberOfNeighbors(std::size_t numSamples) const
 {
   return std::ceil(rewire_factor_ * k_rgg_ * std::log(static_cast<double>(numSamples)));
+}
+
+ompl::base::Cost ompl::control::AITStarKin::computePathCost(
+  std::shared_ptr<ompl::control::PathControl> & path)  const
+{
+  ompl::base::Cost path_cost = opt_->identityCost();
+  if (path->getStateCount() == 0) {
+    return path_cost;
+  }
+
+  for (std::size_t i = 0; i < path->getStateCount() - 1; ++i) {
+    path_cost = opt_->combineCosts(
+      path_cost,
+      opt_->motionCost(path->getState(i), path->getState(i + 1)));
+  }
+  return path_cost;
 }
 
 void ompl::control::AITStarKin::visualizeRGG(

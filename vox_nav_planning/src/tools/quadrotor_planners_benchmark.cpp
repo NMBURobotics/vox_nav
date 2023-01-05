@@ -379,11 +379,15 @@ namespace vox_nav_planning
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
 
+      start_and_goal_poses_.poses.clear();
+      start_and_goal_poses_.poses.push_back(start.pose);
+      start_and_goal_poses_.poses.push_back(goal.pose);
+
       control_simple_setup_->setStartAndGoalStates(random_start, random_goal, goal_tolerance_);
 
       auto si = control_simple_setup_->getSpaceInformation();
-      si->setMinMaxControlDuration(20, 30);
-      si->setPropagationStepSize(0.01);
+      si->setMinMaxControlDuration(20, 40);
+      si->setPropagationStepSize(0.005);
 
 
       control_simple_setup_->setStatePropagator(
@@ -546,11 +550,10 @@ namespace vox_nav_planning
         p.x = cstate->values[0];
         p.y = cstate->values[1];
         p.z = cstate->values[2];
-        //marker.points.push_back(p);
-        //marker.colors.push_back(getColorByIndex(it->first));
 
         marker.pose.position = p;
-        //marker.colors.push_back(getColorByIndex(it->first));
+        marker.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(
+          cstate->values[3], cstate->values[4], cstate->values[5]);
 
         visualization_msgs::msg::Marker text;
         text.header.frame_id = "map";
@@ -580,23 +583,9 @@ namespace vox_nav_planning
 
     plan_publisher_->publish(marker_array);
 
-    /*geometry_msgs::msg::PoseArray start_and_goal;
-    start_and_goal.header = marker_array.markers.front().header;
-    geometry_msgs::msg::Pose start, goal;
-    start.position.x = start_.x;
-    start.position.y = start_.y;
-    start.position.z = start_.z;
-    start.orientation =
-      vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, start_.yaw);
-    goal.position.x = goal_.x;
-    goal.position.y = goal_.y;
-    goal.position.z = goal_.z;
-    goal.orientation =
-      vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, goal_.yaw);
-    start_and_goal.poses.push_back(start);
-    start_and_goal.poses.push_back(goal);
-    start_goal_poses_publisher_->publish(start_and_goal);*/
-
+    // publish start and goal poses
+    start_and_goal_poses_.header = marker_array.markers.front().header;
+    start_goal_poses_publisher_->publish(start_and_goal_poses_);
   }
 
   void QuadrotorControlPlannersBenchMarking::setupMap()
