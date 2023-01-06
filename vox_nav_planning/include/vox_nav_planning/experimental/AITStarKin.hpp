@@ -109,16 +109,16 @@ namespace ompl
 
       /** \brief Given its vertex_descriptor (id),
        * return a const pointer to VertexProperty in geometric graph g_geometric_  */
-      const VertexProperty * getVertex(std::size_t id)
+      const VertexProperty * getVertex(std::size_t id, int thread_id)
       {
-        return &g_geometric_[id];
+        return &g_geometrics_[thread_id][id];
       }
 
       /** \brief Given its vertex_descriptor (id),
        * return a mutable pointer to VertexProperty in geometric graph g_  */
-      VertexProperty * getVertexMutable(std::size_t id)
+      VertexProperty * getVertexMutable(std::size_t id, int thread_id)
       {
-        return &g_geometric_[id];
+        return &g_geometrics_[thread_id][id];
       }
 
       /** \brief Given its vertex_descriptor (id),
@@ -194,16 +194,22 @@ namespace ompl
       base::OptimizationObjectivePtr opt_{nullptr};
 
       /** \brief Current cost of best path. The informed sampling strategy needs it. */
-      ompl::base::Cost bestCost_{std::numeric_limits<double>::infinity()};
+      ompl::base::Cost bestGeometricCost_{std::numeric_limits<double>::infinity()};
+
+      /** \brief Current cost of best path. The informed sampling strategy needs it. */
+      ompl::base::Cost bestControlCost_{std::numeric_limits<double>::infinity()};
 
       /** \brief The best path found so far. */
-      std::shared_ptr<ompl::control::PathControl> bestPath_{nullptr};
+      std::shared_ptr<ompl::control::PathControl> bestGeometricPath_{nullptr};
+
+      /** \brief The best path found so far. */
+      std::shared_ptr<ompl::control::PathControl> bestControlPath_{nullptr};
 
       /** \brief Directed control sampler to expand control graph */
       DirectedControlSamplerPtr controlSampler_;
 
       /** \brief The NN datastructure for geometric graph */
-      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> geometric_nn_;
+      std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>>> geometrics_nn_;
 
       /** \brief The NN datastructure for control graph */
       std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>>> controls_nn_;
@@ -255,7 +261,8 @@ namespace ompl
             return alg_->opt_->motionCost(
               alg_->getVertexControls(i, thread_id_)->state, goal_->state).value();
           } else {
-            return alg_->opt_->motionCost(alg_->getVertex(i)->state, goal_->state).value();
+            return alg_->opt_->motionCost(
+              alg_->getVertex(i, thread_id_)->state, goal_->state).value();
           }
         }
 
@@ -275,24 +282,26 @@ namespace ompl
       {
       public:
         typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-        PrecomputedCostHeuristic(AITStarKin * alg)
-        : alg_(alg)
+        PrecomputedCostHeuristic(AITStarKin * alg, int thread_id = 0)
+        : alg_(alg),
+          thread_id_(thread_id)
         {
         }
         double operator()(vertex_descriptor i)
         {
           double cost{std::numeric_limits<double>::infinity()};
           // verify that the state is valid
-          if (alg_->si_->isValid(alg_->getVertex(i)->state)) {
-            cost = alg_->getVertex(i)->g;
+          if (alg_->si_->isValid(alg_->getVertex(i, thread_id_)->state)) {
+            cost = alg_->getVertex(i, thread_id_)->g;
           } else {
-            alg_->getVertexMutable(i)->blacklisted = true;
+            alg_->getVertexMutable(i, thread_id_)->blacklisted = true;
           }
           return cost;
         }
 
       private:
         AITStarKin * alg_;
+        int thread_id_{0};
       };  // PrecomputedCostHeuristic
 
       /** \brief Exception thrown when goal vertex is found */
@@ -329,16 +338,11 @@ namespace ompl
       VertexProperty * start_vertex_{nullptr};
       VertexProperty * goal_vertex_{nullptr};
 
-      /** \brief The graphs are global too */
-      GraphT g_geometric_;
+      /** \brief The geometric and control graphs */
+      std::vector<GraphT> g_geometrics_;
 
+      /** \brief */
       std::vector<GraphT> g_controls_;
-
-      std::thread * geometric_thread_{nullptr};
-
-      std::vector<std::thread *> control_threads_;
-
-      std::mutex mutex_;
 
       /** \brief The publishers for the geometric and control graph/path visulization*/
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;

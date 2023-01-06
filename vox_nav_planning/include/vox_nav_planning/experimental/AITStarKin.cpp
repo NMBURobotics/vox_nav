@@ -23,6 +23,7 @@ ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
   siC_ = si.get();
 
   // initialize the graphs for all control threads
+  g_geometrics_ = std::vector<GraphT>(num_threads_, GraphT());
   g_controls_ = std::vector<GraphT>(num_threads_, GraphT());
 }
 
@@ -34,23 +35,31 @@ ompl::control::AITStarKin::~AITStarKin()
 void ompl::control::AITStarKin::setup()
 {
   base::Planner::setup();
-  if (!geometric_nn_) {
-    geometric_nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
 
-    // reset nns in all control threads
-    controls_nn_.clear();
-    for (int i = 0; i < num_threads_; i++) {
-      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> this_nn;
-      this_nn.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
-      controls_nn_.push_back(this_nn);
-    }
+  // reset nn for geometric graph
+  geometrics_nn_.clear();
+  for (int i = 0; i < num_threads_; i++) {
+    std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> this_nn;
+    this_nn.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
+    geometrics_nn_.push_back(this_nn);
   }
 
-  geometric_nn_->setDistanceFunction(
-    [this](const VertexProperty * a, const VertexProperty * b)
-    {
-      return distanceFunction(a, b);
-    });
+  // reset nns in all control threads
+  controls_nn_.clear();
+  for (int i = 0; i < num_threads_; i++) {
+    std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> this_nn;
+    this_nn.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
+    controls_nn_.push_back(this_nn);
+  }
+
+  //
+  for (auto & nn : geometrics_nn_) {
+    nn->setDistanceFunction(
+      [this](const VertexProperty * a, const VertexProperty * b)
+      {
+        return distanceFunction(a, b);
+      });
+  }
 
   // set distance function for all nns control threads
   for (auto & nn : controls_nn_) {
@@ -94,7 +103,8 @@ void ompl::control::AITStarKin::setup()
   k_rgg_ = boost::math::constants::e<double>() +
     (boost::math::constants::e<double>() / si_->getStateDimension());
 
-  bestPath_ = std::make_shared<PathControl>(si_);
+  bestControlPath_ = std::make_shared<PathControl>(si_);
+  bestGeometricPath_ = std::make_shared<PathControl>(si_);
 
   // RVIZ VISUALIZATIONS
   node_ = std::make_shared<rclcpp::Node>("aitstarkin_rclcpp_node");
@@ -120,21 +130,28 @@ void ompl::control::AITStarKin::clear()
   rejection_informed_sampler_.reset();
   radius_ = std::numeric_limits<double>::infinity();
   numNeighbors_ = std::numeric_limits<std::size_t>::max();
-  bestCost_ = opt_->infiniteCost();
+  bestControlCost_ = opt_->infiniteCost();
+  bestGeometricCost_ = opt_->infiniteCost();
 
   freeMemory();
 
-  if (geometric_nn_) {
-    geometric_nn_->clear();
-    // clear all nns in control threads
-    for (auto & nn : controls_nn_) {
-      nn->clear();
-    }
-
+  // clear the nn for geometric graph
+  for (auto & nn : geometrics_nn_) {
+    nn->clear();
   }
+
+  // clear the nn for control graph
+  for (auto & nn : controls_nn_) {
+    nn->clear();
+  }
+
+
   // clear the graphs
-  g_geometric_.clear();
-  g_geometric_ = GraphT();
+  for (auto & graph : g_geometrics_) {
+    graph.clear();
+    graph = GraphT();
+  }
+
   // clear all graphs in control threads
   for (auto & graph : g_controls_) {
     graph.clear();
@@ -144,16 +161,7 @@ void ompl::control::AITStarKin::clear()
 
 void ompl::control::AITStarKin::freeMemory()
 {
-  if (geometric_nn_) {
-    std::vector<VertexProperty *> nodes;
-    geometric_nn_->list(nodes);
-    for (auto & node : nodes) {
-      if (node->state) {
-        si_->freeState(node->state);
-      }
-      delete node;
-    }
-  }
+
 
 }
 
@@ -173,7 +181,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     si_->copyState(goal_state, goal);
   }
   goal_vertex_->state = goal_state;
-  geometric_nn_->add(goal_vertex_);
+  for (auto & nn : geometrics_nn_) {
+    nn->add(goal_vertex_);
+  }
 
   // get start node and state
   auto * start_state = si_->allocState();
@@ -181,7 +191,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     si_->copyState(start_state, st);
   }
   start_vertex_->state = start_state;
-  geometric_nn_->add(start_vertex_);
+  // add start to geometric nn
+  for (auto & nn : geometrics_nn_) {
+    nn->add(start_vertex_);
+  }
   // add start to all control nns
   for (auto & nn : controls_nn_) {
     nn->add(start_vertex_);
@@ -199,15 +212,20 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
 
   // Add goal and start to geomteric graph
-  vertex_descriptor start_vertex_descriptor = boost::add_vertex(g_geometric_);
-  vertex_descriptor goal_vertex_descriptor = boost::add_vertex(g_geometric_);
-  start_vertex_->id = start_vertex_descriptor;
-  goal_vertex_->id = goal_vertex_descriptor;
-  g_geometric_[start_vertex_descriptor] = *start_vertex_;
-  g_geometric_[goal_vertex_descriptor] = *goal_vertex_;
+  std::vector<std::pair<vertex_descriptor, vertex_descriptor>> geometric_start_goal_descriptors;
+  for (auto & graph : g_geometrics_) {
+    vertex_descriptor start_vertex_descriptor = boost::add_vertex(graph);
+    vertex_descriptor goal_vertex_descriptor = boost::add_vertex(graph);
+    start_vertex_->id = start_vertex_descriptor;
+    goal_vertex_->id = goal_vertex_descriptor;
+    graph[start_vertex_descriptor] = *start_vertex_;
+    graph[goal_vertex_descriptor] = *goal_vertex_;
+    geometric_start_goal_descriptors.push_back(
+      std::make_pair(start_vertex_descriptor, goal_vertex_descriptor));
+  }
 
   // Add goal and start to control graphs
-  std::vector<std::pair<vertex_descriptor, vertex_descriptor>> start_goal_descriptors;
+  std::vector<std::pair<vertex_descriptor, vertex_descriptor>> control_start_goal_descriptors;
   for (auto & graph : g_controls_) {
     vertex_descriptor control_g_root = boost::add_vertex(graph);
     vertex_descriptor control_g_target = boost::add_vertex(graph);
@@ -215,35 +233,31 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     graph[control_g_root].id = control_g_root;
     graph[control_g_target] = *goal_vertex_;
     graph[control_g_target].id = control_g_target;
-    start_goal_descriptors.push_back(std::make_pair(control_g_root, control_g_target));
-  }
-
-  if (geometric_nn_->size() == 0) {
-    OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
-    return base::PlannerStatus::INVALID_START;
+    control_start_goal_descriptors.push_back(std::make_pair(control_g_root, control_g_target));
   }
 
   OMPL_INFORM(
-    "%s: Starting planning with %u states already in datastructure\n", getName().c_str(),
-    geometric_nn_->size());
+    "%s: Using %u geometric graphs.\n", getName().c_str(), g_controls_.size());
 
   OMPL_INFORM(
-    "%s: Using %u controls graphs, %u controls nn \n", getName().c_str(),
-    g_controls_.size(), controls_nn_.size());
+    "%s: Using %u control graphs.\n", getName().c_str(), g_controls_.size());
 
-  std::list<std::size_t> shortest_path_geometric;
+  std::vector<std::list<std::size_t>>
+  shortest_paths_geometrics(num_threads_, std::list<std::size_t>());
   std::vector<std::list<std::size_t>>
   shortest_paths_controls(num_threads_, std::list<std::size_t>());
 
-  WeightMap weightmap_geometric = get(boost::edge_weight, g_geometric_);
+  std::vector<WeightMap> weightmap_geometrics;
+  for (auto & graph : g_geometrics_) {
+    weightmap_geometrics.push_back(get(boost::edge_weight, graph));
+  }
   std::vector<WeightMap> weightmap_controls;
   for (auto & graph : g_controls_) {
     weightmap_controls.push_back(get(boost::edge_weight, graph));
   }
 
-  auto geometric_path(std::make_shared<PathControl>(si_));
-
-  // Create a vector of shared pointers to PathControl to be filled by each thread
+  std::vector<std::shared_ptr<PathControl>>
+  geometrics_paths(num_threads_, std::make_shared<PathControl>(si_));
   std::vector<std::shared_ptr<PathControl>>
   controls_paths(num_threads_, std::make_shared<PathControl>(si_));
 
@@ -251,53 +265,81 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
   while (ptc == false) {
 
-    std::vector<ompl::base::State *> samples;
+    auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
+    if (use_k_nearest_) {
+      numNeighbors_ = computeNumberOfNeighbors(
+        numSamplesInInformedSet /*- 2 goal and start */);
+    } else {
+      radius_ = computeConnectionRadius(
+        numSamplesInInformedSet /*- 2 goal and start*/);
+    }
 
-    generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
-
-    // Geometric graph Thread
-    geometric_thread_ = new std::thread(
-      [this,
-      &samples,
-      &weightmap_geometric,
-      &shortest_path_geometric,
-      &goal_vertex_descriptor,
-      &start_vertex_descriptor
-      ]
-      {
-        expandGeometricGraph(samples, g_geometric_, geometric_nn_, weightmap_geometric);
-
-        ensureGoalVertexConnectivity(
-          goal_vertex_, g_geometric_, geometric_nn_,
-          weightmap_geometric);
-
-        // First lets compute an heuristic working backward from goal -> start
-        // This is done by running A*/Dijstra backwards from goal to start with no collision checking
-        auto heuristic =
-        GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(this, start_vertex_);
-        shortest_path_geometric =
-        computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
-          g_geometric_, weightmap_geometric, heuristic, goal_vertex_descriptor,
-          start_vertex_descriptor, true, false);
-
-        if (shortest_path_geometric.size() > 0) {
-          // precomputed heuristic is available, lets use it for actual path search with collision checking
-          auto precomputed_heuristic = PrecomputedCostHeuristic<GraphT, GraphEdgeCost>(this);
-          shortest_path_geometric =
-          computeShortestPath<PrecomputedCostHeuristic<GraphT, GraphEdgeCost>>(
-            g_geometric_, weightmap_geometric, precomputed_heuristic, start_vertex_descriptor,
-            goal_vertex_descriptor,
-            false, true);
-        }
-      });
-
-
-    std::vector<std::thread *> threads(num_threads_);
     std::vector<int> thread_ids;
     for (int t = 0; t < num_threads_; t++) {
       thread_ids.push_back(t);
     }
 
+    std::vector<std::thread *> geometric_threads(num_threads_);
+
+    for (int t = 0; t < num_threads_; t++) {
+
+      int immutable_t = t;
+      int & thread_id = thread_ids.at(immutable_t);
+      // Forward Control graph Thread
+      GraphT & g = g_geometrics_.at(thread_id);
+      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & nn =
+        geometrics_nn_.at(thread_id);
+      WeightMap & weightmap = weightmap_geometrics.at(thread_id);
+      std::list<std::size_t> & shortest_paths_geometric = shortest_paths_geometrics.at(thread_id);
+      std::pair<vertex_descriptor, vertex_descriptor> &
+      start_goal_descriptor = geometric_start_goal_descriptors.at(thread_id);
+
+      // Geometric graph Thread
+      geometric_threads[thread_id] = new std::thread(
+        [this,
+        &g,
+        &nn,
+        &weightmap,
+        &shortest_paths_geometric,
+        &start_goal_descriptor,
+        &thread_id
+        ]
+        {
+          std::vector<ompl::base::State *> samples;
+          generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
+
+          expandGeometricGraph(samples, g, nn, weightmap);
+
+          ensureGoalVertexConnectivity(goal_vertex_, g, nn, weightmap);
+
+          OMPL_INFORM(
+            "%s: Geometric graph %d has %d vertices and %d edges\n", getName().c_str(),
+            thread_id,
+            boost::num_vertices(g), boost::num_edges(g));
+
+          // First lets compute an heuristic working backward from goal -> start
+          // This is done by running A*/Dijkstra backwards from goal to start with no collision checking
+          auto heuristic =
+          GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
+            this, start_vertex_, false, thread_id);
+          shortest_paths_geometric =
+          computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
+            g, weightmap, heuristic, start_goal_descriptor.second,
+            start_goal_descriptor.first, true, false);
+
+          if (shortest_paths_geometric.size() > 0) {
+            // precomputed heuristic is available, lets use it for actual path search with collision checking
+            auto precomputed_heuristic =
+            PrecomputedCostHeuristic<GraphT, GraphEdgeCost>(this, thread_id);
+            shortest_paths_geometric =
+            computeShortestPath<PrecomputedCostHeuristic<GraphT, GraphEdgeCost>>(
+              g, weightmap, precomputed_heuristic, start_goal_descriptor.first,
+              start_goal_descriptor.second, false, true);
+          }
+        });
+    }
+
+    std::vector<std::thread *> control_threads(num_threads_);
     for (int t = 0; t < num_threads_; t++) {
 
       int immutable_t = t;
@@ -309,11 +351,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       WeightMap & g_weightmap = weightmap_controls.at(thread_id);
       std::list<std::size_t> & shortest_paths_control = shortest_paths_controls.at(thread_id);
       std::pair<vertex_descriptor,
-        vertex_descriptor> & start_goal_descriptor = start_goal_descriptors.at(thread_id);
+        vertex_descriptor> & start_goal_descriptor = control_start_goal_descriptors.at(thread_id);
 
-      threads[thread_id] = new std::thread(
+      control_threads[thread_id] = new std::thread(
         [this,
-        &samples,
         &goal_state,
         &start_goal_descriptor,
         &g_control,
@@ -323,6 +364,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         &thread_id
         ]
         {
+          std::vector<ompl::base::State *> samples;
+          generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
+
           expandControlGraph(
             samples,
             goal_state,
@@ -351,14 +395,21 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     }
 
     // Let the threads finish
-    for (auto & thread : threads) {
+    for (auto & thread : geometric_threads) {
       thread->join();
       delete thread;
     }
-    geometric_thread_->join();
-    delete geometric_thread_;
+    for (auto & thread : control_threads) {
+      thread->join();
+      delete thread;
+    }
 
-    // Popolate the OMPL paths from vertexes found by A*
+    for (size_t i = 0; i < shortest_paths_geometrics.size(); i++) {
+      populateOmplPathfromVertexPath(
+        shortest_paths_geometrics[i], g_geometrics_[i], geometrics_paths[i]);
+    }
+
+    // Popolate the OMPL control paths from vertexes found by A*
     for (size_t i = 0; i < shortest_paths_controls.size(); i++) {
       populateOmplPathfromVertexPath(
         shortest_paths_controls[i], g_controls_[i], controls_paths[i]);
@@ -372,19 +423,30 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       }
     }
 
-    // Also populate the geometric path from vertexes found by A*
-    geometric_path = std::make_shared<PathControl>(si_);
-    int index = 0;
-    for (auto && i : shortest_path_geometric) {
-      geometric_path->append(g_geometric_[i].state);
-      index++;
+    // Determine best geometric path found by current threads
+    auto best_geometric_path(std::make_shared<PathControl>(si_));
+    auto best_geometric_path_cost = opt_->infiniteCost();
+    auto start_goal_l2_distance = opt_->motionCost(start_state, goal_state);
+    int best_geometric_path_index = 0; int geometric_counter = 0;
+
+    for (auto && curr_path : geometrics_paths) {
+      auto path_cost = computePathCost(curr_path);
+      if (!opt_->isCostBetterThan(path_cost, start_goal_l2_distance)) {
+        // Aight, this path seems legit
+        if (opt_->isCostBetterThan(path_cost, best_geometric_path_cost)) {
+          best_geometric_path = curr_path;
+          best_geometric_path_index = geometric_counter;
+          best_geometric_path_cost = path_cost;
+        }
+      }
+      geometric_counter++;
     }
+
 
     // Determine best control path found by current threads
     auto best_control_path(std::make_shared<PathControl>(si_));
     auto best_control_path_cost = opt_->infiniteCost();
-    auto start_goal_l2_distance = opt_->motionCost(start_state, goal_state);
-    int best_path_index = 0; int counter = 0;
+    int best_control_path_index = 0; int control_counter = 0;
 
     for (auto && curr_path : controls_paths) {
       auto path_cost = computePathCost(curr_path);
@@ -392,19 +454,32 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         // Aight, this path seems legit
         if (opt_->isCostBetterThan(path_cost, best_control_path_cost)) {
           best_control_path = curr_path;
-          best_path_index = counter;
+          best_control_path_index = control_counter;
           best_control_path_cost = path_cost;
         }
       }
-      counter++;
+      control_counter++;
     }
 
     // only for visualization
-    auto best_control_graph = g_controls_[best_path_index];
+    auto best_geometric_graph = g_geometrics_[best_geometric_path_index];
+    auto best_control_graph = g_controls_[best_control_path_index];
 
     OMPL_INFORM(
-      "%s: Better path in %dth graph with %.2f cost.\n",
-      getName().c_str(), best_path_index, bestCost_.value());
+      "%s: Better control path in %dth graph with %.2f cost.\n",
+      getName().c_str(), best_control_path_index, bestControlCost_.value());
+    // If the cost is less than L2 norm of start and goal, this is likely an useless one.
+    // make sure the current cost is not less than L2 norm of start and goal
+    if (opt_->isCostBetterThan(start_goal_l2_distance, best_geometric_path_cost)) {
+
+      // This is a valid solution
+      // Now we need to check if it is better than the previous one
+      if (opt_->isCostBetterThan(best_geometric_path_cost, bestGeometricCost_)) {
+        // This is a better solution, update the best cost and path
+        bestGeometricCost_ = best_geometric_path_cost;
+        bestGeometricPath_ = best_control_path;
+      }
+    }
 
     // If the cost is less than L2 norm of start and goal, this is likely an useless one.
     // make sure the current cost is not less than L2 norm of start and goal
@@ -412,10 +487,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
       // This is a valid solution
       // Now we need to check if it is better than the previous one
-      if (opt_->isCostBetterThan(best_control_path_cost, bestCost_)) {
+      if (opt_->isCostBetterThan(best_control_path_cost, bestControlCost_)) {
         // This is a better solution, update the best cost and path
-        bestCost_ = best_control_path_cost;
-        bestPath_ = best_control_path;
+        bestControlCost_ = best_control_path_cost;
+        bestControlPath_ = best_control_path;
       }
       // Reset graphs
       for (int i = 0; i < num_threads_; i++) {
@@ -437,52 +512,43 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       }
     }
 
-    OMPL_INFORM(
-      "%s: Advancing with %d vertices and %d edges.\n",
-      getName().c_str(), boost::num_vertices(g_geometric_), boost::num_edges(g_geometric_));
-
-    OMPL_INFORM(
-      "%s: For this iteration auto calculated radius_ was %.2f and numNeighbors_ %d, bestPath_ cost %.2f.\n",
-      getName().c_str(), radius_, numNeighbors_, bestCost_.value());
-
     std::string red("red");
     std::string green("green");
     std::string blue("blue");
 
     // geometric path
     visualizePath(
-      g_geometric_,
-      shortest_path_geometric,
+      bestGeometricPath_,
       geometric_path_pub_,
       "g",
       getColor(green));
 
     // best control path
     visualizePath(
-      bestPath_,
+      bestControlPath_,
       control_path_pub_,
       "c",
       getColor(red));
 
     visualizeRGG(
-      g_geometric_,
+      best_geometric_graph,
       rgg_graph_pub_,
       "g",
       getColor(green),
-      start_vertex_descriptor,
-      goal_vertex_descriptor);
+      geometric_start_goal_descriptors[best_geometric_path_index].first,
+      geometric_start_goal_descriptors[best_geometric_path_index].second);
 
     visualizeRGG(
       best_control_graph,
       control_graph_pub_,
       "c",
       getColor(red),
-      start_goal_descriptors[best_path_index].first,
-      start_goal_descriptors[best_path_index].second);
+      control_start_goal_descriptors[best_control_path_index].first,
+      control_start_goal_descriptors[best_control_path_index].second);
 
   }
 
-  pdef_->addSolutionPath(bestPath_, false, 0.0, getName());
+  pdef_->addSolutionPath(bestControlPath_, false, 0.0, getName());
 
   clear();
 
@@ -494,9 +560,7 @@ void ompl::control::AITStarKin::getPlannerData(base::PlannerData & data) const
   Planner::getPlannerData(data);
   std::vector<VertexProperty *> Nodes;
   std::vector<VertexProperty *> allNodes;
-  if (geometric_nn_) {
-    geometric_nn_->list(Nodes);
-  }
+
   double delta = siC_->getPropagationStepSize();
 }
 
@@ -515,7 +579,7 @@ void ompl::control::AITStarKin::generateBatchofSamples(
     } else {
       do{
         ompl::base::Cost min_cost = opt_->infiniteCost();
-        if (opt_->isCostBetterThan(bestCost_, opt_->infiniteCost())) {
+        if (opt_->isCostBetterThan(bestControlCost_, opt_->infiniteCost())) {
           // A valid solution was found
           // Sample in the informed set, and I mean tightly
           min_cost = opt_->motionCost(start_vertex_->state, goal_vertex_->state);
@@ -531,16 +595,6 @@ void ompl::control::AITStarKin::generateBatchofSamples(
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));
     }
   } while (samples.size() < batch_size);
-
-  auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
-
-  if (use_k_nearest_) {
-    numNeighbors_ = computeNumberOfNeighbors(
-      numSamplesInInformedSet + samples.size() /*- 2 goal and start */);
-  } else {
-    radius_ = computeConnectionRadius(
-      numSamplesInInformedSet + samples.size() /*- 2 goal and start*/);
-  }
 
 }
 
@@ -796,7 +850,7 @@ std::size_t ompl::control::AITStarKin::computeNumberOfSamplesInInformedSet() con
     // If this can possibly improve the current solution, it is in the informed set.
     if (opt_->isCostBetterThan(
         opt_->combineCosts(costToCome, costToGo),
-        bestCost_))
+        bestControlCost_))
     {
       ++numberOfSamplesInInformedSet;
     }
@@ -814,7 +868,7 @@ double ompl::control::AITStarKin::computeConnectionRadius(std::size_t numSamples
   return
     rewire_factor_ * std::pow(
     2.0 * (1.0 + 1.0 / dimension) *
-    (rejection_informed_sampler_->getInformedMeasure(bestCost_) /
+    (rejection_informed_sampler_->getInformedMeasure(bestControlCost_) /
     unitNBallMeasure(si_->getStateDimension())) *
     (std::log(static_cast<double>(numSamples)) / static_cast<double>(numSamples)),
     1.0 / dimension);
