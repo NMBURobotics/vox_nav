@@ -1,8 +1,8 @@
 quadrotor_control_benchmarking_rclcpp_node:
   ros__parameters:
-    planner_timeout: 20.0
+    planner_timeout: 40.0
     interpolation_parameter: 50
-    selected_planners: [SST, AITStarKin]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
+    selected_planners: [  AITStarKin]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
     robot_mesh_path: "package://vox_nav_planning/config/drone.stl" # leave empty if you do not have one, robot_mesh_path: ""
     state_bounds:
       min_x_pos: -50.0

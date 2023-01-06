@@ -40,6 +40,10 @@
 #include "rclcpp/rclcpp.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
+
+#include <thread>
+#include <mutex>
+#include <atomic>
 #include <limits>
 #include <cstdint>
 
@@ -128,7 +132,7 @@ namespace ompl
       /** \brief All configurable parameters of AITStarKin, TODO(@atas), add getters and setters for each. */
 
       /** \brief The number of threads to be used in parallel for control. */
-      int num_threads_{1};
+      int num_threads_{2};
 
       /** \brief The number of samples to be added to graph in each iteration. */
       int batch_size_{1000};
@@ -143,7 +147,7 @@ namespace ompl
       double min_dist_between_vertices_{0.1};
 
       /** \brief The edges connecting samples in geometric and control graphs cannot be longer than this */
-      double max_dist_between_vertices_{2.0}; // works ok for elevation
+      double max_dist_between_vertices_{0.0}; // works ok for elevation
 
       /** \brief If available, use valid sampler. */
       bool use_valid_sampler_{true};
@@ -333,6 +337,8 @@ namespace ompl
       std::thread * geometric_thread_{nullptr};
 
       std::vector<std::thread *> control_threads_;
+
+      std::mutex mutex_;
 
       /** \brief The publishers for the geometric and control graph/path visulization*/
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;
