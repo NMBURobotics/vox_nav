@@ -301,22 +301,15 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     for (int t = 0; t < num_threads_; t++) {
 
       int immutable_t = t;
-
       int & thread_id = thread_ids.at(immutable_t);
-
       // Forward Control graph Thread
       GraphT & g_control = g_controls_.at(thread_id);
-
       std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & g_nn =
         controls_nn_.at(thread_id);
-
       WeightMap & g_weightmap = weightmap_controls.at(thread_id);
-
       std::list<std::size_t> & shortest_paths_control = shortest_paths_controls.at(thread_id);
-
       std::pair<vertex_descriptor,
         vertex_descriptor> & start_goal_descriptor = start_goal_descriptors.at(thread_id);
-
 
       threads[thread_id] = new std::thread(
         [this,
@@ -406,6 +399,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       counter++;
     }
 
+    // only for visualization
+    auto best_control_graph = g_controls_[best_path_index];
+
     OMPL_INFORM(
       "%s: Better path in %dth graph with %.2f cost.\n",
       getName().c_str(), best_path_index, bestCost_.value());
@@ -422,7 +418,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         bestPath_ = best_control_path;
       }
       // Reset graphs
-      /*for (int i = 0; i < num_threads_; i++) {
+      for (int i = 0; i < num_threads_; i++) {
         g_controls_[i].clear();
         g_controls_[i] = GraphT();
         // free memory for all nns in control threads
@@ -438,7 +434,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         g_controls_[i][control_g_root].id = control_g_root;
         g_controls_[i][control_g_target] = *goal_vertex_;
         g_controls_[i][control_g_target].id = control_g_target;
-      }*/
+      }
     }
 
     OMPL_INFORM(
@@ -477,7 +473,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       goal_vertex_descriptor);
 
     visualizeRGG(
-      g_controls_[best_path_index],
+      best_control_graph,
       control_graph_pub_,
       "c",
       getColor(red),

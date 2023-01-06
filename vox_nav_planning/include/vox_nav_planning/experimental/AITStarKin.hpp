@@ -132,7 +132,7 @@ namespace ompl
       /** \brief All configurable parameters of AITStarKin, TODO(@atas), add getters and setters for each. */
 
       /** \brief The number of threads to be used in parallel for control. */
-      int num_threads_{2};
+      int num_threads_{8};
 
       /** \brief The number of samples to be added to graph in each iteration. */
       int batch_size_{1000};
@@ -150,7 +150,7 @@ namespace ompl
       double max_dist_between_vertices_{0.0}; // works ok for elevation
 
       /** \brief If available, use valid sampler. */
-      bool use_valid_sampler_{true};
+      bool use_valid_sampler_{false};
 
       /** \brief For directed control, set a number of samples to iterate though, to get a more accurate sampleTo behviour. It comes as costy!. */
       int k_number_of_controls_{1};
