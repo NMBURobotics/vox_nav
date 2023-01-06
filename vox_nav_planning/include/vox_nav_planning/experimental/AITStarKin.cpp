@@ -18,10 +18,12 @@ ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
 : base::Planner(si, "AITStarKin")
 {
   specs_.approximateSolutions = true;
+  specs_.optimizingPaths = true;
+  specs_.multithreaded = true;
   siC_ = si.get();
 
+  // initialize the graphs for all control threads
   g_controls_ = std::vector<GraphT>(num_threads_, GraphT());
-
 }
 
 ompl::control::AITStarKin::~AITStarKin()
@@ -121,6 +123,7 @@ void ompl::control::AITStarKin::clear()
   bestCost_ = opt_->infiniteCost();
 
   freeMemory();
+
   if (geometric_nn_) {
     geometric_nn_->clear();
     // clear all nns in control threads
@@ -150,20 +153,8 @@ void ompl::control::AITStarKin::freeMemory()
       }
       delete node;
     }
-
-    // free memory for all nns in control threads
-    for (auto & nn : controls_nn_) {
-      std::vector<VertexProperty *> nodes;
-      nn->list(nodes);
-      for (auto & node : nodes) {
-        if (node->state) {
-          si_->freeState(node->state);
-        }
-        delete node;
-      }
-    }
-
   }
+
 }
 
 ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
@@ -197,9 +188,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
 
   if (max_dist_between_vertices_ == 0.0) {
-    // Set max distance between vertices to 1/50th of the distance between start and goal (if not set
+    // Set max distance between vertices to 1/10th of the distance between start and goal (if not set
     // by user)
-    max_dist_between_vertices_ = distanceFunction(start_vertex_->state, goal_vertex_->state) / 10.0;
+    max_dist_between_vertices_ =
+      opt_->motionCost(start_vertex_->state, goal_vertex_->state).value() / 10.0;
     OMPL_WARN(
       "%s: Setting max edge distance to 1/10th of the distance between start and goal (%.2f) "
       "though this value is not optimal.",
@@ -234,6 +226,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   OMPL_INFORM(
     "%s: Starting planning with %u states already in datastructure\n", getName().c_str(),
     geometric_nn_->size());
+
+  OMPL_INFORM(
+    "%s: Using %u controls graphs, %u controls nn \n", getName().c_str(),
+    g_controls_.size(), controls_nn_.size());
 
   std::list<std::size_t> shortest_path_geometric;
   std::vector<std::list<std::size_t>>
@@ -297,35 +293,61 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
     control_threads_.clear();
 
-    for (size_t t = 0; t < num_threads_; t++) {
+    for (int t = 0; t < num_threads_; t++) {
+
       // Forward Control graph Thread
+      GraphT & g_control = g_controls_.at(t);
+      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & g_nn = controls_nn_.at(t);
+      WeightMap & g_weightmap = weightmap_controls.at(t);
+      std::list<std::size_t> & shortest_paths_control = shortest_paths_controls.at(t);
+      std::pair<vertex_descriptor,
+        vertex_descriptor> & start_goal_descriptor = start_goal_descriptors.at(t);
+
+      OMPL_INFORM(
+        "%s: Control graph %u has %u vertices and %u edges\n", getName().c_str(), t,
+        boost::num_vertices(g_control), boost::num_edges(g_control));
+      OMPL_INFORM(
+        "%s: Control graph %u has %u ve \n", getName().c_str(), t,
+        g_nn->size());
+
+      int immutable_t = t;
+
       auto current_thread = new std::thread(
         [this,
         &samples,
         &goal_state,
-        &start_goal_descriptors,
-        &weightmap_controls,
-        &shortest_paths_controls,
-        &t
+        &start_goal_descriptor,
+        &g_control,
+        &g_nn,
+        &g_weightmap,
+        &shortest_paths_control,
+        &immutable_t
         ]
         {
           expandControlGraph(
             samples,
             goal_state,
-            start_goal_descriptors[t].first,
-            g_controls_[t],
-            controls_nn_[t],
-            weightmap_controls[t]);
+            start_goal_descriptor.second,
+            g_control,
+            g_nn,
+            g_weightmap);
+
+          OMPL_INFORM(
+            "%s: Control graph %u has %u vertices and %u edges\n", getName().c_str(), immutable_t,
+            boost::num_vertices(g_control), boost::num_edges(g_control));
 
           // Run A* for control graph
           auto control_forward_heuristic =
           GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
-            this, &g_controls_[t][start_goal_descriptors[t].second], true, t);
-          shortest_paths_controls[t] =
+            this, goal_vertex_, true, immutable_t);
+          shortest_paths_control =
           computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
-            g_controls_[t], weightmap_controls[t], control_forward_heuristic,
-            start_goal_descriptors[t].first, start_goal_descriptors[t].second, false, false);
+            g_control, g_weightmap, control_forward_heuristic,
+            start_goal_descriptor.first, start_goal_descriptor.second,
+            false, false);
         });
+
+      control_threads_.push_back(current_thread);
     }
 
     // Let the threads finish
@@ -397,9 +419,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         bestPath_ = best_control_path;
       }
       // Reset graphs
-      for (size_t i = 0; i < num_threads_; i++) {
+      for (int i = 0; i < num_threads_; i++) {
         g_controls_[i].clear();
         g_controls_[i] = GraphT();
+        // free memory for all nns in control threads
         controls_nn_[i]->clear();
 
         // Add the start and goal vertex to the control graph

@@ -128,7 +128,7 @@ namespace ompl
       /** \brief All configurable parameters of AITStarKin, TODO(@atas), add getters and setters for each. */
 
       /** \brief The number of threads to be used in parallel for control. */
-      int num_threads_{8};
+      int num_threads_{1};
 
       /** \brief The number of samples to be added to graph in each iteration. */
       int batch_size_{1000};
@@ -143,10 +143,10 @@ namespace ompl
       double min_dist_between_vertices_{0.1};
 
       /** \brief The edges connecting samples in geometric and control graphs cannot be longer than this */
-      double max_dist_between_vertices_{0.0}; // works ok for elevation
+      double max_dist_between_vertices_{2.0}; // works ok for elevation
 
       /** \brief If available, use valid sampler. */
-      bool use_valid_sampler_{false};
+      bool use_valid_sampler_{true};
 
       /** \brief For directed control, set a number of samples to iterate though, to get a more accurate sampleTo behviour. It comes as costy!. */
       int k_number_of_controls_{1};
@@ -192,6 +192,7 @@ namespace ompl
       /** \brief Current cost of best path. The informed sampling strategy needs it. */
       ompl::base::Cost bestCost_{std::numeric_limits<double>::infinity()};
 
+      /** \brief The best path found so far. */
       std::shared_ptr<ompl::control::PathControl> bestPath_{nullptr};
 
       /** \brief Directed control sampler to expand control graph */
@@ -293,7 +294,8 @@ namespace ompl
       /** \brief Exception thrown when goal vertex is found */
       struct FoundVertex {};
 
-      /** \brief The visitor class for A* search, this is used for all graphs when we perform A* on them.
+      /** \brief The visitor class for A* search,
+       *  this is used for all graphs when we perform A* on them.
       */
       template<class Vertex>
       class SimpleVertexVisitor : public boost::default_astar_visitor
