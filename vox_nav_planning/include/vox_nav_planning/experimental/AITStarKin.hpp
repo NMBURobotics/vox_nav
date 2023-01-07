@@ -471,26 +471,30 @@ namespace ompl
       void populateOmplPathfromVertexPath(
         const std::list<vertex_descriptor> & vertex_path,
         GraphT & g,
-        std::shared_ptr<ompl::control::PathControl> & path) const
+        std::shared_ptr<ompl::control::PathControl> & path,
+        const bool control = false) const
       {
         // add intermediate solution
         path = std::make_shared<PathControl>(si_);
         int index{0};
         for (auto && i : vertex_path) {
 
-          if (g[i].control == nullptr) {
+          if (g[i].control == nullptr && control) {
             // This most likely a start or goal vertex
             // The control has not been allocated for this vertex
             // Allocate a control and set it to zero
             g[i].control = siC_->allocControl();
           }
-
           if (index == 0) {
             path->append(g[i].state);
           } else {
-            path->append(
-              g[i].state, g[i].control,
-              g[i].control_duration * siC_->getPropagationStepSize());
+            if (control) {
+              path->append(
+                g[i].state, g[i].control,
+                g[i].control_duration * siC_->getPropagationStepSize());
+            } else {
+              path->append(g[i].state);
+            }
           }
           index++;
         }

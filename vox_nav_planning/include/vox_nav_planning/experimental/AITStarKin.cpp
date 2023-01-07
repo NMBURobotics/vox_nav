@@ -263,11 +263,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
     auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
     if (use_k_nearest_) {
-      numNeighbors_ = computeNumberOfNeighbors(
-        numSamplesInInformedSet /*- 2 goal and start */);
+      numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
     } else {
-      radius_ = computeConnectionRadius(
-        numSamplesInInformedSet /*- 2 goal and start*/);
+      radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
     }
 
     // The thread ids needs to be immutable for the lambda function
@@ -281,8 +279,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     for (int t = 0; t < num_threads_; t++) {
 
       int immutable_t = t;
+      // Pass all the variables by reference to the lambda function
       auto & thread_id = thread_ids.at(immutable_t);
-      // Forward Control graph Thread
       auto & g = g_geometrics_.at(thread_id);
       auto & nn = geometrics_nn_.at(thread_id);
       auto & weightmap = weightmap_geometrics.at(thread_id);
@@ -329,6 +327,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     std::vector<std::thread *> control_threads(num_threads_);
     for (int t = 0; t < num_threads_; t++) {
       int immutable_t = t;
+      // Pass all the variables by reference to the lambda function
       auto & thread_id = thread_ids.at(immutable_t);
       auto & g_control = g_controls_.at(thread_id);
       auto & g_nn = controls_nn_.at(thread_id);
@@ -379,13 +378,13 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
     for (size_t i = 0; i < shortest_paths_geometrics.size(); i++) {
       populateOmplPathfromVertexPath(
-        shortest_paths_geometrics[i], g_geometrics_[i], geometrics_paths[i]);
+        shortest_paths_geometrics[i], g_geometrics_[i], geometrics_paths[i], false);
     }
 
     // Popolate the OMPL control paths from vertexes found by A*
     for (size_t i = 0; i < shortest_paths_controls.size(); i++) {
       populateOmplPathfromVertexPath(
-        shortest_paths_controls[i], g_controls_[i], controls_paths[i]);
+        shortest_paths_controls[i], g_controls_[i], controls_paths[i], true);
     }
 
     // Check if any of the control threads found an A* path
@@ -449,7 +448,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       if (opt_->isCostBetterThan(best_geometric_path_cost, bestGeometricCost_)) {
         // This is a better solution, update the best cost and path
         bestGeometricCost_ = best_geometric_path_cost;
-        bestGeometricPath_ = best_control_path;
+        bestGeometricPath_ = best_geometric_path;
       }
     }
 
