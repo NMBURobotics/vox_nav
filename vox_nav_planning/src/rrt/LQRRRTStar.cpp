@@ -58,16 +58,7 @@ void ompl::control::LQRRRTStar::clear()
 
 void ompl::control::LQRRRTStar::freeMemory()
 {
-  if (nn_) {
-    std::vector<Node *> nodes;
-    nn_->list(nodes);
-    for (auto & node : nodes) {
-      if (node->state_) {
-        si_->freeState(node->state_);
-      }
-      delete node;
-    }
-  }
+
 }
 
 
@@ -243,21 +234,6 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
 
     OMPL_INFORM("Final solution cost %.2f", final_node->cost_.value());
 
-    smooth_final_course(final_node, 2, goal_node);
-    OMPL_INFORM(
-      "Final solution cost: %.2f after smoothing with segment_framing: 2",
-      final_node->cost_.value());
-
-    smooth_final_course(final_node, 3, goal_node);
-    OMPL_INFORM(
-      "Final solution cost: %.2f after smoothing with segment_framing: 3",
-      final_node->cost_.value());
-
-    smooth_final_course(final_node, 5, goal_node);
-    OMPL_INFORM(
-      "Final solution cost: %.2f after smoothing with segment_framing: 5",
-      final_node->cost_.value());
-
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
 
     final_course = remove_duplicate_states(final_course);
@@ -282,7 +258,7 @@ ompl::base::PlannerStatus ompl::control::LQRRRTStar::solve(
       pdef_->addSolutionPath(path, approximate, approxdif, getName());
       OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
     } else if (!solv && (path->length() > 1.0 )) { // approx
-      solved = false;
+      solved = true;
       approximate = true;
       pdef_->addSolutionPath(path, approximate, approxdif, getName());
       OMPL_INFORM(

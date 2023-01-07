@@ -280,9 +280,7 @@ namespace vox_nav_planning
       marker.scale.y = get_parameter("robot_body_dimens.y").as_double() / 4;
       marker.scale.z = get_parameter("robot_body_dimens.z").as_double() / 4;
       marker.color.a = 0.5;
-      marker.color.r = 0.0;
-      marker.color.g = 1.0;
-      marker.color.b = 1.0;
+      marker.color.r = 1.0;
       marker_array.markers.push_back(marker);
       start_marker = marker;
       goal_marker = marker;

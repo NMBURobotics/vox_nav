@@ -450,11 +450,9 @@ namespace ompl
       rclcpp::Node::SharedPtr node_;
 
       double goalBias_{0.05};
-      double path_resolution_{0.025};
+      double path_resolution_{0.015};
       double connect_circle_dist_{100.0};
       double expand_dis_{1.5};
-
-      std::shared_ptr<LQRPlanner> lqr_planner_;
 
       /** \brief The random number generator */
       RNG rng_;

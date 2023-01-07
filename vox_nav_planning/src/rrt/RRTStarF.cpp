@@ -6,7 +6,6 @@ ompl::control::RRTStarF::RRTStarF(const SpaceInformationPtr & si)
 {
   specs_.approximateSolutions = true;
   siC_ = si.get();
-  lqr_planner_ = std::make_shared<LQRPlanner>(si);
 }
 
 ompl::control::RRTStarF::~RRTStarF()
@@ -58,16 +57,7 @@ void ompl::control::RRTStarF::clear()
 
 void ompl::control::RRTStarF::freeMemory()
 {
-  if (nn_) {
-    std::vector<Node *> nodes;
-    nn_->list(nodes);
-    for (auto & node : nodes) {
-      if (node->state_) {
-        si_->freeState(node->state_);
-      }
-      delete node;
-    }
-  }
+
 }
 
 ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
@@ -189,10 +179,8 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
       marker.action = visualization_msgs::msg::Marker::ADD;
       marker.lifetime = rclcpp::Duration::from_seconds(0);
       marker.text = std::to_string(node_index_counter);
-      marker.scale.x = 0.1;
+      marker.scale.x = 0.08;
       marker.color.a = 1.0;
-      marker.color.r = 0.0;
-      marker.color.g = 1.0;
       marker.color.b = 1.0;
       marker.colors.push_back(marker.color);
       const auto * cstate = i->state_->as<ompl::base::ElevationStateSpace::StateType>();
@@ -224,15 +212,12 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
   if (final_node) {
 
     OMPL_INFORM("Final solution cost %.2f", final_node->cost_.value());
-
     std::vector<base::State *> final_course = generate_final_course(last_valid_node);
-
     OMPL_INFORM("Total states in solution %d", final_course.size());
     final_course = remove_duplicate_states(final_course);
     OMPL_INFORM("Total states in solution after removing duplicates %d", final_course.size());
 
     std::reverse(final_course.begin(), final_course.end());
-
 
     double dist = 0.0;
     bool solv = goal->isSatisfied(final_course.back(), &dist);
