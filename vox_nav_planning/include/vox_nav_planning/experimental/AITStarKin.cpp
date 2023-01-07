@@ -196,15 +196,11 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     nn->add(start_vertex_);
   }
 
-  if (max_dist_between_vertices_ == 0.0) {
-    // Set max distance between vertices to 1/10th of the distance between start and goal (if not set
-    // by user)
+  if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
     max_dist_between_vertices_ =
-      opt_->motionCost(start_vertex_->state, goal_vertex_->state).value() / 10.0;
-    OMPL_WARN(
-      "%s: Setting max edge distance to 1/10th of the distance between start and goal (%.2f) "
-      "though this value is not optimal.",
-      getName().c_str(), max_dist_between_vertices_);
+      opt_->motionCost(start_vertex_->state, goal_vertex_->state).value() / 20.0;
+  } else {
+    max_dist_between_vertices_ = 2.0;
   }
 
   // Add goal and start to geomteric graph
@@ -363,7 +359,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
             start_goal_descriptor.first, start_goal_descriptor.second,
             false, false);
         });
-
     }
 
     // Let the threads finish
@@ -493,14 +488,16 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       bestGeometricPath_,
       geometric_path_pub_,
       "g",
-      getColor(green));
+      getColor(green),
+      si_->getStateSpace()->getType());
 
     // best control path
     visualizePath(
       bestControlPath_,
       control_path_pub_,
       "c",
-      getColor(red));
+      getColor(red),
+      si_->getStateSpace()->getType());
 
     visualizeRGG(
       best_geometric_graph,
@@ -508,7 +505,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       "g",
       getColor(green),
       geometric_start_goal_descriptors[best_geometric_path_index].first,
-      geometric_start_goal_descriptors[best_geometric_path_index].second);
+      geometric_start_goal_descriptors[best_geometric_path_index].second,
+      si_->getStateSpace()->getType());
 
     visualizeRGG(
       best_control_graph,
@@ -516,7 +514,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       "c",
       getColor(red),
       control_start_goal_descriptors[best_control_path_index].first,
-      control_start_goal_descriptors[best_control_path_index].second);
+      control_start_goal_descriptors[best_control_path_index].second,
+      si_->getStateSpace()->getType());
 
   }
 
@@ -552,7 +551,10 @@ void ompl::control::AITStarKin::generateBatchofSamples(
         if (opt_->isCostBetterThan(bestControlCost_, opt_->infiniteCost())) {
           // A valid solution was found
           // Sample in the informed set, and I mean tightly
-          min_cost = opt_->motionCost(start_vertex_->state, goal_vertex_->state);
+          auto euc_cost = opt_->motionCost(start_vertex_->state, goal_vertex_->state);
+          if (!opt_->isCostBetterThan(euc_cost, bestControlCost_)) {
+            min_cost = bestControlCost_;
+          }
         }
         // Sample the associated state uniformly within the informed set.
         //sampler_->sampleUniform(samples.back());
@@ -611,7 +613,7 @@ void ompl::control::AITStarKin::expandGeometricGraph(
         double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
         edge_descriptor e; bool edge_added;
         // not to construct edges with self, and if nbh is further than radius_, continue
-        if (u == v || dist > max_dist_between_vertices_) {
+        if (u == v || dist > (2.0 * max_dist_between_vertices_)) {
           continue;
         }
         if (boost::edge(
@@ -653,7 +655,7 @@ void ompl::control::AITStarKin::ensureGoalVertexConnectivity(
     double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
     edge_descriptor e; bool edge_added;
     // not to construct edges with self, and if nbh is further than radius_, continue
-    if (u == v || dist > max_dist_between_vertices_) {
+    if (u == v || (dist > 2 * max_dist_between_vertices_)) {
       continue;
     }
     if (boost::edge(u, v, geometric_graph).second || boost::edge(v, u, geometric_graph).second) {
@@ -871,7 +873,8 @@ void ompl::control::AITStarKin::visualizeRGG(
   const std::string & ns,
   const std_msgs::msg::ColorRGBA & color,
   const vertex_descriptor & start_vertex,
-  const vertex_descriptor & goal_vertex)
+  const vertex_descriptor & goal_vertex,
+  const int & state_space_type)
 {
   // Clear All previous markers
   visualization_msgs::msg::MarkerArray clear_markers;
@@ -907,14 +910,22 @@ void ompl::control::AITStarKin::visualizeRGG(
     if (g[vd].id == start_vertex || g[vd].id == goal_vertex) {
       color_vd.b *= 0.5;
     }
-    /*const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
-    const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);*/
-    const auto * target_cstate = g[vd].state->as<ompl::base::RealVectorStateSpace::StateType>();
+
     geometry_msgs::msg::Point point;
-    point.x = target_cstate->values[0];
-    point.y = target_cstate->values[1];
-    point.z = target_cstate->values[2];
+    if (state_space_type == base::STATE_SPACE_REAL_VECTOR) {
+      const auto * target_cstate = g[vd].state->as<ompl::base::RealVectorStateSpace::StateType>();
+      point.x = target_cstate->values[0];
+      point.y = target_cstate->values[1];
+      point.z = target_cstate->values[2];
+    } else {
+      const auto * target_cstate = g[vd].state->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+      const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      point.x = target_xyzv->values[0];
+      point.y = target_xyzv->values[1];
+      point.z = target_xyzv->values[2];
+    }
+
     sphere.points.push_back(point);
     sphere.colors.push_back(color);
   }
@@ -942,15 +953,31 @@ void ompl::control::AITStarKin::visualizeRGG(
 
     geometry_msgs::msg::Point source_point, target_point;
 
-    const auto * source_cstate = g[u].state->as<ompl::base::RealVectorStateSpace::StateType>();
-    source_point.x = source_cstate->values[0];
-    source_point.y = source_cstate->values[1];
-    source_point.z = source_cstate->values[2];
+    if (state_space_type == base::STATE_SPACE_REAL_VECTOR) {
+      const auto * source_cstate = g[u].state->as<ompl::base::RealVectorStateSpace::StateType>();
+      source_point.x = source_cstate->values[0];
+      source_point.y = source_cstate->values[1];
+      source_point.z = source_cstate->values[2];
 
-    const auto * target_cstate = g[v].state->as<ompl::base::RealVectorStateSpace::StateType>();
-    target_point.x = target_cstate->values[0];
-    target_point.y = target_cstate->values[1];
-    target_point.z = target_cstate->values[2];
+      const auto * target_cstate = g[v].state->as<ompl::base::RealVectorStateSpace::StateType>();
+      target_point.x = target_cstate->values[0];
+      target_point.y = target_cstate->values[1];
+      target_point.z = target_cstate->values[2];
+    } else {
+      const auto * source_cstate = g[u].state->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+      const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      source_point.x = source_xyzv->values[0];
+      source_point.y = source_xyzv->values[1];
+      source_point.z = source_xyzv->values[2];
+
+      const auto * target_cstate = g[v].state->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+      const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      target_point.x = target_xyzv->values[0];
+      target_point.y = target_xyzv->values[1];
+      target_point.z = target_xyzv->values[2];
+    }
 
     line_strip.points.push_back(source_point);
     line_strip.colors.push_back(color);
@@ -967,7 +994,8 @@ void ompl::control::AITStarKin::visualizePath(
   const std::list<vertex_descriptor> & path,
   const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
   const std::string & ns,
-  const std_msgs::msg::ColorRGBA & color
+  const std_msgs::msg::ColorRGBA & color,
+  const int & state_space_type
 )
 {
   // Clear All previous markers
@@ -1002,15 +1030,31 @@ void ompl::control::AITStarKin::visualizePath(
     auto v = *std::next(path.begin(), i);
     geometry_msgs::msg::Point source_point, target_point;
 
-    const auto * source_cstate = g[u].state->as<ompl::base::RealVectorStateSpace::StateType>();
-    source_point.x = source_cstate->values[0];
-    source_point.y = source_cstate->values[1];
-    source_point.z = source_cstate->values[2];
+    if (state_space_type == base::STATE_SPACE_REAL_VECTOR) {
+      const auto * source_cstate = g[u].state->as<ompl::base::RealVectorStateSpace::StateType>();
+      source_point.x = source_cstate->values[0];
+      source_point.y = source_cstate->values[1];
+      source_point.z = source_cstate->values[2];
 
-    const auto * target_cstate = g[v].state->as<ompl::base::RealVectorStateSpace::StateType>();
-    target_point.x = target_cstate->values[0];
-    target_point.y = target_cstate->values[1];
-    target_point.z = target_cstate->values[2];
+      const auto * target_cstate = g[v].state->as<ompl::base::RealVectorStateSpace::StateType>();
+      target_point.x = target_cstate->values[0];
+      target_point.y = target_cstate->values[1];
+      target_point.z = target_cstate->values[2];
+    } else {
+      const auto * source_cstate = g[u].state->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+      const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      source_point.x = source_xyzv->values[0];
+      source_point.y = source_xyzv->values[1];
+      source_point.z = source_xyzv->values[2];
+
+      const auto * target_cstate = g[v].state->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+      const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      target_point.x = target_xyzv->values[0];
+      target_point.y = target_xyzv->values[1];
+      target_point.z = target_xyzv->values[2];
+    }
 
     line_strip.points.push_back(source_point);
     line_strip.colors.push_back(color);
@@ -1044,7 +1088,8 @@ void ompl::control::AITStarKin::visualizePath(
   const std::shared_ptr<PathControl> & path,
   const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
   const std::string & ns,
-  const std_msgs::msg::ColorRGBA & color
+  const std_msgs::msg::ColorRGBA & color,
+  const int & state_space_type
 )
 {
   // Clear All previous markers
@@ -1081,15 +1126,31 @@ void ompl::control::AITStarKin::visualizePath(
 
     geometry_msgs::msg::Point source_point, target_point;
 
-    const auto * source_cstate = u->as<ompl::base::RealVectorStateSpace::StateType>();
-    source_point.x = source_cstate->values[0];
-    source_point.y = source_cstate->values[1];
-    source_point.z = source_cstate->values[2];
+    if (state_space_type == ompl::base::STATE_SPACE_REAL_VECTOR) {
+      const auto * source_cstate = u->as<ompl::base::RealVectorStateSpace::StateType>();
+      source_point.x = source_cstate->values[0];
+      source_point.y = source_cstate->values[1];
+      source_point.z = source_cstate->values[2];
 
-    const auto * target_cstate = v->as<ompl::base::RealVectorStateSpace::StateType>();
-    target_point.x = target_cstate->values[0];
-    target_point.y = target_cstate->values[1];
-    target_point.z = target_cstate->values[2];
+      const auto * target_cstate = v->as<ompl::base::RealVectorStateSpace::StateType>();
+      target_point.x = target_cstate->values[0];
+      target_point.y = target_cstate->values[1];
+      target_point.z = target_cstate->values[2];
+    } else {
+      const auto * source_cstate = u->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * source_so2 = source_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+      const auto * source_xyzv = source_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      source_point.x = source_xyzv->values[0];
+      source_point.y = source_xyzv->values[1];
+      source_point.z = source_xyzv->values[2];
+
+      const auto * target_cstate = v->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * target_so2 = target_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+      const auto * target_xyzv = target_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      target_point.x = target_xyzv->values[0];
+      target_point.y = target_xyzv->values[1];
+      target_point.z = target_xyzv->values[2];
+    }
 
     line_strip.points.push_back(source_point);
     line_strip.colors.push_back(color);

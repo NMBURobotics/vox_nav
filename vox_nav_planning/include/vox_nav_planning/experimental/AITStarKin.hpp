@@ -103,9 +103,19 @@ namespace ompl
       /** \brief Compute distance between states */
       double distanceFunction(const base::State * a, const base::State * b) const
       {
-        return si_->distance(a, b);
+        // L2 distance is quite weird for geometric planning
+        if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
+          // Assume first 3 dimensions are x,y,z, extract them and compute euclidean distance
+          auto * a_vec = a->as<base::RealVectorStateSpace::StateType>()->values;
+          auto * b_vec = b->as<base::RealVectorStateSpace::StateType>()->values;
+          return sqrt(
+            pow(a_vec[0] - b_vec[0], 2) +
+            pow(a_vec[1] - b_vec[1], 2) +
+            pow(a_vec[2] - b_vec[2], 2));
+        } else {
+          return si_->distance(a, b);
+        }
       }
-
 
       /** \brief Given its vertex_descriptor (id),
        * return a const pointer to VertexProperty in geometric graph g_geometric_  */
@@ -508,7 +518,8 @@ namespace ompl
         const std::string & ns,
         const std_msgs::msg::ColorRGBA & color,
         const vertex_descriptor & start_vertex,
-        const vertex_descriptor & goal_vertex);
+        const vertex_descriptor & goal_vertex,
+        const int & state_space_type);
 
       /** \brief static method to visulize a path in RVIZ*/
       static void visualizePath(
@@ -516,14 +527,16 @@ namespace ompl
         const std::list<vertex_descriptor> & path,
         const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
         const std::string & ns,
-        const std_msgs::msg::ColorRGBA & color
+        const std_msgs::msg::ColorRGBA & color,
+        const int & state_space_type
       );
 
       static void visualizePath(
         const std::shared_ptr<PathControl> & path,
         const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
         const std::string & ns,
-        const std_msgs::msg::ColorRGBA & color
+        const std_msgs::msg::ColorRGBA & color,
+        const int & state_space_type
       );
 
       /** \brief get std_msgs::msg::ColorRGBA given the color name with a std::string*/
