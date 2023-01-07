@@ -83,14 +83,6 @@ void ompl::control::AITStarKin::setup()
   if (!valid_state_sampler_) {
     valid_state_sampler_ = si_->allocValidStateSampler();
   }
-  if (!sampler_) {
-    sampler_ = si_->allocStateSampler();
-  }
-  if (!path_informed_sampler_) {
-    path_informed_sampler_ = std::make_shared<base::PathLengthDirectInfSampler>(
-      pdef_,
-      std::numeric_limits<double>::infinity());
-  }
   if (!rejection_informed_sampler_) {
     rejection_informed_sampler_ = std::make_shared<base::RejectionInfSampler>(
       pdef_,
@@ -123,9 +115,7 @@ void ompl::control::AITStarKin::setup()
 void ompl::control::AITStarKin::clear()
 {
   Planner::clear();
-  sampler_.reset();
   valid_state_sampler_.reset();
-  path_informed_sampler_.reset();
   rejection_informed_sampler_.reset();
   radius_ = std::numeric_limits<double>::infinity();
   numNeighbors_ = std::numeric_limits<std::size_t>::max();
@@ -488,7 +478,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       bestGeometricPath_,
       geometric_path_pub_,
       "g",
-      getColor(green),
+      getColor(blue),
       si_->getStateSpace()->getType());
 
     // best control path
@@ -557,8 +547,6 @@ void ompl::control::AITStarKin::generateBatchofSamples(
           }
         }
         // Sample the associated state uniformly within the informed set.
-        //sampler_->sampleUniform(samples.back());
-        //path_informed_sampler_->sampleUniform(samples.back(), min_cost);
         rejection_informed_sampler_->sampleUniform(
           samples.back(),
           min_cost);
@@ -896,9 +884,9 @@ void ompl::control::AITStarKin::visualizeRGG(
   sphere.id = 0;
   sphere.type = visualization_msgs::msg::Marker::SPHERE_LIST;
   sphere.action = visualization_msgs::msg::Marker::ADD;
-  sphere.scale.x = 0.1;
-  sphere.scale.y = 0.1;
-  sphere.scale.z = 0.1;
+  sphere.scale.x = 0.15;
+  sphere.scale.y = 0.15;
+  sphere.scale.z = 0.15;
 
   visualization_msgs::msg::MarkerArray marker_array;
   // To make a graph of the supervoxel adjacency,
@@ -942,9 +930,9 @@ void ompl::control::AITStarKin::visualizeRGG(
   line_strip.action = visualization_msgs::msg::Marker::ADD;
   line_strip.lifetime = rclcpp::Duration::from_seconds(0);
   line_strip.header.stamp = rclcpp::Clock().now();
-  line_strip.scale.x = 0.005;
-  line_strip.scale.y = 0.005;
-  line_strip.scale.z = 0.005;
+  line_strip.scale.x = 0.01;
+  line_strip.scale.y = 0.01;
+  line_strip.scale.z = 0.01;
   line_strip.color = color;
 
   for (auto eit = es.first; eit != es.second; ++eit) {
@@ -1020,9 +1008,9 @@ void ompl::control::AITStarKin::visualizePath(
   line_strip.action = visualization_msgs::msg::Marker::ADD;
   line_strip.lifetime = rclcpp::Duration::from_seconds(0);
   line_strip.header.stamp = rclcpp::Clock().now();
-  line_strip.scale.x = 0.05;
-  line_strip.scale.y = 0.05;
-  line_strip.scale.z = 0.05;
+  line_strip.scale.x = 0.1;
+  line_strip.scale.y = 0.1;
+  line_strip.scale.z = 0.1;
   line_strip.color = color;
 
   for (size_t i = 1; i < path.size(); i++) {
@@ -1114,9 +1102,9 @@ void ompl::control::AITStarKin::visualizePath(
   line_strip.action = visualization_msgs::msg::Marker::ADD;
   line_strip.lifetime = rclcpp::Duration::from_seconds(0);
   line_strip.header.stamp = rclcpp::Clock().now();
-  line_strip.scale.x = 0.05;
-  line_strip.scale.y = 0.05;
-  line_strip.scale.z = 0.05;
+  line_strip.scale.x = 0.1;
+  line_strip.scale.y = 0.1;
+  line_strip.scale.z = 0.1;
   line_strip.color = color;
 
   for (size_t i = 1; i < path->getStateCount(); i++) {

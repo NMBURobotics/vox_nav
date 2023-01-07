@@ -169,8 +169,6 @@ namespace ompl
        *  Default is dijkstra as it computes shortest path from each vertex to specified one */
       static bool const use_astar_hueristic_{false};
 
-      bool using_real_vector_state_space_{true};
-
       /** \brief Frequently push goal to graph. It is used in control graph */
       double goal_bias_{0.05};
 
@@ -184,12 +182,6 @@ namespace ompl
 
       /** \brief Whether to use nearest neighbor or radius as connection strategy. */
       static bool const use_k_nearest_{true};
-
-      /** \brief State sampler */
-      base::StateSamplerPtr sampler_{nullptr};
-
-      /** \brief Informed sampling strategy */
-      std::shared_ptr<base::PathLengthDirectInfSampler> path_informed_sampler_{nullptr};
 
       /** \brief Informed sampling strategy */
       std::shared_ptr<base::RejectionInfSampler> rejection_informed_sampler_{nullptr};
