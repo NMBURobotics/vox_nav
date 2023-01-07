@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2023 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -145,7 +145,6 @@ void ompl::control::AITStarKin::clear()
     nn->clear();
   }
 
-
   // clear the graphs
   for (auto & graph : g_geometrics_) {
     graph.clear();
@@ -161,8 +160,6 @@ void ompl::control::AITStarKin::clear()
 
 void ompl::control::AITStarKin::freeMemory()
 {
-
-
 }
 
 ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
@@ -274,27 +271,25 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         numSamplesInInformedSet /*- 2 goal and start*/);
     }
 
+    // The thread ids needs to be immutable for the lambda function
     std::vector<int> thread_ids;
     for (int t = 0; t < num_threads_; t++) {
       thread_ids.push_back(t);
     }
 
     std::vector<std::thread *> geometric_threads(num_threads_);
-
+    // Launch geometric planning threads
     for (int t = 0; t < num_threads_; t++) {
 
       int immutable_t = t;
-      int & thread_id = thread_ids.at(immutable_t);
+      auto & thread_id = thread_ids.at(immutable_t);
       // Forward Control graph Thread
-      GraphT & g = g_geometrics_.at(thread_id);
-      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & nn =
-        geometrics_nn_.at(thread_id);
-      WeightMap & weightmap = weightmap_geometrics.at(thread_id);
-      std::list<std::size_t> & shortest_paths_geometric = shortest_paths_geometrics.at(thread_id);
-      std::pair<vertex_descriptor, vertex_descriptor> &
-      start_goal_descriptor = geometric_start_goal_descriptors.at(thread_id);
+      auto & g = g_geometrics_.at(thread_id);
+      auto & nn = geometrics_nn_.at(thread_id);
+      auto & weightmap = weightmap_geometrics.at(thread_id);
+      auto & shortest_paths_geometric = shortest_paths_geometrics.at(thread_id);
+      auto & start_goal_descriptor = geometric_start_goal_descriptors.at(thread_id);
 
-      // Geometric graph Thread
       geometric_threads[thread_id] = new std::thread(
         [this,
         &g,
@@ -303,19 +298,11 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         &shortest_paths_geometric,
         &start_goal_descriptor,
         &thread_id
-        ]
-        {
+        ]  {
           std::vector<ompl::base::State *> samples;
           generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
-
           expandGeometricGraph(samples, g, nn, weightmap);
-
           ensureGoalVertexConnectivity(goal_vertex_, g, nn, weightmap);
-
-          OMPL_INFORM(
-            "%s: Geometric graph %d has %d vertices and %d edges\n", getName().c_str(),
-            thread_id,
-            boost::num_vertices(g), boost::num_edges(g));
 
           // First lets compute an heuristic working backward from goal -> start
           // This is done by running A*/Dijkstra backwards from goal to start with no collision checking
@@ -339,19 +326,16 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         });
     }
 
+    // Launch kino planning threads
     std::vector<std::thread *> control_threads(num_threads_);
     for (int t = 0; t < num_threads_; t++) {
-
       int immutable_t = t;
-      int & thread_id = thread_ids.at(immutable_t);
-      // Forward Control graph Thread
-      GraphT & g_control = g_controls_.at(thread_id);
-      std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & g_nn =
-        controls_nn_.at(thread_id);
-      WeightMap & g_weightmap = weightmap_controls.at(thread_id);
-      std::list<std::size_t> & shortest_paths_control = shortest_paths_controls.at(thread_id);
-      std::pair<vertex_descriptor,
-        vertex_descriptor> & start_goal_descriptor = control_start_goal_descriptors.at(thread_id);
+      auto & thread_id = thread_ids.at(immutable_t);
+      auto & g_control = g_controls_.at(thread_id);
+      auto & g_nn = controls_nn_.at(thread_id);
+      auto & g_weightmap = weightmap_controls.at(thread_id);
+      auto & shortest_paths_control = shortest_paths_controls.at(thread_id);
+      auto & start_goal_descriptor = control_start_goal_descriptors.at(thread_id);
 
       control_threads[thread_id] = new std::thread(
         [this,
@@ -362,11 +346,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         &g_weightmap,
         &shortest_paths_control,
         &thread_id
-        ]
-        {
+        ]  {
           std::vector<ompl::base::State *> samples;
           generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
-
           expandControlGraph(
             samples,
             goal_state,
@@ -374,13 +356,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
             g_control,
             g_nn,
             g_weightmap);
-
-          OMPL_INFORM(
-            "%s: Control graph %d has %d vertices and %d edges\n", getName().c_str(),
-            thread_id,
-            boost::num_vertices(g_control), boost::num_edges(g_control));
-
-          // Run A* for control graph
           auto control_forward_heuristic =
           GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
             this, goal_vertex_, true, thread_id);
@@ -391,7 +366,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
             false, false);
         });
 
-      OMPL_INFORM("%s: Started thread %d\n", getName().c_str(), thread_id);
     }
 
     // Let the threads finish
@@ -461,13 +435,12 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       control_counter++;
     }
 
-    // only for visualization
+    // only for visualization, keep a copy of the best geometric and control graphs
     auto best_geometric_graph = g_geometrics_[best_geometric_path_index];
     auto best_control_graph = g_controls_[best_control_path_index];
 
-    OMPL_INFORM(
-      "%s: Better control path in %dth graph with %.2f cost.\n",
-      getName().c_str(), best_control_path_index, bestControlCost_.value());
+    // Check if the path best path found by current threads is better than the previous best path
+
     // If the cost is less than L2 norm of start and goal, this is likely an useless one.
     // make sure the current cost is not less than L2 norm of start and goal
     if (opt_->isCostBetterThan(start_goal_l2_distance, best_geometric_path_cost)) {
@@ -492,7 +465,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         bestControlCost_ = best_control_path_cost;
         bestControlPath_ = best_control_path;
       }
-      // Reset graphs
+      // Reset control graphs anyways
       for (int i = 0; i < num_threads_; i++) {
         g_controls_[i].clear();
         g_controls_[i] = GraphT();
@@ -512,6 +485,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
       }
     }
 
+    // Visualize the best geometric and control paths in rviz
     std::string red("red");
     std::string green("green");
     std::string blue("blue");
@@ -548,8 +522,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
   }
 
+  // Add the best path to the solution path
   pdef_->addSolutionPath(bestControlPath_, false, 0.0, getName());
 
+  // clear data structures
   clear();
 
   return {goal_reached, false};
@@ -558,10 +534,6 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 void ompl::control::AITStarKin::getPlannerData(base::PlannerData & data) const
 {
   Planner::getPlannerData(data);
-  std::vector<VertexProperty *> Nodes;
-  std::vector<VertexProperty *> allNodes;
-
-  double delta = siC_->getPropagationStepSize();
 }
 
 void ompl::control::AITStarKin::generateBatchofSamples(
@@ -864,7 +836,7 @@ double ompl::control::AITStarKin::computeConnectionRadius(std::size_t numSamples
   // Define the dimension as a helper variable.
   auto dimension = static_cast<double>(si_->getStateDimension());
 
-  // Compute the RRT* factor.
+  // Compute the RRT* factor. Taken from AITStar::computeConnectionRadius.
   return
     rewire_factor_ * std::pow(
     2.0 * (1.0 + 1.0 / dimension) *
@@ -876,6 +848,7 @@ double ompl::control::AITStarKin::computeConnectionRadius(std::size_t numSamples
 
 std::size_t ompl::control::AITStarKin::computeNumberOfNeighbors(std::size_t numSamples) const
 {
+  // Compute the RGG factor. Taken from AITStar::computeNumberOfNeighbors.
   return std::ceil(rewire_factor_ * k_rgg_ * std::log(static_cast<double>(numSamples)));
 }
 
@@ -886,7 +859,6 @@ ompl::base::Cost ompl::control::AITStarKin::computePathCost(
   if (path->getStateCount() == 0) {
     return path_cost;
   }
-
   for (std::size_t i = 0; i < path->getStateCount() - 1; ++i) {
     path_cost = opt_->combineCosts(
       path_cost,
