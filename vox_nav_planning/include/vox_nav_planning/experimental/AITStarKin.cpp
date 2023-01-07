@@ -552,7 +552,7 @@ void ompl::control::AITStarKin::generateBatchofSamples(
           // A valid solution was found
           // Sample in the informed set, and I mean tightly
           auto euc_cost = opt_->motionCost(start_vertex_->state, goal_vertex_->state);
-          if (!opt_->isCostBetterThan(euc_cost, bestControlCost_)) {
+          if (opt_->isCostBetterThan(euc_cost, bestControlCost_)) {
             min_cost = bestControlCost_;
           }
         }
@@ -613,7 +613,7 @@ void ompl::control::AITStarKin::expandGeometricGraph(
         double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
         edge_descriptor e; bool edge_added;
         // not to construct edges with self, and if nbh is further than radius_, continue
-        if (u == v || dist > (2.0 * max_dist_between_vertices_)) {
+        if (u == v || dist > (1.0 * max_dist_between_vertices_)) {
           continue;
         }
         if (boost::edge(
