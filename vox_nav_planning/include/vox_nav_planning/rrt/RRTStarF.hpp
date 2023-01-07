@@ -310,60 +310,7 @@ namespace ompl
       {
         return si_->distance(a, b);
       }
-      std::vector<base::State *> lqrize(std::vector<base::State *> path_nodes, int segment_framing)
-      {
-        lqr_planner_->set_max_time(4.0);
-        lqr_planner_->set_goal_tolerance(0.5);
-        lqr_planner_->set_phi_bound(0.8);
-        lqr_planner_->set_dt(0.2);
-        lqr_planner_->set_v(1.0);
-
-        std::vector<base::State *> lqr_path_states;
-
-        if (path_nodes.size() < segment_framing) {
-          return lqr_path_states;
-        }
-        std::reverse(path_nodes.begin(), path_nodes.end());
-
-        for (int i = segment_framing; i < path_nodes.size(); i += segment_framing) {
-
-          if (i >= path_nodes.size()) {
-            i = path_nodes.size() - 1;
-          }
-
-          auto prev_node = path_nodes[i - segment_framing];
-          auto cur_node = path_nodes[i];
-          if (i != segment_framing) {
-            prev_node = lqr_path_states.back();
-          }
-
-          double relative_cost = 0.0;
-
-          std::vector<base::State *> resulting_path;
-
-          if (i == segment_framing) {
-            lqr_planner_->compute_LQR_plan(
-              prev_node, cur_node, resulting_path);
-          } else {
-            auto * prev_node_cstate =
-              prev_node->as<ompl::base::ElevationStateSpace::StateType>();
-            auto * latest_arrived_cstate =
-              lqr_path_states.back()->as<ompl::base::ElevationStateSpace::StateType>();
-            prev_node_cstate->setSO2(latest_arrived_cstate->getSO2()->value);
-            lqr_planner_->compute_LQR_plan(
-              prev_node, cur_node, resulting_path);
-          }
-
-          for (auto seg : resulting_path) {
-            lqr_path_states.push_back(seg);
-
-          }
-        }
-        lqr_planner_->set_max_time(4.0);
-
-        return lqr_path_states;
-      }
-
+        
       std::vector<base::State *> generate_final_course(Node * goal_node)
       {
         std::vector<base::State *> final_path;
