@@ -21,10 +21,6 @@ ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
   specs_.optimizingPaths = true;
   specs_.multithreaded = true;
   siC_ = si.get();
-
-  // initialize the graphs for all control threads
-  g_geometrics_ = std::vector<GraphT>(num_threads_, GraphT());
-  g_controls_ = std::vector<GraphT>(num_threads_, GraphT());
 }
 
 ompl::control::AITStarKin::~AITStarKin()
@@ -35,6 +31,10 @@ ompl::control::AITStarKin::~AITStarKin()
 void ompl::control::AITStarKin::setup()
 {
   base::Planner::setup();
+
+  // initialize the graphs for all control threads
+  g_geometrics_ = std::vector<GraphT>(num_threads_, GraphT());
+  g_controls_ = std::vector<GraphT>(num_threads_, GraphT());
 
   // reset nn for geometric graph
   geometrics_nn_.clear();
@@ -118,7 +118,6 @@ void ompl::control::AITStarKin::setup()
     "vox_nav/aitstarkin/control_rgg", rclcpp::SystemDefaultsQoS());
   control_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
     "vox_nav/aitstarkin/c_plan", rclcpp::SystemDefaultsQoS());
-
 }
 
 void ompl::control::AITStarKin::clear()
@@ -234,7 +233,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
 
   OMPL_INFORM(
-    "%s: Using %u geometric graphs.\n", getName().c_str(), g_controls_.size());
+    "%s: Using %u geometric graphs.\n", getName().c_str(), g_geometrics_.size());
 
   OMPL_INFORM(
     "%s: Using %u control graphs.\n", getName().c_str(), g_controls_.size());
