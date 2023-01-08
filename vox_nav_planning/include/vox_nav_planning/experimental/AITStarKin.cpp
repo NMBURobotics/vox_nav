@@ -21,6 +21,8 @@ ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
   specs_.optimizingPaths = true;
   specs_.multithreaded = true;
   siC_ = si.get();
+
+
 }
 
 ompl::control::AITStarKin::~AITStarKin()
@@ -572,7 +574,7 @@ void ompl::control::AITStarKin::expandGeometricGraph(
     this_vertex_property->state = (i);
     std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
 
-    if constexpr (use_k_nearest_) {
+    if (use_k_nearest_) {
       geometric_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
     } else {
       geometric_nn->nearestR(this_vertex_property, radius_, nbh);
@@ -628,7 +630,7 @@ void ompl::control::AITStarKin::ensureGoalVertexConnectivity(
   // Neihbors of goal vertex
   std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh;
 
-  if constexpr (use_k_nearest_) {
+  if (use_k_nearest_) {
     geometric_nn->nearestK(target_vertex_property, numNeighbors_, goal_nbh);
   } else {
     geometric_nn->nearestR(target_vertex_property, radius_, goal_nbh);
@@ -683,7 +685,7 @@ void ompl::control::AITStarKin::expandControlGraph(
 
     std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
 
-    if constexpr (use_k_nearest_) {
+    if (use_k_nearest_) {
       control_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
     } else {
       control_nn->nearestR(this_vertex_property, radius_, nbh);

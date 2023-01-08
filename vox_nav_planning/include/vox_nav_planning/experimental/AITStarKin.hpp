@@ -59,6 +59,46 @@ namespace ompl
        @par External documentation
        TBD
     */
+
+
+    struct Parameters
+    {
+      /** \brief All configurable parameters of AITStarKin, TODO(@atas), add getters and setters for each. */
+
+      /** \brief The number of threads to be used in parallel for control. */
+      int num_threads_{8};
+
+      /** \brief The number of samples to be added to graph in each iteration. */
+      int batch_size_{1000};
+
+      /** \brief The a single vertex, do not construct more edges (neighbours) more than max_neighbors_. */
+      int max_neighbors_{10};
+
+      /** \brief Adding almost identical samples does not help much, so we regulate this by min_dist_between_vertices_. */
+      double min_dist_between_vertices_{0.1};
+
+      /** \brief The edges connecting samples in geometric and control graphs cannot be longer than this */
+      double max_dist_between_vertices_{0.0}; // works ok for elevation
+
+      /** \brief If available, use valid sampler. */
+      bool use_valid_sampler_{false};
+
+      /** \brief For directed control, set a number of samples to iterate though, to get a more accurate sampleTo behviour. It comes as costy!. */
+      int k_number_of_controls_{1};
+
+      /** \brief For adaptive heuristic, there is two options, dijkstra and astar.
+       *  Default is dijkstra as it computes shortest path from each vertex to specified one */
+      bool use_astar_hueristic_{false};
+
+      /** \brief Frequently push goal to graph. It is used in control graph */
+      double goal_bias_{0.05};
+
+      double rewire_factor_{1.0};
+
+      /** \brief Whether to use nearest neighbor or radius as connection strategy. */
+      bool use_k_nearest_{true};
+    };
+
     class AITStarKin : public base::Planner
     {
     public:
@@ -138,50 +178,78 @@ namespace ompl
         return &g_controls_[thread_id][id];
       }
 
+      void setNumThreads(int num_threads)
+      {
+        params_.num_threads_ = num_threads;
+      }
+
+      int getNumThreads() const
+      {
+        return params_.num_threads_;
+      }
+
+      void setBatchSize(int batch_size)
+      {
+        params_.batch_size_ = batch_size;
+      }
+
+      int getBatchSize() const
+      {
+        return params_.batch_size_;
+      }
+
+      void setMaxNeighbors(int max_neighbors)
+      {
+        params_.max_neighbors_ = max_neighbors;
+      }
+
+      int getMaxNeighbors() const
+      {
+        return params_.max_neighbors_;
+      }
+
+      void setMinDistBetweenVertices(double min_dist_between_vertices)
+      {
+        params_.min_dist_between_vertices_ = min_dist_between_vertices;
+      }
+
+      double getMinDistBetweenVertices() const
+      {
+        return params_.min_dist_between_vertices_;
+      }
+
+      void setGoalBias(double goal_bias)
+      {
+        params_.goal_bias_ = goal_bias;
+      }
+
+      double getGoalBias() const
+      {
+        return params_.goal_bias_;
+      }
+
+      void setUseKNearest(bool use_k_nearest)
+      {
+        params_.use_k_nearest_ = use_k_nearest;
+      }
+
+      bool getUseKNearest() const
+      {
+        return params_.use_k_nearest_;
+      }
+
     private:
-      /** \brief All configurable parameters of AITStarKin, TODO(@atas), add getters and setters for each. */
-
-      /** \brief The number of threads to be used in parallel for control. */
-      int num_threads_{8};
-
-      /** \brief The number of samples to be added to graph in each iteration. */
-      int batch_size_{1000};
+      /** \brief All configurable parames live here. */
+      Parameters params_;
 
       /** \brief The radius to construct edges in construction of RGG, this is meant to be used in geometric graph, determines max edge length. */
       double radius_{std::numeric_limits<double>::infinity()};
-
-      /** \brief The a single vertex, do not construct more edges (neighbours) more than max_neighbors_. */
-      int max_neighbors_{10};
-
-      /** \brief Adding almost identical samples does not help much, so we regulate this by min_dist_between_vertices_. */
-      double min_dist_between_vertices_{0.1};
-
-      /** \brief The edges connecting samples in geometric and control graphs cannot be longer than this */
-      double max_dist_between_vertices_{0.0}; // works ok for elevation
-
-      /** \brief If available, use valid sampler. */
-      bool use_valid_sampler_{false};
-
-      /** \brief For directed control, set a number of samples to iterate though, to get a more accurate sampleTo behviour. It comes as costy!. */
-      int k_number_of_controls_{1};
-
-      /** \brief For adaptive heuristic, there is two options, dijkstra and astar.
-       *  Default is dijkstra as it computes shortest path from each vertex to specified one */
-      static bool const use_astar_hueristic_{false};
-
-      /** \brief Frequently push goal to graph. It is used in control graph */
-      double goal_bias_{0.05};
-
-      double rewire_factor_{1.0};
 
       /** \brief A constant for the computation of the number of neighbors when using a k-nearest model. */
       std::size_t k_rgg_{std::numeric_limits<std::size_t>::max()};
 
       /** \brief Auto calculate neighbours to connect. */
       std::size_t numNeighbors_{std::numeric_limits<std::size_t>::max()};
-
-      /** \brief Whether to use nearest neighbor or radius as connection strategy. */
-      static bool const use_k_nearest_{true};
 
       /** \brief Informed sampling strategy */
       std::shared_ptr<base::RejectionInfSampler> rejection_informed_sampler_{nullptr};
@@ -413,7 +481,7 @@ namespace ompl
         // Now we can run A* forwards from start to goal and check for collisions
         try {
           if (precompute_heuristic) {
-            if constexpr (use_astar_hueristic_) {
+            if (use_astar_hueristic_) {
               boost::astar_search_tree(
                 g, start_vertex, heuristic,
                 boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
