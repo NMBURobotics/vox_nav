@@ -148,10 +148,15 @@ namespace ompl
           // Assume first 3 dimensions are x,y,z, extract them and compute euclidean distance
           auto * a_vec = a->as<base::RealVectorStateSpace::StateType>()->values;
           auto * b_vec = b->as<base::RealVectorStateSpace::StateType>()->values;
-          return sqrt(
-            pow(a_vec[0] - b_vec[0], 2) +
-            pow(a_vec[1] - b_vec[1], 2) +
-            pow(a_vec[2] - b_vec[2], 2));
+          if (si_->getStateSpace()->getDimension() > 3) {
+            return sqrt(
+              pow(a_vec[0] - b_vec[0], 2) +
+              pow(a_vec[1] - b_vec[1], 2) +
+              pow(a_vec[2] - b_vec[2], 2));
+          } else {
+            // If dimension is higher than 3, just use L2 distance
+            return si_->distance(a, b);
+          }
         } else {
           return si_->distance(a, b);
         }
@@ -216,6 +221,26 @@ namespace ompl
       double getMinDistBetweenVertices() const
       {
         return params_.min_dist_between_vertices_;
+      }
+
+      void setMaxDistBetweenVertices(double max_dist_between_vertices)
+      {
+        params_.max_dist_between_vertices_ = max_dist_between_vertices;
+      }
+
+      double getMaxDistBetweenVertices() const
+      {
+        return params_.max_dist_between_vertices_;
+      }
+
+      void setUseValidSampler(bool use_valid_sampler)
+      {
+        params_.use_valid_sampler_ = use_valid_sampler;
+      }
+
+      bool getUseValidSampler() const
+      {
+        return params_.use_valid_sampler_;
       }
 
       void setGoalBias(double goal_bias)
@@ -481,7 +506,7 @@ namespace ompl
         // Now we can run A* forwards from start to goal and check for collisions
         try {
           if (precompute_heuristic) {
-            if (use_astar_hueristic_) {
+            if (params_.use_astar_hueristic_) {
               boost::astar_search_tree(
                 g, start_vertex, heuristic,
                 boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));

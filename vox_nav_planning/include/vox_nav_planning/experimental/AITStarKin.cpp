@@ -22,6 +22,30 @@ ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
   specs_.multithreaded = true;
   siC_ = si.get();
 
+  declareParam<int>(
+    "num_threads", this, &AITStarKin::setNumThreads, &AITStarKin::getNumThreads, "1:4:8");
+  declareParam<int>(
+    "batch_size", this, &AITStarKin::setBatchSize, &AITStarKin::getBatchSize, "10:100:1000");
+  declareParam<int>(
+    "max_neighbors", this, &AITStarKin::setMaxNeighbors, &AITStarKin::getMaxNeighbors, "5:10:20");
+  declareParam<double>(
+    "min_dist_between_vertices", this, &AITStarKin::setMinDistBetweenVertices,
+    &AITStarKin::getMinDistBetweenVertices, "0.01:0.1:1.0");
+  declareParam<double>(
+    "max_dist_between_vertices", this, &AITStarKin::setMaxDistBetweenVertices,
+    &AITStarKin::getMaxDistBetweenVertices, "0.0:0.0:10.0");
+  declareParam<bool>(
+    "use_valid_sampler", this, &AITStarKin::setUseValidSampler, &AITStarKin::getUseValidSampler,
+    "0,1");
+  declareParam<double>(
+    "goal_bias", this, &AITStarKin::setGoalBias, &AITStarKin::getGoalBias, "0.0:0.05:0.2");
+  declareParam<bool>(
+    "use_k_nearest", this, &AITStarKin::setUseKNearest, &AITStarKin::getUseKNearest, "0,1");
+
+  addPlannerProgressProperty(
+    "geometric_cost DOUBLE", [this]() {return std::to_string(bestGeometricCost_.value());});
+  addPlannerProgressProperty(
+    "control_cost DOUBLE", [this]() {return std::to_string(bestControlCost_.value());});
 
 }
 
@@ -35,12 +59,12 @@ void ompl::control::AITStarKin::setup()
   base::Planner::setup();
 
   // initialize the graphs for all control threads
-  g_geometrics_ = std::vector<GraphT>(num_threads_, GraphT());
-  g_controls_ = std::vector<GraphT>(num_threads_, GraphT());
+  g_geometrics_ = std::vector<GraphT>(params_.num_threads_, GraphT());
+  g_controls_ = std::vector<GraphT>(params_.num_threads_, GraphT());
 
   // reset nn for geometric graph
   geometrics_nn_.clear();
-  for (int i = 0; i < num_threads_; i++) {
+  for (int i = 0; i < params_.num_threads_; i++) {
     std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> this_nn;
     this_nn.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
     geometrics_nn_.push_back(this_nn);
@@ -48,7 +72,7 @@ void ompl::control::AITStarKin::setup()
 
   // reset nns in all control threads
   controls_nn_.clear();
-  for (int i = 0; i < num_threads_; i++) {
+  for (int i = 0; i < params_.num_threads_; i++) {
     std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> this_nn;
     this_nn.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
     controls_nn_.push_back(this_nn);
@@ -91,7 +115,9 @@ void ompl::control::AITStarKin::setup()
       std::numeric_limits<double>::infinity());
   }
   if (!controlSampler_) {
-    controlSampler_ = std::make_shared<SimpleDirectedControlSampler>(siC_, k_number_of_controls_);
+    controlSampler_ = std::make_shared<SimpleDirectedControlSampler>(
+      siC_,
+      params_.k_number_of_controls_);
   }
 
   k_rgg_ = boost::math::constants::e<double>() +
@@ -189,10 +215,10 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
 
   if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
-    max_dist_between_vertices_ =
+    params_.max_dist_between_vertices_ =
       opt_->motionCost(start_vertex_->state, goal_vertex_->state).value() / 20.0;
   } else {
-    max_dist_between_vertices_ = 2.0;
+    params_.max_dist_between_vertices_ = 2.0;
   }
 
   // Add goal and start to geomteric graph
@@ -227,9 +253,9 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     "%s: Using %u control graphs.\n", getName().c_str(), g_controls_.size());
 
   std::vector<std::list<std::size_t>>
-  shortest_paths_geometrics(num_threads_, std::list<std::size_t>());
+  shortest_paths_geometrics(params_.num_threads_, std::list<std::size_t>());
   std::vector<std::list<std::size_t>>
-  shortest_paths_controls(num_threads_, std::list<std::size_t>());
+  shortest_paths_controls(params_.num_threads_, std::list<std::size_t>());
 
   std::vector<WeightMap> weightmap_geometrics;
   for (auto & graph : g_geometrics_) {
@@ -241,16 +267,16 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   }
 
   std::vector<std::shared_ptr<PathControl>>
-  geometrics_paths(num_threads_, std::make_shared<PathControl>(si_));
+  geometrics_paths(params_.num_threads_, std::make_shared<PathControl>(si_));
   std::vector<std::shared_ptr<PathControl>>
-  controls_paths(num_threads_, std::make_shared<PathControl>(si_));
+  controls_paths(params_.num_threads_, std::make_shared<PathControl>(si_));
 
   bool goal_reached{false};
 
   while (ptc == false) {
 
     auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
-    if (use_k_nearest_) {
+    if (params_.use_k_nearest_) {
       numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
     } else {
       radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
@@ -258,13 +284,13 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
 
     // The thread ids needs to be immutable for the lambda function
     std::vector<int> thread_ids;
-    for (int t = 0; t < num_threads_; t++) {
+    for (int t = 0; t < params_.num_threads_; t++) {
       thread_ids.push_back(t);
     }
 
-    std::vector<std::thread *> geometric_threads(num_threads_);
+    std::vector<std::thread *> geometric_threads(params_.num_threads_);
     // Launch geometric planning threads
-    for (int t = 0; t < num_threads_; t++) {
+    for (int t = 0; t < params_.num_threads_; t++) {
 
       int immutable_t = t;
       // Pass all the variables by reference to the lambda function
@@ -285,7 +311,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         &thread_id
         ]  {
           std::vector<ompl::base::State *> samples;
-          generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
+          generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
           expandGeometricGraph(samples, g, nn, weightmap);
           ensureGoalVertexConnectivity(goal_vertex_, g, nn, weightmap);
 
@@ -312,8 +338,8 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
     }
 
     // Launch kino planning threads
-    std::vector<std::thread *> control_threads(num_threads_);
-    for (int t = 0; t < num_threads_; t++) {
+    std::vector<std::thread *> control_threads(params_.num_threads_);
+    for (int t = 0; t < params_.num_threads_; t++) {
       int immutable_t = t;
       // Pass all the variables by reference to the lambda function
       auto & thread_id = thread_ids.at(immutable_t);
@@ -334,7 +360,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         &thread_id
         ]  {
           std::vector<ompl::base::State *> samples;
-          generateBatchofSamples(batch_size_, use_valid_sampler_, samples);
+          generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
           expandControlGraph(
             samples,
             goal_state,
@@ -451,7 +477,7 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
         bestControlPath_ = best_control_path;
       }
       // Reset control graphs anyways
-      for (int i = 0; i < num_threads_; i++) {
+      for (int i = 0; i < params_.num_threads_; i++) {
         g_controls_[i].clear();
         g_controls_[i] = GraphT();
         // free memory for all nns in control threads
@@ -574,20 +600,20 @@ void ompl::control::AITStarKin::expandGeometricGraph(
     this_vertex_property->state = (i);
     std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
 
-    if (use_k_nearest_) {
+    if (params_.use_k_nearest_) {
       geometric_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
     } else {
       geometric_nn->nearestR(this_vertex_property, radius_, nbh);
     }
 
-    if (nbh.size() > max_neighbors_) {
-      nbh.resize(max_neighbors_);
+    if (nbh.size() > params_.max_neighbors_) {
+      nbh.resize(params_.max_neighbors_);
     }
 
     bool does_vertice_exits{false};
     for (auto && nb : nbh) {
       double dist = distanceFunction(i, nb->state);
-      if (dist < min_dist_between_vertices_ /*do not add same vertice twice*/) {
+      if (dist < params_.min_dist_between_vertices_ /*do not add same vertice twice*/) {
         does_vertice_exits = true;
       }
     }
@@ -603,7 +629,7 @@ void ompl::control::AITStarKin::expandGeometricGraph(
         double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
         edge_descriptor e; bool edge_added;
         // not to construct edges with self, and if nbh is further than radius_, continue
-        if (u == v || dist > (1.0 * max_dist_between_vertices_)) {
+        if (u == v || dist > params_.max_dist_between_vertices_) {
           continue;
         }
         if (boost::edge(
@@ -630,14 +656,14 @@ void ompl::control::AITStarKin::ensureGoalVertexConnectivity(
   // Neihbors of goal vertex
   std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh;
 
-  if (use_k_nearest_) {
+  if (params_.use_k_nearest_) {
     geometric_nn->nearestK(target_vertex_property, numNeighbors_, goal_nbh);
   } else {
     geometric_nn->nearestR(target_vertex_property, radius_, goal_nbh);
   }
 
-  if (goal_nbh.size() > max_neighbors_) {
-    goal_nbh.resize(max_neighbors_);
+  if (goal_nbh.size() > params_.max_neighbors_) {
+    goal_nbh.resize(params_.max_neighbors_);
   }
   for (auto && nb : goal_nbh) {
     vertex_descriptor u = target_vertex_property->id;
@@ -645,7 +671,7 @@ void ompl::control::AITStarKin::ensureGoalVertexConnectivity(
     double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
     edge_descriptor e; bool edge_added;
     // not to construct edges with self, and if nbh is further than radius_, continue
-    if (u == v || (dist > 2 * max_dist_between_vertices_)) {
+    if (u == v || (dist > 2 * params_.max_dist_between_vertices_)) {
       continue;
     }
     if (boost::edge(u, v, geometric_graph).second || boost::edge(v, u, geometric_graph).second) {
@@ -668,7 +694,7 @@ void ompl::control::AITStarKin::expandControlGraph(
 {
   // Now we have a collision free path, we can now find a control path
   // Add all samples to the control NN and contol graph
-  int ith_sample = static_cast<int>(1.0 / goal_bias_);
+  int ith_sample = static_cast<int>(1.0 / params_.goal_bias_);
   int index_of_goal_bias{0};
 
   for (auto && i : samples) {
@@ -685,7 +711,7 @@ void ompl::control::AITStarKin::expandControlGraph(
 
     std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
 
-    if (use_k_nearest_) {
+    if (params_.use_k_nearest_) {
       control_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
     } else {
       control_nn->nearestR(this_vertex_property, radius_, nbh);
@@ -694,14 +720,14 @@ void ompl::control::AITStarKin::expandControlGraph(
     if (nbh.size() == 0) {
       continue;
     }
-    if (nbh.size() > max_neighbors_) {
-      nbh.resize(max_neighbors_);
+    if (nbh.size() > params_.max_neighbors_) {
+      nbh.resize(params_.max_neighbors_);
     }
 
     bool does_vertice_exits{false};
     for (auto && nb : nbh) {
       double dist = distanceFunction(i, nb->state);
-      if (dist < min_dist_between_vertices_ /*do not add same vertice twice*/) {
+      if (dist < params_.min_dist_between_vertices_ /*do not add same vertice twice*/) {
         does_vertice_exits = true;
       }
     }
@@ -745,7 +771,7 @@ void ompl::control::AITStarKin::expandControlGraph(
         double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
         edge_descriptor e; bool edge_added;
         // not to construct edges with self, and if nbh is further than radius_, continue
-        if (u == v || dist > max_dist_between_vertices_) {
+        if (u == v || dist > params_.max_dist_between_vertices_) {
           continue;
         }
         if (boost::edge(
@@ -766,14 +792,14 @@ void ompl::control::AITStarKin::expandControlGraph(
           target_vertex_state);
 
         // if the distance is less than the radius to target, then add the edge
-        if (dist_to_target < max_dist_between_vertices_) {
+        if (dist_to_target < params_.max_dist_between_vertices_) {
 
           vertex_descriptor u = arrived_vertex_property->id;
           vertex_descriptor v = target_vertex_descriptor;
           double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
           edge_descriptor e; bool edge_added;
           // not to construct edges with self, and if nbh is further than radius_, continue
-          if (u == v || dist > max_dist_between_vertices_) {
+          if (u == v || dist > params_.max_dist_between_vertices_) {
             continue;
           }
           if (boost::edge(u, v, control_graph).second ||
@@ -828,7 +854,7 @@ double ompl::control::AITStarKin::computeConnectionRadius(std::size_t numSamples
 
   // Compute the RRT* factor. Taken from AITStar::computeConnectionRadius.
   return
-    rewire_factor_ * std::pow(
+    params_.rewire_factor_ * std::pow(
     2.0 * (1.0 + 1.0 / dimension) *
     (rejection_informed_sampler_->getInformedMeasure(bestControlCost_) /
     unitNBallMeasure(si_->getStateDimension())) *
@@ -839,7 +865,7 @@ double ompl::control::AITStarKin::computeConnectionRadius(std::size_t numSamples
 std::size_t ompl::control::AITStarKin::computeNumberOfNeighbors(std::size_t numSamples) const
 {
   // Compute the RGG factor. Taken from AITStar::computeNumberOfNeighbors.
-  return std::ceil(rewire_factor_ * k_rgg_ * std::log(static_cast<double>(numSamples)));
+  return std::ceil(params_.rewire_factor_ * k_rgg_ * std::log(static_cast<double>(numSamples)));
 }
 
 ompl::base::Cost ompl::control::AITStarKin::computePathCost(
