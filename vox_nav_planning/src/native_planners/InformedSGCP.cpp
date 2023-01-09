@@ -474,8 +474,20 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       // Now we need to check if it is better than the previous one
       if (opt_->isCostBetterThan(best_control_path_cost, bestControlCost_)) {
         // This is a better solution, update the best cost and path
-        bestControlCost_ = best_control_path_cost;
-        bestControlPath_ = best_control_path;
+
+        // Lets VALIDATE the control path
+        bool valid = true;
+        for (auto && state : best_control_path->getStates()) {
+          if (!si_->isValid(state)) {
+            valid = false;
+            break;
+          }
+        }
+
+        if (valid) {
+          bestControlCost_ = best_control_path_cost;
+          bestControlPath_ = best_control_path;
+        }
 
         // Reset control graphs anyways
         for (int i = 0; i < params_.num_threads_; i++) {
@@ -814,7 +826,6 @@ void ompl::control::InformedSGCP::expandControlGraph(
           control_weightmap[e] =
             opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
         }
-
       }
     }
   }
