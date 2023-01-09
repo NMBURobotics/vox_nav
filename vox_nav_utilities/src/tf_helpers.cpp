@@ -98,6 +98,7 @@ namespace vox_nav_utilities
       global_pose = tf_buffer.transform(
         robot_pose, global_frame,
         tf2::durationFromSec(transform_timeout));
+      global_pose.pose.position.z = 0.5;
       return true;
     } catch (tf2::LookupException & ex) {
       RCLCPP_ERROR(

@@ -763,8 +763,8 @@ void ompl::control::InformedSGCP::expandControlGraph(
           nb->state,
           deep_copy_sample_state);
 
-        if (duration == 0) {
-          // perhaprs due to invalidy of the state, we cannot proceed
+        if (duration == 0 || !si_->isValid(deep_copy_sample_state)) {
+          // perhaps due to invalidity of the state, we cannot proceed
           siC_->freeControl(c);
           si_->freeState(deep_copy_sample_state);
           continue;
