@@ -80,7 +80,7 @@ OpenCV)
 add_library(vox_nav_ompl_planners SHARED  src/rrt/RRTStarF.cpp
                                           src/rrt/LQRPlanner.cpp
                                           src/rrt/LQRRRTStar.cpp 
-                                          include/vox_nav_planning/experimental/AITStarKin.cpp)
+                                          include/vox_nav_planning/experimental/InformedSGCP.cpp)
 target_link_libraries(vox_nav_ompl_planners ${PCL_LIBRARIES})
 ament_target_dependencies(vox_nav_ompl_planners ${dependencies})
 

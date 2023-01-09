@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_PLANNING__RRT__AITSTARKIN_HPP_
-#define VOX_NAV_PLANNING__RRT__AITSTARKIN_HPP_
+#ifndef VOX_NAV_PLANNING__RRT__InformedSGCP_HPP_
+#define VOX_NAV_PLANNING__RRT__InformedSGCP_HPP_
 
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
@@ -52,20 +52,20 @@ namespace ompl
   namespace control
   {
     /**
-       @anchor cAITStarKin
+       @anchor cInformedSGCP
        @par Short description
-       \ref A kinodynamic extension of AITStar. This implementation is based on boost graph library.
-       An accompanying paper explaning novelities of this implementation will be published soon.
+       \ref Informed Simultaneous Geometric and Control Planner (InformedSGCP).
+       The implementation is based on boost graph library.
+       An accompanying paper explaining novelities of this planner will be published soon.
        @par External documentation
        TBD
     */
 
-
     struct Parameters
     {
-      /** \brief All configurable parameters of AITStarKin, TODO(@atas), add getters and setters for each. */
+      /** \brief All configurable parameters of InformedSGCP. */
 
-      /** \brief The number of threads to be used in parallel for control. */
+      /** \brief The number of threads to be used in parallel for geometric and control. */
       int num_threads_{8};
 
       /** \brief The number of samples to be added to graph in each iteration. */
@@ -99,13 +99,13 @@ namespace ompl
       bool use_k_nearest_{true};
     };
 
-    class AITStarKin : public base::Planner
+    class InformedSGCP : public base::Planner
     {
     public:
       /** \brief Constructor */
-      AITStarKin(const SpaceInformationPtr & si);
+      InformedSGCP(const SpaceInformationPtr & si);
 
-      ~AITStarKin() override;
+      ~InformedSGCP() override;
 
       void setup() override;
 
@@ -332,7 +332,7 @@ namespace ompl
       typedef GraphT::edge_descriptor edge_descriptor;
 
       /** \brief The generic eucledean distance heuristic, this is used for all graphs when we perform A* on them.
-       * Make it a friend of AITStarKin so it can access private members of AITStarKin.
+       * Make it a friend of InformedSGCP so it can access private members of InformedSGCP.
       */
       friend class GenericDistanceHeuristic;
       template<class Graph, class VertexProperty, class CostType>
@@ -341,7 +341,7 @@ namespace ompl
       public:
         typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
         GenericDistanceHeuristic(
-          AITStarKin * alg, VertexProperty * goal,
+          InformedSGCP * alg, VertexProperty * goal,
           bool control = false,
           int thread_id = 0)
         : alg_(alg),
@@ -362,14 +362,14 @@ namespace ompl
         }
 
       private:
-        AITStarKin * alg_{nullptr};
+        InformedSGCP * alg_{nullptr};
         VertexProperty * goal_{nullptr};
         bool control_{false};
         int thread_id_{0};
       };  // GenericDistanceHeuristic
 
       /** \brief The precomputed cost heuristic, this is used for geometric graph when we perform A* with collision checks.
-       * Make it a friend of AITStarKin so it can access private members of AITStarKin.
+       * Make it a friend of InformedSGCP so it can access private members of InformedSGCP.
       */
       friend class PrecomputedCostHeuristic;
       template<class Graph, class CostType>
@@ -377,7 +377,7 @@ namespace ompl
       {
       public:
         typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-        PrecomputedCostHeuristic(AITStarKin * alg, int thread_id = 0)
+        PrecomputedCostHeuristic(InformedSGCP * alg, int thread_id = 0)
         : alg_(alg),
           thread_id_(thread_id)
         {
@@ -395,7 +395,7 @@ namespace ompl
         }
 
       private:
-        AITStarKin * alg_;
+        InformedSGCP * alg_;
         int thread_id_{0};
       };  // PrecomputedCostHeuristic
 
@@ -627,9 +627,9 @@ namespace ompl
       /** \brief get std_msgs::msg::ColorRGBA given the color name with a std::string*/
       static std_msgs::msg::ColorRGBA getColor(std::string & color);
 
-    };     // class AITStarKin
+    };     // class InformedSGCP
   }   // namespace control
 }   // namespace ompl
 
 
-#endif  // VOX_NAV_PLANNING__RRT__AITSTARKIN_HPP_
+#endif  // VOX_NAV_PLANNING__RRT__InformedSGCP_HPP_

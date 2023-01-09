@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "AITStarKin.hpp"
+#include "InformedSGCP.hpp"
 
-ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
-: base::Planner(si, "AITStarKin")
+ompl::control::InformedSGCP::InformedSGCP(const SpaceInformationPtr & si)
+: base::Planner(si, "InformedSGCP")
 {
   specs_.approximateSolutions = true;
   specs_.optimizingPaths = true;
@@ -23,24 +23,25 @@ ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
   siC_ = si.get();
 
   declareParam<int>(
-    "num_threads", this, &AITStarKin::setNumThreads, &AITStarKin::getNumThreads, "1:4:8");
+    "num_threads", this, &InformedSGCP::setNumThreads, &InformedSGCP::getNumThreads, "1:4:8");
   declareParam<int>(
-    "batch_size", this, &AITStarKin::setBatchSize, &AITStarKin::getBatchSize, "10:100:1000");
+    "batch_size", this, &InformedSGCP::setBatchSize, &InformedSGCP::getBatchSize, "10:100:1000");
   declareParam<int>(
-    "max_neighbors", this, &AITStarKin::setMaxNeighbors, &AITStarKin::getMaxNeighbors, "5:10:20");
+    "max_neighbors", this, &InformedSGCP::setMaxNeighbors, &InformedSGCP::getMaxNeighbors,
+    "5:10:20");
   declareParam<double>(
-    "min_dist_between_vertices", this, &AITStarKin::setMinDistBetweenVertices,
-    &AITStarKin::getMinDistBetweenVertices, "0.01:0.1:1.0");
+    "min_dist_between_vertices", this, &InformedSGCP::setMinDistBetweenVertices,
+    &InformedSGCP::getMinDistBetweenVertices, "0.01:0.1:1.0");
   declareParam<double>(
-    "max_dist_between_vertices", this, &AITStarKin::setMaxDistBetweenVertices,
-    &AITStarKin::getMaxDistBetweenVertices, "0.0:0.0:10.0");
+    "max_dist_between_vertices", this, &InformedSGCP::setMaxDistBetweenVertices,
+    &InformedSGCP::getMaxDistBetweenVertices, "0.0:0.0:10.0");
   declareParam<bool>(
-    "use_valid_sampler", this, &AITStarKin::setUseValidSampler, &AITStarKin::getUseValidSampler,
+    "use_valid_sampler", this, &InformedSGCP::setUseValidSampler, &InformedSGCP::getUseValidSampler,
     "0,1");
   declareParam<double>(
-    "goal_bias", this, &AITStarKin::setGoalBias, &AITStarKin::getGoalBias, "0.0:0.05:0.2");
+    "goal_bias", this, &InformedSGCP::setGoalBias, &InformedSGCP::getGoalBias, "0.0:0.05:0.2");
   declareParam<bool>(
-    "use_k_nearest", this, &AITStarKin::setUseKNearest, &AITStarKin::getUseKNearest, "0,1");
+    "use_k_nearest", this, &InformedSGCP::setUseKNearest, &InformedSGCP::getUseKNearest, "0,1");
 
   addPlannerProgressProperty(
     "geometric_cost DOUBLE", [this]() {return std::to_string(bestGeometricCost_.value());});
@@ -49,12 +50,12 @@ ompl::control::AITStarKin::AITStarKin(const SpaceInformationPtr & si)
 
 }
 
-ompl::control::AITStarKin::~AITStarKin()
+ompl::control::InformedSGCP::~InformedSGCP()
 {
   freeMemory();
 }
 
-void ompl::control::AITStarKin::setup()
+void ompl::control::InformedSGCP::setup()
 {
   base::Planner::setup();
 
@@ -127,20 +128,20 @@ void ompl::control::AITStarKin::setup()
   bestGeometricPath_ = std::make_shared<PathControl>(si_);
 
   // RVIZ VISUALIZATIONS
-  node_ = std::make_shared<rclcpp::Node>("aitstarkin_rclcpp_node");
+  node_ = std::make_shared<rclcpp::Node>("InformedSGCP_rclcpp_node");
   rgg_graph_pub_ =
     node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "vox_nav/aitstarkin/rgg", rclcpp::SystemDefaultsQoS());
+    "vox_nav/InformedSGCP/rgg", rclcpp::SystemDefaultsQoS());
   geometric_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "vox_nav/aitstarkin/g_plan", rclcpp::SystemDefaultsQoS());
+    "vox_nav/InformedSGCP/g_plan", rclcpp::SystemDefaultsQoS());
   control_graph_pub_ =
     node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "vox_nav/aitstarkin/control_rgg", rclcpp::SystemDefaultsQoS());
+    "vox_nav/InformedSGCP/control_rgg", rclcpp::SystemDefaultsQoS());
   control_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "vox_nav/aitstarkin/c_plan", rclcpp::SystemDefaultsQoS());
+    "vox_nav/InformedSGCP/c_plan", rclcpp::SystemDefaultsQoS());
 }
 
-void ompl::control::AITStarKin::clear()
+void ompl::control::InformedSGCP::clear()
 {
   Planner::clear();
   valid_state_sampler_.reset();
@@ -175,11 +176,11 @@ void ompl::control::AITStarKin::clear()
   }
 }
 
-void ompl::control::AITStarKin::freeMemory()
+void ompl::control::InformedSGCP::freeMemory()
 {
 }
 
-ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
+ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   const base::PlannerTerminationCondition & ptc)
 {
   // check if the problem is setup properly
@@ -546,12 +547,12 @@ ompl::base::PlannerStatus ompl::control::AITStarKin::solve(
   return {goal_reached, false};
 }
 
-void ompl::control::AITStarKin::getPlannerData(base::PlannerData & data) const
+void ompl::control::InformedSGCP::getPlannerData(base::PlannerData & data) const
 {
   Planner::getPlannerData(data);
 }
 
-void ompl::control::AITStarKin::generateBatchofSamples(
+void ompl::control::InformedSGCP::generateBatchofSamples(
   int batch_size,
   bool use_valid_sampler,
   std::vector<ompl::base::State *> & samples)
@@ -586,7 +587,7 @@ void ompl::control::AITStarKin::generateBatchofSamples(
 
 }
 
-void ompl::control::AITStarKin::expandGeometricGraph(
+void ompl::control::InformedSGCP::expandGeometricGraph(
   const std::vector<ompl::base::State *> & samples,
   GraphT & geometric_graph,
   std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
@@ -598,7 +599,7 @@ void ompl::control::AITStarKin::expandGeometricGraph(
   for (auto && i : samples) {
     VertexProperty * this_vertex_property = new VertexProperty();
     this_vertex_property->state = (i);
-    std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
+    std::vector<ompl::control::InformedSGCP::VertexProperty *> nbh;
 
     if (params_.use_k_nearest_) {
       geometric_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
@@ -647,14 +648,14 @@ void ompl::control::AITStarKin::expandGeometricGraph(
   }
 }
 
-void ompl::control::AITStarKin::ensureGoalVertexConnectivity(
+void ompl::control::InformedSGCP::ensureGoalVertexConnectivity(
   VertexProperty * target_vertex_property,
   GraphT & geometric_graph,
   std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
   WeightMap & geometric_weightmap)
 {
   // Neihbors of goal vertex
-  std::vector<ompl::control::AITStarKin::VertexProperty *> goal_nbh;
+  std::vector<ompl::control::InformedSGCP::VertexProperty *> goal_nbh;
 
   if (params_.use_k_nearest_) {
     geometric_nn->nearestK(target_vertex_property, numNeighbors_, goal_nbh);
@@ -684,7 +685,7 @@ void ompl::control::AITStarKin::ensureGoalVertexConnectivity(
   }
 }
 
-void ompl::control::AITStarKin::expandControlGraph(
+void ompl::control::InformedSGCP::expandControlGraph(
   const std::vector<ompl::base::State *> & samples,
   const ompl::base::State * target_vertex_state,
   const vertex_descriptor & target_vertex_descriptor,
@@ -709,7 +710,7 @@ void ompl::control::AITStarKin::expandControlGraph(
     }
     index_of_goal_bias++;
 
-    std::vector<ompl::control::AITStarKin::VertexProperty *> nbh;
+    std::vector<ompl::control::InformedSGCP::VertexProperty *> nbh;
 
     if (params_.use_k_nearest_) {
       control_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
@@ -818,7 +819,7 @@ void ompl::control::AITStarKin::expandControlGraph(
   }
 }
 
-std::size_t ompl::control::AITStarKin::computeNumberOfSamplesInInformedSet() const
+std::size_t ompl::control::InformedSGCP::computeNumberOfSamplesInInformedSet() const
 {
   // Loop over all vertices and count the ones in the informed set.
   std::size_t numberOfSamplesInInformedSet{0u};
@@ -847,7 +848,7 @@ std::size_t ompl::control::AITStarKin::computeNumberOfSamplesInInformedSet() con
   return numberOfSamplesInInformedSet;
 }
 
-double ompl::control::AITStarKin::computeConnectionRadius(std::size_t numSamples) const
+double ompl::control::InformedSGCP::computeConnectionRadius(std::size_t numSamples) const
 {
   // Define the dimension as a helper variable.
   auto dimension = static_cast<double>(si_->getStateDimension());
@@ -862,13 +863,13 @@ double ompl::control::AITStarKin::computeConnectionRadius(std::size_t numSamples
     1.0 / dimension);
 }
 
-std::size_t ompl::control::AITStarKin::computeNumberOfNeighbors(std::size_t numSamples) const
+std::size_t ompl::control::InformedSGCP::computeNumberOfNeighbors(std::size_t numSamples) const
 {
   // Compute the RGG factor. Taken from AITStar::computeNumberOfNeighbors.
   return std::ceil(params_.rewire_factor_ * k_rgg_ * std::log(static_cast<double>(numSamples)));
 }
 
-ompl::base::Cost ompl::control::AITStarKin::computePathCost(
+ompl::base::Cost ompl::control::InformedSGCP::computePathCost(
   std::shared_ptr<ompl::control::PathControl> & path)  const
 {
   ompl::base::Cost path_cost = opt_->identityCost();
@@ -883,7 +884,7 @@ ompl::base::Cost ompl::control::AITStarKin::computePathCost(
   return path_cost;
 }
 
-void ompl::control::AITStarKin::visualizeRGG(
+void ompl::control::InformedSGCP::visualizeRGG(
   const GraphT & g,
   const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
   const std::string & ns,
@@ -1005,7 +1006,7 @@ void ompl::control::AITStarKin::visualizeRGG(
   publisher->publish(marker_array);
 }
 
-void ompl::control::AITStarKin::visualizePath(
+void ompl::control::InformedSGCP::visualizePath(
   const GraphT & g,
   const std::list<vertex_descriptor> & path,
   const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
@@ -1100,7 +1101,7 @@ void ompl::control::AITStarKin::visualizePath(
   publisher->publish(marker_array);
 }
 
-void ompl::control::AITStarKin::visualizePath(
+void ompl::control::InformedSGCP::visualizePath(
   const std::shared_ptr<PathControl> & path,
   const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & publisher,
   const std::string & ns,
@@ -1196,7 +1197,7 @@ void ompl::control::AITStarKin::visualizePath(
   publisher->publish(marker_array);
 }
 
-std_msgs::msg::ColorRGBA ompl::control::AITStarKin::getColor(std::string & color)
+std_msgs::msg::ColorRGBA ompl::control::InformedSGCP::getColor(std::string & color)
 {
   std_msgs::msg::ColorRGBA color_rgba;
   if (color == "red") {
