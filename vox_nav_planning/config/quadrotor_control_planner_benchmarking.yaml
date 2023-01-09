@@ -1,4 +1,4 @@
-quadrotor_control_benchmarking_rclcpp_node:
+quadrotor_control_planners_benchmark:
   ros__parameters:
     planner_timeout: 40.0
     interpolation_parameter: 50

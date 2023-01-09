@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "control_planners_benchmark.hpp"
+#include "car_control_planners_benchmark.hpp"
 
 namespace vox_nav_planning
 {
-  ControlPlannersBenchMarking::ControlPlannersBenchMarking()
-  : Node("planner_benchmarking_rclcpp_node")
+  CarControlPlannersBenchMarking::CarControlPlannersBenchMarking()
+  : Node("car_control_planners_benchmark")
   {
     RCLCPP_INFO(this->get_logger(), "Creating:");
 
@@ -157,7 +157,7 @@ namespace vox_nav_planning
     control_simple_setup_ = std::make_shared<ompl::control::SimpleSetup>(control_state_space_);
     control_simple_setup_->setOptimizationObjective(getOptimizationObjective());
     control_simple_setup_->setStateValidityChecker(
-      std::bind(&ControlPlannersBenchMarking::isStateValid, this, std::placeholders::_1));
+      std::bind(&CarControlPlannersBenchMarking::isStateValid, this, std::placeholders::_1));
 
     RCLCPP_INFO(this->get_logger(), "Selected planners for benchmarking:");
     for (auto && i : selected_planners_) {
@@ -174,12 +174,12 @@ namespace vox_nav_planning
       "start_goal_poses", rclcpp::SystemDefaultsQoS());
   }
 
-  ControlPlannersBenchMarking::~ControlPlannersBenchMarking()
+  CarControlPlannersBenchMarking::~CarControlPlannersBenchMarking()
   {
     RCLCPP_INFO(this->get_logger(), "Destroying:");
   }
 
-  void ControlPlannersBenchMarking::propagate(
+  void CarControlPlannersBenchMarking::propagate(
     const ompl::control::SpaceInformation * si,
     const ompl::base::State * start,
     const ompl::control::Control * control,
@@ -209,7 +209,7 @@ namespace vox_nav_planning
     si->enforceBounds(result);
   }
 
-  ompl::base::OptimizationObjectivePtr ControlPlannersBenchMarking::getOptimizationObjective()
+  ompl::base::OptimizationObjectivePtr CarControlPlannersBenchMarking::getOptimizationObjective()
   {
     // select a optimizatio objective
     ompl::base::OptimizationObjectivePtr length_objective(
@@ -227,7 +227,7 @@ namespace vox_nav_planning
   }
 
   std::map<int, ompl::control::PathControl>
-  ControlPlannersBenchMarking::doBenchMarking()
+  CarControlPlannersBenchMarking::doBenchMarking()
   {
 
     ompl::base::ScopedState<ompl::base::ElevationStateSpace> random_start(state_space_),
@@ -362,7 +362,8 @@ namespace vox_nav_planning
 
           si->setValidStateSamplerAllocator(
             std::bind(
-              &ControlPlannersBenchMarking::allocValidStateSampler, this, std::placeholders::_1));
+              &CarControlPlannersBenchMarking::allocValidStateSampler, this,
+              std::placeholders::_1));
 
           control_simple_setup_->setPlanner(planner_ptr);
           control_simple_setup_->setup();
@@ -422,7 +423,7 @@ namespace vox_nav_planning
     return paths_map;
   }
 
-  bool ControlPlannersBenchMarking::isStateValid(const ompl::base::State * state)
+  bool CarControlPlannersBenchMarking::isStateValid(const ompl::base::State * state)
   {
     const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
     // cast the abstract state type to the type we expect
@@ -449,7 +450,7 @@ namespace vox_nav_planning
     return !collisionWithFullMapResult.isCollision();
   }
 
-  void ControlPlannersBenchMarking::publishSamplePlans(
+  void CarControlPlannersBenchMarking::publishSamplePlans(
     std::map<int, ompl::control::PathControl> sample_paths)
   {
 
@@ -541,7 +542,7 @@ namespace vox_nav_planning
     plan_publisher_->publish(marker_array);
   }
 
-  void ControlPlannersBenchMarking::setupMap()
+  void CarControlPlannersBenchMarking::setupMap()
   {
     const std::lock_guard<std::mutex> lock(octomap_mutex_);
 
@@ -632,7 +633,7 @@ namespace vox_nav_planning
     }
   }
 
-  ompl::base::ValidStateSamplerPtr ControlPlannersBenchMarking::allocValidStateSampler(
+  ompl::base::ValidStateSamplerPtr CarControlPlannersBenchMarking::allocValidStateSampler(
     const ompl::base::SpaceInformation * si)
   {
     auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
@@ -643,7 +644,7 @@ namespace vox_nav_planning
     return valid_sampler;
   }
 
-  std_msgs::msg::ColorRGBA ControlPlannersBenchMarking::getColorByIndex(int index)
+  std_msgs::msg::ColorRGBA CarControlPlannersBenchMarking::getColorByIndex(int index)
   {
     std_msgs::msg::ColorRGBA result;
     switch (index) {
@@ -752,7 +753,7 @@ namespace vox_nav_planning
     return result;
   }
 
-  double ControlPlannersBenchMarking::getRangedRandom(double min, double max)
+  double CarControlPlannersBenchMarking::getRangedRandom(double min, double max)
   {
     std::random_device rd;
     std::default_random_engine eng(rd());
@@ -766,7 +767,7 @@ namespace vox_nav_planning
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<vox_nav_planning::ControlPlannersBenchMarking>();
+  auto node = std::make_shared<vox_nav_planning::CarControlPlannersBenchMarking>();
   while (rclcpp::ok() && !node->is_map_ready_) {
     rclcpp::spin_some(node->get_node_base_interface());
     RCLCPP_INFO(

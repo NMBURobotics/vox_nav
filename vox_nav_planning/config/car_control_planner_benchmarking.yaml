@@ -1,4 +1,4 @@
-control_planners_benchmark:
+car_control_planners_benchmark:
   ros__parameters:
     planner_timeout: 30.0
     interpolation_parameter: 50

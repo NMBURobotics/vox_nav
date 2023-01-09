@@ -16,14 +16,14 @@ def generate_launch_description():
     planner_benchmarking_node_config_cmd = DeclareLaunchArgument(
         'planner_benchmarking_node_config',
         default_value=os.path.join(package_dir, 'config',
-                                   'control_planner_benchmarking.yaml'),
+                                   'car_control_planner_benchmarking.yaml'),
         description='Full path to the pcl2octomap rclcpp node config')
 
     # Declare node actions
-    control_planners_benchmark = Node(
+    car_control_planners_benchmark = Node(
         package='vox_nav_planning',
-        executable='control_planners_benchmark',
-        name='control_planners_benchmark',
+        executable='car_control_planners_benchmark',
+        name='car_control_planners_benchmark',
         output='screen',
         prefix=['xterm -e gdb -ex run --args'],
         parameters=[planner_benchmarking_node_config])
@@ -31,6 +31,6 @@ def generate_launch_description():
     # Create the launch description and populate
     ld = LaunchDescription()
     ld.add_action(planner_benchmarking_node_config_cmd)
-    ld.add_action(control_planners_benchmark)
+    ld.add_action(car_control_planners_benchmark)
 
     return ld

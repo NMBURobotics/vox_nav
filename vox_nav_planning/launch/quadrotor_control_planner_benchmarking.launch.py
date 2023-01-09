@@ -20,10 +20,10 @@ def generate_launch_description():
         description='Full path to the pcl2octomap rclcpp node config')
 
     # Declare node actions
-    quadrotor_control_benchmarking_rclcpp_node = Node(
+    quadrotor_control_planners_benchmark = Node(
         package='vox_nav_planning',
         executable='quadrotor_control_planners_benchmark',
-        name='quadrotor_control_benchmarking_rclcpp_node',
+        name='quadrotor_control_planners_benchmark',
         output='screen',
         prefix=['xterm -e gdb -ex run --args'],
         parameters=[planner_benchmarking_node_config])
@@ -31,6 +31,6 @@ def generate_launch_description():
     # Create the launch description and populate
     ld = LaunchDescription()
     ld.add_action(planner_benchmarking_node_config_cmd)
-    ld.add_action(quadrotor_control_benchmarking_rclcpp_node)
+    ld.add_action(quadrotor_control_planners_benchmark)
 
     return ld

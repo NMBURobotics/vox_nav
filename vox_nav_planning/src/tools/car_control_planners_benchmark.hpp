@@ -129,10 +129,10 @@ namespace vox_nav_planning
       minyaw(0.0), maxyaw(0.0) {}
   };
 
-  class ControlPlannersBenchMarking : public rclcpp::Node
+  class CarControlPlannersBenchMarking : public rclcpp::Node
   {
   private:
-    rclcpp::Logger logger_{rclcpp::get_logger("elevation_control_planners_benchmarks")};
+    rclcpp::Logger logger_{rclcpp::get_logger("car_control_planners_benchmark")};
     std::string selected_state_space_; // se2 ? se3
     SEBounds se_bounds_;             // struct for keeping things clean
     ompl::base::StateSpacePtr state_space_;
@@ -193,13 +193,13 @@ namespace vox_nav_planning
      * @brief Construct a new Planner Bench Marking object
      *
      */
-    ControlPlannersBenchMarking();
+    CarControlPlannersBenchMarking();
 
     /**
      * @brief Destroy the Planner Bench Marking object
      *
      */
-    ~ControlPlannersBenchMarking();
+    ~CarControlPlannersBenchMarking();
 
     /**
      * @brief perfrom actual benchmark and return a sample run
@@ -309,7 +309,7 @@ namespace vox_nav_planning
       }
     }
 
-  };   // class ControlPlannersBenchMarking
+  };   // class CarControlPlannersBenchMarking
 }   // namespace vox_nav_planning
 
 #endif // VOX_NAV_PLANNING__PLUGINS__CONTROL_PLANNERS_BENCHMARKING_HPP_
