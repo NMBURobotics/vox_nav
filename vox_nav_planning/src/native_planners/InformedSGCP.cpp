@@ -476,24 +476,25 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         // This is a better solution, update the best cost and path
         bestControlCost_ = best_control_path_cost;
         bestControlPath_ = best_control_path;
-      }
-      // Reset control graphs anyways
-      for (int i = 0; i < params_.num_threads_; i++) {
-        g_controls_[i].clear();
-        g_controls_[i] = GraphT();
-        // free memory for all nns in control threads
-        controls_nn_[i]->clear();
 
-        // Add the start and goal vertex to the control graph
-        controls_nn_[i]->add(start_vertex_);
+        // Reset control graphs anyways
+        for (int i = 0; i < params_.num_threads_; i++) {
+          g_controls_[i].clear();
+          g_controls_[i] = GraphT();
+          // free memory for all nns in control threads
+          controls_nn_[i]->clear();
 
-        // Add goal and start to forward control graph
-        auto control_g_root = boost::add_vertex(g_controls_[i]);
-        auto control_g_target = boost::add_vertex(g_controls_[i]);
-        g_controls_[i][control_g_root] = *start_vertex_;
-        g_controls_[i][control_g_root].id = control_g_root;
-        g_controls_[i][control_g_target] = *goal_vertex_;
-        g_controls_[i][control_g_target].id = control_g_target;
+          // Add the start and goal vertex to the control graph
+          controls_nn_[i]->add(start_vertex_);
+
+          // Add goal and start to forward control graph
+          auto control_g_root = boost::add_vertex(g_controls_[i]);
+          auto control_g_target = boost::add_vertex(g_controls_[i]);
+          g_controls_[i][control_g_root] = *start_vertex_;
+          g_controls_[i][control_g_root].id = control_g_root;
+          g_controls_[i][control_g_target] = *goal_vertex_;
+          g_controls_[i][control_g_target].id = control_g_target;
+        }
       }
     }
 
