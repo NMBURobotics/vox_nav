@@ -15,11 +15,11 @@
 #ifndef VOX_NAV_PLANNING__PLUGINS__ELEVATION_CONTROL_PLANNER_HPP_
 #define VOX_NAV_PLANNING__PLUGINS__ELEVATION_CONTROL_PLANNER_HPP_
 
-
-#include "vox_nav_planning/rrt/RRTStarF.hpp"
-#include "vox_nav_planning/rrt/LQRPlanner.hpp"
-#include "vox_nav_planning/rrt/LQRRRTStar.hpp"
-#include "vox_nav_planning/experimental/InformedSGCP.hpp"
+// Our native planners
+#include "vox_nav_planning/native_planners/RRTStarF.hpp"
+#include "vox_nav_planning/native_planners/LQRPlanner.hpp"
+#include "vox_nav_planning/native_planners/LQRRRTStar.hpp"
+#include "vox_nav_planning/native_planners/InformedSGCP.hpp"
 
 #include "vox_nav_planning/planner_core.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
