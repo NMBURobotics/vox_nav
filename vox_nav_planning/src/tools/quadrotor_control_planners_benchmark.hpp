@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_PLANNING__PLUGINS__CONTROL_PLANNERS_BENCHMARKING_HPP_
-#define VOX_NAV_PLANNING__PLUGINS__CONTROL_PLANNERS_BENCHMARKING_HPP_
+#ifndef VOX_NAV_PLANNING__PLUGINS__QUADROTOR_CONTROL_PLANNERS_BENCHMARKING_HPP_
+#define VOX_NAV_PLANNING__PLUGINS__QUADROTOR_CONTROL_PLANNERS_BENCHMARKING_HPP_
 #pragma once
 
 // ROS
@@ -25,7 +25,6 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <visualization_msgs/msg/marker_array.hpp>
-#include <vox_nav_utilities/elevation_state_space.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
 // PCL
@@ -66,10 +65,11 @@
 #include "ompl/control/planners/pdst/PDST.h"
 #include "ompl/control/planners/syclop/SyclopRRT.h"
 #include "ompl/control/planners/PlannerIncludes.h"
-#include "vox_nav_planning/rrt/RRTStarF.hpp"
-#include "vox_nav_planning/rrt/LQRPlanner.hpp"
-#include "vox_nav_planning/rrt/LQRRRTStar.hpp"
-#include "vox_nav_planning/experimental/InformedSGCP.hpp"
+#include "vox_nav_planning/native_planners/RRTStarF.hpp"
+#include "vox_nav_planning/native_planners/LQRPlanner.hpp"
+#include "vox_nav_planning/native_planners/LQRRRTStar.hpp"
+#include "vox_nav_planning/native_planners/InformedSGCP.hpp"
+#include "Quadrotor.hpp"
 // OMPL BASE
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/objectives/MaximizeMinClearanceObjective.h>
@@ -100,57 +100,57 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace vox_nav_planning
 {
 
-  struct GroundRobotPose
-  {
-    double x;
-    double y;
-    double z;
-    double yaw;
-    GroundRobotPose()
-    : x(0.0), y(0.0), z(0.0), yaw(0.0) {}
+  struct StateBounds
+  { // 15 state bounds
+    std::pair<double, double> x_pos = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> y_pos = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> z_pos = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> roll = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> pitch = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> yaw = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> x_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> y_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> z_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> roll_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> pitch_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> yaw_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> x_acc = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> y_acc = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> z_acc = std::make_pair<double, double>(0.0, 0.0);
   };
 
-  struct SEBounds
-  {
-    double minx;
-    double maxx;
-    double miny;
-    double maxy;
-    double minz;
-    double maxz;
-    double minyaw;
-    double maxyaw;
-    SEBounds()
-    : minx(0.0), maxx(0.0), miny(0.0), maxy(0.0), minz(0.0), maxz(0.0),
-      minyaw(0.0), maxyaw(0.0) {}
+  struct ControlBounds
+  {  // 6 DOF
+    std::pair<double, double> z_pos = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> z_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> yaw_vel = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> x_acc = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> y_acc = std::make_pair<double, double>(0.0, 0.0);
+    std::pair<double, double> z_acc = std::make_pair<double, double>(0.0, 0.0);
   };
 
-  class ControlPlannersBenchMarking : public rclcpp::Node
+  class QuadrotorControlPlannersBenchMarking : public rclcpp::Node
   {
   private:
-    rclcpp::Logger logger_{rclcpp::get_logger("elevation_control_planners_benchmarks")};
-    std::string selected_state_space_; // se2 ? se3
-    SEBounds se_bounds_;             // struct for keeping things clean
+    rclcpp::Logger logger_{rclcpp::get_logger("quadrotor_control_benchmarking_rclcpp_node")};
+    StateBounds state_bounds_;             // struct for keeping things clean
+    ControlBounds control_bounds_;         // struct for keeping things clean
     ompl::base::StateSpacePtr state_space_;
     ompl::control::ControlSpacePtr control_state_space_;
     ompl::control::SimpleSetupPtr control_simple_setup_;
-    std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
-    std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
-    std::string selected_se2_space_name_;
-    ompl::base::ElevationStateSpace::SE2StateType se2_space_type_;
-    double rho_;
+
+    QuadrotorControl quadrotor_controller_;
 
     std::vector<std::string> selected_planners_;
+    std::string robot_mesh_path_;
     std::string results_output_dir_;
     std::string results_file_regex_;
-    double octomap_voxel_size_;
     double planner_timeout_;
-    // Only used for REEDS or DUBINS
-    double min_turning_radius_;
     double goal_tolerance_;
     double min_euclidean_dist_start_to_goal_;
     int interpolation_parameter_;
@@ -159,9 +159,8 @@ namespace vox_nav_planning
     int max_memory_;
     bool publish_a_sample_bencmark_;
     std::string sample_bencmark_plans_topic_;
+    geometry_msgs::msg::PoseArray start_and_goal_poses_;
 
-    GroundRobotPose start_;
-    GroundRobotPose goal_;
     geometry_msgs::msg::Vector3 robot_body_dimensions_;
 
     std::shared_ptr<octomap::OcTree> original_octomap_octree_;
@@ -180,26 +179,19 @@ namespace vox_nav_planning
 
     std::mutex octomap_mutex_;
 
-    std::shared_ptr<octomap::OcTree> elevated_surfel_octomap_octree_;
-    std::shared_ptr<fcl::CollisionObjectf> elevated_surfels_collision_object_;
-    geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
-    pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
-    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
-    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
-
   public:
     volatile bool is_map_ready_;
     /**
      * @brief Construct a new Planner Bench Marking object
      *
      */
-    ControlPlannersBenchMarking();
+    QuadrotorControlPlannersBenchMarking();
 
     /**
      * @brief Destroy the Planner Bench Marking object
      *
      */
-    ~ControlPlannersBenchMarking();
+    ~QuadrotorControlPlannersBenchMarking();
 
     /**
      * @brief perfrom actual benchmark and return a sample run
@@ -228,15 +220,6 @@ namespace vox_nav_planning
       const ompl::control::Control * control,
       const double duration,
       ompl::base::State * result);
-
-    /**
-    * @brief
-    *
-    * @param si
-    * @return ompl::base::ValidStateSamplerPtr
-    */
-    ompl::base::ValidStateSamplerPtr allocValidStateSampler(
-      const ompl::base::SpaceInformation * si);
 
     /**
     * @brief
@@ -312,4 +295,4 @@ namespace vox_nav_planning
   };   // class ControlPlannersBenchMarking
 }   // namespace vox_nav_planning
 
-#endif // VOX_NAV_PLANNING__PLUGINS__CONTROL_PLANNERS_BENCHMARKING_HPP_
+#endif // VOX_NAV_PLANNING__PLUGINS__QUADROTOR_CONTROL_PLANNERS_BENCHMARKING_HPP_

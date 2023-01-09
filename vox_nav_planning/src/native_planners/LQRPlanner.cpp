@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vox_nav_planning/rrt/LQRPlanner.hpp"
-
+#include "vox_nav_planning/native_planners/LQRPlanner.hpp"
 
 ompl::control::LQRPlanner::LQRPlanner(const SpaceInformationPtr & si)
 : base::Planner(si, "LQRPlanner")

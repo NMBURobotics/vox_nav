@@ -16,7 +16,7 @@
 #define VOX_NAV_PLANNING__RRT__RRTSTARF_HPP_
 
 #include "vox_nav_planning/planner_core.hpp"
-#include "vox_nav_planning/rrt/LQRPlanner.hpp"
+#include "vox_nav_planning/native_planners/LQRPlanner.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
 #include "nav_msgs/msg/path.hpp"
 
@@ -310,7 +310,7 @@ namespace ompl
       {
         return si_->distance(a, b);
       }
-        
+
       std::vector<base::State *> generate_final_course(Node * goal_node)
       {
         std::vector<base::State *> final_path;

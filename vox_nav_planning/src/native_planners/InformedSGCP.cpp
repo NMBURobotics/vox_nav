@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "InformedSGCP.hpp"
+#include "vox_nav_planning/native_planners/InformedSGCP.hpp"
 
 ompl::control::InformedSGCP::InformedSGCP(const SpaceInformationPtr & si)
 : base::Planner(si, "InformedSGCP")

@@ -18,7 +18,7 @@
 #include "vox_nav_planning/planner_core.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
 #include "nav_msgs/msg/path.hpp"
-#include "vox_nav_planning/rrt/LQRPlanner.hpp"
+#include "vox_nav_planning/native_planners/LQRPlanner.hpp"
 
 #include "ompl/control/planners/PlannerIncludes.h"
 #include "ompl/datastructures/NearestNeighbors.h"
