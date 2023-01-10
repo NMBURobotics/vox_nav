@@ -52,7 +52,7 @@ quadrotor_control_planners_benchmark:
       x: 0.4
       y: 0.4
       z: 0.2
-    goal_tolerance: 2.0
+    goal_tolerance: 5.0
     min_euclidean_dist_start_to_goal: 25.0
     batch_size: 1
     epochs: 100
