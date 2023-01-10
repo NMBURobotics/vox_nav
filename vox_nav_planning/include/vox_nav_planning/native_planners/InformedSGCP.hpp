@@ -260,6 +260,8 @@ namespace ompl
       /** \brief Auto calculate neighbours to connect. */
       std::size_t numNeighbors_{std::numeric_limits<std::size_t>::max()};
 
+      int currentBestSolutionStatus_{ompl::base::PlannerStatus::UNKNOWN};
+
       /** \brief Informed sampling strategy */
       std::shared_ptr<base::RejectionInfSampler> rejection_informed_sampler_{nullptr};
 
@@ -448,6 +450,7 @@ namespace ompl
        * TODO(@atas), add more description here*/
       void expandGeometricGraph(
         const std::vector<ompl::base::State *> & samples,
+        const base::PlannerTerminationCondition & ptc,
         GraphT & geometric_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
         WeightMap & geometric_weightmap);
@@ -467,6 +470,7 @@ namespace ompl
         const std::vector<ompl::base::State *> & samples,
         const ompl::base::State * target_vertex_state,
         const vertex_descriptor & target_vertex_descriptor,
+        const base::PlannerTerminationCondition & ptc,
         GraphT & control_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
         WeightMap & control_weightmap,

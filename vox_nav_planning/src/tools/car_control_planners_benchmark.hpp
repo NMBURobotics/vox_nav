@@ -301,6 +301,8 @@ namespace vox_nav_planning
         planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
       } else if (selected_planner_name == std::string("InformedSGCP")) {
         planner = ompl::base::PlannerPtr(new ompl::control::InformedSGCP(si));
+      } else if (selected_planner_name == std::string("PDST")) {
+        planner = ompl::base::PlannerPtr(new ompl::control::PDST(si));
       } else {
         RCLCPP_WARN(
           logger,

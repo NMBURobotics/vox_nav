@@ -4,7 +4,7 @@ car_control_planners_benchmark:
     interpolation_parameter: 50
     octomap_voxel_size: 0.2
     selected_state_space: "SE2" # "DUBINS","REEDS", "SE2", "SE3" ### PS. Use DUBINS OR REEDS for Ackermann
-    selected_planners: [SST, InformedSGCP, EST, KPIECE1]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
+    selected_planners: [SST, InformedSGCP, EST, KPIECE1, PDST]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
     min_turning_radius: 1.5
     state_space_boundries:
       minx: -40.0
@@ -30,7 +30,7 @@ car_control_planners_benchmark:
       z: 1.5
     goal:
       z: 1.5
-    goal_tolerance: 3.14
+    goal_tolerance: 1.0
     min_euclidean_dist_start_to_goal: 25.0
     batch_size: 1
     epochs: 2

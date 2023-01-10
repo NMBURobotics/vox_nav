@@ -312,11 +312,12 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         &weightmap,
         &shortest_paths_geometric,
         &start_goal_descriptor,
-        &thread_id
+        &thread_id,
+        &ptc
         ]  {
           std::vector<ompl::base::State *> samples;
           generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
-          expandGeometricGraph(samples, g, nn, weightmap);
+          expandGeometricGraph(samples, ptc, g, nn, weightmap);
           ensureGoalVertexConnectivity(goal_vertex_, g, nn, weightmap);
 
           // First lets compute an heuristic working backward from goal -> start
@@ -363,7 +364,8 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         &g_weightmap,
         &shortest_paths_control,
         &thread_id,
-        &planner_status
+        &planner_status,
+        &ptc
         ]  {
           std::vector<ompl::base::State *> samples;
           generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
@@ -371,6 +373,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             samples,
             goal_state,
             start_goal_descriptor.second,
+            ptc,
             g_control,
             g_nn,
             g_weightmap,
@@ -483,26 +486,44 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         }
 
         if (valid) {
-          bestControlCost_ = best_control_path_cost;
-          bestControlPath_ = best_control_path;
-          // was this approximate solution or exact?;
+          int temp = ompl::base::PlannerStatus::UNKNOWN;
+
           if (control_threads_status[best_control_path_index] ==
-            base::PlannerStatus::EXACT_SOLUTION)
+            ompl::base::PlannerStatus::EXACT_SOLUTION)
           {
             approximate_solution = false;
             exact_solution = true;
             OMPL_INFORM(
               "%s: Found Exact solution with %.2f cost", getName().c_str(),
-              bestControlCost_.value());
+              best_control_path_cost.value());
+            temp = base::PlannerStatus::EXACT_SOLUTION;
+            bestControlCost_ = best_control_path_cost;
+            bestControlPath_ = best_control_path;
+          }
+
+          if (control_threads_status[best_control_path_index] ==
+            ompl::base::PlannerStatus::APPROXIMATE_SOLUTION &&
+            currentBestSolutionStatus_ == ompl::base::PlannerStatus::EXACT_SOLUTION)
+          {
+            OMPL_INFORM(
+              "%s: Previously Found an Exact solution with %.2f cost but control thread returned approximate solution now, we will skip this solution and keep exact solution.",
+              getName().c_str(), bestControlCost_.value());
+            temp = base::PlannerStatus::EXACT_SOLUTION;
           } else if (control_threads_status[best_control_path_index] ==
-            base::PlannerStatus::APPROXIMATE_SOLUTION)
+            base::PlannerStatus::APPROXIMATE_SOLUTION &&
+            (currentBestSolutionStatus_ == base::PlannerStatus::APPROXIMATE_SOLUTION ||
+            currentBestSolutionStatus_ == base::PlannerStatus::UNKNOWN))
           {
             approximate_solution = true;
             exact_solution = false;
             OMPL_INFORM(
-              "%s: Found Approx. solution with %.2f cost", getName().c_str(),
-              bestControlCost_.value());
+              "%s: Found Approximate solution with %.2f cost", getName().c_str(),
+              best_control_path_cost.value());
+            temp = base::PlannerStatus::APPROXIMATE_SOLUTION;
+            bestControlCost_ = best_control_path_cost;
+            bestControlPath_ = best_control_path;
           }
+          currentBestSolutionStatus_ = temp;
         }
 
         // Reset control graphs anyways
@@ -613,11 +634,11 @@ void ompl::control::InformedSGCP::generateBatchofSamples(
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));
     }
   } while (samples.size() < batch_size);
-
 }
 
 void ompl::control::InformedSGCP::expandGeometricGraph(
   const std::vector<ompl::base::State *> & samples,
+  const base::PlannerTerminationCondition & ptc,
   GraphT & geometric_graph,
   std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
   WeightMap & geometric_weightmap)
@@ -626,6 +647,10 @@ void ompl::control::InformedSGCP::expandGeometricGraph(
   // Create edges to construct an RGG, the vertices closer than radius_ will construct an edge
   // But too close vertices will be discarded in order for memory not to sink
   for (auto && i : samples) {
+    if (ptc == true) {
+      break;
+    }
+
     VertexProperty * this_vertex_property = new VertexProperty();
     this_vertex_property->state = (i);
     std::vector<ompl::control::InformedSGCP::VertexProperty *> nbh;
@@ -718,6 +743,7 @@ void ompl::control::InformedSGCP::expandControlGraph(
   const std::vector<ompl::base::State *> & samples,
   const ompl::base::State * target_vertex_state,
   const vertex_descriptor & target_vertex_descriptor,
+  const base::PlannerTerminationCondition & ptc,
   GraphT & control_graph,
   std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
   WeightMap & control_weightmap,
@@ -729,6 +755,9 @@ void ompl::control::InformedSGCP::expandControlGraph(
   int index_of_goal_bias{0};
 
   for (auto && i : samples) {
+    if (ptc == true) {
+      break;
+    }
     VertexProperty * this_vertex_property = new VertexProperty();
     this_vertex_property->state = i;
 

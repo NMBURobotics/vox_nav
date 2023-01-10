@@ -337,7 +337,6 @@ namespace vox_nav_planning
           ompl::base::PlannerStatus solved = control_simple_setup_->solve(planner_timeout_);
           ompl::control::PathControl solution_path(si);
           try {
-            control_simple_setup_->getSolutionPath().printAsMatrix(std::cout);
             solution_path = control_simple_setup_->getSolutionPath();
           } catch (const std::exception & e) {
             std::cerr << e.what() << '\n';
