@@ -333,7 +333,7 @@ namespace vox_nav_planning
 
           control_simple_setup_->setPlanner(planner_ptr);
           control_simple_setup_->setup();
-          control_simple_setup_->print(std::cout);
+          //control_simple_setup_->print(std::cout);
           ompl::base::PlannerStatus solved = control_simple_setup_->solve(planner_timeout_);
           ompl::control::PathControl solution_path(si);
           try {
@@ -348,7 +348,11 @@ namespace vox_nav_planning
 
           ss << planner_name.c_str() << " " << solved << " " << solution_path.length() << "\n";
           std::pair<int, ompl::control::PathControl> curr_pair(index, solution_path);
-          paths_map.insert(curr_pair);
+          if (solved == ompl::base::PlannerStatus::EXACT_SOLUTION ||
+            solved == ompl::base::PlannerStatus::APPROXIMATE_SOLUTION)
+          {
+            paths_map.insert(curr_pair);
+          }
           control_simple_setup_->clear();
         }
         index++;

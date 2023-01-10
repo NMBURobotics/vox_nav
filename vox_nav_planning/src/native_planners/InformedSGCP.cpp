@@ -21,6 +21,8 @@ ompl::control::InformedSGCP::InformedSGCP(const SpaceInformationPtr & si)
   specs_.optimizingPaths = true;
   specs_.multithreaded = true;
   siC_ = si.get();
+  specs_.canReportIntermediateSolutions = true;
+  specs_.approximateSolutions = true;
 
   declareParam<int>(
     "num_threads", this, &InformedSGCP::setNumThreads, &InformedSGCP::getNumThreads, "1:4:8");
@@ -515,13 +517,17 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             currentBestSolutionStatus_ == base::PlannerStatus::UNKNOWN))
           {
             approximate_solution = true;
-            exact_solution = false;
+            exact_solution = true;
             OMPL_INFORM(
               "%s: Found Approximate solution with %.2f cost", getName().c_str(),
               best_control_path_cost.value());
             temp = base::PlannerStatus::APPROXIMATE_SOLUTION;
             bestControlCost_ = best_control_path_cost;
             bestControlPath_ = best_control_path;
+            if (static_cast<bool>(Planner::pdef_->getIntermediateSolutionCallback())) {
+              pdef_->getIntermediateSolutionCallback()(
+                this, getConstStates(bestControlPath_), bestControlCost_);
+            }
           }
           currentBestSolutionStatus_ = temp;
         }

@@ -582,7 +582,16 @@ namespace ompl
           }
           index++;
         }
+      }
 
+      std::vector<const ompl::base::State *> getConstStates(
+        const std::shared_ptr<ompl::control::PathControl> & path)
+      {
+        std::vector<const ompl::base::State *> states;
+        for (std::size_t i = 0; i < path->getStateCount(); ++i) {
+          states.push_back(path->getState(i));
+        }
+        return states;
       }
 
       /** \brief static method to visulize a graph in RVIZ*/

@@ -25,7 +25,7 @@ def generate_launch_description():
         executable='quadrotor_control_planners_benchmark',
         name='quadrotor_control_planners_benchmark',
         output='screen',
-        prefix=['xterm -e gdb -ex run --args'],
+        #prefix=['xterm -e gdb -ex run --args'],
         parameters=[planner_benchmarking_node_config])
 
     # Create the launch description and populate

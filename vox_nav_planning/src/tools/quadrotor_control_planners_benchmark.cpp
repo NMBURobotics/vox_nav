@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2023 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -327,71 +327,36 @@ namespace vox_nav_planning
 
       // spin until a valid random start and goal poses are found. Also
       // make sure that a soluion exists for generated states
-      volatile bool found_valid_random_start_goal = false;
       double start_yaw, goal_yaw, nan;
 
-      while (!found_valid_random_start_goal) {
+      start_yaw = getRangedRandom(state_bounds_.yaw.first, state_bounds_.yaw.second);
+      goal_yaw = getRangedRandom(state_bounds_.yaw.first, state_bounds_.yaw.second);
 
-        start_yaw = getRangedRandom(state_bounds_.yaw.first, state_bounds_.yaw.second);
-        goal_yaw = getRangedRandom(state_bounds_.yaw.first, state_bounds_.yaw.second);
+      start.pose.position.x = 1;   //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+      start.pose.position.y = 0;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      start.pose.position.z = 2;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
 
-        start.pose.position.x = 1;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-        start.pose.position.y = 0; //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
-        start.pose.position.z = 2;         //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 
-        start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
+      goal.pose.position.x = 35;  //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+      goal.pose.position.y = 35;  //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      goal.pose.position.z = 3;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
 
-        goal.pose.position.x = 35;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-        goal.pose.position.y = 35;//getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
-        goal.pose.position.z = 3;        //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      goal.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 
-        goal.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
+      random_start->values[0] = start.pose.position.x;
+      random_start->values[1] = start.pose.position.y;
+      random_start->values[2] = start.pose.position.z;
+      random_start->values[3] = 0;
+      random_start->values[4] = 0;
+      random_start->values[5] = start_yaw;
 
-        random_start->values[0] = start.pose.position.x;
-        random_start->values[1] = start.pose.position.y;
-        random_start->values[2] = start.pose.position.z;
-        random_start->values[3] = 0;
-        random_start->values[4] = 0;
-        random_start->values[5] = start_yaw;
-
-        random_goal->values[0] = goal.pose.position.x;
-        random_goal->values[1] = goal.pose.position.y;
-        random_goal->values[2] = goal.pose.position.z;
-        random_goal->values[3] = 0;
-        random_goal->values[4] = 0;
-        random_goal->values[5] = goal_yaw;
-
-        // the distance should be above a certain threshold
-        double distance = state_space_->distance(random_start.get(), random_goal.get());
-
-        // create a planner for the defined space
-        ompl::base::PlannerPtr rrtstar_planner;
-        rrtstar_planner =
-          ompl::base::PlannerPtr(new ompl::control::RRT(si));
-        control_simple_setup_->setPlanner(rrtstar_planner);
-
-        //ompl::base::PlannerStatus has_solution = control_simple_setup_->solve(20.0);
-
-        // if it gets to this point , that menas our random states are valid and
-        // already meets min dist requiremnets but now there also has to be a
-        // solution for this problem
-        /*found_valid_random_start_goal =
-          (has_solution == ompl::base::PlannerStatus::EXACT_SOLUTION);*/
-
-
-        found_valid_random_start_goal =
-          (isStateValid(random_start.get()) && isStateValid(random_goal.get()) &&
-          distance > min_euclidean_dist_start_to_goal_);
-
-        if (!found_valid_random_start_goal) {
-          RCLCPP_INFO(
-            this->get_logger(),
-            "Still Looking to sample valid random start and goal states ... ");
-          continue;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      }
+      random_goal->values[0] = goal.pose.position.x;
+      random_goal->values[1] = goal.pose.position.y;
+      random_goal->values[2] = goal.pose.position.z;
+      random_goal->values[3] = 0;
+      random_goal->values[4] = 0;
+      random_goal->values[5] = goal_yaw;
 
       start_and_goal_poses_.poses.clear();
       start_and_goal_poses_.poses.push_back(start.pose);
@@ -403,7 +368,6 @@ namespace vox_nav_planning
       si->setMinMaxControlDuration(20, 40);
       si->setPropagationStepSize(0.005);
 
-
       control_simple_setup_->setStatePropagator(
         [this, si](const ompl::base::State * state, const ompl::control::Control * control,
         const double duration, ompl::base::State * result)
@@ -411,11 +375,7 @@ namespace vox_nav_planning
           this->propagate(si.get(), state, control, duration, result);
         });
 
-      /*RCLCPP_INFO(
-        this->get_logger(),
-        "A valid random start and goal states has been found.");*/
 
-      ompl::tools::Benchmark benchmark(*control_simple_setup_, "benchmark");
       std::mutex plan_mutex;
       int index(0);
       for (auto && planner_name : selected_planners_) {
@@ -433,11 +393,10 @@ namespace vox_nav_planning
 
           control_simple_setup_->setPlanner(planner_ptr);
           control_simple_setup_->setup();
-          control_simple_setup_->print(std::cout);
+          //control_simple_setup_->print(std::cout);
           ompl::base::PlannerStatus solved = control_simple_setup_->solve(planner_timeout_);
           ompl::control::PathControl solution_path(si);
           try {
-            control_simple_setup_->getSolutionPath().printAsMatrix(std::cout);
             solution_path = control_simple_setup_->getSolutionPath();
           } catch (const std::exception & e) {
             std::cerr << e.what() << '\n';
@@ -449,38 +408,17 @@ namespace vox_nav_planning
 
           ss << planner_name.c_str() << " " << solved << " " << solution_path.length() << "\n";
           std::pair<int, ompl::control::PathControl> curr_pair(index, solution_path);
-          paths_map.insert(curr_pair);
+          if (solved == ompl::base::PlannerStatus::EXACT_SOLUTION ||
+            solved == ompl::base::PlannerStatus::APPROXIMATE_SOLUTION)
+          {
+            paths_map.insert(curr_pair);
+          }
           control_simple_setup_->clear();
         }
         index++;
       }
 
       std::cout << ss.str() << std::endl;
-
-      /*
-      benchmark.addPlanner(planner_ptr);
-
-
-      ompl::tools::Benchmark::Request request(planner_timeout_, max_memory_,
-        batch_size_);
-      request.displayProgress = true;
-
-      RCLCPP_INFO(
-        this->get_logger(),
-        "Created sample plans from each planner, "
-        "Now performing actual benchmark, This might take some time.");
-
-      benchmark.benchmark(request);
-
-      benchmark.saveResultsToFile(
-        (results_output_dir_ + results_file_regex_ +
-        "_" + std::to_string(i) + ".log")
-        .c_str());
-
-      RCLCPP_INFO(
-        this->get_logger(),
-        "Bencmarking results saved to given directory: %s",
-        results_output_dir_.c_str());*/
 
       control_simple_setup_->clear();
 
@@ -590,6 +528,7 @@ namespace vox_nav_planning
         marker_array.markers.push_back(text);
         marker_array.markers.push_back(marker);
         total_poses++;
+        start_and_goal_poses_.header = marker.header;
       }
 
       it++;
@@ -598,7 +537,6 @@ namespace vox_nav_planning
     plan_publisher_->publish(marker_array);
 
     // publish start and goal poses
-    start_and_goal_poses_.header = marker_array.markers.front().header;
     start_goal_poses_publisher_->publish(start_and_goal_poses_);
   }
 
