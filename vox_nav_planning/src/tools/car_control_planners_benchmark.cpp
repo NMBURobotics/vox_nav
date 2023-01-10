@@ -244,75 +244,41 @@ namespace vox_nav_planning
 
       // spin until a valid random start and goal poses are found. Also
       // make sure that a soluion exists for generated states
-      volatile bool found_valid_random_start_goal = false;
       double start_yaw, goal_yaw, nan;
 
-      while (!found_valid_random_start_goal) {
+      start_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
+      goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
 
-        start_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
-        goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
+      start.pose.position.x = 29.0;  //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+      start.pose.position.y = 5.0;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, -3.14);
 
-        start.pose.position.x = 1;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-        start.pose.position.y = 0; //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
-        start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
+      goal.pose.position.x = 10;  //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+      goal.pose.position.y = -10;  //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      goal.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 
-        goal.pose.position.x = 35;//getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-        goal.pose.position.y = 35;//getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
-        goal.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
+      vox_nav_utilities::determineValidNearestGoalStart(
+        nearest_elevated_surfel_to_start_,
+        nearest_elevated_surfel_to_goal_,
+        start,
+        goal,
+        elevated_surfel_cloud_);
 
-        vox_nav_utilities::determineValidNearestGoalStart(
-          nearest_elevated_surfel_to_start_,
-          nearest_elevated_surfel_to_goal_,
-          start,
-          goal,
-          elevated_surfel_cloud_);
+      nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
+      nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
 
-        nearest_elevated_surfel_to_start_.pose.orientation = start.pose.orientation;
-        nearest_elevated_surfel_to_goal_.pose.orientation = goal.pose.orientation;
+      random_start->setXYZV(
+        nearest_elevated_surfel_to_start_.pose.position.x,
+        nearest_elevated_surfel_to_start_.pose.position.y,
+        nearest_elevated_surfel_to_start_.pose.position.z, 0);
+      random_start->setSO2(start_yaw);
 
-        random_start->setXYZV(
-          nearest_elevated_surfel_to_start_.pose.position.x,
-          nearest_elevated_surfel_to_start_.pose.position.y,
-          nearest_elevated_surfel_to_start_.pose.position.z, 0);
-        random_start->setSO2(start_yaw);
+      random_goal->setXYZV(
+        nearest_elevated_surfel_to_goal_.pose.position.x,
+        nearest_elevated_surfel_to_goal_.pose.position.y,
+        nearest_elevated_surfel_to_goal_.pose.position.z, 0);
+      random_goal->setSO2(goal_yaw);
 
-        random_goal->setXYZV(
-          nearest_elevated_surfel_to_goal_.pose.position.x,
-          nearest_elevated_surfel_to_goal_.pose.position.y,
-          nearest_elevated_surfel_to_goal_.pose.position.z, 0);
-        random_goal->setSO2(goal_yaw);
-
-        // the distance should be above a certain threshold
-        double distance = state_space_->distance(random_start.get(), random_goal.get());
-
-        // create a planner for the defined space
-        ompl::base::PlannerPtr rrtstar_planner;
-        rrtstar_planner =
-          ompl::base::PlannerPtr(new ompl::control::RRT(si));
-        control_simple_setup_->setPlanner(rrtstar_planner);
-
-        //ompl::base::PlannerStatus has_solution = control_simple_setup_->solve(20.0);
-
-        // if it gets to this point , that menas our random states are valid and
-        // already meets min dist requiremnets but now there also has to be a
-        // solution for this problem
-        /*found_valid_random_start_goal =
-          (has_solution == ompl::base::PlannerStatus::EXACT_SOLUTION);*/
-
-
-        found_valid_random_start_goal =
-          (isStateValid(random_start.get()) && isStateValid(random_goal.get()) &&
-          distance > min_euclidean_dist_start_to_goal_);
-
-        if (!found_valid_random_start_goal) {
-          RCLCPP_INFO(
-            this->get_logger(),
-            "Still Looking to sample valid random start and goal states ... ");
-          continue;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      }
 
       control_simple_setup_->setStartAndGoalStates(random_start, random_goal, goal_tolerance_);
 

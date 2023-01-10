@@ -143,23 +143,7 @@ namespace ompl
       /** \brief Compute distance between states */
       double distanceFunction(const base::State * a, const base::State * b) const
       {
-        // L2 distance is quite weird for geometric planning
-        if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
-          // Assume first 3 dimensions are x,y,z, extract them and compute euclidean distance
-          auto * a_vec = a->as<base::RealVectorStateSpace::StateType>()->values;
-          auto * b_vec = b->as<base::RealVectorStateSpace::StateType>()->values;
-          if (si_->getStateSpace()->getDimension() > 3) {
-            return sqrt(
-              pow(a_vec[0] - b_vec[0], 2) +
-              pow(a_vec[1] - b_vec[1], 2) +
-              pow(a_vec[2] - b_vec[2], 2));
-          } else {
-            // If dimension is higher than 3, just use L2 distance
-            return si_->distance(a, b);
-          }
-        } else {
-          return si_->distance(a, b);
-        }
+        return si_->distance(a, b);
       }
 
       /** \brief Given its vertex_descriptor (id),
@@ -485,7 +469,8 @@ namespace ompl
         const vertex_descriptor & target_vertex_descriptor,
         GraphT & control_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
-        WeightMap & control_weightmap);
+        WeightMap & control_weightmap,
+        int & status);
 
       template<class Heuristic>
       std::list<vertex_descriptor> computeShortestPath(

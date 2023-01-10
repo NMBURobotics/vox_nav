@@ -272,9 +272,12 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   std::vector<std::shared_ptr<PathControl>>
   controls_paths(params_.num_threads_, std::make_shared<PathControl>(si_));
 
-  bool goal_reached{false};
+  bool exact_solution{false}; bool approximate_solution{false};
 
   while (ptc == false) {
+
+    std::vector<int> control_threads_status(params_.num_threads_,
+      ompl::base::PlannerStatus::UNKNOWN);
 
     auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
     if (params_.use_k_nearest_) {
@@ -349,6 +352,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       auto & g_weightmap = weightmap_controls.at(thread_id);
       auto & shortest_paths_control = shortest_paths_controls.at(thread_id);
       auto & start_goal_descriptor = control_start_goal_descriptors.at(thread_id);
+      auto & planner_status = control_threads_status.at(thread_id);
 
       control_threads[thread_id] = new std::thread(
         [this,
@@ -358,7 +362,8 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         &g_nn,
         &g_weightmap,
         &shortest_paths_control,
-        &thread_id
+        &thread_id,
+        &planner_status
         ]  {
           std::vector<ompl::base::State *> samples;
           generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
@@ -368,7 +373,8 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             start_goal_descriptor.second,
             g_control,
             g_nn,
-            g_weightmap);
+            g_weightmap,
+            planner_status);
           auto control_forward_heuristic =
           GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
             this, goal_vertex_, true, thread_id);
@@ -399,14 +405,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     for (size_t i = 0; i < shortest_paths_controls.size(); i++) {
       populateOmplPathfromVertexPath(
         shortest_paths_controls[i], g_controls_[i], controls_paths[i], true);
-    }
-
-    // Check if any of the control threads found an A* path
-    for (auto & path : shortest_paths_controls) {
-      if (path.size() > 0) {
-        goal_reached = true;
-        break;
-      }
     }
 
     // Determine best geometric path found by current threads
@@ -487,6 +485,24 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         if (valid) {
           bestControlCost_ = best_control_path_cost;
           bestControlPath_ = best_control_path;
+          // was this approximate solution or exact?;
+          if (control_threads_status[best_control_path_index] ==
+            base::PlannerStatus::EXACT_SOLUTION)
+          {
+            approximate_solution = false;
+            exact_solution = true;
+            OMPL_INFORM(
+              "%s: Found Exact solution with %.2f cost", getName().c_str(),
+              bestControlCost_.value());
+          } else if (control_threads_status[best_control_path_index] ==
+            base::PlannerStatus::APPROXIMATE_SOLUTION)
+          {
+            approximate_solution = true;
+            exact_solution = false;
+            OMPL_INFORM(
+              "%s: Found Approx. solution with %.2f cost", getName().c_str(),
+              bestControlCost_.value());
+          }
         }
 
         // Reset control graphs anyways
@@ -552,12 +568,12 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   }
 
   // Add the best path to the solution path
-  pdef_->addSolutionPath(bestControlPath_, false, 0.0, getName());
+  pdef_->addSolutionPath(bestControlPath_, approximate_solution, 0.0, getName());
 
   // clear data structures
   clear();
 
-  return {goal_reached, false};
+  return {exact_solution, approximate_solution};
 }
 
 void ompl::control::InformedSGCP::getPlannerData(base::PlannerData & data) const
@@ -685,7 +701,7 @@ void ompl::control::InformedSGCP::ensureGoalVertexConnectivity(
     double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
     edge_descriptor e; bool edge_added;
     // not to construct edges with self, and if nbh is further than radius_, continue
-    if (u == v || (dist > 2 * params_.max_dist_between_vertices_)) {
+    if (u == v || (dist > params_.max_dist_between_vertices_)) {
       continue;
     }
     if (boost::edge(u, v, geometric_graph).second || boost::edge(v, u, geometric_graph).second) {
@@ -704,7 +720,8 @@ void ompl::control::InformedSGCP::expandControlGraph(
   const vertex_descriptor & target_vertex_descriptor,
   GraphT & control_graph,
   std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
-  WeightMap & control_weightmap)
+  WeightMap & control_weightmap,
+  int & status)
 {
   // Now we have a collision free path, we can now find a control path
   // Add all samples to the control NN and contol graph
@@ -801,13 +818,17 @@ void ompl::control::InformedSGCP::expandControlGraph(
 
         // calculate the distance between the arrived state and the start/goal
 
-        double dist_to_target = distanceFunction(
+        double dist_to_target;
+        base::Goal * goal = pdef_->getGoal().get();
+        goal->isSatisfied(arrived_vertex_property->state, &dist_to_target);
+
+        double dist_to_target_approx = distanceFunction(
           arrived_vertex_property->state,
           target_vertex_state);
 
-        // if the distance is less than the radius to target, then add the edge
-        if (dist_to_target < params_.max_dist_between_vertices_) {
-
+        if (goal->isSatisfied(arrived_vertex_property->state, &dist_to_target)) {
+          // if the distance is less than the radius to target, then add the edge
+          // Exact solution
           vertex_descriptor u = arrived_vertex_property->id;
           vertex_descriptor v = target_vertex_descriptor;
           double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
@@ -825,6 +846,27 @@ void ompl::control::InformedSGCP::expandControlGraph(
           boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
           control_weightmap[e] =
             opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
+          status = base::PlannerStatus::EXACT_SOLUTION;
+        } else if (dist_to_target_approx < params_.max_dist_between_vertices_) {
+          // Approximate solution
+          vertex_descriptor u = arrived_vertex_property->id;
+          vertex_descriptor v = target_vertex_descriptor;
+          double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
+          edge_descriptor e; bool edge_added;
+          // not to construct edges with self, and if nbh is further than radius_, continue
+          if (u == v || dist > params_.max_dist_between_vertices_) {
+            continue;
+          }
+          if (boost::edge(u, v, control_graph).second ||
+            boost::edge(v, u, control_graph).second)
+          {
+            continue;
+          }
+          // Once suitable edges are found, populate them over graphs
+          boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
+          control_weightmap[e] =
+            opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
+          status = base::PlannerStatus::APPROXIMATE_SOLUTION;
         }
       }
     }
