@@ -219,7 +219,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
   if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
     params_.max_dist_between_vertices_ =
-      opt_->motionCost(start_vertex_->state, goal_vertex_->state).value() / 20.0;
+      opt_->motionCost(start_vertex_->state, goal_vertex_->state).value() / 10.0;
   } else {
     params_.max_dist_between_vertices_ = 2.0;
   }
@@ -282,11 +282,8 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       ompl::base::PlannerStatus::UNKNOWN);
 
     auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
-    if (params_.use_k_nearest_) {
-      numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
-    } else {
-      radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
-    }
+    numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
+    radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
 
     // The thread ids needs to be immutable for the lambda function
     std::vector<int> thread_ids;
@@ -376,6 +373,13 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             goal_state,
             start_goal_descriptor.second,
             ptc,
+            g_control,
+            g_nn,
+            g_weightmap,
+            planner_status);
+          ensureGoalVertexConnectivity(
+            goal_state,
+            start_goal_descriptor.second,
             g_control,
             g_nn,
             g_weightmap,
@@ -761,6 +765,7 @@ void ompl::control::InformedSGCP::expandControlGraph(
   int index_of_goal_bias{0};
 
   for (auto && i : samples) {
+
     if (ptc == true) {
       break;
     }
@@ -906,6 +911,131 @@ void ompl::control::InformedSGCP::expandControlGraph(
       }
     }
   }
+}
+
+void ompl::control::InformedSGCP::ensureGoalVertexConnectivity(
+  const ompl::base::State * target_vertex_state,
+  const vertex_descriptor & target_vertex_descriptor,
+  GraphT & control_graph,
+  std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
+  WeightMap & control_weightmap,
+  int & status)
+{
+
+  std::vector<ompl::control::InformedSGCP::VertexProperty *> nbh;
+
+  if (params_.use_k_nearest_) {
+    control_nn->nearestK(&control_graph[target_vertex_descriptor], 2.0 * numNeighbors_, nbh);
+  } else {
+    control_nn->nearestR(&control_graph[target_vertex_descriptor], radius_, nbh);
+  }
+
+  // Try to drive from all neighbors to the target vertex
+  for (auto && nb : nbh) {
+    if (nb->id == target_vertex_descriptor) {
+      // Do not add edge to target vertex
+      continue;
+    }
+    // Do not modify original sample, as that will affect geometric RGG
+    auto deep_copy_sample_state = si_->allocState();
+    si_->copyState(deep_copy_sample_state, control_graph[target_vertex_descriptor].state);
+    // Attempt to drive towards newly added sample
+    // Modify the sample to latest arrived state
+    auto c = siC_->allocControl();
+    auto duration = controlSampler_->sampleTo(
+      c,
+      nb->state,
+      deep_copy_sample_state);
+
+    if (duration == 0 || !si_->isValid(deep_copy_sample_state)) {
+      // perhaps due to invalidity of the state, we cannot proceed
+      siC_->freeControl(c);
+      si_->freeState(deep_copy_sample_state);
+      continue;
+    }
+
+    vertex_descriptor arrived_vertex_descriptor = boost::add_vertex(control_graph);
+    auto arrived_vertex_property = new VertexProperty();
+    arrived_vertex_property->id = arrived_vertex_descriptor;
+    arrived_vertex_property->state = deep_copy_sample_state;
+    control_graph[arrived_vertex_descriptor] = *arrived_vertex_property;
+    control_graph[arrived_vertex_descriptor].state = deep_copy_sample_state;
+    control_graph[arrived_vertex_descriptor].control = c;
+    control_graph[arrived_vertex_descriptor].control_duration = duration;
+    control_nn->add(arrived_vertex_property);
+
+    vertex_descriptor u = arrived_vertex_descriptor;
+    vertex_descriptor v = nb->id;
+    double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
+    edge_descriptor e; bool edge_added;
+    // not to construct edges with self, and if nbh is further than radius_, continue
+    if (u == v || dist > params_.max_dist_between_vertices_) {
+      continue;
+    }
+    if (boost::edge(u, v, control_graph).second ||
+      boost::edge(v, u, control_graph).second)
+    {
+      continue;
+    }
+    // Once suitable edges are found, populate them over graphs
+    boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
+    control_weightmap[e] =
+      opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
+
+    // calculate the distance between the arrived state and the start/goal
+
+    double dist_to_target;
+    base::Goal * goal = pdef_->getGoal().get();
+    goal->isSatisfied(arrived_vertex_property->state, &dist_to_target);
+
+    double dist_to_target_approx = distanceFunction(
+      arrived_vertex_property->state,
+      target_vertex_state);
+
+    if (goal->isSatisfied(arrived_vertex_property->state, &dist_to_target)) {
+      // if the distance is less than the radius to target, then add the edge
+      // Exact solution
+      vertex_descriptor u = arrived_vertex_property->id;
+      vertex_descriptor v = target_vertex_descriptor;
+      double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
+      edge_descriptor e; bool edge_added;
+      // not to construct edges with self, and if nbh is further than radius_, continue
+      if (u == v || dist > params_.max_dist_between_vertices_) {
+        continue;
+      }
+      if (boost::edge(u, v, control_graph).second ||
+        boost::edge(v, u, control_graph).second)
+      {
+        continue;
+      }
+      // Once suitable edges are found, populate them over graphs
+      boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
+      control_weightmap[e] =
+        opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
+      status = base::PlannerStatus::EXACT_SOLUTION;
+    } else if (dist_to_target_approx < params_.max_dist_between_vertices_) {
+      // Approximate solution
+      vertex_descriptor u = arrived_vertex_property->id;
+      vertex_descriptor v = target_vertex_descriptor;
+      double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
+      edge_descriptor e; bool edge_added;
+      // not to construct edges with self, and if nbh is further than radius_, continue
+      if (u == v || dist > params_.max_dist_between_vertices_) {
+        continue;
+      }
+      if (boost::edge(u, v, control_graph).second ||
+        boost::edge(v, u, control_graph).second)
+      {
+        continue;
+      }
+      // Once suitable edges are found, populate them over graphs
+      boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
+      control_weightmap[e] =
+        opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
+      status = base::PlannerStatus::APPROXIMATE_SOLUTION;
+    }
+  }
+
 }
 
 std::size_t ompl::control::InformedSGCP::computeNumberOfSamplesInInformedSet() const

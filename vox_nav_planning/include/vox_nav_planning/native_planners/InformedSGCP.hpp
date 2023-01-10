@@ -66,7 +66,7 @@ namespace ompl
       /** \brief All configurable parameters of InformedSGCP. */
 
       /** \brief The number of threads to be used in parallel for geometric and control. */
-      int num_threads_{8};
+      int num_threads_{12};
 
       /** \brief The number of samples to be added to graph in each iteration. */
       int batch_size_{1000};
@@ -91,7 +91,7 @@ namespace ompl
       bool use_astar_hueristic_{false};
 
       /** \brief Frequently push goal to graph. It is used in control graph */
-      double goal_bias_{0.05};
+      double goal_bias_{0.1};
 
       double rewire_factor_{1.0};
 
@@ -471,6 +471,14 @@ namespace ompl
         const ompl::base::State * target_vertex_state,
         const vertex_descriptor & target_vertex_descriptor,
         const base::PlannerTerminationCondition & ptc,
+        GraphT & control_graph,
+        std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
+        WeightMap & control_weightmap,
+        int & status);
+
+      void ensureGoalVertexConnectivity(
+        const ompl::base::State * target_vertex_state,
+        const vertex_descriptor & target_vertex_descriptor,
         GraphT & control_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
         WeightMap & control_weightmap,
