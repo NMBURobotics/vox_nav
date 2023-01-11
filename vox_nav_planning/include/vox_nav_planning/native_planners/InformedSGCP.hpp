@@ -97,6 +97,8 @@ namespace ompl
 
       /** \brief Whether to use nearest neighbor or radius as connection strategy. */
       bool use_k_nearest_{true};
+
+      bool solve_control_graph_{true};
     };
 
     class InformedSGCP : public base::Planner
@@ -245,6 +247,16 @@ namespace ompl
       bool getUseKNearest() const
       {
         return params_.use_k_nearest_;
+      }
+
+      void setSolveControlGraph(bool solve_control_graph)
+      {
+        params_.solve_control_graph_ = solve_control_graph;
+      }
+
+      bool getSolveControlGraph() const
+      {
+        return params_.solve_control_graph_;
       }
 
     private:
@@ -563,13 +575,21 @@ namespace ompl
       void populateOmplPathfromVertexPath(
         const std::list<vertex_descriptor> & vertex_path,
         GraphT & g,
+        WeightMap & weightmap,
         std::shared_ptr<ompl::control::PathControl> & path,
         const bool control = false) const
       {
-        // add intermediate solution
+
         path = std::make_shared<PathControl>(si_);
         int index{0};
         for (auto && i : vertex_path) {
+
+          // Use this opportunity to mark the edges as invalid if they were blacklisted
+          if (g[i].blacklisted) {
+            for (auto ed : boost::make_iterator_range(boost::out_edges(i, g))) {
+              weightmap[ed] = opt_->infiniteCost().value();
+            }
+          }
 
           if (g[i].control == nullptr && control) {
             // This most likely a start or goal vertex

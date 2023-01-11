@@ -41,14 +41,14 @@ EXACT_SOLUTION = 'Exact'
 
 def plot_status():
     # ALL SBO PLANNERS
-    RRTStarF = []
-    LQRRRTStar = []
     SST = []
+    InformedSGCP = []
     EST = []
     KPIECE1 = []
+    PDST = []
 
     file1 = open(
-        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/plugins/exp.txt', 'r')
+        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/tools/quad.txt', 'r')
     Lines = file1.readlines()
     count = 0
     for line in Lines:
@@ -56,35 +56,35 @@ def plot_status():
         result = len(line.split())
         print(line.split()[0])
 
-        if line.split()[0] == 'RRTStarF':
-            RRTStarF = np.append(RRTStarF, line.split()[1])
-        if line.split()[0] == 'LQRRRTStar':
-            LQRRRTStar = np.append(LQRRRTStar, line.split()[1])
         if line.split()[0] == 'SST':
             SST = np.append(SST, line.split()[1])
+        if line.split()[0] == 'InformedSGCP':
+            InformedSGCP = np.append(InformedSGCP, line.split()[1])
         if line.split()[0] == 'EST':
             EST = np.append(EST, line.split()[1])
         if line.split()[0] == 'KPIECE1':
             KPIECE1 = np.append(KPIECE1, line.split()[1])
+        if line.split()[0] == 'PDST':
+            PDST = np.append(PDST, line.split()[1])
 
     exact_sol = []
     apprx_sol = []
     timeout = []
 
     f = [
-        RRTStarF,
-        LQRRRTStar,
         SST,
+        InformedSGCP,
         EST,
-        KPIECE1
+        KPIECE1,
+        PDST
     ]
 
     x = [
-        'RRTStarF',
-        'LQRRRTStar',
         'SST',
+        'InformedSGCP',
         'EST',
-        'KPIECE1'
+        'KPIECE1',
+        'PDST'
     ]
 
     index = 0
@@ -111,92 +111,17 @@ def plot_status():
     plt.title(
         "Stacked bar plot representing status of solutions by evaluated planners")
     plt.show()
-
-
-def plot_status():
-    # ALL SBO PLANNERS
-    RRTStarF = []
-    LQRRRTStar = []
-    SST = []
-    EST = []
-    KPIECE1 = []
-
-    file1 = open(
-        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/plugins/exp.txt', 'r')
-    Lines = file1.readlines()
-    count = 0
-    for line in Lines:
-        count += 1
-        result = len(line.split())
-        print(line.split()[0])
-
-        if line.split()[0] == 'RRTStarF':
-            RRTStarF = np.append(RRTStarF, line.split()[1])
-        if line.split()[0] == 'LQRRRTStar':
-            LQRRRTStar = np.append(LQRRRTStar, line.split()[1])
-        if line.split()[0] == 'SST':
-            SST = np.append(SST, line.split()[1])
-        if line.split()[0] == 'EST':
-            EST = np.append(EST, line.split()[1])
-        if line.split()[0] == 'KPIECE1':
-            KPIECE1 = np.append(KPIECE1, line.split()[1])
-
-    exact_sol = []
-    apprx_sol = []
-    timeout = []
-
-    f = [
-        RRTStarF,
-        LQRRRTStar,
-        SST,
-        EST,
-        KPIECE1
-    ]
-
-    x = [
-        'RRTStarF',
-        'LQRRRTStar',
-        'SST',
-        'EST',
-        'KPIECE1'
-    ]
-
-    index = 0
-    for t in x:
-        unique, counts = np.unique(f[index], return_counts=True)
-        D = dict(zip(unique, counts))
-        exact_sol.append(D.get(EXACT_SOLUTION, 0))
-        apprx_sol.append(D.get(APPROXIMATE_SOLUTION, 0))
-        timeout.append(D.get(TIMEOUT, 0))
-        index += 1
-
-    exact_sol = np.array(exact_sol)
-    apprx_sol = np.array(apprx_sol)
-    timeout = np.array(timeout)
-
-    # plot bars in stack manner
-    plt.bar(x, exact_sol,  color='g')
-    plt.bar(x, apprx_sol, bottom=exact_sol, color='y')
-    plt.bar(x, timeout, bottom=exact_sol + apprx_sol, color='b')
-    plt.xlabel("Planners")
-    plt.ylabel("Total Number of Runs")
-    plt.legend(["Exact Solution",
-               "Approximate Solution", "Timeout"])
-    plt.title(
-        "Stacked bar plot representing status of solutions by evaluated planners")
-    plt.show()
-
 
 def plot_lenght():
     # ALL SBO PLANNERS
-    RRTStarF = []
-    LQRRRTStar = []
     SST = []
+    InformedSGCP = []
     EST = []
     KPIECE1 = []
+    PDST = []
 
     file1 = open(
-        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/plugins/exp.txt', 'r')
+        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/tools/quad.txt', 'r')
     Lines = file1.readlines()
     count = 0
     for line in Lines:
@@ -205,16 +130,16 @@ def plot_lenght():
         print(line.split()[0])
         res = float(line.split()[-1])
 
-        if line.split()[0] == 'RRTStarF' and line.split()[1] == 'Exact':
-            RRTStarF = np.append(RRTStarF, res)
-        if line.split()[0] == 'LQRRRTStar' and line.split()[1] == 'Exact':
-            LQRRRTStar = np.append(LQRRRTStar, res)
         if line.split()[0] == 'SST' and line.split()[1] == 'Exact':
             SST = np.append(SST, res)
+        if line.split()[0] == 'InformedSGCP' and line.split()[1] == 'Exact':
+            InformedSGCP = np.append(InformedSGCP, res)
         if line.split()[0] == 'EST' and line.split()[1] == 'Exact':
             EST = np.append(EST, res)
         if line.split()[0] == 'KPIECE1' and line.split()[1] == 'Exact':
             KPIECE1 = np.append(KPIECE1, res)
+        if line.split()[0] == 'PDST' and line.split()[1] == 'Exact':
+            PDST = np.append(PDST, res)
 
     exact_sol = []
     apprx_sol = []
@@ -223,19 +148,19 @@ def plot_lenght():
     import plotly.express as px
 
     data = [
-        RRTStarF,
-        LQRRRTStar,
         SST,
+        InformedSGCP,
         EST,
-        KPIECE1
+        KPIECE1,
+        PDST
     ]
 
     x = [
-        'RRTStarF',
-        'LQRRRTStar',
         'SST',
+        'InformedSGCP',
         'EST',
-        'KPIECE1'
+        'KPIECE1',
+        'PDST'
     ]
 
     fig = plt.figure(figsize=(10, 7))
@@ -293,5 +218,5 @@ def plot_lenght():
 
 
 if __name__ == '__main__':
-    # plot_status()
+    plot_status()
     plot_lenght()

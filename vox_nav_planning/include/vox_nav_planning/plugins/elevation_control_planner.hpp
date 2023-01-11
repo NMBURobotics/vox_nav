@@ -163,6 +163,10 @@ namespace vox_nav_planning
         planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
       } else if (selected_planner_name == std::string("InformedSGCP")) {
         planner = ompl::base::PlannerPtr(new ompl::control::InformedSGCP(si));
+        planner->as<ompl::control::InformedSGCP>()->setUseValidSampler(true);
+        planner->as<ompl::control::InformedSGCP>()->setMaxDistBetweenVertices(1.0);
+        planner->as<ompl::control::InformedSGCP>()->setUseKNearest(true);
+        planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(false);
       } else {
         RCLCPP_WARN(
           logger,
