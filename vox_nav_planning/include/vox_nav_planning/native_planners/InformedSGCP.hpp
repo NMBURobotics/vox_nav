@@ -582,6 +582,7 @@ namespace ompl
 
         path = std::make_shared<PathControl>(si_);
         int index{0};
+        vertex_descriptor prev_vertex = vertex_path.front();
         for (auto && i : vertex_path) {
 
           // Use this opportunity to mark the edges as invalid if they were blacklisted
@@ -589,6 +590,16 @@ namespace ompl
             for (auto ed : boost::make_iterator_range(boost::out_edges(i, g))) {
               weightmap[ed] = opt_->infiniteCost().value();
             }
+          }
+
+          if (index > 0) {
+            bool is_edge_valid = si_->checkMotion(g[prev_vertex].state, g[i].state);
+            if (!is_edge_valid) {
+              // Mark the edge as invalid
+              auto ed = boost::edge(prev_vertex, i, g);
+              weightmap[ed.first] = opt_->infiniteCost().value();
+            }
+            prev_vertex = i;
           }
 
           if (g[i].control == nullptr && control) {
