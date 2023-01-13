@@ -188,33 +188,42 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   // check if the problem is setup properly
   checkValidity();
 
-  // reset goal and start vertex properties
-  goal_vertex_ = new VertexProperty();
-  start_vertex_ = new VertexProperty();
 
   // get the goal node and state
   auto * goal_state = si_->allocState();
-  while (const base::State * goal = pis_.nextGoal()) {
-    si_->copyState(goal_state, goal);
-  }
-  goal_vertex_->state = goal_state;
-  for (auto & nn : geometrics_nn_) {
-    nn->add(goal_vertex_);
-  }
-
-  // get start node and state
   auto * start_state = si_->allocState();
+  // get start node and state
   while (const base::State * st = pis_.nextStart()) {
     si_->copyState(start_state, st);
   }
-  start_vertex_->state = start_state;
-  // add start to geometric nn
-  for (auto & nn : geometrics_nn_) {
-    nn->add(start_vertex_);
+  while (const base::State * goal = pis_.nextGoal()) {
+    si_->copyState(goal_state, goal);
   }
+
+  // reset goal and start vertex properties
+  geometric_start_vertex_ = new VertexProperty();
+  geometric_goal_vertex_ = new VertexProperty();
+  geometric_start_vertex_->state = start_state;
+  geometric_goal_vertex_->state = goal_state;
+  for (auto & nn : geometrics_nn_) {
+    nn->add(geometric_goal_vertex_);
+    nn->add(geometric_start_vertex_);
+  }
+
   // add start to all control nns
   for (int i = 0; i < params_.num_threads_; i++) {
-    controls_nn_[i]->add(start_vertex_);
+    auto this_control_start_vertex = new VertexProperty();
+    auto this_control_goal_vertex = new VertexProperty();
+    if (i % 2 == 0) {
+      this_control_start_vertex->state = start_state;
+      this_control_goal_vertex->state = goal_state;
+    } else {
+      this_control_start_vertex->state = goal_state;
+      this_control_goal_vertex->state = start_state;
+    }
+    controls_nn_[i]->add(this_control_start_vertex);
+    control_start_vertices_.push_back(this_control_start_vertex);
+    control_goal_vertices_.push_back(this_control_goal_vertex);
   }
 
   if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
@@ -228,10 +237,10 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   for (auto & graph : g_geometrics_) {
     vertex_descriptor start_vertex_descriptor = boost::add_vertex(graph);
     vertex_descriptor goal_vertex_descriptor = boost::add_vertex(graph);
-    start_vertex_->id = start_vertex_descriptor;
-    goal_vertex_->id = goal_vertex_descriptor;
-    graph[start_vertex_descriptor] = *start_vertex_;
-    graph[goal_vertex_descriptor] = *goal_vertex_;
+    geometric_start_vertex_->id = start_vertex_descriptor;
+    geometric_goal_vertex_->id = goal_vertex_descriptor;
+    graph[start_vertex_descriptor] = *geometric_start_vertex_;
+    graph[goal_vertex_descriptor] = *geometric_goal_vertex_;
     geometric_start_goal_descriptors.push_back(
       std::make_pair(start_vertex_descriptor, goal_vertex_descriptor));
   }
@@ -241,10 +250,9 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   for (int i = 0; i < params_.num_threads_; i++) {
     vertex_descriptor control_g_root = boost::add_vertex(g_controls_[i]);
     vertex_descriptor control_g_target = boost::add_vertex(g_controls_[i]);
-
-    g_controls_[i][control_g_root] = *start_vertex_;
+    g_controls_[i][control_g_root] = *control_start_vertices_[i];
     g_controls_[i][control_g_root].id = control_g_root;
-    g_controls_[i][control_g_target] = *goal_vertex_;
+    g_controls_[i][control_g_target] = *control_goal_vertices_[i];
     g_controls_[i][control_g_target].id = control_g_target;
     control_start_goal_descriptors.push_back(
       std::make_pair(
@@ -254,7 +262,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
   OMPL_INFORM(
     "%s: Using %u geometric graphs.\n", getName().c_str(), g_geometrics_.size());
-
   OMPL_INFORM(
     "%s: Using %u control graphs.\n", getName().c_str(), g_controls_.size());
 
@@ -285,8 +292,9 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       ompl::base::PlannerStatus::UNKNOWN);
 
     auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
-    numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
-    radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
+    //numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
+    //radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
+    numNeighbors_ = 20;
 
     // The thread ids needs to be immutable for the lambda function
     std::vector<int> thread_ids;
@@ -320,13 +328,13 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
           std::vector<ompl::base::State *> samples;
           generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
           expandGeometricGraph(samples, ptc, g, nn, weightmap);
-          ensureGoalVertexConnectivity(goal_vertex_, g, nn, weightmap);
+          ensureGoalVertexConnectivity(&g[start_goal_descriptor.second], g, nn, weightmap);
 
           // First lets compute an heuristic working backward from goal -> start
           // This is done by running A*/Dijkstra backwards from goal to start with no collision checking
           auto heuristic =
           GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
-            this, start_vertex_, false, thread_id);
+            this, &g[start_goal_descriptor.first], false, thread_id);
           shortest_paths_geometric =
           computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
             g, weightmap, heuristic,
@@ -560,14 +568,14 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             controls_nn_[i]->clear();
 
             // Add the start and goal vertex to the control graph
-            controls_nn_[i]->add(start_vertex_);
+            controls_nn_[i]->add(geometric_start_vertex_);
 
             // Add goal and start to forward control graph
             auto control_g_root = boost::add_vertex(g_controls_[i]);
             auto control_g_target = boost::add_vertex(g_controls_[i]);
-            g_controls_[i][control_g_root] = *start_vertex_;
+            g_controls_[i][control_g_root] = *geometric_start_vertex_;
             g_controls_[i][control_g_root].id = control_g_root;
-            g_controls_[i][control_g_target] = *goal_vertex_;
+            g_controls_[i][control_g_target] = *geometric_goal_vertex_;
             g_controls_[i][control_g_target].id = control_g_target;
 
             // Let us know which thread found the best solution
@@ -659,7 +667,9 @@ void ompl::control::InformedSGCP::generateBatchofSamples(
         if (opt_->isCostBetterThan(bestGeometricCost_, opt_->infiniteCost())) {
           // A valid solution was found
           // Sample in the informed set, and I mean tightly
-          auto euc_cost = opt_->motionCost(start_vertex_->state, goal_vertex_->state);
+          auto euc_cost = opt_->motionCost(
+            geometric_start_vertex_->state,
+            geometric_goal_vertex_->state);
           if (opt_->isCostBetterThan(euc_cost, bestGeometricCost_)) {
             min_cost = bestGeometricCost_;
           }
@@ -864,7 +874,9 @@ void ompl::control::InformedSGCP::expandControlGraph(
           nb->state,
           deep_copy_sample_state);
 
-        if (duration < siC_->getMinControlDuration() || !si_->isValid(deep_copy_sample_state)) {
+        if (duration < siC_->getMinControlDuration() ||
+          !si_->isValid(deep_copy_sample_state))
+        {
           // perhaps due to invalidity of the state, we cannot proceed
           siC_->freeControl(c);
           si_->freeState(deep_copy_sample_state);
@@ -889,9 +901,8 @@ void ompl::control::InformedSGCP::expandControlGraph(
         if (u == v || dist > params_.max_dist_between_vertices_) {
           continue;
         }
-        if (boost::edge(
-            u, v,
-            control_graph).second || boost::edge(v, u, control_graph).second)
+        if (boost::edge(u, v, control_graph).second ||
+          boost::edge(v, u, control_graph).second)
         {
           continue;
         }
@@ -979,15 +990,14 @@ void ompl::control::InformedSGCP::ensureGoalVertexConnectivity(
 
     // calculate the distance between the arrived state and the start/goal
 
-    double dist_to_target;
     base::Goal * goal = pdef_->getGoal().get();
-    goal->isSatisfied(arrived_vertex_property->state, &dist_to_target);
+    auto * goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
+    double goal_tolerance = goal_s->getThreshold();
 
     double dist_to_target_approx = distanceFunction(
-      arrived_vertex_property->state,
-      target_vertex_state);
+      arrived_vertex_property->state, target_vertex_state);
 
-    if (goal->isSatisfied(arrived_vertex_property->state, &dist_to_target)) {
+    if (dist_to_target_approx < goal_tolerance) {
       // if the distance is less than the radius to target, then add the edge
       // Exact solution
       vertex_descriptor u = arrived_vertex_property->id;
@@ -1044,12 +1054,12 @@ std::size_t ompl::control::InformedSGCP::computeNumberOfSamplesInInformedSet() c
     // Get the best cost to come from any start.
     auto costToCome = opt_->infiniteCost();
     costToCome = opt_->betterCost(
-      costToCome, opt_->motionCostHeuristic(start_vertex_->state, vertex));
+      costToCome, opt_->motionCostHeuristic(geometric_start_vertex_->state, vertex));
 
     // Get the best cost to go to any goal.
     auto costToGo = opt_->infiniteCost();
     costToGo = opt_->betterCost(
-      costToCome, opt_->motionCostHeuristic(vertex, goal_vertex_->state));
+      costToCome, opt_->motionCostHeuristic(vertex, geometric_goal_vertex_->state));
 
     // If this can possibly improve the current solution, it is in the informed set.
     if (opt_->isCostBetterThan(

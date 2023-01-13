@@ -448,8 +448,11 @@ namespace ompl
       };  // SimpleVertexVisitor
 
       /** \brief Keep a global copy of start and goal vertex properties*/
-      VertexProperty * start_vertex_{nullptr};
-      VertexProperty * goal_vertex_{nullptr};
+      VertexProperty * geometric_start_vertex_{nullptr};
+      VertexProperty * geometric_goal_vertex_{nullptr};
+
+      std::vector<VertexProperty *> control_start_vertices_;
+      std::vector<VertexProperty *> control_goal_vertices_;
 
       /** \brief The geometric and control graphs */
       std::vector<GraphT> g_geometrics_;
