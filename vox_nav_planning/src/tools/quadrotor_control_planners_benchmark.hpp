@@ -158,6 +158,7 @@ namespace vox_nav_planning
     int epochs_;
     int max_memory_;
     bool publish_a_sample_bencmark_;
+    std::string octomap_from_file_;
     std::string sample_bencmark_plans_topic_;
     geometry_msgs::msg::PoseArray start_and_goal_poses_;
 
@@ -176,6 +177,8 @@ namespace vox_nav_planning
     rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr
       get_maps_and_surfels_client_;
     rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
+    // Publish the octomap
+    rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_publisher_;
 
     std::mutex octomap_mutex_;
 
@@ -284,6 +287,9 @@ namespace vox_nav_planning
         planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
       } else if (selected_planner_name == std::string("InformedSGCP")) {
         planner = ompl::base::PlannerPtr(new ompl::control::InformedSGCP(si));
+        planner->as<ompl::control::InformedSGCP>()->setKNumberControls(2);
+        planner->as<ompl::control::InformedSGCP>()->setBatchSize(100);
+        planner->as<ompl::control::InformedSGCP>()->setMinDistBetweenVertices(0.5);
       } else if (selected_planner_name == std::string("PDST")) {
         planner = ompl::base::PlannerPtr(new ompl::control::PDST(si));
       } else {

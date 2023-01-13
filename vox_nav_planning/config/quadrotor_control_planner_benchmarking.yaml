@@ -1,58 +1,58 @@
 quadrotor_control_planners_benchmark:
   ros__parameters:
-    planner_timeout: 40.0
+    planner_timeout: 60.0
     interpolation_parameter: 50
-    selected_planners: [SST, InformedSGCP, EST, KPIECE1, PDST]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
+    selected_planners: [  InformedSGCP ]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
     robot_mesh_path: "package://vox_nav_planning/config/drone.stl" # leave empty if you do not have one, robot_mesh_path: ""
     state_bounds:
-      min_x_pos: -50.0
-      max_x_pos: 50.0
-      min_y_pos: -50.0
-      max_y_pos: 50.0
+      min_x_pos: -10.0
+      max_x_pos: 10.0
+      min_y_pos: -7.0
+      max_y_pos: 7.0
       min_z_pos: 0.0
-      max_z_pos: 10.0
+      max_z_pos: 2.0
       min_roll: -0.5
       max_roll: 0.5
       min_pitch: -0.4
       max_pitch: 0.4
-      min_yaw: -3.14
-      max_yaw: 3.14
-      min_x_vel: -1.5
-      max_x_vel: 1.5
-      min_y_vel: -1.5
-      max_y_vel: 1.5
-      min_z_vel: -1.5
-      max_z_vel: 1.5
-      min_roll_vel: -0.5
-      max_roll_vel: 0.5
-      min_pitch_vel: -0.5
-      max_pitch_vel: 0.5
-      min_yaw_vel: -0.5
-      max_yaw_vel: 0.5
-      min_x_acc: -1.5
-      max_x_acc: 1.5
-      min_y_acc: -1.5
-      max_y_acc: 1.5
+      min_yaw: -0.5
+      max_yaw: 0.5
+      min_x_vel: -0.5
+      max_x_vel: 0.5
+      min_y_vel: -0.5
+      max_y_vel: 0.5
+      min_z_vel: -0.5
+      max_z_vel: 0.5
+      min_roll_vel: -0.2
+      max_roll_vel: 0.2
+      min_pitch_vel: -0.2
+      max_pitch_vel: 0.2
+      min_yaw_vel: -0.2
+      max_yaw_vel: 0.2
+      min_x_acc: -0.5
+      max_x_acc: 0.5
+      min_y_acc: -0.5
+      max_y_acc: 0.5
       min_z_acc: -0.5
       max_z_acc: 0.5
     control_bounds:
       min_z_pos: -0.0
-      max_z_pos: 6.0
-      min_z_vel: -0.1
+      max_z_pos: 3.0
+      min_z_vel: -1.0
       max_z_vel: 1.0
-      min_yaw_vel: -0.5
-      max_yaw_vel: 0.5
+      min_yaw_vel: -1.5
+      max_yaw_vel: 1.5
       min_x_acc: -1.5
       max_x_acc: 1.5
       min_y_acc: -1.5
       max_y_acc: 1.5
-      min_z_acc: -0.1
+      min_z_acc: -1.5
       max_z_acc: 1.5
     robot_body_dimens:
-      x: 0.4
-      y: 0.4
+      x: 0.2
+      y: 0.2
       z: 0.2
-    goal_tolerance: 5.0
+    goal_tolerance: 0.5
     min_euclidean_dist_start_to_goal: 25.0
     batch_size: 1
     epochs: 100
@@ -61,3 +61,5 @@ quadrotor_control_planners_benchmark:
     results_file_regex: "control"
     publish_a_sample_bencmark: true
     sample_bencmark_plans_topic: "benchmark_plan"
+    octomap_from_file: "/home/atas/Downloads/quad_world_octomap.bt"
+    #octomap_from_file: ""

@@ -145,7 +145,17 @@ namespace ompl
       /** \brief Compute distance between states */
       double distanceFunction(const base::State * a, const base::State * b) const
       {
-        return si_->distance(a, b);
+        if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
+          // Use only first three elemnts of state space
+          auto a_ = a->as<base::RealVectorStateSpace::StateType>();
+          auto b_ = b->as<base::RealVectorStateSpace::StateType>();
+          return sqrt(
+            pow(a_->values[0] - b_->values[0], 2) +
+            pow(a_->values[1] - b_->values[1], 2) +
+            pow(a_->values[2] - b_->values[2], 2));
+        } else {
+          return si_->distance(a, b);
+        }
       }
 
       /** \brief Given its vertex_descriptor (id),
@@ -227,6 +237,16 @@ namespace ompl
       bool getUseValidSampler() const
       {
         return params_.use_valid_sampler_;
+      }
+
+      void setKNumberControls(int k_number_of_controls)
+      {
+        params_.k_number_of_controls_ = k_number_of_controls;
+      }
+
+      int getKNumberControls() const
+      {
+        return params_.k_number_of_controls_;
       }
 
       void setGoalBias(double goal_bias)

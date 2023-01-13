@@ -85,6 +85,7 @@ namespace vox_nav_planning
     this->declare_parameter("results_file_regex", "SE2");
     this->declare_parameter("publish_a_sample_bencmark", true);
     this->declare_parameter("sample_bencmark_plans_topic", "benchmark_plan");
+    this->declare_parameter("octomap_from_file", "");
 
     this->get_parameter("selected_planners", selected_planners_);
     this->get_parameter("robot_mesh_path", robot_mesh_path_);
@@ -104,6 +105,7 @@ namespace vox_nav_planning
     this->get_parameter("publish_a_sample_bencmark", publish_a_sample_bencmark_);
     this->get_parameter(
       "sample_bencmark_plans_topic", sample_bencmark_plans_topic_);
+    this->get_parameter("octomap_from_file", octomap_from_file_);
 
     // Place all state bounds in a struct
     this->get_parameter("state_bounds.min_x_pos", state_bounds_.x_pos.first);
@@ -167,6 +169,10 @@ namespace vox_nav_planning
       get_maps_and_surfels_client_node_->create_client<vox_nav_msgs::srv::GetMapsAndSurfels>(
       "get_maps_and_surfels");
 
+
+    octomap_publisher_ = this->create_publisher<octomap_msgs::msg::Octomap>(
+      "octomap",
+      rclcpp::SystemDefaultsQoS());
     setupMap();
 
     auto state_bounds = std::make_shared<ompl::base::RealVectorBounds>(15);
@@ -220,6 +226,7 @@ namespace vox_nav_planning
 
     state_space_ = std::make_shared<ompl::base::RealVectorStateSpace>(15);
     state_space_->as<ompl::base::RealVectorStateSpace>()->setBounds(*state_bounds);
+    state_space_->setLongestValidSegmentFraction(0.01);
 
     control_state_space_ = std::make_shared<ompl::control::RealVectorControlSpace>(state_space_, 6);
     control_state_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(*control_bounds);
@@ -263,32 +270,41 @@ namespace vox_nav_planning
     double x_pos = states->values[0];
     double y_pos = states->values[1];
     double z_pos = states->values[2];
+
     double roll = states->values[3];
     double pitch = states->values[4];
     double yaw = states->values[5];
+
     double x_vel = states->values[6];
     double y_vel = states->values[7];
     double z_vel = states->values[8];
+
     double roll_vel = states->values[9];
     double pitch_vel = states->values[10];
     double yaw_vel = states->values[11];
+
     double x_acc = states->values[12];
     double y_acc = states->values[13];
     double z_acc = states->values[14];
 
     // Extract all the controls and propagate them
     double c_z_pos = controls->values[0];
-    double c_z_vel = controls->values[1];
-    double c_yaw_vel = controls->values[2];
+    double c_yaw = controls->values[1];
+    double c_z_vel = controls->values[2];
     double c_x_acc = controls->values[3];
     double c_y_acc = controls->values[4];
     double c_z_acc = controls->values[5];
 
     // Propagate the states
     auto propogated_states = quadrotor_controller_.step(
-      x_pos, y_pos, z_pos, roll, pitch, yaw, x_vel, y_vel, z_vel,
-      roll_vel, pitch_vel, yaw_vel, x_acc, y_acc, z_acc,
-      c_z_pos, c_z_vel, c_yaw_vel, c_x_acc, c_y_acc, c_z_acc, duration);
+      x_pos, y_pos, z_pos,
+      roll, pitch, yaw,
+      x_vel, y_vel, z_vel,
+      roll_vel, pitch_vel, yaw_vel,
+      x_acc, y_acc, z_acc,
+      c_z_pos, c_yaw, c_z_vel,
+      c_x_acc, c_y_acc, c_z_acc,
+      duration);
 
     // Set the result
     auto * result_states = result->as<ompl::base::RealVectorStateSpace::StateType>();
@@ -332,15 +348,15 @@ namespace vox_nav_planning
       start_yaw = getRangedRandom(state_bounds_.yaw.first, state_bounds_.yaw.second);
       goal_yaw = getRangedRandom(state_bounds_.yaw.first, state_bounds_.yaw.second);
 
-      start.pose.position.x = 1;   //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-      start.pose.position.y = 0;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      start.pose.position.x = -6.9;   //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+      start.pose.position.y = -5.9;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
       start.pose.position.z = 2;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
 
-      start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
+      start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 1.57);
 
-      goal.pose.position.x = 35;  //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-      goal.pose.position.y = 35;  //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
-      goal.pose.position.z = 3;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      goal.pose.position.x = 7.9;  //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+      goal.pose.position.y = 3.8;  //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      goal.pose.position.z = 2;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
 
       goal.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 
@@ -365,7 +381,7 @@ namespace vox_nav_planning
       control_simple_setup_->setStartAndGoalStates(random_start, random_goal, goal_tolerance_);
 
       auto si = control_simple_setup_->getSpaceInformation();
-      si->setMinMaxControlDuration(20, 40);
+      si->setMinMaxControlDuration(40, 80);
       si->setPropagationStepSize(0.01);
 
       control_simple_setup_->setStatePropagator(
@@ -544,55 +560,90 @@ namespace vox_nav_planning
   {
     const std::lock_guard<std::mutex> lock(octomap_mutex_);
 
-    while (!is_map_ready_ && rclcpp::ok()) {
+    if (!octomap_from_file_.empty()) {
+      // Read Octomap from file
 
-      auto request = std::make_shared<vox_nav_msgs::srv::GetMapsAndSurfels::Request>();
+      octomap::OcTree temp_tree(0.2);
+      temp_tree.readBinary(octomap_from_file_);
 
-      while (!get_maps_and_surfels_client_->wait_for_service(std::chrono::seconds(1))) {
-        if (!rclcpp::ok()) {
-          RCLCPP_ERROR(
-            logger_,
-            "Interrupted while waiting for the get_maps_and_surfels service. Exiting");
-          return;
-        }
-        RCLCPP_INFO(
-          logger_,
-          "get_maps_and_surfels service not available, waiting and trying again");
-      }
-
-      auto result_future = get_maps_and_surfels_client_->async_send_request(request);
-      if (rclcpp::spin_until_future_complete(
-          get_maps_and_surfels_client_node_,
-          result_future) !=
-        rclcpp::FutureReturnCode::SUCCESS)
-      {
-        RCLCPP_ERROR(logger_, "/get_maps_and_surfels service call failed");
-      }
-      auto response = result_future.get();
-
-      if (response->is_valid) {
-        is_map_ready_ = true;
-      } else {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        RCLCPP_INFO(
-          logger_, "Waiting for GetMapsAndSurfels service to provide correct maps.");
-        continue;
-      }
-
-      auto original_octomap_octree =
-        dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(response->original_octomap));
-      original_octomap_octree_ = std::make_shared<octomap::OcTree>(*original_octomap_octree);
-
-      delete original_octomap_octree;
+      original_octomap_octree_ = std::make_shared<octomap::OcTree>(temp_tree);
 
       auto original_octomap_fcl_octree = std::make_shared<fcl::OcTreef>(original_octomap_octree_);
       original_octomap_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
         std::shared_ptr<fcl::CollisionGeometryf>(original_octomap_fcl_octree));
 
+      RCLCPP_INFO(this->get_logger(), "Read Octomap from file");
+
+      // Publish the octomap
+      octomap_msgs::msg::Octomap octomap_msg;
+      octomap_msgs::fullMapToMsg(*original_octomap_octree_, octomap_msg);
+      octomap_msg.header.frame_id = "map";
+      octomap_msg.header.stamp = rclcpp::Clock().now();
+
+      for (int i = 0; i < 100; i++) {
+        octomap_publisher_->publish(octomap_msg);
+      }
+
       RCLCPP_INFO(
         logger_,
         "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
-        "octomap for state validity (aka collision check)", original_octomap_octree_->size());
+        "octomap for state validity (aka collision check)",
+        original_octomap_octree_->size());
+
+      is_map_ready_ = true;
+
+    } else {
+
+      while (!is_map_ready_ && rclcpp::ok()) {
+
+        auto request = std::make_shared<vox_nav_msgs::srv::GetMapsAndSurfels::Request>();
+
+        while (!get_maps_and_surfels_client_->wait_for_service(std::chrono::seconds(1))) {
+          if (!rclcpp::ok()) {
+            RCLCPP_ERROR(
+              logger_,
+              "Interrupted while waiting for the get_maps_and_surfels service. Exiting");
+            return;
+          }
+          RCLCPP_INFO(
+            logger_,
+            "get_maps_and_surfels service not available, waiting and trying again");
+        }
+
+        auto result_future = get_maps_and_surfels_client_->async_send_request(request);
+        if (rclcpp::spin_until_future_complete(
+            get_maps_and_surfels_client_node_,
+            result_future) !=
+          rclcpp::FutureReturnCode::SUCCESS)
+        {
+          RCLCPP_ERROR(logger_, "/get_maps_and_surfels service call failed");
+        }
+        auto response = result_future.get();
+
+        if (response->is_valid) {
+          is_map_ready_ = true;
+        } else {
+          std::this_thread::sleep_for(std::chrono::seconds(1));
+          RCLCPP_INFO(
+            logger_, "Waiting for GetMapsAndSurfels service to provide correct maps.");
+          continue;
+        }
+
+        auto original_octomap_octree =
+          dynamic_cast<octomap::OcTree *>(octomap_msgs::fullMsgToMap(response->original_octomap));
+        original_octomap_octree_ = std::make_shared<octomap::OcTree>(*original_octomap_octree);
+
+        delete original_octomap_octree;
+
+        auto original_octomap_fcl_octree = std::make_shared<fcl::OcTreef>(original_octomap_octree_);
+        original_octomap_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
+          std::shared_ptr<fcl::CollisionGeometryf>(original_octomap_fcl_octree));
+
+        RCLCPP_INFO(
+          logger_,
+          "Recieved a valid Octomap with %d nodes, A FCL collision tree will be created from this "
+          "octomap for state validity (aka collision check)", original_octomap_octree_->size());
+      }
     }
   }
 

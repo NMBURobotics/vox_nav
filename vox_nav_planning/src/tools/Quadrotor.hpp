@@ -21,8 +21,8 @@ class QuadrotorControl
 {
 private:
 // Simulation parameters
-  double g = 9.81;
-  double m = 0.2;
+  double g = 1.0;
+  double m = 1.0;
   double Ixx = 1;
   double Iyy = 1;
   double Izz = 1;
@@ -38,7 +38,7 @@ private:
 // Derivative coefficients
   double Kd_x = 10;
   double Kd_y = 10;
-  double Kd_z = 1;
+  double Kd_z = 10;
 
 public:
   QuadrotorControl()

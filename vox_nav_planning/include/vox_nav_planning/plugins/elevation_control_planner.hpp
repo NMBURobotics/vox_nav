@@ -166,7 +166,7 @@ namespace vox_nav_planning
         planner->as<ompl::control::InformedSGCP>()->setUseValidSampler(false);
         planner->as<ompl::control::InformedSGCP>()->setMaxDistBetweenVertices(1.0);
         planner->as<ompl::control::InformedSGCP>()->setUseKNearest(true);
-        planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(false);
+        planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(true);
       } else {
         RCLCPP_WARN(
           logger,
