@@ -287,9 +287,8 @@ namespace vox_nav_planning
         planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
       } else if (selected_planner_name == std::string("InformedSGCP")) {
         planner = ompl::base::PlannerPtr(new ompl::control::InformedSGCP(si));
-        planner->as<ompl::control::InformedSGCP>()->setKNumberControls(2);
-        planner->as<ompl::control::InformedSGCP>()->setBatchSize(100);
         planner->as<ompl::control::InformedSGCP>()->setMinDistBetweenVertices(0.5);
+        planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(true);
       } else if (selected_planner_name == std::string("PDST")) {
         planner = ompl::base::PlannerPtr(new ompl::control::PDST(si));
       } else {

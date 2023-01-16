@@ -292,9 +292,8 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       ompl::base::PlannerStatus::UNKNOWN);
 
     auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
-    //numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
-    //radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
-    numNeighbors_ = 20;
+    numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
+    radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
 
     // The thread ids needs to be immutable for the lambda function
     std::vector<int> thread_ids;
@@ -459,7 +458,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     // Determine best control path found by current threads
     auto best_control_path(std::make_shared<PathControl>(si_));
     auto best_control_path_cost = opt_->infiniteCost();
-    int best_control_path_index = 0; int control_counter = 0;
+    int best_control_path_index = 1; int control_counter = 0;
 
     for (auto && curr_path : controls_paths) {
       auto path_cost = computePathCost(curr_path);
@@ -577,13 +576,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             g_controls_[i][control_g_root].id = control_g_root;
             g_controls_[i][control_g_target] = *geometric_goal_vertex_;
             g_controls_[i][control_g_target].id = control_g_target;
-
-            // Let us know which thread found the best solution
-            if (best_control_path_index != -1) {
-              OMPL_INFORM(
-                "%s: Best geometric path found by thread %d", getName().c_str(),
-                best_control_path_index);
-            }
           }
         }
       }
@@ -696,6 +688,7 @@ void ompl::control::InformedSGCP::expandGeometricGraph(
   // Create edges to construct an RGG, the vertices closer than radius_ will construct an edge
   // But too close vertices will be discarded in order for memory not to sink
   for (auto && i : samples) {
+
     if (ptc == true) {
       break;
     }

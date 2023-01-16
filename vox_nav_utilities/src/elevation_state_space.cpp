@@ -84,6 +84,9 @@ ElevationStateSpace::ElevationStateSpace(
 
   state1_se2_ = se2_->allocState();
   state2_se2_ = se2_->allocState();
+  interpolation_state1_se2_ = se2_->allocState();
+  interpolation_state2_se2_ = se2_->allocState();
+  interpolated_state_se2_ = se2_->allocState();
 
   workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
     new pcl::PointCloud<pcl::PointSurfel>);
@@ -218,25 +221,33 @@ void ompl::base::ElevationStateSpace::interpolate(
   auto * interpolated_so2 = state->as<StateType>()->as<SO2StateSpace::StateType>(0);
   auto * interpolated_xyzv = state->as<StateType>()->as<RealVectorStateSpace::StateType>(1);
 
-  auto from_se2 = se2_->allocState(); auto to_se2 = se2_->allocState();
-  from_se2->as<SE2StateSpace::StateType>()->setXY(from_xyzv->values[0], from_xyzv->values[1]);
-  from_se2->as<SE2StateSpace::StateType>()->setYaw(from_so2->value);
-  to_se2->as<SE2StateSpace::StateType>()->setXY(to_xyzv->values[0], to_xyzv->values[1]);
-  to_se2->as<SE2StateSpace::StateType>()->setYaw(to_so2->value);
+  interpolation_state1_se2_->as<SE2StateSpace::StateType>()->setXY(
+    from_xyzv->values[0],
+    from_xyzv->values[1]);
+  interpolation_state1_se2_->as<SE2StateSpace::StateType>()->setYaw(from_so2->value);
 
-  auto interpolated_se2 = se2_->allocState();  // This has X, Y , SO2
+  interpolation_state2_se2_->as<SE2StateSpace::StateType>()->setXY(
+    to_xyzv->values[0],
+    to_xyzv->values[1]);
+  interpolation_state2_se2_->as<SE2StateSpace::StateType>()->setYaw(to_so2->value);
 
   if (se2_state_type_ == SE2StateType::SE2) {
-    se2_->interpolate(from_se2, to_se2, t, interpolated_se2);
+    se2_->interpolate(
+      interpolation_state1_se2_, interpolation_state2_se2_, t,
+      interpolated_state_se2_);
   } else if (se2_state_type_ == SE2StateType::DUBINS) {
-    dubins_->interpolate(from_se2, to_se2, t, interpolated_se2);
+    dubins_->interpolate(
+      interpolation_state1_se2_, interpolation_state2_se2_, t,
+      interpolated_state_se2_);
   } else {
-    reeds_sheep_->interpolate(from_se2, to_se2, t, interpolated_se2);
+    reeds_sheep_->interpolate(
+      interpolation_state1_se2_, interpolation_state2_se2_, t,
+      interpolated_state_se2_);
   }
 
-  interpolated_so2->value = interpolated_se2->as<SE2StateSpace::StateType>()->getYaw();     // so2
-  interpolated_xyzv->values[0] = interpolated_se2->as<SE2StateSpace::StateType>()->getX();  // x
-  interpolated_xyzv->values[1] = interpolated_se2->as<SE2StateSpace::StateType>()->getY();  // y
+  interpolated_so2->value = interpolated_state_se2_->as<SE2StateSpace::StateType>()->getYaw();     // so2
+  interpolated_xyzv->values[0] = interpolated_state_se2_->as<SE2StateSpace::StateType>()->getX();  // x
+  interpolated_xyzv->values[1] = interpolated_state_se2_->as<SE2StateSpace::StateType>()->getY();  // y
   interpolated_xyzv->values[2] = (from_xyzv->values[2] + to_xyzv->values[2]) / 2.0;         // z
   interpolated_xyzv->values[3] = (from_xyzv->values[3] + to_xyzv->values[3]) / 2.0;         // v
 

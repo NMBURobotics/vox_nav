@@ -133,7 +133,7 @@ namespace vox_nav_planning
       *se2_bounds_,
       *z_bounds_,
       *v_bounds);
-    state_space_->setLongestValidSegmentFraction(0.01);
+    state_space_->setLongestValidSegmentFraction(0.1);
 
     control_state_space_ = std::make_shared<ompl::control::RealVectorControlSpace>(state_space_, 2);
     control_state_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(*control_bounds);

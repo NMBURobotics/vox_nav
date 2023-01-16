@@ -201,6 +201,10 @@ namespace ompl
       ompl::base::State * state1_se2_;
       ompl::base::State * state2_se2_;
 
+      ompl::base::State * interpolation_state1_se2_;
+      ompl::base::State * interpolation_state2_se2_;
+      ompl::base::State * interpolated_state_se2_;
+
       double rho_;
       bool isSymmetric_;
     };

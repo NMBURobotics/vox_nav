@@ -1,9 +1,9 @@
 quadrotor_control_planners_benchmark:
   ros__parameters:
-    planner_timeout: 60.0
+    planner_timeout: 40.0
     interpolation_parameter: 50
-    selected_planners: [  InformedSGCP ]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
-    robot_mesh_path: "package://vox_nav_planning/config/drone.stl" # leave empty if you do not have one, robot_mesh_path: ""
+    selected_planners: [SST, InformedSGCP, EST, KPIECE1, PDST]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
+    robot_mesh_path: "" # leave empty if you do not have one, robot_mesh_path: ""
     state_bounds:
       min_x_pos: -10.0
       max_x_pos: 10.0
@@ -49,13 +49,13 @@ quadrotor_control_planners_benchmark:
       min_z_acc: -1.5
       max_z_acc: 1.5
     robot_body_dimens:
-      x: 0.2
-      y: 0.2
+      x: 0.3
+      y: 0.3
       z: 0.2
     goal_tolerance: 0.5
     min_euclidean_dist_start_to_goal: 25.0
     batch_size: 1
-    epochs: 100
+    epochs: 1
     max_memory: 4096
     results_output_dir: "/home/atas/test/"
     results_file_regex: "control"

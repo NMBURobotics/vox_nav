@@ -145,6 +145,7 @@ namespace vox_nav_planning
     double rho_;
 
     std::vector<std::string> selected_planners_;
+    std::string robot_mesh_path_;
     std::string results_output_dir_;
     std::string results_file_regex_;
     double octomap_voxel_size_;
@@ -158,7 +159,10 @@ namespace vox_nav_planning
     int epochs_;
     int max_memory_;
     bool publish_a_sample_bencmark_;
+    std::string octomap_from_file_;
     std::string sample_bencmark_plans_topic_;
+    geometry_msgs::msg::PoseArray start_and_goal_poses_;
+
 
     GroundRobotPose start_;
     GroundRobotPose goal_;
@@ -177,6 +181,8 @@ namespace vox_nav_planning
     rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr
       get_maps_and_surfels_client_;
     rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
+
+    rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_publisher_;
 
     std::mutex octomap_mutex_;
 
@@ -301,6 +307,8 @@ namespace vox_nav_planning
         planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
       } else if (selected_planner_name == std::string("InformedSGCP")) {
         planner = ompl::base::PlannerPtr(new ompl::control::InformedSGCP(si));
+        planner->as<ompl::control::InformedSGCP>()->setMinDistBetweenVertices(0.5);
+        planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(true);
       } else if (selected_planner_name == std::string("PDST")) {
         planner = ompl::base::PlannerPtr(new ompl::control::PDST(si));
       } else {

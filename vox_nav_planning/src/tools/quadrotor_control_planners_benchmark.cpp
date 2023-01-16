@@ -425,7 +425,8 @@ namespace vox_nav_planning
           ss << planner_name.c_str() << " " << solved << " " << solution_path.length() << "\n";
           std::pair<int, ompl::control::PathControl> curr_pair(index, solution_path);
           if (solved == ompl::base::PlannerStatus::EXACT_SOLUTION ||
-            solved == ompl::base::PlannerStatus::APPROXIMATE_SOLUTION)
+            solved == ompl::base::PlannerStatus::APPROXIMATE_SOLUTION ||
+            solved == ompl::base::PlannerStatus::TIMEOUT)
           {
             paths_map.insert(curr_pair);
           }
@@ -499,13 +500,13 @@ namespace vox_nav_planning
           marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
           marker.mesh_resource = robot_mesh_path_;
         } else {
-          marker.type = visualization_msgs::msg::Marker::CUBE;
+          marker.type = visualization_msgs::msg::Marker::SPHERE;
         }
 
         marker.action = visualization_msgs::msg::Marker::ADD;
         marker.lifetime = rclcpp::Duration::from_seconds(0);
-        marker.scale.x = robot_body_dimensions_.x;
-        marker.scale.y = robot_body_dimensions_.y;
+        marker.scale.x = 0.15; // robot_body_dimensions_.x;
+        marker.scale.y = 0.15; // robot_body_dimensions_.y;
         marker.scale.z = robot_body_dimensions_.z;
         marker.id = total_poses;
         marker.color = getColorByIndex(it->first);
@@ -541,7 +542,7 @@ namespace vox_nav_planning
         text.color.g = 1.0;
         text.color.r = 1.0;
 
-        marker_array.markers.push_back(text);
+        //marker_array.markers.push_back(text);
         marker_array.markers.push_back(marker);
         total_poses++;
         start_and_goal_poses_.header = marker.header;

@@ -69,10 +69,10 @@ namespace ompl
       int num_threads_{12};
 
       /** \brief The number of samples to be added to graph in each iteration. */
-      int batch_size_{1000};
+      int batch_size_{100};
 
       /** \brief The a single vertex, do not construct more edges (neighbours) more than max_neighbors_. */
-      int max_neighbors_{10};
+      int max_neighbors_{15};
 
       /** \brief Adding almost identical samples does not help much, so we regulate this by min_dist_between_vertices_. */
       double min_dist_between_vertices_{0.1};
@@ -84,7 +84,7 @@ namespace ompl
       bool use_valid_sampler_{false};
 
       /** \brief For directed control, set a number of samples to iterate though, to get a more accurate sampleTo behviour. It comes as costy!. */
-      int k_number_of_controls_{1};
+      int k_number_of_controls_{2};
 
       /** \brief For adaptive heuristic, there is two options, dijkstra and astar.
        *  Default is dijkstra as it computes shortest path from each vertex to specified one */
