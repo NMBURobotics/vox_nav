@@ -25,7 +25,7 @@ def generate_launch_description():
         executable='car_control_planners_benchmark',
         name='car_control_planners_benchmark',
         output='screen',
-        prefix=['xterm -e gdb -ex run --args'],
+        #prefix=['xterm -e gdb -ex run --args'],
         #prefix=['xterm -e valgrind --tool=massif -v'],    # memory profiling
         parameters=[planner_benchmarking_node_config])
 

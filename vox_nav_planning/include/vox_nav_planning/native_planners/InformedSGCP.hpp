@@ -687,14 +687,6 @@ namespace ompl
 
           // Add the start and goal vertex to the control graph
           controls_nn_[i]->add(control_start_vertices_[i]);
-
-          // Add goal and start to forward control graph
-          vertex_descriptor control_g_root = boost::add_vertex(g_controls_[i]);
-          vertex_descriptor control_g_target = boost::add_vertex(g_controls_[i]);
-          g_controls_[i][control_g_root] = *control_start_vertices_[i];
-          g_controls_[i][control_g_root].id = control_g_root;
-          g_controls_[i][control_g_target] = *control_goal_vertices_[i];
-          g_controls_[i][control_g_target].id = control_g_target;
         }
 
         // Reset the weightmap
@@ -706,18 +698,27 @@ namespace ompl
 
       void populateControlGraphsWithSolution(
         const std::vector<VertexProperty *> & vertex_path,
-        std::vector<WeightMap> & weightmap_controls
+        std::vector<WeightMap> & weightmap_controls,
+        std::vector<std::pair<vertex_descriptor, vertex_descriptor>> & control_start_goal_descriptors
       )
       {
+        control_start_goal_descriptors.clear();
+
         for (int i = 0; i < params_.num_threads_; i++) {
 
+          vertex_descriptor control_g_root = boost::add_vertex(g_controls_[i]);
+          g_controls_[i][control_g_root] = *control_start_vertices_[i];
+          g_controls_[i][control_g_root].id = control_g_root;
+
           int index{0};
-          vertex_descriptor u = boost::add_vertex(g_controls_[i]);
+
+          vertex_descriptor u = control_g_root;
+          vertex_descriptor control_g_target;
+
           for (auto && vertex : vertex_path) {
-            // do not add any edges connecting goal
-            if (index >= vertex_path.size() - 2) {
-              break;
-            }
+
+            std::cout << "Vertex " << vertex->id << std::endl;
+
             if (index > 0) {
               // Add the edge to the control graph
               edge_descriptor e; bool edge_added;
@@ -736,13 +737,19 @@ namespace ompl
 
               controls_nn_[i]->add(modified_vertex);
               g_controls_[i][v] = *modified_vertex;
-
               u = v;
 
+              if (index == vertex_path.size() - 1) {
+                control_g_target = v;
+              }
             }
+
             index++;
           }
-
+          control_start_goal_descriptors.push_back(
+            std::make_pair(
+              g_controls_[i][control_g_root].id,
+              g_controls_[i][control_g_target].id));
         }
       }
 

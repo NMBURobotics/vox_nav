@@ -19,8 +19,8 @@ car_control_planners_benchmark:
       minv: -1.5
       maxv: 1.5
     control_boundries:
-      minv: -1.5
-      maxv:  1.5
+      minv: -1.0
+      maxv:  1.0
       minw: -1.0
       maxw:  1.0
     robot_body_dimens:

@@ -586,7 +586,8 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
           populateControlGraphsWithSolution(
             bestControlVertex[best_control_path_index],
-            weightmap_controls);
+            weightmap_controls,
+            control_start_goal_descriptors);
 
         }
       }
@@ -1055,12 +1056,7 @@ std::size_t ompl::control::InformedSGCP::computeNumberOfSamplesInInformedSet() c
   std::size_t numberOfSamplesInInformedSet{0u};
   for (auto vd : boost::make_iterator_range(vertices(g_controls_[0]))) {
 
-    std::cout << "Vertex: " << vd << std::endl;
-
-
     auto vertex = g_controls_[0][vd].state;
-
-    std::cout << "vertex state: " << vertex << std::endl;
 
     // Get the best cost to come from any start.
     auto costToCome = opt_->infiniteCost();
