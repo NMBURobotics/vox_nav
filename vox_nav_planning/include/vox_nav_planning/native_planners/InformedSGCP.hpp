@@ -506,6 +506,7 @@ namespace ompl
         const ompl::base::State * target_vertex_state,
         const vertex_descriptor & target_vertex_descriptor,
         const base::PlannerTerminationCondition & ptc,
+        const bool & intial_plan_available,
         GraphT & control_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
         WeightMap & control_weightmap,
@@ -600,12 +601,16 @@ namespace ompl
         GraphT & g,
         WeightMap & weightmap,
         std::shared_ptr<ompl::control::PathControl> & path,
-        const bool control = false) const
+        std::vector<VertexProperty *> & vertexprop_path,
+        const bool control = false
+      ) const
       {
 
         path = std::make_shared<PathControl>(si_);
         int index{0};
         vertex_descriptor prev_vertex = vertex_path.front();
+
+
         for (auto && i : vertex_path) {
 
           // Use this opportunity to mark the edges as invalid if they were blacklisted
@@ -642,6 +647,9 @@ namespace ompl
               path->append(g[i].state);
             }
           }
+
+          vertexprop_path[index] = new VertexProperty(g[i]);
+
           index++;
         }
       }
@@ -654,6 +662,88 @@ namespace ompl
           states.push_back(path->getState(i));
         }
         return states;
+      }
+
+      std::vector<ompl::base::State *> getStates(
+        const std::shared_ptr<ompl::control::PathControl> & path)
+      {
+        std::vector<ompl::base::State *> states;
+        for (std::size_t i = 0; i < path->getStateCount() - 1; ++i) {
+          states.push_back(path->getState(i));
+        }
+        return states;
+      }
+
+      void clearControlGraphs(
+        std::vector<WeightMap> & weightmap_controls
+      )
+      {
+        // Reset control graphs anyways
+        for (int i = 0; i < params_.num_threads_; i++) {
+          g_controls_[i].clear();
+          g_controls_[i] = GraphT();
+          // free memory for all nns in control threads
+          controls_nn_[i]->clear();
+
+          // Add the start and goal vertex to the control graph
+          controls_nn_[i]->add(control_start_vertices_[i]);
+
+          // Add goal and start to forward control graph
+          vertex_descriptor control_g_root = boost::add_vertex(g_controls_[i]);
+          vertex_descriptor control_g_target = boost::add_vertex(g_controls_[i]);
+          g_controls_[i][control_g_root] = *control_start_vertices_[i];
+          g_controls_[i][control_g_root].id = control_g_root;
+          g_controls_[i][control_g_target] = *control_goal_vertices_[i];
+          g_controls_[i][control_g_target].id = control_g_target;
+        }
+
+        // Reset the weightmap
+        weightmap_controls.clear();
+        for (auto & graph : g_controls_) {
+          weightmap_controls.push_back(get(boost::edge_weight, graph));
+        }
+      }
+
+      void populateControlGraphsWithSolution(
+        const std::vector<VertexProperty *> & vertex_path,
+        std::vector<WeightMap> & weightmap_controls
+      )
+      {
+        for (int i = 0; i < params_.num_threads_; i++) {
+
+          int index{0};
+          vertex_descriptor u = boost::add_vertex(g_controls_[i]);
+          for (auto && vertex : vertex_path) {
+            // do not add any edges connecting goal
+            if (index >= vertex_path.size() - 2) {
+              break;
+            }
+            if (index > 0) {
+              // Add the edge to the control graph
+              edge_descriptor e; bool edge_added;
+              auto v = boost::add_vertex(g_controls_[i]);
+              boost::tie(e, edge_added) = boost::add_edge(u, v, g_controls_[i]);
+
+              std::cout << "Adding edge from " << u << " to " << v << std::endl;
+
+              weightmap_controls[i][e] = opt_->motionCost(
+                vertex_path[index - 1]->state,
+                vertex_path[index]->state).value();
+
+              // allocate vertex
+              auto modified_vertex = new VertexProperty(*vertex_path[index]);
+              modified_vertex->id = v;
+
+              controls_nn_[i]->add(modified_vertex);
+              g_controls_[i][v] = *modified_vertex;
+
+              u = v;
+
+            }
+            index++;
+          }
+
+        }
       }
 
       /** \brief static method to visulize a graph in RVIZ*/
@@ -687,7 +777,7 @@ namespace ompl
       /** \brief get std_msgs::msg::ColorRGBA given the color name with a std::string*/
       static std_msgs::msg::ColorRGBA getColor(std::string & color);
 
-    };     // class InformedSGCP
+    };      // class InformedSGCP
   }   // namespace control
 }   // namespace ompl
 

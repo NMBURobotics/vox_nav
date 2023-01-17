@@ -1,6 +1,6 @@
 car_control_planners_benchmark:
   ros__parameters:
-    planner_timeout: 20.0
+    planner_timeout: 30.0
     interpolation_parameter: 50
     octomap_voxel_size: 0.2
     selected_state_space: "SE2" # "DUBINS","REEDS", "SE2", "SE3" ### PS. Use DUBINS OR REEDS for Ackermann
@@ -12,8 +12,8 @@ car_control_planners_benchmark:
       maxx: 10.0
       miny: -7.0
       maxy: 7.0
-      minz: -0.0
-      maxz: 2.0
+      minz: 0.
+      maxz: 0.5
       minyaw: -3.14
       maxyaw: 3.14
       minv: -1.5

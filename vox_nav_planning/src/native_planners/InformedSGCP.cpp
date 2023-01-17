@@ -286,6 +286,12 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
   bool exact_solution{false}; bool approximate_solution{false};
 
+  std::vector<std::vector<VertexProperty *>> bestControlVertex, bestGeometricVertex;
+  for (int i = 0; i < params_.num_threads_; i++) {
+    bestControlVertex.push_back(std::vector<VertexProperty *>({}));
+    bestGeometricVertex.push_back(std::vector<VertexProperty *>({}));
+  }
+
   while (ptc == false) {
 
     std::vector<int> control_threads_status(params_.num_threads_,
@@ -294,6 +300,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
     numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
     radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
+    //numNeighbors_ = 20;
 
     // The thread ids needs to be immutable for the lambda function
     std::vector<int> thread_ids;
@@ -375,7 +382,8 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
           &shortest_paths_control,
           &thread_id,
           &planner_status,
-          &ptc
+          &ptc,
+          &exact_solution
           ]  {
             std::vector<ompl::base::State *> samples;
             generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
@@ -384,6 +392,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
               g_control[start_goal_descriptor.second].state,
               start_goal_descriptor.second,
               ptc,
+              exact_solution,
               g_control,
               g_nn,
               g_weightmap,
@@ -416,9 +425,15 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
       // Popolate the OMPL control paths from vertexes found by A*
       for (size_t i = 0; i < shortest_paths_controls.size(); i++) {
+        bestControlVertex[i].resize(shortest_paths_controls[i].size());
         populateOmplPathfromVertexPath(
-          shortest_paths_controls[i], g_controls_[i], weightmap_controls[i],
-          controls_paths[i], true);
+          shortest_paths_controls[i],
+          g_controls_[i],
+          weightmap_controls[i],
+          controls_paths[i],
+          bestControlVertex[i],
+          true
+        );
       }
 
     }
@@ -430,9 +445,10 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     }
 
     for (size_t i = 0; i < shortest_paths_geometrics.size(); i++) {
+      bestGeometricVertex[i].resize(shortest_paths_geometrics[i].size());
       populateOmplPathfromVertexPath(
         shortest_paths_geometrics[i], g_geometrics_[i], weightmap_geometrics[i],
-        geometrics_paths[i], false);
+        geometrics_paths[i], bestGeometricVertex[i], false);
     }
 
     // Determine best geometric path found by current threads
@@ -559,24 +575,19 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         }
 
         if (currentBestSolutionStatus_ != base::PlannerStatus::UNKNOWN) {
+
+          // print number of vertex
+          OMPL_INFORM(
+            "%s: Best Control Graph has %d vertices and ",
+            getName().c_str(), bestControlVertex[best_control_path_index].size());
+
           // Reset control graphs anyways
-          for (int i = 0; i < params_.num_threads_; i++) {
-            g_controls_[i].clear();
-            g_controls_[i] = GraphT();
-            // free memory for all nns in control threads
-            controls_nn_[i]->clear();
+          clearControlGraphs(weightmap_controls);
 
-            // Add the start and goal vertex to the control graph
-            controls_nn_[i]->add(geometric_start_vertex_);
+          populateControlGraphsWithSolution(
+            bestControlVertex[best_control_path_index],
+            weightmap_controls);
 
-            // Add goal and start to forward control graph
-            auto control_g_root = boost::add_vertex(g_controls_[i]);
-            auto control_g_target = boost::add_vertex(g_controls_[i]);
-            g_controls_[i][control_g_root] = *geometric_start_vertex_;
-            g_controls_[i][control_g_root].id = control_g_root;
-            g_controls_[i][control_g_target] = *geometric_goal_vertex_;
-            g_controls_[i][control_g_target].id = control_g_target;
-          }
         }
       }
     }
@@ -797,6 +808,7 @@ void ompl::control::InformedSGCP::expandControlGraph(
   const ompl::base::State * target_vertex_state,
   const vertex_descriptor & target_vertex_descriptor,
   const base::PlannerTerminationCondition & ptc,
+  const bool & intial_plan_available,
   GraphT & control_graph,
   std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
   WeightMap & control_weightmap,
@@ -1043,7 +1055,13 @@ std::size_t ompl::control::InformedSGCP::computeNumberOfSamplesInInformedSet() c
   std::size_t numberOfSamplesInInformedSet{0u};
   for (auto vd : boost::make_iterator_range(vertices(g_controls_[0]))) {
 
+    std::cout << "Vertex: " << vd << std::endl;
+
+
     auto vertex = g_controls_[0][vd].state;
+
+    std::cout << "vertex state: " << vertex << std::endl;
+
     // Get the best cost to come from any start.
     auto costToCome = opt_->infiniteCost();
     costToCome = opt_->betterCost(
