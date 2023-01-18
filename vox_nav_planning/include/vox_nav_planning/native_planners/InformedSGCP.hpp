@@ -312,6 +312,8 @@ namespace ompl
       /** \brief Current cost of best path. The informed sampling strategy needs it. */
       ompl::base::Cost bestControlCost_{std::numeric_limits<double>::infinity()};
 
+      int best_control_path_index_{0};
+
       /** \brief The best path found so far. */
       std::shared_ptr<ompl::control::PathControl> bestGeometricPath_{nullptr};
 
@@ -319,7 +321,13 @@ namespace ompl
       std::shared_ptr<ompl::control::PathControl> bestControlPath_{nullptr};
 
       /** \brief Directed control sampler to expand control graph */
-      DirectedControlSamplerPtr controlSampler_;
+      DirectedControlSamplerPtr directedControlSampler_;
+
+      /** \brief Control sampler */
+      ControlSamplerPtr controlSampler_;
+
+      /** \brief The random number generator */
+      RNG rng_;
 
       /** \brief The NN datastructure for geometric graph */
       std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>>> geometrics_nn_;
@@ -507,6 +515,7 @@ namespace ompl
         const vertex_descriptor & target_vertex_descriptor,
         const base::PlannerTerminationCondition & ptc,
         const bool & intial_plan_available,
+        const std::vector<VertexProperty *> & vertex_prop_plan,
         GraphT & control_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
         WeightMap & control_weightmap,
@@ -675,81 +684,37 @@ namespace ompl
       }
 
       void clearControlGraphs(
-        std::vector<WeightMap> & weightmap_controls
+        std::vector<WeightMap> & weightmap_controls,
+        std::vector<std::pair<vertex_descriptor, vertex_descriptor>> & control_start_goal_descriptors
       )
       {
         // Reset control graphs anyways
+        control_start_goal_descriptors.clear();
+
         for (int i = 0; i < params_.num_threads_; i++) {
           g_controls_[i].clear();
           g_controls_[i] = GraphT();
           // free memory for all nns in control threads
           controls_nn_[i]->clear();
-
           // Add the start and goal vertex to the control graph
           controls_nn_[i]->add(control_start_vertices_[i]);
-        }
-
-        // Reset the weightmap
-        weightmap_controls.clear();
-        for (auto & graph : g_controls_) {
-          weightmap_controls.push_back(get(boost::edge_weight, graph));
-        }
-      }
-
-      void populateControlGraphsWithSolution(
-        const std::vector<VertexProperty *> & vertex_path,
-        std::vector<WeightMap> & weightmap_controls,
-        std::vector<std::pair<vertex_descriptor, vertex_descriptor>> & control_start_goal_descriptors
-      )
-      {
-        control_start_goal_descriptors.clear();
-
-        for (int i = 0; i < params_.num_threads_; i++) {
 
           vertex_descriptor control_g_root = boost::add_vertex(g_controls_[i]);
           g_controls_[i][control_g_root] = *control_start_vertices_[i];
           g_controls_[i][control_g_root].id = control_g_root;
+          vertex_descriptor control_g_target = boost::add_vertex(g_controls_[i]);
+          g_controls_[i][control_g_target] = *control_goal_vertices_[i];
+          g_controls_[i][control_g_target].id = control_g_target;
 
-          int index{0};
-
-          vertex_descriptor u = control_g_root;
-          vertex_descriptor control_g_target;
-
-          for (auto && vertex : vertex_path) {
-
-            std::cout << "Vertex " << vertex->id << std::endl;
-
-            if (index > 0) {
-              // Add the edge to the control graph
-              edge_descriptor e; bool edge_added;
-              auto v = boost::add_vertex(g_controls_[i]);
-              boost::tie(e, edge_added) = boost::add_edge(u, v, g_controls_[i]);
-
-              std::cout << "Adding edge from " << u << " to " << v << std::endl;
-
-              weightmap_controls[i][e] = opt_->motionCost(
-                vertex_path[index - 1]->state,
-                vertex_path[index]->state).value();
-
-              // allocate vertex
-              auto modified_vertex = new VertexProperty(*vertex_path[index]);
-              modified_vertex->id = v;
-
-              controls_nn_[i]->add(modified_vertex);
-              g_controls_[i][v] = *modified_vertex;
-              u = v;
-
-              if (index == vertex_path.size() - 1) {
-                control_g_target = v;
-              }
-            }
-
-            index++;
-          }
           control_start_goal_descriptors.push_back(
             std::make_pair(
               g_controls_[i][control_g_root].id,
               g_controls_[i][control_g_target].id));
+        }
+        // Reset the weightmap
+        weightmap_controls.clear();
+        for (auto & graph : g_controls_) {
+          weightmap_controls.push_back(get(boost::edge_weight, graph));
         }
       }
 

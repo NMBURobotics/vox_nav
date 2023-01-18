@@ -48,7 +48,7 @@ def plot_status():
     PDST = []
 
     file1 = open(
-        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/tools/quad.txt', 'r')
+        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/tools/carim.txt', 'r')
     Lines = file1.readlines()
     count = 0
     for line in Lines:
@@ -121,7 +121,7 @@ def plot_lenght():
     PDST = []
 
     file1 = open(
-        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/tools/quad.txt', 'r')
+        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/tools/carim.txt', 'r')
     Lines = file1.readlines()
     count = 0
     for line in Lines:
@@ -155,19 +155,26 @@ def plot_lenght():
         PDST
     ]
 
+
+    m1 = np.array(data[0:2]).mean(axis=1).round(2)
+    st1 = np.array(data[0:2]).std(axis=1).round(2)
+    
+    print(m1)
+    print(st1)
+    
     x = [
-        'SST',
-        'InformedSGCP',
+        'SST,\n (mean='+str(m1[0])+'\nstd='+str(st1[0])+')',
+        'InformedSGCP,\n (mean='+str(m1[1])+'\nstd='+str(st1[1])+')',
         'EST',
         'KPIECE1',
         'PDST'
     ]
-
+    
     fig = plt.figure(figsize=(10, 7))
     ax = fig.add_subplot(111)
 
     bp = ax.boxplot(data, patch_artist=True,
-                    notch='True', vert=0, showfliers=False, autorange=True, showbox=True, showmeans=True)
+                    notch='True', vert=0, showfliers=True, autorange=True, showbox=True, showmeans=True)
 
     colors = ['#0000FF', '#00FF00',
               '#FFFF00', '#FF00FF', '#FFF0FF']
@@ -213,6 +220,8 @@ def plot_lenght():
     ax.get_yaxis().tick_left()
     plt.xlabel("Path Lengths")
     plt.ylabel("Planner")
+    plt.yticks(range(0, len(x) * 2, 2), x, fontsize=8, rotation=30)
+
     # show plot
     plt.show()
 
