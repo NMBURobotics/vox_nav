@@ -859,59 +859,68 @@ void ompl::control::InformedSGCP::expandControlGraph(
   WeightMap & control_weightmap,
   int & status)
 {
-  // Now we have a collision free path, we can now find a control path
-  // Add all samples to the control NN and contol graph
+  // Every ith sample is goal biasing sampling
   int ith_sample = static_cast<int>(1.0 / params_.goal_bias_);
-  int index_of_goal_bias{0};
+  int goal_bias_counter{0};
 
+  // Iterate over the samples and try to add them to the control graph
   for (auto && i : samples) {
 
+    // Check if the planner has been terminated
     if (ptc == true) {
       break;
     }
-    VertexProperty * this_vertex_property = new VertexProperty();
-    this_vertex_property->state = i;
+
+    VertexProperty * vertex_property = new VertexProperty();
+    vertex_property->state = i;
 
     // Every ith sample is goal biasing
-    if ((index_of_goal_bias & ith_sample) == 0) {
+    // So if this is the ith sample, then the sample is the goal state
+    if ((goal_bias_counter & ith_sample) == 0) {
       auto deep_copy_target_state = si_->allocState();
       si_->copyState(deep_copy_target_state, target_vertex_state);
-      this_vertex_property->state = deep_copy_target_state;
+      vertex_property->state = deep_copy_target_state;
     }
-    index_of_goal_bias++;
+    // increment the goal bias counter
+    goal_bias_counter++;
 
+    // Get the nearest neighbors of the sample with numNeighbors_ or radius_
     std::vector<ompl::control::InformedSGCP::VertexProperty *> nbh;
-
     if (params_.use_k_nearest_) {
-      control_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
+      control_nn->nearestK(vertex_property, numNeighbors_, nbh);
     } else {
-      control_nn->nearestR(this_vertex_property, radius_, nbh);
+      control_nn->nearestR(vertex_property, radius_, nbh);
     }
 
+    // if No neighbors found, continue
     if (nbh.size() == 0) {
       continue;
     }
+
+    // Clip the number of neighbors to max_neighbors_, The nearest neighbors are sorted by distance
     if (nbh.size() > params_.max_neighbors_) {
       nbh.resize(params_.max_neighbors_);
     }
 
+    // Check if sample us unique enough
     bool does_vertice_exits{false};
     for (auto && nb : nbh) {
       double dist = distanceFunction(i, nb->state);
-      if (dist < params_.min_dist_between_vertices_ /*do not add same vertice twice*/) {
+      if (dist < params_.min_dist_between_vertices_) {
+        // ops this sample is not unique enough, so do not add it to the graph as it increases the computation time
         does_vertice_exits = true;
       }
     }
 
     if (!does_vertice_exits) {
-      for (auto && nb : nbh) {
 
+      // Now this sample is unique enough, so add it to the graph
+      for (auto && nb : nbh) {
+        
         if (nb->id == target_vertex_descriptor) {
-          // Do not add edge to target vertex
           continue;
         }
         if (nb->blacklisted) {
-          // Do not add edge to target vertex
           continue;
         }
         // Do not modify original sample, as that will affect geometric RGG
