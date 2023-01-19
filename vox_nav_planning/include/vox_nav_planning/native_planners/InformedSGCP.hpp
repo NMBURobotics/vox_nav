@@ -132,6 +132,7 @@ namespace ompl
         ompl::control::Control * control{nullptr};
         unsigned int control_duration{0};
         std::size_t id{0};
+        std::size_t parent_id{0};
         double g{1.0e+3};
         bool blacklisted{false};
       };

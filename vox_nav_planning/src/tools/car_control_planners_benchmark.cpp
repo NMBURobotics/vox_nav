@@ -274,8 +274,8 @@ namespace vox_nav_planning
       start_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
       goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
 
-      start.pose.position.x = -6.9;   //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-      start.pose.position.y = -5.9;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      start.pose.position.x = 7.9;   //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+      start.pose.position.y = 8.0;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
       start.pose.position.z = 0.5;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
       start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 1.57);
 

@@ -303,7 +303,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
     numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
     radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
-    //numNeighbors_ = 20;
 
     // The thread ids needs to be immutable for the lambda function
     std::vector<int> thread_ids;
@@ -602,7 +601,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         clearControlGraphs(weightmap_controls, control_start_goal_descriptors);
 
       }
-
     }
 
     // Visualize the best geometric and control paths in rviz
@@ -680,14 +678,14 @@ void ompl::control::InformedSGCP::generateBatchofSamples(
     } else {
       do{
         ompl::base::Cost min_cost = opt_->infiniteCost();
-        if (opt_->isCostBetterThan(bestGeometricCost_, opt_->infiniteCost())) {
+        if (opt_->isCostBetterThan(bestControlCost_, opt_->infiniteCost())) {
           // A valid solution was found
           // Sample in the informed set, and I mean tightly
           auto euc_cost = opt_->motionCost(
             geometric_start_vertex_->state,
             geometric_goal_vertex_->state);
-          if (opt_->isCostBetterThan(euc_cost, bestGeometricCost_)) {
-            min_cost = bestGeometricCost_;
+          if (opt_->isCostBetterThan(euc_cost, bestControlCost_)) {
+            min_cost = bestControlCost_;
           }
         }
         // Sample the associated state uniformly within the informed set.
@@ -828,122 +826,113 @@ void ompl::control::InformedSGCP::expandControlGraph(
   WeightMap & control_weightmap,
   int & status)
 {
-  if (true) {
+  // Now we have a collision free path, we can now find a control path
+  // Add all samples to the control NN and contol graph
+  int ith_sample = static_cast<int>(1.0 / params_.goal_bias_);
+  int index_of_goal_bias{0};
 
-    // Now we have a collision free path, we can now find a control path
-    // Add all samples to the control NN and contol graph
-    int ith_sample = static_cast<int>(1.0 / params_.goal_bias_);
-    int index_of_goal_bias{0};
+  for (auto && i : samples) {
 
-    for (auto && i : samples) {
+    if (ptc == true) {
+      break;
+    }
+    VertexProperty * this_vertex_property = new VertexProperty();
+    this_vertex_property->state = i;
 
-      if (ptc == true) {
-        break;
-      }
-      VertexProperty * this_vertex_property = new VertexProperty();
-      this_vertex_property->state = i;
+    // Every ith sample is goal biasing
+    if ((index_of_goal_bias & ith_sample) == 0) {
+      auto deep_copy_target_state = si_->allocState();
+      si_->copyState(deep_copy_target_state, target_vertex_state);
+      this_vertex_property->state = deep_copy_target_state;
+    }
+    index_of_goal_bias++;
 
-      // Every ith sample is goal biasing
-      if ((index_of_goal_bias & ith_sample) == 0) {
-        auto deep_copy_target_state = si_->allocState();
-        si_->copyState(deep_copy_target_state, target_vertex_state);
-        this_vertex_property->state = deep_copy_target_state;
-      }
-      index_of_goal_bias++;
+    std::vector<ompl::control::InformedSGCP::VertexProperty *> nbh;
 
-      std::vector<ompl::control::InformedSGCP::VertexProperty *> nbh;
+    if (params_.use_k_nearest_) {
+      control_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
+    } else {
+      control_nn->nearestR(this_vertex_property, radius_, nbh);
+    }
 
-      if (params_.use_k_nearest_) {
-        control_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
-      } else {
-        control_nn->nearestR(this_vertex_property, radius_, nbh);
-      }
+    if (nbh.size() == 0) {
+      continue;
+    }
+    if (nbh.size() > params_.max_neighbors_) {
+      nbh.resize(params_.max_neighbors_);
+    }
 
-      if (nbh.size() == 0) {
-        continue;
-      }
-      if (nbh.size() > params_.max_neighbors_) {
-        nbh.resize(params_.max_neighbors_);
-      }
-
-      bool does_vertice_exits{false};
-      for (auto && nb : nbh) {
-        double dist = distanceFunction(i, nb->state);
-        if (dist < params_.min_dist_between_vertices_ /*do not add same vertice twice*/) {
-          does_vertice_exits = true;
-        }
-      }
-
-      if (!does_vertice_exits) {
-        for (auto && nb : nbh) {
-          if (nb->id == target_vertex_descriptor) {
-            // Do not add edge to target vertex
-            continue;
-          }
-          /*if (!si_->checkMotion(i, nb->state)) {
-            // Do not add edge to target vertex
-            continue;
-          }*/
-          if (nb->blacklisted) {
-            // Do not add edge to target vertex
-            continue;
-          }
-          // Do not modify original sample, as that will affect geometric RGG
-          auto deep_copy_sample_state = si_->allocState();
-          si_->copyState(deep_copy_sample_state, i);
-          // Attempt to drive towards newly added sample
-          // modify the sample to latest arrived state
-          auto c = siC_->allocControl();
-          auto duration = directedControlSampler_->sampleTo(
-            c,
-            nb->state,
-            deep_copy_sample_state);
-
-          if (duration < siC_->getMinControlDuration() ||
-            !si_->isValid(deep_copy_sample_state))
-          {
-            // perhaps due to invalidity of the state, we cannot proceed
-            siC_->freeControl(c);
-            si_->freeState(deep_copy_sample_state);
-            nb->blacklisted = true;
-            // remove the nn as it led to invalid state
-            continue;
-          }
-
-          vertex_descriptor arrived_vertex_descriptor = boost::add_vertex(control_graph);
-          auto arrived_vertex_property = new VertexProperty();
-          arrived_vertex_property->id = arrived_vertex_descriptor;
-          arrived_vertex_property->state = deep_copy_sample_state;
-          control_graph[arrived_vertex_descriptor] = *arrived_vertex_property;
-          control_graph[arrived_vertex_descriptor].state = deep_copy_sample_state;
-          control_graph[arrived_vertex_descriptor].control = c;
-          control_graph[arrived_vertex_descriptor].control_duration = duration;
-          control_nn->add(arrived_vertex_property);
-
-          vertex_descriptor u = arrived_vertex_descriptor;
-          vertex_descriptor v = nb->id;
-          double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
-          edge_descriptor e; bool edge_added;
-          // not to construct edges with self, and if nbh is further than radius_, continue
-          if (u == v || dist > params_.max_dist_between_vertices_) {
-            continue;
-          }
-          if (boost::edge(u, v, control_graph).second ||
-            boost::edge(v, u, control_graph).second)
-          {
-            continue;
-          }
-          // Once suitable edges are found, populate them over graphs
-          boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
-          control_weightmap[e] =
-            opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
-        }
+    bool does_vertice_exits{false};
+    for (auto && nb : nbh) {
+      double dist = distanceFunction(i, nb->state);
+      if (dist < params_.min_dist_between_vertices_ /*do not add same vertice twice*/) {
+        does_vertice_exits = true;
       }
     }
-  } else {
 
+    if (!does_vertice_exits) {
+      for (auto && nb : nbh) {
+        if (nb->id == target_vertex_descriptor) {
+          // Do not add edge to target vertex
+          continue;
+        }
+        if (nb->blacklisted) {
+          // Do not add edge to target vertex
+          continue;
+        }
+        // Do not modify original sample, as that will affect geometric RGG
+        auto deep_copy_sample_state = si_->allocState();
+        si_->copyState(deep_copy_sample_state, i);
+        // Attempt to drive towards newly added sample
+        // modify the sample to latest arrived state
+        auto c = siC_->allocControl();
+        auto duration = directedControlSampler_->sampleTo(
+          c,
+          nb->state,
+          deep_copy_sample_state);
 
+        if (duration < siC_->getMinControlDuration() ||
+          !si_->isValid(deep_copy_sample_state))
+        {
+          // perhaps due to invalidity of the state, we cannot proceed
+          siC_->freeControl(c);
+          si_->freeState(deep_copy_sample_state);
+          nb->blacklisted = true;
+          // remove the nn as it led to invalid state
+          continue;
+        }
+
+        vertex_descriptor arrived_vertex_descriptor = boost::add_vertex(control_graph);
+        auto arrived_vertex_property = new VertexProperty();
+        arrived_vertex_property->id = arrived_vertex_descriptor;
+        arrived_vertex_property->state = deep_copy_sample_state;
+        control_graph[arrived_vertex_descriptor] = *arrived_vertex_property;
+        control_graph[arrived_vertex_descriptor].state = deep_copy_sample_state;
+        control_graph[arrived_vertex_descriptor].control = c;
+        control_graph[arrived_vertex_descriptor].control_duration = duration;
+        control_nn->add(arrived_vertex_property);
+
+        vertex_descriptor u = arrived_vertex_descriptor;
+        vertex_descriptor v = nb->id;
+        double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
+        edge_descriptor e; bool edge_added;
+        // not to construct edges with self, and if nbh is further than radius_, continue
+        if (u == v || dist > params_.max_dist_between_vertices_) {
+          continue;
+        }
+        if (boost::edge(u, v, control_graph).second ||
+          boost::edge(v, u, control_graph).second)
+        {
+          continue;
+        }
+        // Once suitable edges are found, populate them over graphs
+        boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
+        control_weightmap[e] =
+          opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
+      }
+    }
   }
+
 }
 
 void ompl::control::InformedSGCP::ensureGoalVertexConnectivity(
