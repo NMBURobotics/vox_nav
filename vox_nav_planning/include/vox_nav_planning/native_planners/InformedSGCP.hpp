@@ -135,6 +135,7 @@ namespace ompl
         std::size_t parent_id{0};
         double g{1.0e+3};
         bool blacklisted{false};
+        bool is_root{false};
       };
 
       /** \brief Compute distance between Vertexes (actually distance between contained states) */
@@ -146,17 +147,7 @@ namespace ompl
       /** \brief Compute distance between states */
       double distanceFunction(const base::State * a, const base::State * b) const
       {
-        if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
-          // Use only first three elemnts of state space
-          auto a_ = a->as<base::RealVectorStateSpace::StateType>();
-          auto b_ = b->as<base::RealVectorStateSpace::StateType>();
-          return sqrt(
-            pow(a_->values[0] - b_->values[0], 2) +
-            pow(a_->values[1] - b_->values[1], 2) +
-            pow(a_->values[2] - b_->values[2], 2));
-        } else {
-          return si_->distance(a, b);
-        }
+        return si_->distance(a, b);
       }
 
       /** \brief Given its vertex_descriptor (id),
@@ -335,6 +326,8 @@ namespace ompl
 
       /** \brief The NN datastructure for control graph */
       std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>>> controls_nn_;
+
+      std::mutex nnMutex_;
 
       /** \brief The typedef of Edge cost as double,
        * note that ompl::base::Cost wont work as some operators are not provided (e.g. +) */
@@ -520,6 +513,8 @@ namespace ompl
         GraphT & control_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
         WeightMap & control_weightmap,
+        const GraphT * connection_control_graph,
+        const std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_control_nn,
         int & status);
 
       void ensureGoalVertexConnectivity(
@@ -703,6 +698,7 @@ namespace ompl
           vertex_descriptor control_g_root = boost::add_vertex(g_controls_[i]);
           g_controls_[i][control_g_root] = *control_start_vertices_[i];
           g_controls_[i][control_g_root].id = control_g_root;
+          g_controls_[i][control_g_root].is_root = true;
           vertex_descriptor control_g_target = boost::add_vertex(g_controls_[i]);
           g_controls_[i][control_g_target] = *control_goal_vertices_[i];
           g_controls_[i][control_g_target].id = control_g_target;

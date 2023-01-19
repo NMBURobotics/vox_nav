@@ -224,6 +224,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       this_control_start_vertex->state = goal_state;
       this_control_goal_vertex->state = start_state;
     }
+    this_control_start_vertex->is_root = true;
     controls_nn_[i]->add(this_control_start_vertex);
     control_start_vertices_.push_back(this_control_start_vertex);
     control_goal_vertices_.push_back(this_control_goal_vertex);
@@ -255,6 +256,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     vertex_descriptor control_g_target = boost::add_vertex(g_controls_[i]);
     g_controls_[i][control_g_root] = *control_start_vertices_[i];
     g_controls_[i][control_g_root].id = control_g_root;
+    g_controls_[i][control_g_root].is_root = true;
     g_controls_[i][control_g_target] = *control_goal_vertices_[i];
     g_controls_[i][control_g_target].id = control_g_target;
     control_start_goal_descriptors.push_back(
@@ -391,6 +393,20 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
           ]  {
             std::vector<ompl::base::State *> samples;
             generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
+
+            GraphT * connection_g_control = nullptr;
+            std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_g_nn = nullptr;
+
+            if (thread_id % 2 == 0) {
+              // connect current thread's graph to next thread's graph
+              connection_g_control = &g_controls_.at(thread_id + 1);
+              connection_g_nn = controls_nn_.at(thread_id + 1);
+            } else {
+              // connect current thread's graph to previous thread's graph
+              connection_g_control = &g_controls_.at(thread_id - 1);
+              connection_g_nn = controls_nn_.at(thread_id - 1);
+            }
+
             expandControlGraph(
               samples,
               g_control[start_goal_descriptor.second].state,
@@ -401,14 +417,19 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
               g_control,
               g_nn,
               g_weightmap,
+              connection_g_control,
+              connection_g_nn,
               planner_status);
+
             ensureGoalVertexConnectivity(
-              g_control[start_goal_descriptor.second].state,
-              start_goal_descriptor.second,
-              g_control,
-              g_nn,
-              g_weightmap,
+              g_control[start_goal_descriptor.second].state,   // target state
+              start_goal_descriptor.second,                    // target vertex
+              g_control,                                       // current graph that is expanding towards target
+              g_nn,                                            // current graph nearest neighbor
+              g_weightmap,                                     // current graph weightmap
               planner_status);
+
+
             auto control_forward_heuristic =
             GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
               this, &g_control[start_goal_descriptor.second], true, thread_id);
@@ -824,6 +845,8 @@ void ompl::control::InformedSGCP::expandControlGraph(
   GraphT & control_graph,
   std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
   WeightMap & control_weightmap,
+  const GraphT * connection_control_graph,
+  const std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_control_nn,
   int & status)
 {
   // Now we have a collision free path, we can now find a control path
@@ -872,6 +895,7 @@ void ompl::control::InformedSGCP::expandControlGraph(
 
     if (!does_vertice_exits) {
       for (auto && nb : nbh) {
+
         if (nb->id == target_vertex_descriptor) {
           // Do not add edge to target vertex
           continue;
@@ -906,10 +930,14 @@ void ompl::control::InformedSGCP::expandControlGraph(
         auto arrived_vertex_property = new VertexProperty();
         arrived_vertex_property->id = arrived_vertex_descriptor;
         arrived_vertex_property->state = deep_copy_sample_state;
+        arrived_vertex_property->parent_id = nb->id;
         control_graph[arrived_vertex_descriptor] = *arrived_vertex_property;
         control_graph[arrived_vertex_descriptor].state = deep_copy_sample_state;
         control_graph[arrived_vertex_descriptor].control = c;
         control_graph[arrived_vertex_descriptor].control_duration = duration;
+        control_graph[arrived_vertex_descriptor].parent_id = nb->id;
+
+        std::lock_guard<std::mutex> guard(nnMutex_);
         control_nn->add(arrived_vertex_property);
 
         vertex_descriptor u = arrived_vertex_descriptor;
@@ -929,6 +957,68 @@ void ompl::control::InformedSGCP::expandControlGraph(
         boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
         control_weightmap[e] =
           opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
+
+        // check if arrived vertex connects to any vertex from connection graph
+        VertexProperty * nbh_in_connection_graph = nullptr;
+        try {
+          nbh_in_connection_graph = connection_control_nn->nearest(arrived_vertex_property);
+        } catch (...) {
+          std::cout << "No nearest avail" << std::endl;
+          continue;
+        }
+
+        if (nbh_in_connection_graph) {
+
+          if (distanceFunction(
+              nbh_in_connection_graph,
+              arrived_vertex_property) < params_.min_dist_between_vertices_)
+          {
+            // arrived vertex is close to a vertex in connection graph
+            // establish connection from arrived vertex from all the way to root of connection graph
+
+            auto connection_vertex = nbh_in_connection_graph->id;
+            auto connection_vertex_parent = arrived_vertex_descriptor;
+
+            while ( (*connection_control_graph)[connection_vertex].is_root == false) {
+
+              auto vertex_to_be_added = boost::add_vertex(control_graph);
+              auto vertex_prop_to_be_added = new VertexProperty();
+
+              vertex_prop_to_be_added->id = vertex_to_be_added;
+              vertex_prop_to_be_added->parent_id = connection_vertex_parent;
+
+              vertex_prop_to_be_added->state = si_->allocState();
+
+              if ((*connection_control_graph)[connection_vertex].state == nullptr) {
+                break;
+              }
+
+              si_->copyState(
+                vertex_prop_to_be_added->state,
+                (*connection_control_graph)[connection_vertex].state);
+
+              control_graph[vertex_to_be_added] = *vertex_prop_to_be_added;
+              control_nn->add(vertex_prop_to_be_added);
+
+              edge_descriptor e; bool edge_added;
+              boost::tie(e, edge_added) =
+                boost::add_edge(connection_vertex_parent, vertex_to_be_added, control_graph);
+
+              control_weightmap[e] = opt_->motionCost(
+                control_graph[connection_vertex_parent].state,
+                control_graph[vertex_to_be_added].state).value();
+
+              // print the edge
+              /*std::cout << "Adding edge from " << connection_vertex_parent << " to " <<
+                vertex_to_be_added << "in thread #" << std::this_thread::get_id() << std::endl;*/
+
+              connection_vertex =
+                (*connection_control_graph)[connection_vertex].parent_id;
+              connection_vertex_parent = vertex_to_be_added;
+
+            }
+          }
+        }
       }
     }
   }
