@@ -600,7 +600,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             "%s: Best Control Graph has %d vertices and ",
             getName().c_str(), bestControlVertex[bestControlPathIndex_].size());
           // Reset control graphs anyways
-          clearControlGraphs(weightmap_controls, control_start_goal_descriptors);
+          //clearControlGraphs(weightmap_controls, control_start_goal_descriptors);
 
         }
       } else if (control_threads_status[bestControlPathIndex_] ==
@@ -612,7 +612,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
           "%s: Another solution was found with cost %.2f but it did not improve previous cost %.2f so we will not update the best control path. ",
           getName().c_str(), best_control_path_cost.value(), bestControlCost_);
         // Reset control graphs anyways
-        clearControlGraphs(weightmap_controls, control_start_goal_descriptors);
+        //clearControlGraphs(weightmap_controls, control_start_goal_descriptors);
 
       }
     }
