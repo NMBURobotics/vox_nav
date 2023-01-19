@@ -319,46 +319,49 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       int immutable_t = t;
       // Pass all the variables by reference to the lambda function
       auto & thread_id = thread_ids.at(immutable_t);
-      auto & g = graphGeometricThreads_.at(thread_id);
-      auto & nn = nnGeometricThreads_.at(thread_id);
-      auto & weightmap = weightmap_geometrics.at(thread_id);
-      auto & shortest_paths_geometric = shortest_paths_geometrics.at(thread_id);
-      auto & start_goal_descriptor = geometric_start_goal_descriptors.at(thread_id);
+      auto & geometric_graph = graphGeometricThreads_.at(thread_id);
+      auto & geometric_nn = nnGeometricThreads_.at(thread_id);
+      auto & geometric_weightmap = weightmap_geometrics.at(thread_id);
+      auto & geometric_shortest_path = shortest_paths_geometrics.at(thread_id);
+      auto & start_goal_descriptor_pair = geometric_start_goal_descriptors.at(thread_id);
 
       geometric_threads[thread_id] = new std::thread(
         [this,
-        &g,
-        &nn,
-        &weightmap,
-        &shortest_paths_geometric,
-        &start_goal_descriptor,
+        &geometric_graph,
+        &geometric_nn,
+        &geometric_weightmap,
+        &geometric_shortest_path,
+        &start_goal_descriptor_pair,
         &thread_id,
         &ptc
         ]  {
           std::vector<ompl::base::State *> samples;
           generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
-          expandGeometricGraph(samples, ptc, g, nn, weightmap);
-          ensureGeometricGoalVertexConnectivity(&g[start_goal_descriptor.second], g, nn, weightmap);
+          expandGeometricGraph(samples, ptc, geometric_graph, geometric_nn, geometric_weightmap);
+          ensureGeometricGoalVertexConnectivity(
+            &geometric_graph[start_goal_descriptor_pair.second], geometric_graph,
+            geometric_nn, geometric_weightmap);
 
           // First lets compute an heuristic working backward from goal -> start
           // This is done by running A*/Dijkstra backwards from goal to start with no collision checking
           auto heuristic =
           GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
-            this, &g[start_goal_descriptor.first], false, thread_id);
-          shortest_paths_geometric =
+            this, &geometric_graph[start_goal_descriptor_pair.first], false, thread_id);
+          geometric_shortest_path =
           computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
-            g, weightmap, heuristic,
-            start_goal_descriptor.second,
-            start_goal_descriptor.first, true, false);
+            geometric_graph, geometric_weightmap, heuristic,
+            start_goal_descriptor_pair.second,
+            start_goal_descriptor_pair.first, true, false);
 
-          if (shortest_paths_geometric.size() > 0) {
+          if (geometric_shortest_path.size() > 0) {
             // precomputed heuristic is available, lets use it for actual path search with collision checking
             auto precomputed_heuristic =
             PrecomputedCostHeuristic<GraphT, GraphEdgeCost>(this, thread_id);
-            shortest_paths_geometric =
+            geometric_shortest_path =
             computeShortestPath<PrecomputedCostHeuristic<GraphT, GraphEdgeCost>>(
-              g, weightmap, precomputed_heuristic, start_goal_descriptor.first,
-              start_goal_descriptor.second, false, true);
+              geometric_graph, geometric_weightmap, precomputed_heuristic,
+              start_goal_descriptor_pair.first,
+              start_goal_descriptor_pair.second, false, true);
           }
         });
     }
@@ -370,24 +373,23 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         int immutable_t = t;
         // Pass all the variables by reference to the lambda function
         auto & thread_id = thread_ids.at(immutable_t);
-        auto & g_control = graphControlThreads_.at(thread_id);
-        auto & g_nn = nnControlsThreads_.at(thread_id);
-        auto & g_weightmap = weightmap_controls.at(thread_id);
-        auto & shortest_paths_control = shortest_paths_controls.at(thread_id);
-        auto & start_goal_descriptor = control_start_goal_descriptors.at(thread_id);
+        auto & control_graph = graphControlThreads_.at(thread_id);
+        auto & control_nn = nnControlsThreads_.at(thread_id);
+        auto & control_weightmap = weightmap_controls.at(thread_id);
+        auto & control_shortest_path = shortest_paths_controls.at(thread_id);
+        auto & start_goal_descriptor_pair = control_start_goal_descriptors.at(thread_id);
         auto & planner_status = control_threads_status.at(thread_id);
 
         control_threads[thread_id] = new std::thread(
           [this,
-          &start_goal_descriptor,
-          &g_control,
-          &g_nn,
-          &g_weightmap,
-          &shortest_paths_control,
+          &start_goal_descriptor_pair,
+          &control_graph,
+          &control_nn,
+          &control_weightmap,
+          &control_shortest_path,
           &thread_id,
           &planner_status,
-          &ptc,
-          &exact_solution
+          &ptc
           ]  {
             std::vector<ompl::base::State *> samples;
             generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
@@ -407,34 +409,34 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
             expandControlGraph(
               samples,
-              g_control[start_goal_descriptor.second].state,
-              start_goal_descriptor.second,
+              control_graph[start_goal_descriptor_pair.second].state,
+              start_goal_descriptor_pair.second,
               ptc,
               connection_g_control,
               connection_g_nn,
-              g_control,
-              g_nn,
-              g_weightmap,
+              control_graph,
+              control_nn,
+              control_weightmap,
               planner_status);
 
             ensureControlGoalVertexConnectivity(
-              g_control[start_goal_descriptor.second].state,   // target state
-              start_goal_descriptor.second,                    // target vertex
-              g_control,                                       // current graph that is expanding towards target
-              g_nn,                                            // current graph nearest neighbor
-              g_weightmap,                                     // current graph weightmap
+              control_graph[start_goal_descriptor_pair.second].state,   // target state
+              start_goal_descriptor_pair.second,                        // target vertex
+              control_graph,                                            // current graph that is expanding towards target
+              control_nn,                                               // current graph nearest neighbor
+              control_weightmap,                                        // current graph weightmap
               planner_status);
 
             auto control_forward_heuristic =
             GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
-              this, &g_control[start_goal_descriptor.second], true, thread_id);
-            shortest_paths_control =
+              this, &control_graph[start_goal_descriptor_pair.second], true, thread_id);
+            control_shortest_path =
             computeShortestPath<GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>>(
-              g_control,
-              g_weightmap,
+              control_graph,
+              control_weightmap,
               control_forward_heuristic,
-              start_goal_descriptor.first,
-              start_goal_descriptor.second,
+              start_goal_descriptor_pair.first,
+              start_goal_descriptor_pair.second,
               false, false);
           });
       }

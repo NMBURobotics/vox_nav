@@ -609,12 +609,12 @@ namespace ompl
 
       /** \brief After expandControlGraph() function call,
        * make sure that the target vertex is connected to it's graph and nearest neighbors if possible.
-       * \param target_vertex_state the target vertex state
-        * \param target_vertex_descriptor the target vertex descriptor
-        * \param control_graph the graph to be expanded (this thread's graph)
-        * \param control_nn nearest neighbor structure to be updated (this thread's nn)
-        * \param control_weightmap weight map to be updated (this thread's weightmap)
-        * \param status is the status of the thread (exact solution ? , unknown ?)
+      * \param target_vertex_state the target vertex state
+      * \param target_vertex_descriptor the target vertex descriptor
+      * \param control_graph the graph to be expanded (this thread's graph)
+      * \param control_nn nearest neighbor structure to be updated (this thread's nn)
+      * \param control_weightmap weight map to be updated (this thread's weightmap)
+      * \param status is the status of the thread (exact solution ? , unknown ?)
        * */
       void ensureControlGoalVertexConnectivity(
         const ompl::base::State * target_vertex_state,
