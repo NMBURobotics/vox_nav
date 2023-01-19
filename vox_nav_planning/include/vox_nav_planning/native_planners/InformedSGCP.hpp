@@ -464,54 +464,6 @@ namespace ompl
       /** \brief The control graphs, the numbers of graphs equals to number of threads */
       std::vector<GraphT> graphControlThreads_;
 
-      /** \brief generate a requested amound of states with preffered state sampler*/
-      void generateBatchofSamples(
-        int batch_size,
-        bool use_valid_sampler,
-        std::vector<ompl::base::State *> & samples);
-
-      /** \brief Keep expanding geometric graph with generated samples.
-       * TODO(@atas), add more description here*/
-      void expandGeometricGraph(
-        const std::vector<ompl::base::State *> & samples,
-        const base::PlannerTerminationCondition & ptc,
-        GraphT & geometric_graph,
-        std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
-        WeightMap & geometric_weightmap);
-
-      /** \brief In each iteration, make sure that goal vertex is connected to its nn.
-       * TODO(@atas), add more description here*/
-      void ensureGoalVertexConnectivity(
-        VertexProperty * target_vertex_property,
-        GraphT & geometric_graph,
-        std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
-        WeightMap & geometric_weightmap);
-
-      /** \brief Keep expanding control graph with generated samples.
-       * Note that only non-violating states will be added, the rest are discaded
-       * TODO(@atas), add more description here*/
-      void expandControlGraph(
-        const std::vector<ompl::base::State *> & samples,
-        const ompl::base::State * target_vertex_state,
-        const vertex_descriptor & target_vertex_descriptor,
-        const base::PlannerTerminationCondition & ptc,
-        const bool & intial_plan_available,
-        const std::vector<VertexProperty *> & vertex_prop_plan,
-        GraphT & control_graph,
-        std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
-        WeightMap & control_weightmap,
-        const GraphT * connection_control_graph,
-        const std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_control_nn,
-        int & status);
-
-      void ensureGoalVertexConnectivity(
-        const ompl::base::State * target_vertex_state,
-        const vertex_descriptor & target_vertex_descriptor,
-        GraphT & control_graph,
-        std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
-        WeightMap & control_weightmap,
-        int & status);
-
       template<class Heuristic>
       std::list<vertex_descriptor> computeShortestPath(
         GraphT & g,
@@ -575,6 +527,54 @@ namespace ompl
         }
       }
 
+      /** \brief generate a requested amound of states with preffered state sampler*/
+      void generateBatchofSamples(
+        int batch_size,
+        bool use_valid_sampler,
+        std::vector<ompl::base::State *> & samples);
+
+      /** \brief Keep expanding geometric graph with generated samples.
+       * TODO(@atas), add more description here*/
+      void expandGeometricGraph(
+        const std::vector<ompl::base::State *> & samples,
+        const base::PlannerTerminationCondition & ptc,
+        GraphT & geometric_graph,
+        std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
+        WeightMap & geometric_weightmap);
+
+      /** \brief In each iteration, make sure that goal vertex is connected to its nn.
+       * TODO(@atas), add more description here*/
+      void ensureGoalVertexConnectivity(
+        VertexProperty * target_vertex_property,
+        GraphT & geometric_graph,
+        std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
+        WeightMap & geometric_weightmap);
+
+      /** \brief Keep expanding control graph with generated samples.
+       * Note that only non-violating states will be added, the rest are discaded
+       * TODO(@atas), add more description here*/
+      void expandControlGraph(
+        const std::vector<ompl::base::State *> & samples,
+        const ompl::base::State * target_vertex_state,
+        const vertex_descriptor & target_vertex_descriptor,
+        const base::PlannerTerminationCondition & ptc,
+        const bool & intial_plan_available,
+        const std::vector<VertexProperty *> & vertex_prop_plan,
+        GraphT & control_graph,
+        std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
+        WeightMap & control_weightmap,
+        const GraphT * connection_control_graph,
+        const std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_control_nn,
+        int & status);
+
+      void ensureGoalVertexConnectivity(
+        const ompl::base::State * target_vertex_state,
+        const vertex_descriptor & target_vertex_descriptor,
+        GraphT & control_graph,
+        std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
+        WeightMap & control_weightmap,
+        int & status);
+
       /** \brief original AIT* function */
       std::size_t computeNumberOfSamplesInInformedSet() const;
 
@@ -606,38 +606,7 @@ namespace ompl
       void clearControlGraphs(
         std::vector<WeightMap> & weightmap_controls,
         std::vector<std::pair<vertex_descriptor, vertex_descriptor>> & control_start_goal_descriptors
-      )
-      {
-        // Reset control graphs anyways
-        control_start_goal_descriptors.clear();
-
-        for (int i = 0; i < params_.num_threads_; i++) {
-          graphControlThreads_[i].clear();
-          graphControlThreads_[i] = GraphT();
-          // free memory for all nns in control threads
-          nnControlsThreads_[i]->clear();
-          // Add the start and goal vertex to the control graph
-          nnControlsThreads_[i]->add(startVerticesControl_[i]);
-
-          vertex_descriptor control_g_root = boost::add_vertex(graphControlThreads_[i]);
-          graphControlThreads_[i][control_g_root] = *startVerticesControl_[i];
-          graphControlThreads_[i][control_g_root].id = control_g_root;
-          graphControlThreads_[i][control_g_root].is_root = true;
-          vertex_descriptor control_g_target = boost::add_vertex(graphControlThreads_[i]);
-          graphControlThreads_[i][control_g_target] = *goalVerticesControl_[i];
-          graphControlThreads_[i][control_g_target].id = control_g_target;
-
-          control_start_goal_descriptors.push_back(
-            std::make_pair(
-              graphControlThreads_[i][control_g_root].id,
-              graphControlThreads_[i][control_g_target].id));
-        }
-        // Reset the weightmap
-        weightmap_controls.clear();
-        for (auto & graph : graphControlThreads_) {
-          weightmap_controls.push_back(get(boost::edge_weight, graph));
-        }
-      }
+      );
 
       /** \brief static method to visulize a graph in RVIZ*/
       static void visualizeRGG(

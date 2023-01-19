@@ -1251,6 +1251,21 @@ void ompl::control::InformedSGCP::populateOmplPathfromVertexPath(
   }
 }
 
+ompl::base::Cost ompl::control::InformedSGCP::computePathCost(
+  std::shared_ptr<ompl::control::PathControl> & path)  const
+{
+  ompl::base::Cost path_cost = opt_->identityCost();
+  if (path->getStateCount() == 0) {
+    return path_cost;
+  }
+  for (std::size_t i = 0; i < path->getStateCount() - 1; ++i) {
+    path_cost = opt_->combineCosts(
+      path_cost,
+      opt_->motionCost(path->getState(i), path->getState(i + 1)));
+  }
+  return path_cost;
+}
+
 std::vector<const ompl::base::State *> ompl::control::InformedSGCP::getConstStates(
   const std::shared_ptr<ompl::control::PathControl> & path)
 {
@@ -1271,19 +1286,40 @@ std::vector<ompl::base::State *> ompl::control::InformedSGCP::getStates(
   return states;
 }
 
-ompl::base::Cost ompl::control::InformedSGCP::computePathCost(
-  std::shared_ptr<ompl::control::PathControl> & path)  const
+void ompl::control::InformedSGCP::clearControlGraphs(
+  std::vector<WeightMap> & weightmap_controls,
+  std::vector<std::pair<vertex_descriptor, vertex_descriptor>> & control_start_goal_descriptors
+)
 {
-  ompl::base::Cost path_cost = opt_->identityCost();
-  if (path->getStateCount() == 0) {
-    return path_cost;
+  // Reset control graphs anyways
+  control_start_goal_descriptors.clear();
+
+  for (int i = 0; i < params_.num_threads_; i++) {
+    graphControlThreads_[i].clear();
+    graphControlThreads_[i] = GraphT();
+    // free memory for all nns in control threads
+    nnControlsThreads_[i]->clear();
+    // Add the start and goal vertex to the control graph
+    nnControlsThreads_[i]->add(startVerticesControl_[i]);
+
+    vertex_descriptor control_g_root = boost::add_vertex(graphControlThreads_[i]);
+    graphControlThreads_[i][control_g_root] = *startVerticesControl_[i];
+    graphControlThreads_[i][control_g_root].id = control_g_root;
+    graphControlThreads_[i][control_g_root].is_root = true;
+    vertex_descriptor control_g_target = boost::add_vertex(graphControlThreads_[i]);
+    graphControlThreads_[i][control_g_target] = *goalVerticesControl_[i];
+    graphControlThreads_[i][control_g_target].id = control_g_target;
+
+    control_start_goal_descriptors.push_back(
+      std::make_pair(
+        graphControlThreads_[i][control_g_root].id,
+        graphControlThreads_[i][control_g_target].id));
   }
-  for (std::size_t i = 0; i < path->getStateCount() - 1; ++i) {
-    path_cost = opt_->combineCosts(
-      path_cost,
-      opt_->motionCost(path->getState(i), path->getState(i + 1)));
+  // Reset the weightmap
+  weightmap_controls.clear();
+  for (auto & graph : graphControlThreads_) {
+    weightmap_controls.push_back(get(boost::edge_weight, graph));
   }
-  return path_cost;
 }
 
 void ompl::control::InformedSGCP::visualizeRGG(
