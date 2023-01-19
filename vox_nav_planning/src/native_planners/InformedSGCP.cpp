@@ -871,6 +871,11 @@ void ompl::control::InformedSGCP::expandControlGraph(
       break;
     }
 
+    // If the sampled state is not valid, discard it and continue
+    if (!si_->getStateValidityChecker()->isValid(i)) {
+      continue;
+    }
+
     VertexProperty * vertex_property = new VertexProperty();
     vertex_property->state = i;
 
@@ -914,37 +919,46 @@ void ompl::control::InformedSGCP::expandControlGraph(
 
     if (!does_vertice_exits) {
 
-      // Now this sample is unique enough, so add it to the graph
+      // Now this sample is unique enough,  we will try to propogate from it's neighbors to it
       for (auto && nb : nbh) {
-        
+
+        // If the neighbor is goal vertex, do not "propogate" from goal to sample,
+        // the ultmate goal is to propogate from sample to goal
         if (nb->id == target_vertex_descriptor) {
           continue;
         }
+
+        // if neighbor is blacklisted, do not propogate from it and continue
         if (nb->blacklisted) {
           continue;
         }
-        // Do not modify original sample, as that will affect geometric RGG
+
+        // Do not modify original sample
         auto deep_copy_sample_state = si_->allocState();
         si_->copyState(deep_copy_sample_state, i);
-        // Attempt to drive towards newly added sample
-        // modify the sample to latest arrived state
+        // Attempt to drive from neighbour towards newly added sample
+        // modify the sample to latest arrived valid state, is it guaranteed to be valid.
         auto c = siC_->allocControl();
         auto duration = directedControlSampler_->sampleTo(
           c,
           nb->state,
           deep_copy_sample_state);
 
+        // if the duration is less than min_control_duration, then probably it hit the boundary
+        // or the sample is invalid, so do not add it to the graph
         if (duration < siC_->getMinControlDuration() ||
           !si_->isValid(deep_copy_sample_state))
         {
-          // perhaps due to invalidity of the state, we cannot proceed
+          // we cannot proceed free the allocated control and state
           siC_->freeControl(c);
           si_->freeState(deep_copy_sample_state);
+          // blacklist the neighbor, this is not %100 correct, but otherwise the graph get filled with
+          // useless vertices that are stuck on boundaries
           nb->blacklisted = true;
-          // remove the nn as it led to invalid state
           continue;
         }
 
+        // As result of sampleTo, the sample is now valid, so add it to the graph and nn structure
         vertex_descriptor arrived_vertex_descriptor = boost::add_vertex(control_graph);
         auto arrived_vertex_property = new VertexProperty();
         arrived_vertex_property->id = arrived_vertex_descriptor;
@@ -956,13 +970,15 @@ void ompl::control::InformedSGCP::expandControlGraph(
         control_graph[arrived_vertex_descriptor].control_duration = duration;
         control_graph[arrived_vertex_descriptor].parent_id = nb->id;
 
+        // lock the nn structure as some other thread might be accessing it
         std::lock_guard<std::mutex> guard(nnMutex_);
         control_nn->add(arrived_vertex_property);
 
+        // Also add edge from neighbor to arrived vertex
         vertex_descriptor u = arrived_vertex_descriptor;
         vertex_descriptor v = nb->id;
-        double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
-        edge_descriptor e; bool edge_added;
+        double dist = distanceFunction(arrived_vertex_property->state, nb->state);
+
         // not to construct edges with self, and if nbh is further than radius_, continue
         if (u == v || dist > params_.max_dist_between_vertices_) {
           continue;
@@ -972,72 +988,77 @@ void ompl::control::InformedSGCP::expandControlGraph(
         {
           continue;
         }
-        // Once suitable edges are found, populate them over graphs
+
+        edge_descriptor e; bool edge_added;
         boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
         control_weightmap[e] =
           opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
 
-        // check if arrived vertex connects to any vertex from connection graph
+        // Now check if the arrived vertex connects to any vertex from connection_graph
         VertexProperty * nbh_in_connection_graph = nullptr;
         try {
           nbh_in_connection_graph = connection_control_nn->nearest(arrived_vertex_property);
         } catch (...) {
-          OMPL_WARN("%s: No nn available to establish a connection", getName().c_str());
+          OMPL_WARN(
+            "%s: No nn available to establish a connection from connection_graph",
+            getName().c_str());
           continue;
         }
 
         if (nbh_in_connection_graph) {
 
+          // We have a neighbor in connection graph, check if it is close enough to connect
+
           if (distanceFunction(
               nbh_in_connection_graph,
               arrived_vertex_property) < params_.min_dist_between_vertices_)
           {
-            // arrived vertex is close to a vertex in connection graph
-            // establish connection from arrived vertex from all the way to root of connection graph
-
+            // arrived vertex is close to enough to it's nn in connection graph
+            // establish connection from arrived vertex from all the way to root of connection_graph,
+            // ultimately giving us a path from start to goal
             auto connection_vertex = nbh_in_connection_graph->id;
             auto connection_vertex_parent = arrived_vertex_descriptor;
 
-            while ( (*connection_control_graph)[connection_vertex].is_root == false) {
+            // spin until we get Get to the root of the connection_graph which is the goal vertex
+            while ((*connection_control_graph)[connection_vertex].is_root == false) {
 
               auto vertex_to_be_added = boost::add_vertex(control_graph);
               auto vertex_prop_to_be_added = new VertexProperty();
-
               vertex_prop_to_be_added->id = vertex_to_be_added;
               vertex_prop_to_be_added->parent_id = connection_vertex_parent;
-
               vertex_prop_to_be_added->state = si_->allocState();
 
+              // if the state is nullptr, then we have reached the root of the connection_graph
               if ((*connection_control_graph)[connection_vertex].state == nullptr) {
                 break;
               }
 
+              // Add the connection vertex and all of its parents to the control_graph and nn structure
               si_->copyState(
                 vertex_prop_to_be_added->state,
                 (*connection_control_graph)[connection_vertex].state);
-
               control_graph[vertex_to_be_added] = *vertex_prop_to_be_added;
               control_nn->add(vertex_prop_to_be_added);
 
+              // Also add edges from the parent to the vertex
               edge_descriptor e; bool edge_added;
               boost::tie(e, edge_added) =
                 boost::add_edge(connection_vertex_parent, vertex_to_be_added, control_graph);
-
               control_weightmap[e] = opt_->motionCost(
                 control_graph[connection_vertex_parent].state,
                 control_graph[vertex_to_be_added].state).value();
 
+              // NOTE: The path from connection vertex to root of connection graph is reversed
+              // We have to deal with this when we are trying to extract the path from the control_graph
               connection_vertex =
                 (*connection_control_graph)[connection_vertex].parent_id;
               connection_vertex_parent = vertex_to_be_added;
-
             }
           }
         }
       }
     }
   }
-
 }
 
 void ompl::control::InformedSGCP::ensureControlGoalVertexConnectivity(
@@ -1048,9 +1069,8 @@ void ompl::control::InformedSGCP::ensureControlGoalVertexConnectivity(
   WeightMap & control_weightmap,
   int & status)
 {
-
+  // Get all the neighbors of the target vertex
   std::vector<ompl::control::InformedSGCP::VertexProperty *> nbh;
-
   if (params_.use_k_nearest_) {
     control_nn->nearestK(&control_graph[target_vertex_descriptor], 2.0 * numNeighbors_, nbh);
   } else {
@@ -1059,15 +1079,18 @@ void ompl::control::InformedSGCP::ensureControlGoalVertexConnectivity(
 
   // Try to drive from all neighbors to the target vertex
   for (auto && nb : nbh) {
+
     if (nb->id == target_vertex_descriptor) {
-      // Do not add edge to target vertex
+      // Do not add edge to self
       continue;
     }
+
+    // Check if the motion is valid
     if (!si_->checkMotion(nb->state, control_graph[target_vertex_descriptor].state)) {
-      // Do not add edge to target vertex
       continue;
     }
-    // Do not modify original sample, as that will affect geometric RGG
+
+    // Do not modify original sample
     auto deep_copy_sample_state = si_->allocState();
     si_->copyState(deep_copy_sample_state, control_graph[target_vertex_descriptor].state);
     // Attempt to drive towards newly added sample
@@ -1084,7 +1107,6 @@ void ompl::control::InformedSGCP::ensureControlGoalVertexConnectivity(
       si_->freeState(deep_copy_sample_state);
       continue;
     }
-
     vertex_descriptor arrived_vertex_descriptor = boost::add_vertex(control_graph);
     auto arrived_vertex_property = new VertexProperty();
     arrived_vertex_property->id = arrived_vertex_descriptor;
@@ -1094,7 +1116,6 @@ void ompl::control::InformedSGCP::ensureControlGoalVertexConnectivity(
     control_graph[arrived_vertex_descriptor].control = c;
     control_graph[arrived_vertex_descriptor].control_duration = duration;
     control_nn->add(arrived_vertex_property);
-
     vertex_descriptor u = arrived_vertex_descriptor;
     vertex_descriptor v = nb->id;
     double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
@@ -1114,14 +1135,11 @@ void ompl::control::InformedSGCP::ensureControlGoalVertexConnectivity(
       opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
 
     // calculate the distance between the arrived state and the start/goal
-
     base::Goal * goal = pdef_->getGoal().get();
     auto * goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
     double goal_tolerance = goal_s->getThreshold();
-
     double dist_to_target_approx = distanceFunction(
       arrived_vertex_property->state, target_vertex_state);
-
     if (dist_to_target_approx < goal_tolerance) {
       // if the distance is less than the radius to target, then add the edge
       // Exact solution
@@ -1142,7 +1160,6 @@ void ompl::control::InformedSGCP::ensureControlGoalVertexConnectivity(
       boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
       control_weightmap[e] =
         opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
-
       status = base::PlannerStatus::EXACT_SOLUTION;
     }
   }

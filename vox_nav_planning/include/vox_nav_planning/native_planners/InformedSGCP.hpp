@@ -559,7 +559,7 @@ namespace ompl
         WeightMap & geometric_weightmap
       );
 
-      /** \brief In expandGeometricGraph() function call,
+      /** \brief After expandGeometricGraph() function call,
        * make sure that the target vertex is connected to it's graph and nearest neighbor.
        * \param target_vertex_property the target vertex to be connected
        * \param geometric_graph the graph to be expanded
@@ -607,6 +607,15 @@ namespace ompl
         WeightMap & control_weightmap,
         int & status);
 
+      /** \brief After expandControlGraph() function call,
+       * make sure that the target vertex is connected to it's graph and nearest neighbors if possible.
+       * \param target_vertex_state the target vertex state
+        * \param target_vertex_descriptor the target vertex descriptor
+        * \param control_graph the graph to be expanded (this thread's graph)
+        * \param control_nn nearest neighbor structure to be updated (this thread's nn)
+        * \param control_weightmap weight map to be updated (this thread's weightmap)
+        * \param status is the status of the thread (exact solution ? , unknown ?)
+       * */
       void ensureControlGoalVertexConnectivity(
         const ompl::base::State * target_vertex_state,
         const vertex_descriptor & target_vertex_descriptor,
@@ -615,7 +624,7 @@ namespace ompl
         WeightMap & control_weightmap,
         int & status);
 
-      /** \brief original AIT* function */
+      /** \brief original AIT* function, get number of samples in informed set */
       std::size_t computeNumberOfSamplesInInformedSet() const;
 
       /** \brief original AIT* function */
@@ -624,10 +633,24 @@ namespace ompl
       /** \brief original AIT* function */
       std::size_t computeNumberOfNeighbors(std::size_t numSamples) const;
 
-      /** \brief compute path cost */
+      /** \brief compute path cost by finding cost between
+       * consecutive vertices in the path
+       * \param vertex_path is the path
+      */
       ompl::base::Cost computePathCost(
         std::shared_ptr<ompl::control::PathControl> & path) const;
 
+      /** \brief Given a path defined as list of vertex_descriptor \e vertex_path,
+       * extract the corresponding states and controls from the graph \e g
+       * and populate the ompl::control::PathControl \e path.
+       * also populate the vertexprop_path with the vertex properties of the path.
+       * \param vertex_path is the path defined as list of vertex_descriptor
+       * \param g is the graph from which the path is extracted
+       * \param weightmap is the weightmap of the graph from which the path is extracted
+       * \param path is the ompl::control::PathControl to be populated
+       * \param vertexprop_path is the vector of vertex properties to be populated
+       * \param control is a flag to indicate if the path is control path or not
+       *  */
       void populateOmplPathfromVertexPath(
         const std::list<vertex_descriptor> & vertex_path,
         GraphT & g,
@@ -637,9 +660,17 @@ namespace ompl
         const bool control = false
       ) const;
 
+      /** \brief Extract the states from the path and return them as a vector of const states
+        * \param path is the ompl::control::PathControl from which the states are extracted
+        */
       std::vector<const ompl::base::State *> getConstStatesFromPath(
         const std::shared_ptr<ompl::control::PathControl> & path);
 
+      /** \brief Clear the control graphs and the corresponding nearest neighbor structures in all threads
+       * but again populate the start and goal vertices in the control graphs while only populating the start vertex in the nearest neighbor structures
+        * \param weightmap_controls is the vector of weightmaps of the control graphs
+        * \param control_start_goal_descriptors is the vector of start and goal vertex descriptors of the control graphs
+       */
       void clearControlGraphs(
         std::vector<WeightMap> & weightmap_controls,
         std::vector<std::pair<vertex_descriptor, vertex_descriptor>> & control_start_goal_descriptors
