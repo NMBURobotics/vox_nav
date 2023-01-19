@@ -963,7 +963,7 @@ void ompl::control::InformedSGCP::expandControlGraph(
         try {
           nbh_in_connection_graph = connection_control_nn->nearest(arrived_vertex_property);
         } catch (...) {
-          std::cout << "No nearest avail" << std::endl;
+          OMPL_WARN("%s: No nn available to establish a connection", getName().c_str());
           continue;
         }
 
@@ -1007,10 +1007,6 @@ void ompl::control::InformedSGCP::expandControlGraph(
               control_weightmap[e] = opt_->motionCost(
                 control_graph[connection_vertex_parent].state,
                 control_graph[vertex_to_be_added].state).value();
-
-              // print the edge
-              /*std::cout << "Adding edge from " << connection_vertex_parent << " to " <<
-                vertex_to_be_added << "in thread #" << std::this_thread::get_id() << std::endl;*/
 
               connection_vertex =
                 (*connection_control_graph)[connection_vertex].parent_id;
