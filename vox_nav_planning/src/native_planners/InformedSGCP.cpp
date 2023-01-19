@@ -338,7 +338,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
           std::vector<ompl::base::State *> samples;
           generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
           expandGeometricGraph(samples, ptc, g, nn, weightmap);
-          ensureGoalVertexConnectivity(&g[start_goal_descriptor.second], g, nn, weightmap);
+          ensureGeometricGoalVertexConnectivity(&g[start_goal_descriptor.second], g, nn, weightmap);
 
           // First lets compute an heuristic working backward from goal -> start
           // This is done by running A*/Dijkstra backwards from goal to start with no collision checking
@@ -376,7 +376,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         auto & shortest_paths_control = shortest_paths_controls.at(thread_id);
         auto & start_goal_descriptor = control_start_goal_descriptors.at(thread_id);
         auto & planner_status = control_threads_status.at(thread_id);
-        auto & bestControlVertexProp = bestControlVertex.at(bestControlPathIndex_);
 
         control_threads[thread_id] = new std::thread(
           [this,
@@ -388,8 +387,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
           &thread_id,
           &planner_status,
           &ptc,
-          &exact_solution,
-          &bestControlVertexProp
+          &exact_solution
           ]  {
             std::vector<ompl::base::State *> samples;
             generateBatchofSamples(params_.batch_size_, params_.use_valid_sampler_, samples);
@@ -412,23 +410,20 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
               g_control[start_goal_descriptor.second].state,
               start_goal_descriptor.second,
               ptc,
-              exact_solution,
-              bestControlVertexProp,
+              connection_g_control,
+              connection_g_nn,
               g_control,
               g_nn,
               g_weightmap,
-              connection_g_control,
-              connection_g_nn,
               planner_status);
 
-            ensureGoalVertexConnectivity(
+            ensureControlGoalVertexConnectivity(
               g_control[start_goal_descriptor.second].state,   // target state
               start_goal_descriptor.second,                    // target vertex
               g_control,                                       // current graph that is expanding towards target
               g_nn,                                            // current graph nearest neighbor
               g_weightmap,                                     // current graph weightmap
               planner_status);
-
 
             auto control_forward_heuristic =
             GenericDistanceHeuristic<GraphT, VertexProperty, GraphEdgeCost>(
@@ -461,7 +456,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
           true
         );
       }
-
     }
 
     // Let the threads finish
@@ -495,7 +489,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       }
       geometric_counter++;
     }
-
 
     // Determine best control path found by current threads
     auto best_control_path(std::make_shared<PathControl>(si_));
@@ -767,34 +760,36 @@ void ompl::control::InformedSGCP::expandGeometricGraph(
         does_vertice_exits = true;
       }
     }
-    
+
     if (!does_vertice_exits) {
 
       // Add the new vertex to the graph and nn structure
-      vertex_descriptor this_vertex_descriptor = boost::add_vertex(geometric_graph);
-      vertex_property_to_be_added->id = this_vertex_descriptor;
-      geometric_graph[this_vertex_descriptor] = *vertex_property_to_be_added;
+      vertex_descriptor vertex_descriptor_to_be_added = boost::add_vertex(geometric_graph);
+      vertex_property_to_be_added->id = vertex_descriptor_to_be_added;
+      geometric_graph[vertex_descriptor_to_be_added] = *vertex_property_to_be_added;
       geometric_nn->add(vertex_property_to_be_added);
       for (auto && nb : nbh) {
         if (!si_->checkMotion(vertex_property_to_be_added->state, nb->state)) {
           continue;
         }
 
-        vertex_descriptor u = this_vertex_descriptor;
+        vertex_descriptor u = vertex_descriptor_to_be_added;
         vertex_descriptor v = nb->id;
-        double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
-        edge_descriptor e; bool edge_added;
+        double dist = distanceFunction(
+          vertex_property_to_be_added->state,
+          nb->state);
+
         // not to construct edges with self, and if nbh is further than radius_, continue
         if (u == v || dist > params_.max_dist_between_vertices_) {
           continue;
         }
-        if (boost::edge(
-            u, v,
-            geometric_graph).second || boost::edge(v, u, geometric_graph).second)
+        if (boost::edge(u, v, geometric_graph).second || // if edge already exists, continue
+          boost::edge(v, u, geometric_graph).second)
         {
           continue;
         }
         // Once suitable edges are found, populate them over graphs
+        edge_descriptor e; bool edge_added;
         boost::tie(e, edge_added) = boost::add_edge(u, v, geometric_graph);
         geometric_weightmap[e] =
           opt_->motionCost(geometric_graph[u].state, geometric_graph[v].state).value();
@@ -803,33 +798,39 @@ void ompl::control::InformedSGCP::expandGeometricGraph(
   }
 }
 
-void ompl::control::InformedSGCP::ensureGoalVertexConnectivity(
+void ompl::control::InformedSGCP::ensureGeometricGoalVertexConnectivity(
   VertexProperty * target_vertex_property,
   GraphT & geometric_graph,
   std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
   WeightMap & geometric_weightmap)
 {
-  // Neihbors of goal vertex
-  std::vector<ompl::control::InformedSGCP::VertexProperty *> goal_nbh;
 
+  // get neihbors of the target vertex
+  std::vector<ompl::control::InformedSGCP::VertexProperty *> goal_nbh;
   if (params_.use_k_nearest_) {
     geometric_nn->nearestK(target_vertex_property, numNeighbors_, goal_nbh);
   } else {
     geometric_nn->nearestR(target_vertex_property, radius_, goal_nbh);
   }
 
+  // Clip the number of neighbors to max_neighbors_, The nearest neighbors are sorted by distance
   if (goal_nbh.size() > params_.max_neighbors_) {
     goal_nbh.resize(params_.max_neighbors_);
   }
+
+  // iterate over the neighbors and add edges to the target vertex if they are valid
+  // and satisfy the distance criteria
   for (auto && nb : goal_nbh) {
+
     if (!si_->checkMotion(nb->state, target_vertex_property->state)) {
-      // Do not add edge to target vertex
+      // Do not add edge to target vertex as it is not valid
       continue;
     }
+
     vertex_descriptor u = target_vertex_property->id;
     vertex_descriptor v = nb->id;
-    double dist = distanceFunction(geometric_graph[u].state, geometric_graph[v].state);
-    edge_descriptor e; bool edge_added;
+    double dist = distanceFunction(target_vertex_property->state, nb->state);
+
     // not to construct edges with self, and if nbh is further than radius_, continue
     if (u == v || (dist > params_.max_dist_between_vertices_)) {
       continue;
@@ -837,7 +838,9 @@ void ompl::control::InformedSGCP::ensureGoalVertexConnectivity(
     if (boost::edge(u, v, geometric_graph).second || boost::edge(v, u, geometric_graph).second) {
       continue;
     }
-    // Once suitable edges are found, populate them over graphs
+
+    // Connect the target vertex to the neighbor as it is valid and satisfies the distance criterias
+    edge_descriptor e; bool edge_added;
     boost::tie(e, edge_added) = boost::add_edge(u, v, geometric_graph);
     geometric_weightmap[e] =
       opt_->motionCost(geometric_graph[u].state, geometric_graph[v].state).value();
@@ -849,13 +852,11 @@ void ompl::control::InformedSGCP::expandControlGraph(
   const ompl::base::State * target_vertex_state,
   const vertex_descriptor & target_vertex_descriptor,
   const base::PlannerTerminationCondition & ptc,
-  const bool & intial_plan_available,
-  const std::vector<VertexProperty *> & vertex_prop_plan,
+  const GraphT * connection_control_graph,
+  const std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_control_nn,
   GraphT & control_graph,
   std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
   WeightMap & control_weightmap,
-  const GraphT * connection_control_graph,
-  const std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_control_nn,
   int & status)
 {
   // Now we have a collision free path, we can now find a control path
@@ -1030,7 +1031,7 @@ void ompl::control::InformedSGCP::expandControlGraph(
 
 }
 
-void ompl::control::InformedSGCP::ensureGoalVertexConnectivity(
+void ompl::control::InformedSGCP::ensureControlGoalVertexConnectivity(
   const ompl::base::State * target_vertex_state,
   const vertex_descriptor & target_vertex_descriptor,
   GraphT & control_graph,
@@ -1134,29 +1135,8 @@ void ompl::control::InformedSGCP::ensureGoalVertexConnectivity(
         opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
 
       status = base::PlannerStatus::EXACT_SOLUTION;
-    }   /*else if (dist_to_target_approx < params_.max_dist_between_vertices_) {
-      // Approximate solution
-      vertex_descriptor u = arrived_vertex_property->id;
-      vertex_descriptor v = target_vertex_descriptor;
-      double dist = distanceFunction(control_graph[u].state, control_graph[v].state);
-      edge_descriptor e; bool edge_added;
-      // not to construct edges with self, and if nbh is further than radius_, continue
-      if (u == v || dist > params_.max_dist_between_vertices_) {
-        continue;
-      }
-      if (boost::edge(u, v, control_graph).second ||
-        boost::edge(v, u, control_graph).second)
-      {
-        continue;
-      }
-      // Once suitable edges are found, populate them over graphs
-      boost::tie(e, edge_added) = boost::add_edge(u, v, control_graph);
-      control_weightmap[e] =
-        opt_->motionCost(control_graph[u].state, control_graph[v].state).value();
-      status = base::PlannerStatus::APPROXIMATE_SOLUTION;
-    }*/
+    }
   }
-
 }
 
 std::size_t ompl::control::InformedSGCP::computeNumberOfSamplesInInformedSet() const

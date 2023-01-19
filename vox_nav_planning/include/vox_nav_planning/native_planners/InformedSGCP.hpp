@@ -527,47 +527,87 @@ namespace ompl
         }
       }
 
-      /** \brief generate a requested amound of states with preffered state sampler*/
+      /** \brief generate a requested amound of states with preffered state sampler
+       * \param batch_size number of states to generate
+       * \param use_valid_sampler if true, use valid state sampler, otherwise use uniform sampler
+       * \param samples vector of states to be filled with generated samples
+      */
       void generateBatchofSamples(
         int batch_size,
         bool use_valid_sampler,
         std::vector<ompl::base::State *> & samples);
 
-      /** \brief Keep expanding geometric graph with generated samples.
-       * TODO(@atas), add more description here*/
+      /** \brief Keep expanding geometric graph with generated samples, thread-safe.
+       * This function is called by each thread in parallel to expand the geometric graphs.
+       * For each sample in \e samples, check if it is valid,
+       * Check if it is in withing min-max edge range,
+       * check if it is unique enough,
+       * If all checks pass, add it to the graph and nn structure.
+       * Validity check is done with motionCheck, so the edges are collisiosn free.
+       * However the user needs to set setLongestValidSegmentFraction() to low value, e.g. 0.01
+       * \param samples vector of states to be added to the graph
+       * \param ptc termination condition
+       * \param geometric_graph the graph to be expanded
+       * \param geometric_nn nearest neighbor structure to be updated
+       * \param geometric_weightmap weight map to be updated
+      */
       void expandGeometricGraph(
         const std::vector<ompl::base::State *> & samples,
         const base::PlannerTerminationCondition & ptc,
         GraphT & geometric_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
-        WeightMap & geometric_weightmap);
+        WeightMap & geometric_weightmap
+      );
 
-      /** \brief In each iteration, make sure that goal vertex is connected to its nn.
-       * TODO(@atas), add more description here*/
-      void ensureGoalVertexConnectivity(
+      /** \brief In expandGeometricGraph() function call,
+       * make sure that the target vertex is connected to it's graph and nearest neighbor.
+       * \param target_vertex_property the target vertex to be connected
+       * \param geometric_graph the graph to be expanded
+       * \param geometric_nn nearest neighbor structure to be updated
+       * \param geometric_weightmap weight map to be updated
+       * */
+      void ensureGeometricGoalVertexConnectivity(
         VertexProperty * target_vertex_property,
         GraphT & geometric_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & geometric_nn,
         WeightMap & geometric_weightmap);
 
       /** \brief Keep expanding control graph with generated samples.
-       * Note that only non-violating states will be added, the rest are discaded
-       * TODO(@atas), add more description here*/
+       * This function is called by each thread in parallel to expand the control graphs.
+       * The even threads are used to expand the control graphs from start->goal, e.g. 0,2,...
+       * and the odd threads are used to expand the control graphs from goal->start. e.g. 1,3,...
+       * However, the even threads tries to connect to odd threads after each sample addition.
+       * For instance, the even thread 0 will try to connect to odd thread 1,
+       * and the odd thread 1 will try to connect to even thread 0, and so on. This ultimately makes the control search bidirectional.
+       * Each thread has its own control graph and nearest neighbor structure.
+       * For each sample in \e samples, check if it is valid,
+       * Check if it is in withing min-max edge range,
+       * check if it is unique enough,
+       * If all checks pass, add it to the graph and nn structure.
+       * \param samples vector of states to be added to the graph
+       * \param target_vertex_state the target vertex state
+       * \param target_vertex_descriptor the target vertex descriptor
+       * \param ptc termination condition
+       * \param connection_control_graph is the graph,  this thread will try to connect to
+       * \param connection_control_nn is the nearest neighbor structure, this thread will try to connect to
+       * \param control_graph the graph to be expanded (this thread's graph)
+       * \param control_nn nearest neighbor structure to be updated (this thread's nn)
+       * \param control_weightmap weight map to be updated (this thread's weightmap)
+       * \param status is the status of the thread
+       */
       void expandControlGraph(
         const std::vector<ompl::base::State *> & samples,
         const ompl::base::State * target_vertex_state,
         const vertex_descriptor & target_vertex_descriptor,
         const base::PlannerTerminationCondition & ptc,
-        const bool & intial_plan_available,
-        const std::vector<VertexProperty *> & vertex_prop_plan,
+        const GraphT * connection_control_graph,
+        const std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_control_nn,
         GraphT & control_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
         WeightMap & control_weightmap,
-        const GraphT * connection_control_graph,
-        const std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_control_nn,
         int & status);
-      
-      void ensureGoalVertexConnectivity(
+
+      void ensureControlGoalVertexConnectivity(
         const ompl::base::State * target_vertex_state,
         const vertex_descriptor & target_vertex_descriptor,
         GraphT & control_graph,
