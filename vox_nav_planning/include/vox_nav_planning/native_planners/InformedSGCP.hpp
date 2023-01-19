@@ -279,18 +279,19 @@ namespace ompl
       double radius_{std::numeric_limits<double>::infinity()};
 
       /** \brief A constant for the computation of the number of neighbors when using a k-nearest model. */
-      std::size_t k_rgg_{std::numeric_limits<std::size_t>::max()};
+      std::size_t kRGG_{std::numeric_limits<std::size_t>::max()};
 
       /** \brief Auto calculate neighbours to connect. */
       std::size_t numNeighbors_{std::numeric_limits<std::size_t>::max()};
 
+      /** \brief Keep status of current status*/
       int currentBestSolutionStatus_{ompl::base::PlannerStatus::UNKNOWN};
 
       /** \brief Informed sampling strategy */
-      std::shared_ptr<base::RejectionInfSampler> rejection_informed_sampler_{nullptr};
+      std::shared_ptr<base::RejectionInfSampler> rejectionInformedSampler_{nullptr};
 
       /** \brief Valid state sampler */
-      base::ValidStateSamplerPtr valid_state_sampler_{nullptr};
+      base::ValidStateSamplerPtr validStateSampler_{nullptr};
 
       /** \brief Control space information */
       const SpaceInformation * siC_{nullptr};
@@ -304,7 +305,8 @@ namespace ompl
       /** \brief Current cost of best path. The informed sampling strategy needs it. */
       ompl::base::Cost bestControlCost_{std::numeric_limits<double>::infinity()};
 
-      int best_control_path_index_{0};
+      /** \brief keep the index of best control path, the index comes from thread id*/
+      int bestControlPathIndex_{0};
 
       /** \brief The best path found so far. */
       std::shared_ptr<ompl::control::PathControl> bestGeometricPath_{nullptr};
@@ -322,10 +324,10 @@ namespace ompl
       RNG rng_;
 
       /** \brief The NN datastructure for geometric graph */
-      std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>>> geometrics_nn_;
+      std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>>> nnGeometricThreads_;
 
       /** \brief The NN datastructure for control graph */
-      std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>>> controls_nn_;
+      std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>>> nnControlsThreads_;
 
       std::mutex nnMutex_;
 
@@ -691,9 +693,9 @@ namespace ompl
           g_controls_[i].clear();
           g_controls_[i] = GraphT();
           // free memory for all nns in control threads
-          controls_nn_[i]->clear();
+          nnControlsThreads_[i]->clear();
           // Add the start and goal vertex to the control graph
-          controls_nn_[i]->add(control_start_vertices_[i]);
+          nnControlsThreads_[i]->add(control_start_vertices_[i]);
 
           vertex_descriptor control_g_root = boost::add_vertex(g_controls_[i]);
           g_controls_[i][control_g_root] = *control_start_vertices_[i];

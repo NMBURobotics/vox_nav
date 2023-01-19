@@ -66,23 +66,23 @@ void ompl::control::InformedSGCP::setup()
   g_controls_ = std::vector<GraphT>(params_.num_threads_, GraphT());
 
   // reset nn for geometric graph
-  geometrics_nn_.clear();
+  nnGeometricThreads_.clear();
   for (int i = 0; i < params_.num_threads_; i++) {
     std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> this_nn;
     this_nn.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
-    geometrics_nn_.push_back(this_nn);
+    nnGeometricThreads_.push_back(this_nn);
   }
 
   // reset nns in all control threads
-  controls_nn_.clear();
+  nnControlsThreads_.clear();
   for (int i = 0; i < params_.num_threads_; i++) {
     std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> this_nn;
     this_nn.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
-    controls_nn_.push_back(this_nn);
+    nnControlsThreads_.push_back(this_nn);
   }
 
   //
-  for (auto & nn : geometrics_nn_) {
+  for (auto & nn : nnGeometricThreads_) {
     nn->setDistanceFunction(
       [this](const VertexProperty * a, const VertexProperty * b)
       {
@@ -91,7 +91,7 @@ void ompl::control::InformedSGCP::setup()
   }
 
   // set distance function for all nns control threads
-  for (auto & nn : controls_nn_) {
+  for (auto & nn : nnControlsThreads_) {
     nn->setDistanceFunction(
       [this](const VertexProperty * a, const VertexProperty * b)
       {
@@ -109,11 +109,11 @@ void ompl::control::InformedSGCP::setup()
     }
   }
 
-  if (!valid_state_sampler_) {
-    valid_state_sampler_ = si_->allocValidStateSampler();
+  if (!validStateSampler_) {
+    validStateSampler_ = si_->allocValidStateSampler();
   }
-  if (!rejection_informed_sampler_) {
-    rejection_informed_sampler_ = std::make_shared<base::RejectionInfSampler>(
+  if (!rejectionInformedSampler_) {
+    rejectionInformedSampler_ = std::make_shared<base::RejectionInfSampler>(
       pdef_,
       std::numeric_limits<double>::infinity());
   }
@@ -126,7 +126,7 @@ void ompl::control::InformedSGCP::setup()
     controlSampler_ = siC_->allocControlSampler();
   }
 
-  k_rgg_ = boost::math::constants::e<double>() +
+  kRGG_ = boost::math::constants::e<double>() +
     (boost::math::constants::e<double>() / si_->getStateDimension());
 
   bestControlPath_ = std::make_shared<PathControl>(si_);
@@ -149,8 +149,8 @@ void ompl::control::InformedSGCP::setup()
 void ompl::control::InformedSGCP::clear()
 {
   Planner::clear();
-  valid_state_sampler_.reset();
-  rejection_informed_sampler_.reset();
+  validStateSampler_.reset();
+  rejectionInformedSampler_.reset();
   radius_ = std::numeric_limits<double>::infinity();
   numNeighbors_ = std::numeric_limits<std::size_t>::max();
   bestControlCost_ = opt_->infiniteCost();
@@ -159,12 +159,12 @@ void ompl::control::InformedSGCP::clear()
   freeMemory();
 
   // clear the nn for geometric graph
-  for (auto & nn : geometrics_nn_) {
+  for (auto & nn : nnGeometricThreads_) {
     nn->clear();
   }
 
   // clear the nn for control graph
-  for (auto & nn : controls_nn_) {
+  for (auto & nn : nnControlsThreads_) {
     nn->clear();
   }
 
@@ -208,7 +208,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   geometric_goal_vertex_ = new VertexProperty();
   geometric_start_vertex_->state = start_state;
   geometric_goal_vertex_->state = goal_state;
-  for (auto & nn : geometrics_nn_) {
+  for (auto & nn : nnGeometricThreads_) {
     nn->add(geometric_goal_vertex_);
     nn->add(geometric_start_vertex_);
   }
@@ -225,7 +225,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       this_control_goal_vertex->state = start_state;
     }
     this_control_start_vertex->is_root = true;
-    controls_nn_[i]->add(this_control_start_vertex);
+    nnControlsThreads_[i]->add(this_control_start_vertex);
     control_start_vertices_.push_back(this_control_start_vertex);
     control_goal_vertices_.push_back(this_control_goal_vertex);
   }
@@ -320,7 +320,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       // Pass all the variables by reference to the lambda function
       auto & thread_id = thread_ids.at(immutable_t);
       auto & g = g_geometrics_.at(thread_id);
-      auto & nn = geometrics_nn_.at(thread_id);
+      auto & nn = nnGeometricThreads_.at(thread_id);
       auto & weightmap = weightmap_geometrics.at(thread_id);
       auto & shortest_paths_geometric = shortest_paths_geometrics.at(thread_id);
       auto & start_goal_descriptor = geometric_start_goal_descriptors.at(thread_id);
@@ -371,12 +371,12 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         // Pass all the variables by reference to the lambda function
         auto & thread_id = thread_ids.at(immutable_t);
         auto & g_control = g_controls_.at(thread_id);
-        auto & g_nn = controls_nn_.at(thread_id);
+        auto & g_nn = nnControlsThreads_.at(thread_id);
         auto & g_weightmap = weightmap_controls.at(thread_id);
         auto & shortest_paths_control = shortest_paths_controls.at(thread_id);
         auto & start_goal_descriptor = control_start_goal_descriptors.at(thread_id);
         auto & planner_status = control_threads_status.at(thread_id);
-        auto & bestControlVertexProp = bestControlVertex.at(best_control_path_index_);
+        auto & bestControlVertexProp = bestControlVertex.at(bestControlPathIndex_);
 
         control_threads[thread_id] = new std::thread(
           [this,
@@ -400,11 +400,11 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             if (thread_id % 2 == 0) {
               // connect current thread's graph to next thread's graph
               connection_g_control = &g_controls_.at(thread_id + 1);
-              connection_g_nn = controls_nn_.at(thread_id + 1);
+              connection_g_nn = nnControlsThreads_.at(thread_id + 1);
             } else {
               // connect current thread's graph to previous thread's graph
               connection_g_control = &g_controls_.at(thread_id - 1);
-              connection_g_nn = controls_nn_.at(thread_id - 1);
+              connection_g_nn = nnControlsThreads_.at(thread_id - 1);
             }
 
             expandControlGraph(
@@ -508,7 +508,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         // Aight, this path seems legit
         if (opt_->isCostBetterThan(path_cost, best_control_path_cost)) {
           best_control_path = curr_path;
-          best_control_path_index_ = control_counter;
+          bestControlPathIndex_ = control_counter;
           best_control_path_cost = path_cost;
         }
       }
@@ -517,7 +517,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
     // only for visualization, keep a copy of the best geometric and control graphs
     auto best_geometric_graph = g_geometrics_[best_geometric_path_index];
-    auto best_control_graph = g_controls_[best_control_path_index_];
+    auto best_control_graph = g_controls_[bestControlPathIndex_];
 
     // Check if the path best path found by current threads is better than the previous best path
 
@@ -558,7 +558,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         if (valid) {
           int temp = ompl::base::PlannerStatus::UNKNOWN;
 
-          if (control_threads_status[best_control_path_index_] ==
+          if (control_threads_status[bestControlPathIndex_] ==
             ompl::base::PlannerStatus::EXACT_SOLUTION)
           {
             approximate_solution = false;
@@ -571,7 +571,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             bestControlPath_ = best_control_path;
           }
 
-          if (control_threads_status[best_control_path_index_] ==
+          if (control_threads_status[bestControlPathIndex_] ==
             ompl::base::PlannerStatus::APPROXIMATE_SOLUTION &&
             currentBestSolutionStatus_ == ompl::base::PlannerStatus::EXACT_SOLUTION)
           {
@@ -579,7 +579,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
               "%s: Previously Found an Exact solution with %.2f cost but control thread returned approximate solution now, we will skip this solution and keep exact solution.",
               getName().c_str(), bestControlCost_.value());
             temp = base::PlannerStatus::EXACT_SOLUTION;
-          } else if (control_threads_status[best_control_path_index_] ==
+          } else if (control_threads_status[bestControlPathIndex_] ==
             base::PlannerStatus::APPROXIMATE_SOLUTION &&
             (currentBestSolutionStatus_ == base::PlannerStatus::APPROXIMATE_SOLUTION ||
             currentBestSolutionStatus_ == base::PlannerStatus::UNKNOWN))
@@ -605,12 +605,12 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
           // print number of vertex
           OMPL_INFORM(
             "%s: Best Control Graph has %d vertices and ",
-            getName().c_str(), bestControlVertex[best_control_path_index_].size());
+            getName().c_str(), bestControlVertex[bestControlPathIndex_].size());
           // Reset control graphs anyways
           clearControlGraphs(weightmap_controls, control_start_goal_descriptors);
 
         }
-      } else if (control_threads_status[best_control_path_index_] ==
+      } else if (control_threads_status[bestControlPathIndex_] ==
         ompl::base::PlannerStatus::EXACT_SOLUTION)
       {
         // This is not a better solution, but if it is exact solution, clear graphs and populate with solution
@@ -660,8 +660,8 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       control_graph_pub_,
       "c",
       getColor(red),
-      control_start_goal_descriptors[best_control_path_index_].first,
-      control_start_goal_descriptors[best_control_path_index_].second,
+      control_start_goal_descriptors[bestControlPathIndex_].first,
+      control_start_goal_descriptors[bestControlPathIndex_].second,
       si_->getStateSpace()->getType());
 
   }
@@ -695,7 +695,7 @@ void ompl::control::InformedSGCP::generateBatchofSamples(
     auto state = si_->allocState();
     samples.push_back(state);
     if (use_valid_sampler) {
-      valid_state_sampler_->sample(samples.back());
+      validStateSampler_->sample(samples.back());
     } else {
       do{
         ompl::base::Cost min_cost = opt_->infiniteCost();
@@ -710,7 +710,7 @@ void ompl::control::InformedSGCP::generateBatchofSamples(
           }
         }
         // Sample the associated state uniformly within the informed set.
-        rejection_informed_sampler_->sampleUniform(
+        rejectionInformedSampler_->sampleUniform(
           samples.back(),
           min_cost);
 
@@ -1189,7 +1189,7 @@ double ompl::control::InformedSGCP::computeConnectionRadius(std::size_t numSampl
   return
     params_.rewire_factor_ * std::pow(
     2.0 * (1.0 + 1.0 / dimension) *
-    (rejection_informed_sampler_->getInformedMeasure(bestControlCost_) /
+    (rejectionInformedSampler_->getInformedMeasure(bestControlCost_) /
     unitNBallMeasure(si_->getStateDimension())) *
     (std::log(static_cast<double>(numSamples)) / static_cast<double>(numSamples)),
     1.0 / dimension);
@@ -1198,7 +1198,7 @@ double ompl::control::InformedSGCP::computeConnectionRadius(std::size_t numSampl
 std::size_t ompl::control::InformedSGCP::computeNumberOfNeighbors(std::size_t numSamples) const
 {
   // Compute the RGG factor. Taken from AITStar::computeNumberOfNeighbors.
-  return std::ceil(params_.rewire_factor_ * k_rgg_ * std::log(static_cast<double>(numSamples)));
+  return std::ceil(params_.rewire_factor_ * kRGG_ * std::log(static_cast<double>(numSamples)));
 }
 
 ompl::base::Cost ompl::control::InformedSGCP::computePathCost(
