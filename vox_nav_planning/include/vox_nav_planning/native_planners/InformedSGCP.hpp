@@ -154,21 +154,21 @@ namespace ompl
        * return a const pointer to VertexProperty in geometric graph g_geometric_  */
       const VertexProperty * getVertex(std::size_t id, int thread_id)
       {
-        return &g_geometrics_[thread_id][id];
+        return &graphGeometricThreads_[thread_id][id];
       }
 
       /** \brief Given its vertex_descriptor (id),
        * return a mutable pointer to VertexProperty in geometric graph g_  */
       VertexProperty * getVertexMutable(std::size_t id, int thread_id)
       {
-        return &g_geometrics_[thread_id][id];
+        return &graphGeometricThreads_[thread_id][id];
       }
 
       /** \brief Given its vertex_descriptor (id),
        * return a const pointer to VertexProperty in control graph g_forward_control_  */
       const VertexProperty * getVertexControls(std::size_t id, int thread_id)
       {
-        return &g_controls_[thread_id][id];
+        return &graphControlThreads_[thread_id][id];
       }
 
       void setNumThreads(int num_threads)
@@ -369,17 +369,17 @@ namespace ompl
         : alg_(alg),
           goal_(goal),
           control_(control),
-          thread_id_(thread_id)
+          threadId_(thread_id)
         {
         }
         double operator()(vertex_descriptor i)
         {
           if (control_) {
             return alg_->opt_->motionCost(
-              alg_->getVertexControls(i, thread_id_)->state, goal_->state).value();
+              alg_->getVertexControls(i, threadId_)->state, goal_->state).value();
           } else {
             return alg_->opt_->motionCost(
-              alg_->getVertex(i, thread_id_)->state, goal_->state).value();
+              alg_->getVertex(i, threadId_)->state, goal_->state).value();
           }
         }
 
@@ -387,7 +387,7 @@ namespace ompl
         InformedSGCP * alg_{nullptr};
         VertexProperty * goal_{nullptr};
         bool control_{false};
-        int thread_id_{0};
+        int threadId_{0};
       };  // GenericDistanceHeuristic
 
       /** \brief The precomputed cost heuristic, this is used for geometric graph when we perform A* with collision checks.
@@ -401,24 +401,24 @@ namespace ompl
         typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
         PrecomputedCostHeuristic(InformedSGCP * alg, int thread_id = 0)
         : alg_(alg),
-          thread_id_(thread_id)
+          threadId_(thread_id)
         {
         }
         double operator()(vertex_descriptor i)
         {
           double cost{std::numeric_limits<double>::infinity()};
           // verify that the state is valid
-          if (alg_->si_->isValid(alg_->getVertex(i, thread_id_)->state)) {
-            cost = alg_->getVertex(i, thread_id_)->g;
+          if (alg_->si_->isValid(alg_->getVertex(i, threadId_)->state)) {
+            cost = alg_->getVertex(i, threadId_)->g;
           } else {
-            alg_->getVertexMutable(i, thread_id_)->blacklisted = true;
+            alg_->getVertexMutable(i, threadId_)->blacklisted = true;
           }
           return cost;
         }
 
       private:
         InformedSGCP * alg_;
-        int thread_id_{0};
+        int threadId_{0};
       };  // PrecomputedCostHeuristic
 
       /** \brief Exception thrown when goal vertex is found */
@@ -432,52 +432,37 @@ namespace ompl
       {
       public:
         SimpleVertexVisitor(Vertex goal_vertex, int * num_visits)
-        : goal_vertex_(goal_vertex),
-          num_visits_(num_visits)
+        : goalVertex_(goal_vertex),
+          numVisits_(num_visits)
         {
         }
         template<class Graph>
         void examine_vertex(Vertex u, Graph & g)
         {
           // check whether examined vertex was goal, if yes throw
-          ++(*num_visits_);
-          if (u == goal_vertex_) {
+          ++(*numVisits_);
+          if (u == goalVertex_) {
             throw FoundVertex();
           }
         }
 
       private:
-        Vertex goal_vertex_;
-        int * num_visits_;
+        Vertex goalVertex_;
+        int * numVisits_;
       };  // SimpleVertexVisitor
 
       /** \brief Keep a global copy of start and goal vertex properties*/
-      VertexProperty * geometric_start_vertex_{nullptr};
-      VertexProperty * geometric_goal_vertex_{nullptr};
+      VertexProperty * startVertexGeometric_{nullptr};
+      VertexProperty * goalVertexGeometric_{nullptr};
 
-      std::vector<VertexProperty *> control_start_vertices_;
-      std::vector<VertexProperty *> control_goal_vertices_;
+      std::vector<VertexProperty *> startVerticesControl_;
+      std::vector<VertexProperty *> goalVerticesControl_;
 
-      /** \brief The geometric and control graphs */
-      std::vector<GraphT> g_geometrics_;
+      /** \brief The geometric graphs, the numbers of graphs equals to number of threads */
+      std::vector<GraphT> graphGeometricThreads_;
 
-      /** \brief */
-      std::vector<GraphT> g_controls_;
-
-      /** \brief The publishers for the geometric and control graph/path visulization*/
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;
-
-      /** \brief The publishers for the geometric and control graph/path visulization*/
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr geometric_path_pub_;
-
-      /** \brief The publishers for the geometric and control graph/path visulization*/
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_graph_pub_;
-
-      /** \brief The publishers for the geometric and control graph/path visulization*/
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_path_pub_;
-
-      /** \brief The node*/
-      rclcpp::Node::SharedPtr node_;
+      /** \brief The control graphs, the numbers of graphs equals to number of threads */
+      std::vector<GraphT> graphControlThreads_;
 
       /** \brief generate a requested amound of states with preffered state sampler*/
       void generateBatchofSamples(
@@ -690,29 +675,29 @@ namespace ompl
         control_start_goal_descriptors.clear();
 
         for (int i = 0; i < params_.num_threads_; i++) {
-          g_controls_[i].clear();
-          g_controls_[i] = GraphT();
+          graphControlThreads_[i].clear();
+          graphControlThreads_[i] = GraphT();
           // free memory for all nns in control threads
           nnControlsThreads_[i]->clear();
           // Add the start and goal vertex to the control graph
-          nnControlsThreads_[i]->add(control_start_vertices_[i]);
+          nnControlsThreads_[i]->add(startVerticesControl_[i]);
 
-          vertex_descriptor control_g_root = boost::add_vertex(g_controls_[i]);
-          g_controls_[i][control_g_root] = *control_start_vertices_[i];
-          g_controls_[i][control_g_root].id = control_g_root;
-          g_controls_[i][control_g_root].is_root = true;
-          vertex_descriptor control_g_target = boost::add_vertex(g_controls_[i]);
-          g_controls_[i][control_g_target] = *control_goal_vertices_[i];
-          g_controls_[i][control_g_target].id = control_g_target;
+          vertex_descriptor control_g_root = boost::add_vertex(graphControlThreads_[i]);
+          graphControlThreads_[i][control_g_root] = *startVerticesControl_[i];
+          graphControlThreads_[i][control_g_root].id = control_g_root;
+          graphControlThreads_[i][control_g_root].is_root = true;
+          vertex_descriptor control_g_target = boost::add_vertex(graphControlThreads_[i]);
+          graphControlThreads_[i][control_g_target] = *goalVerticesControl_[i];
+          graphControlThreads_[i][control_g_target].id = control_g_target;
 
           control_start_goal_descriptors.push_back(
             std::make_pair(
-              g_controls_[i][control_g_root].id,
-              g_controls_[i][control_g_target].id));
+              graphControlThreads_[i][control_g_root].id,
+              graphControlThreads_[i][control_g_target].id));
         }
         // Reset the weightmap
         weightmap_controls.clear();
-        for (auto & graph : g_controls_) {
+        for (auto & graph : graphControlThreads_) {
           weightmap_controls.push_back(get(boost::edge_weight, graph));
         }
       }
@@ -747,6 +732,21 @@ namespace ompl
 
       /** \brief get std_msgs::msg::ColorRGBA given the color name with a std::string*/
       static std_msgs::msg::ColorRGBA getColor(std::string & color);
+
+      /** \brief The publishers for the geometric and control graph/path visulization*/
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr rgg_graph_pub_;
+
+      /** \brief The publishers for the geometric and control graph/path visulization*/
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr geometric_path_pub_;
+
+      /** \brief The publishers for the geometric and control graph/path visulization*/
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_graph_pub_;
+
+      /** \brief The publishers for the geometric and control graph/path visulization*/
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_path_pub_;
+
+      /** \brief The node*/
+      rclcpp::Node::SharedPtr node_;
 
     };      // class InformedSGCP
   }   // namespace control
