@@ -191,7 +191,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   // check if the problem is setup properly
   checkValidity();
 
-
   // get the goal node and state
   auto * goal_state = si_->allocState();
   auto * start_state = si_->allocState();
@@ -201,6 +200,15 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   }
   while (const base::State * goal = pis_.nextGoal()) {
     si_->copyState(goal_state, goal);
+  }
+
+  if (!si_->getStateValidityChecker()->isValid(start_state)) {
+    OMPL_ERROR("Start state is not valid");
+    return base::PlannerStatus::INVALID_START;
+  }
+  if (!si_->getStateValidityChecker()->isValid(goal_state)) {
+    OMPL_ERROR("Goal state is not valid");
+    return base::PlannerStatus::INVALID_GOAL;
   }
 
   // reset goal and start vertex properties
