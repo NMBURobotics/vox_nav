@@ -594,7 +594,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             bestControlPath_ = best_control_path;
             if (static_cast<bool>(Planner::pdef_->getIntermediateSolutionCallback())) {
               pdef_->getIntermediateSolutionCallback()(
-                this, getConstStates(bestControlPath_), bestControlCost_);
+                this, getConstStatesFromPath(bestControlPath_), bestControlCost_);
             }
           }
           currentBestSolutionStatus_ = temp;
@@ -695,13 +695,14 @@ void ompl::control::InformedSGCP::generateBatchofSamples(
     auto state = si_->allocState();
     samples.push_back(state);
     if (use_valid_sampler) {
+      // sample from the valid sampler
       validStateSampler_->sample(samples.back());
     } else {
       do{
+        // Sample in the informed set after an control solution has been found.
+        // Otherwise, sample uniformly in the state space.
         ompl::base::Cost min_cost = opt_->infiniteCost();
         if (opt_->isCostBetterThan(bestControlCost_, opt_->infiniteCost())) {
-          // A valid solution was found
-          // Sample in the informed set, and I mean tightly
           auto euc_cost = opt_->motionCost(
             startVertexGeometric_->state,
             goalVertexGeometric_->state);
@@ -709,15 +710,12 @@ void ompl::control::InformedSGCP::generateBatchofSamples(
             min_cost = bestControlCost_;
           }
         }
-        // Sample the associated state uniformly within the informed set.
         rejectionInformedSampler_->sampleUniform(
           samples.back(),
           min_cost);
-
-        // Count how many states we've checked.
       } while (!si_->getStateValidityChecker()->isValid(samples.back()));
     }
-  } while (samples.size() < batch_size);
+  } while (samples.size() < batch_size); // Keep sampling until batch_size is reached
 }
 
 void ompl::control::InformedSGCP::expandGeometricGraph(
@@ -732,42 +730,53 @@ void ompl::control::InformedSGCP::expandGeometricGraph(
   // But too close vertices will be discarded in order for memory not to sink
   for (auto && i : samples) {
 
+    // if the planner is termination condition is met, break
     if (ptc == true) {
       break;
     }
+
+    // If the sampled state is not valid, discard it and continue
     if (!si_->getStateValidityChecker()->isValid(i)) {
       continue;
     }
 
-    VertexProperty * this_vertex_property = new VertexProperty();
-    this_vertex_property->state = (i);
-    std::vector<ompl::control::InformedSGCP::VertexProperty *> nbh;
+    // We will potentially add a new vertex to the graph and nn structure, so allocate a vertex property
+    VertexProperty * vertex_property_to_be_added = new VertexProperty();
+    vertex_property_to_be_added->state = (i);
 
+    // Get the neighbors of the new vertex with radius_ or k-nearest
+    std::vector<ompl::control::InformedSGCP::VertexProperty *> nbh;
     if (params_.use_k_nearest_) {
-      geometric_nn->nearestK(this_vertex_property, numNeighbors_, nbh);
+      geometric_nn->nearestK(vertex_property_to_be_added, numNeighbors_, nbh);
     } else {
-      geometric_nn->nearestR(this_vertex_property, radius_, nbh);
+      geometric_nn->nearestR(vertex_property_to_be_added, radius_, nbh);
     }
 
+    // Clip the number of neighbors to max_neighbors_, The nearest neighbors are sorted by distance
+    // So the further neighbors are discarded
     if (nbh.size() > params_.max_neighbors_) {
       nbh.resize(params_.max_neighbors_);
     }
 
+    // Check if the new vertex is too close to an existing vertex
     bool does_vertice_exits{false};
     for (auto && nb : nbh) {
       double dist = distanceFunction(i, nb->state);
-      if (dist < params_.min_dist_between_vertices_ /*do not add same vertice twice*/) {
+      if (dist < params_.min_dist_between_vertices_) {
+        // ops, a very close vertex already exists in graph and nn, do not add due to computational burden*/
         does_vertice_exits = true;
       }
     }
-
+    
     if (!does_vertice_exits) {
+
+      // Add the new vertex to the graph and nn structure
       vertex_descriptor this_vertex_descriptor = boost::add_vertex(geometric_graph);
-      this_vertex_property->id = this_vertex_descriptor;
-      geometric_graph[this_vertex_descriptor] = *this_vertex_property;
-      geometric_nn->add(this_vertex_property);
+      vertex_property_to_be_added->id = this_vertex_descriptor;
+      geometric_graph[this_vertex_descriptor] = *vertex_property_to_be_added;
+      geometric_nn->add(vertex_property_to_be_added);
       for (auto && nb : nbh) {
-        if (!si_->checkMotion(this_vertex_property->state, nb->state)) {
+        if (!si_->checkMotion(vertex_property_to_be_added->state, nb->state)) {
           continue;
         }
 
@@ -1266,21 +1275,11 @@ ompl::base::Cost ompl::control::InformedSGCP::computePathCost(
   return path_cost;
 }
 
-std::vector<const ompl::base::State *> ompl::control::InformedSGCP::getConstStates(
+std::vector<const ompl::base::State *> ompl::control::InformedSGCP::getConstStatesFromPath(
   const std::shared_ptr<ompl::control::PathControl> & path)
 {
   std::vector<const ompl::base::State *> states;
   for (std::size_t i = 0; i < path->getStateCount(); ++i) {
-    states.push_back(path->getState(i));
-  }
-  return states;
-}
-
-std::vector<ompl::base::State *> ompl::control::InformedSGCP::getStates(
-  const std::shared_ptr<ompl::control::PathControl> & path)
-{
-  std::vector<ompl::base::State *> states;
-  for (std::size_t i = 0; i < path->getStateCount() - 1; ++i) {
     states.push_back(path->getState(i));
   }
   return states;

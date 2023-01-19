@@ -566,7 +566,7 @@ namespace ompl
         const GraphT * connection_control_graph,
         const std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_control_nn,
         int & status);
-
+      
       void ensureGoalVertexConnectivity(
         const ompl::base::State * target_vertex_state,
         const vertex_descriptor & target_vertex_descriptor,
@@ -597,10 +597,7 @@ namespace ompl
         const bool control = false
       ) const;
 
-      std::vector<const ompl::base::State *> getConstStates(
-        const std::shared_ptr<ompl::control::PathControl> & path);
-
-      std::vector<ompl::base::State *> getStates(
+      std::vector<const ompl::base::State *> getConstStatesFromPath(
         const std::shared_ptr<ompl::control::PathControl> & path);
 
       void clearControlGraphs(
