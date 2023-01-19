@@ -595,76 +595,13 @@ namespace ompl
         std::shared_ptr<ompl::control::PathControl> & path,
         std::vector<VertexProperty *> & vertexprop_path,
         const bool control = false
-      ) const
-      {
-
-        path = std::make_shared<PathControl>(si_);
-        int index{0};
-        vertex_descriptor prev_vertex = vertex_path.front();
-
-
-        for (auto && i : vertex_path) {
-
-          // Use this opportunity to mark the edges as invalid if they were blacklisted
-          if (g[i].blacklisted) {
-            for (auto ed : boost::make_iterator_range(boost::out_edges(i, g))) {
-              weightmap[ed] = opt_->infiniteCost().value();
-            }
-          }
-
-          if (index > 0) {
-            bool is_edge_valid = si_->checkMotion(g[prev_vertex].state, g[i].state);
-            if (!is_edge_valid) {
-              // Mark the edge as invalid
-              auto ed = boost::edge(prev_vertex, i, g);
-              weightmap[ed.first] = opt_->infiniteCost().value();
-            }
-            prev_vertex = i;
-          }
-
-          if (g[i].control == nullptr && control) {
-            // This most likely a start or goal vertex
-            // The control has not been allocated for this vertex
-            // Allocate a control and set it to zero
-            g[i].control = siC_->allocControl();
-          }
-          if (index == 0) {
-            path->append(g[i].state);
-          } else {
-            if (control) {
-              path->append(
-                g[i].state, g[i].control,
-                g[i].control_duration * siC_->getPropagationStepSize());
-            } else {
-              path->append(g[i].state);
-            }
-          }
-
-          vertexprop_path[index] = new VertexProperty(g[i]);
-
-          index++;
-        }
-      }
+      ) const;
 
       std::vector<const ompl::base::State *> getConstStates(
-        const std::shared_ptr<ompl::control::PathControl> & path)
-      {
-        std::vector<const ompl::base::State *> states;
-        for (std::size_t i = 0; i < path->getStateCount(); ++i) {
-          states.push_back(path->getState(i));
-        }
-        return states;
-      }
+        const std::shared_ptr<ompl::control::PathControl> & path);
 
       std::vector<ompl::base::State *> getStates(
-        const std::shared_ptr<ompl::control::PathControl> & path)
-      {
-        std::vector<ompl::base::State *> states;
-        for (std::size_t i = 0; i < path->getStateCount() - 1; ++i) {
-          states.push_back(path->getState(i));
-        }
-        return states;
-      }
+        const std::shared_ptr<ompl::control::PathControl> & path);
 
       void clearControlGraphs(
         std::vector<WeightMap> & weightmap_controls,
