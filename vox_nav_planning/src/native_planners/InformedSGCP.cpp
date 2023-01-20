@@ -211,6 +211,138 @@ void ompl::control::InformedSGCP::freeMemory()
 {
 }
 
+double ompl::control::InformedSGCP::distanceFunction(
+  const VertexProperty * a,
+  const VertexProperty * b) const
+{
+  return si_->distance(a->state, b->state);
+}
+
+double ompl::control::InformedSGCP::distanceFunction(
+  const base::State * a,
+  const base::State * b) const
+{
+  return si_->distance(a, b);
+}
+
+const ompl::control::InformedSGCP::VertexProperty * ompl::control::InformedSGCP::getVertex(
+  std::size_t id, int thread_id)
+{
+  return &graphGeometricThreads_[thread_id][id];
+}
+
+ompl::control::InformedSGCP::VertexProperty * ompl::control::InformedSGCP::getVertexMutable(
+  std::size_t id, int thread_id)
+{
+  return &graphGeometricThreads_[thread_id][id];
+}
+
+const ompl::control::InformedSGCP::VertexProperty * ompl::control::InformedSGCP::getVertexControls(
+  std::size_t id, int thread_id)
+{
+  return &graphControlThreads_[thread_id][id];
+}
+
+void ompl::control::InformedSGCP::setNumThreads(int num_threads)
+{
+  params_.num_threads_ = num_threads;
+}
+
+int ompl::control::InformedSGCP::getNumThreads() const
+{
+  return params_.num_threads_;
+}
+
+void ompl::control::InformedSGCP::setBatchSize(int batch_size)
+{
+  params_.batch_size_ = batch_size;
+}
+
+int ompl::control::InformedSGCP::getBatchSize() const
+{
+  return params_.batch_size_;
+}
+
+void ompl::control::InformedSGCP::setMaxNeighbors(int max_neighbors)
+{
+  params_.max_neighbors_ = max_neighbors;
+}
+
+int ompl::control::InformedSGCP::getMaxNeighbors() const
+{
+  return params_.max_neighbors_;
+}
+
+void ompl::control::InformedSGCP::setMinDistBetweenVertices(double min_dist_between_vertices)
+{
+  params_.min_dist_between_vertices_ = min_dist_between_vertices;
+}
+
+double ompl::control::InformedSGCP::getMinDistBetweenVertices() const
+{
+  return params_.min_dist_between_vertices_;
+}
+
+void ompl::control::InformedSGCP::setMaxDistBetweenVertices(double max_dist_between_vertices)
+{
+  params_.max_dist_between_vertices_ = max_dist_between_vertices;
+}
+
+double ompl::control::InformedSGCP::getMaxDistBetweenVertices() const
+{
+  return params_.max_dist_between_vertices_;
+}
+
+void ompl::control::InformedSGCP::setUseValidSampler(bool use_valid_sampler)
+{
+  params_.use_valid_sampler_ = use_valid_sampler;
+}
+
+bool ompl::control::InformedSGCP::getUseValidSampler() const
+{
+  return params_.use_valid_sampler_;
+}
+
+void ompl::control::InformedSGCP::setKNumberControls(int k_number_of_controls)
+{
+  params_.k_number_of_controls_ = k_number_of_controls;
+}
+
+int ompl::control::InformedSGCP::getKNumberControls() const
+{
+  return params_.k_number_of_controls_;
+}
+
+void ompl::control::InformedSGCP::setGoalBias(double goal_bias)
+{
+  params_.goal_bias_ = goal_bias;
+}
+
+double ompl::control::InformedSGCP::getGoalBias() const
+{
+  return params_.goal_bias_;
+}
+
+void ompl::control::InformedSGCP::setUseKNearest(bool use_k_nearest)
+{
+  params_.use_k_nearest_ = use_k_nearest;
+}
+
+bool ompl::control::InformedSGCP::getUseKNearest() const
+{
+  return params_.use_k_nearest_;
+}
+
+void ompl::control::InformedSGCP::setSolveControlGraph(bool solve_control_graph)
+{
+  params_.solve_control_graph_ = solve_control_graph;
+}
+
+bool ompl::control::InformedSGCP::getSolveControlGraph() const
+{
+  return params_.solve_control_graph_;
+}
+
 ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   const base::PlannerTerminationCondition & ptc)
 {
@@ -512,7 +644,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
           });
       }
 
-      // Let the control threads finish
+      // Let the control threads finish and join to the main thread
       for (auto & thread : control_threads) {
         thread->join();
         delete thread;
@@ -546,7 +678,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         geometric_ompl_paths[i], bestGeometricVertex[i], false);
     }
 
-    // Determine best geometric path found by current threads
+    // Determine best geometric path found by all threads
     auto best_geometric_path(std::make_shared<PathControl>(si_));
     auto best_geometric_path_cost = opt_->infiniteCost();
     auto start_goal_l2_distance = opt_->motionCost(start_state, goal_state);

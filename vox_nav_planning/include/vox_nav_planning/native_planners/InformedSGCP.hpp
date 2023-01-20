@@ -93,11 +93,13 @@ namespace ompl
       /** \brief Frequently push goal to graph. It is used in control graph */
       double goal_bias_{0.1};
 
+      /** \brief a constant that effects numNeighbors_ and radius_*/
       double rewire_factor_{1.0};
 
       /** \brief Whether to use nearest neighbor or radius as connection strategy. */
       bool use_k_nearest_{true};
 
+      /** \brief whether to solve the kinodyanmic solution */
       bool solve_control_graph_{true};
     };
 
@@ -107,13 +109,16 @@ namespace ompl
       /** \brief Constructor */
       InformedSGCP(const SpaceInformationPtr & si);
 
+      /** \brief Destructor */
       ~InformedSGCP() override;
 
+      /** \brief Setup the planner */
       void setup() override;
 
       /** \brief Continue solving for some amount of time. Return true if solution was found. */
       base::PlannerStatus solve(const base::PlannerTerminationCondition & ptc) override;
 
+      /** \brief Get the internal data owned by planner, NOT IMPLEMENTED */
       void getPlannerData(base::PlannerData & data) const override;
 
       /** \brief Clear datastructures. Call this function if the
@@ -124,7 +129,7 @@ namespace ompl
       /** \brief Free the memory allocated by this planner. That is mostly in nearest neihbours. */
       void freeMemory();
 
-      /** \brief Properties of boost graph vertex, both geometriuc and control graphes share this vertex property.
+      /** \brief Properties of boost graph vertex, both geometriuc and control graphs share this vertex property.
        *  Some of the elements are not used in geometric graph (e.g., control, control_duration). */
       struct VertexProperty
       {
@@ -139,137 +144,52 @@ namespace ompl
       };
 
       /** \brief Compute distance between Vertexes (actually distance between contained states) */
-      double distanceFunction(const VertexProperty * a, const VertexProperty * b) const
-      {
-        return si_->distance(a->state, b->state);
-      }
+      double distanceFunction(const VertexProperty * a, const VertexProperty * b) const;
 
       /** \brief Compute distance between states */
-      double distanceFunction(const base::State * a, const base::State * b) const
-      {
-        return si_->distance(a, b);
-      }
+      double distanceFunction(const base::State * a, const base::State * b) const;
 
       /** \brief Given its vertex_descriptor (id),
        * return a const pointer to VertexProperty in geometric graph g_geometric_  */
-      const VertexProperty * getVertex(std::size_t id, int thread_id)
-      {
-        return &graphGeometricThreads_[thread_id][id];
-      }
+      const VertexProperty * getVertex(std::size_t id, int thread_id);
 
       /** \brief Given its vertex_descriptor (id),
        * return a mutable pointer to VertexProperty in geometric graph g_  */
-      VertexProperty * getVertexMutable(std::size_t id, int thread_id)
-      {
-        return &graphGeometricThreads_[thread_id][id];
-      }
+      VertexProperty * getVertexMutable(std::size_t id, int thread_id);
 
       /** \brief Given its vertex_descriptor (id),
        * return a const pointer to VertexProperty in control graph g_forward_control_  */
-      const VertexProperty * getVertexControls(std::size_t id, int thread_id)
-      {
-        return &graphControlThreads_[thread_id][id];
-      }
+      const VertexProperty * getVertexControls(std::size_t id, int thread_id);
 
-      void setNumThreads(int num_threads)
-      {
-        params_.num_threads_ = num_threads;
-      }
+      void setNumThreads(int num_threads);
+      int getNumThreads() const;
 
-      int getNumThreads() const
-      {
-        return params_.num_threads_;
-      }
+      void setBatchSize(int batch_size);
+      int getBatchSize() const;
 
-      void setBatchSize(int batch_size)
-      {
-        params_.batch_size_ = batch_size;
-      }
+      void setMaxNeighbors(int max_neighbors);
+      int getMaxNeighbors() const;
 
-      int getBatchSize() const
-      {
-        return params_.batch_size_;
-      }
+      void setMinDistBetweenVertices(double min_dist_between_vertices);
+      double getMinDistBetweenVertices() const;
 
-      void setMaxNeighbors(int max_neighbors)
-      {
-        params_.max_neighbors_ = max_neighbors;
-      }
+      void setMaxDistBetweenVertices(double max_dist_between_vertices);
+      double getMaxDistBetweenVertices() const;
 
-      int getMaxNeighbors() const
-      {
-        return params_.max_neighbors_;
-      }
+      void setUseValidSampler(bool use_valid_sampler);
+      bool getUseValidSampler() const;
 
-      void setMinDistBetweenVertices(double min_dist_between_vertices)
-      {
-        params_.min_dist_between_vertices_ = min_dist_between_vertices;
-      }
+      void setKNumberControls(int k_number_of_controls);
+      int getKNumberControls() const;
 
-      double getMinDistBetweenVertices() const
-      {
-        return params_.min_dist_between_vertices_;
-      }
+      void setGoalBias(double goal_bias);
+      double getGoalBias() const;
 
-      void setMaxDistBetweenVertices(double max_dist_between_vertices)
-      {
-        params_.max_dist_between_vertices_ = max_dist_between_vertices;
-      }
+      void setUseKNearest(bool use_k_nearest);
+      bool getUseKNearest() const;
 
-      double getMaxDistBetweenVertices() const
-      {
-        return params_.max_dist_between_vertices_;
-      }
-
-      void setUseValidSampler(bool use_valid_sampler)
-      {
-        params_.use_valid_sampler_ = use_valid_sampler;
-      }
-
-      bool getUseValidSampler() const
-      {
-        return params_.use_valid_sampler_;
-      }
-
-      void setKNumberControls(int k_number_of_controls)
-      {
-        params_.k_number_of_controls_ = k_number_of_controls;
-      }
-
-      int getKNumberControls() const
-      {
-        return params_.k_number_of_controls_;
-      }
-
-      void setGoalBias(double goal_bias)
-      {
-        params_.goal_bias_ = goal_bias;
-      }
-
-      double getGoalBias() const
-      {
-        return params_.goal_bias_;
-      }
-
-      void setUseKNearest(bool use_k_nearest)
-      {
-        params_.use_k_nearest_ = use_k_nearest;
-      }
-
-      bool getUseKNearest() const
-      {
-        return params_.use_k_nearest_;
-      }
-
-      void setSolveControlGraph(bool solve_control_graph)
-      {
-        params_.solve_control_graph_ = solve_control_graph;
-      }
-
-      bool getSolveControlGraph() const
-      {
-        return params_.solve_control_graph_;
-      }
+      void setSolveControlGraph(bool solve_control_graph);
+      bool getSolveControlGraph() const;
 
     private:
       /** \brief All configurable parames live here. */
@@ -315,10 +235,10 @@ namespace ompl
       std::shared_ptr<ompl::control::PathControl> bestControlPath_{nullptr};
 
       /** \brief Directed control sampler to expand control graph */
-      DirectedControlSamplerPtr directedControlSampler_;
+      DirectedControlSamplerPtr directedControlSampler_{nullptr};
 
       /** \brief Control sampler */
-      ControlSamplerPtr controlSampler_;
+      ControlSamplerPtr controlSampler_{nullptr};
 
       /** \brief The random number generator */
       RNG rng_;
@@ -417,7 +337,7 @@ namespace ompl
         }
 
       private:
-        InformedSGCP * alg_;
+        InformedSGCP * alg_{nullptr};
         int threadId_{0};
       };  // PrecomputedCostHeuristic
 
@@ -464,6 +384,16 @@ namespace ompl
       /** \brief The control graphs, the numbers of graphs equals to number of threads */
       std::vector<GraphT> graphControlThreads_;
 
+      /** \brief A templetaed function to run shortest path algorithms such as A* or Dijkstra on boost graphs
+       * \param[in] g The boost graph
+       * \param[in] weightmap The weightmap of the boost graph indicating edge weights
+       * \param[in] heuristic The heuristic function to be used for A* search
+       * \param[in] start_vertex The start vertex of the search
+       * \param[in] goal_vertex The goal vertex of the search
+       * \param[in] precompute_heuristic Whether to precompute heuristic values for all vertices with Dijkstra
+       * \param[in] use_full_collision_check Whether to use full collision check for A* search
+       * \return The shortest path from start to goal as a list of vertex_descriptors
+       */
       template<class Heuristic>
       std::list<vertex_descriptor> computeShortestPath(
         GraphT & g,
@@ -504,16 +434,19 @@ namespace ompl
         } catch (FoundVertex found_goal) {
 
           // Catch the exception
+
           // Found a Heuristic from start to the goal (no collision checks),
-          // We now have H function
+          // We now have H function, distrbute the precomputed cost values to graph
           for (auto vd : boost::make_iterator_range(vertices(g))) {
             g[vd].g = d[vd];
           }
 
           // Found a collision free path to the goal, catch the exception
+          bool is_valid_path = true;
           for (vertex_descriptor v = goal_vertex;; v = p[v]) {
             if (use_full_collision_check) {
               if (g[v].blacklisted) {
+                is_valid_path = false;
                 //   Found a blacklisted vertex most likely due to collision, Marking in/out edges as invalid for this vertex
                 for (auto ed : boost::make_iterator_range(boost::out_edges(v, g))) {
                   weightmap[ed] = opt_->infiniteCost().value();
@@ -523,7 +456,13 @@ namespace ompl
             shortest_path.push_front(v);
             if (p[v] == v) {break;}
           }
-          return shortest_path;
+
+          if (is_valid_path) {
+            return shortest_path;
+          } else {
+            // the path is not valid, return empty path
+            return std::list<vertex_descriptor>({});
+          }
         }
       }
 
@@ -673,6 +612,8 @@ namespace ompl
         std::vector<WeightMap> & weightmap_controls,
         std::vector<std::pair<vertex_descriptor, vertex_descriptor>> & control_start_goal_descriptors
       );
+
+      // RVIZ Visualization of planner progess, this will be removed in the future
 
       /** \brief static method to visulize a graph in RVIZ*/
       static void visualizeRGG(
