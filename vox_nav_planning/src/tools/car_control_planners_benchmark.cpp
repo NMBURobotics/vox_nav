@@ -409,74 +409,44 @@ namespace vox_nav_planning
     auto it = sample_paths.begin();
     while (it != sample_paths.end()) {
 
+      visualization_msgs::msg::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = rclcpp::Clock().now();
+
+      if (!robot_mesh_path_.empty()) {
+        marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
+        marker.mesh_resource = robot_mesh_path_;
+      } else {
+        marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+      }
+      marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.lifetime = rclcpp::Duration::from_seconds(0);
+      marker.scale.x = 0.1;
+      marker.scale.y = 0.1;
+      marker.scale.z = 0.1;
+      marker.id = total_poses;
+      marker.color = getColorByIndex(it->first);
+      marker.ns = "path" + std::to_string(it->first);
 
       for (std::size_t curr_path_state = 0;
         curr_path_state < it->second.getStateCount(); curr_path_state++)
       {
-
-        visualization_msgs::msg::Marker marker;
-        marker.header.frame_id = "map";
-        marker.header.stamp = rclcpp::Clock().now();
-
-        if (!robot_mesh_path_.empty()) {
-          marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
-          marker.mesh_resource = robot_mesh_path_;
-        } else {
-          marker.type = visualization_msgs::msg::Marker::SPHERE;
-        }
-        marker.action = visualization_msgs::msg::Marker::ADD;
-        marker.lifetime = rclcpp::Duration::from_seconds(0);
-        marker.scale.x = 0.4;
-        marker.scale.y = 0.4;
-        marker.scale.z = 0.3;
-        marker.id = total_poses;
-        marker.color = getColorByIndex(it->first);
-        marker.ns = "path" + std::to_string(it->first);
-
         const auto * cstate =
           it->second.getState(curr_path_state)->as<ompl::base::ElevationStateSpace::StateType>();
-        // cast the abstract state type to the type we expect
         const auto * so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-        // extract the second component of the state and cast it to what we expect
         const auto * xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
         geometry_msgs::msg::Point p;
         p.x = xyzv->values[0];
         p.y = xyzv->values[1];
         p.z = xyzv->values[2];
-        //marker.points.push_back(p);
-        //marker.colors.push_back(getColorByIndex(it->first));
-
-        marker.pose.position = p;
-        //marker.colors.push_back(getColorByIndex(it->first));
-
-        visualization_msgs::msg::Marker text;
-        text.header.frame_id = "map";
-        text.header.stamp = rclcpp::Clock().now();
-        text.ns = "path";
-        text.id = total_poses + 1000;
-        text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
-        text.action = visualization_msgs::msg::Marker::ADD;
-        text.lifetime = rclcpp::Duration::from_seconds(0);
-        text.text = std::to_string(total_poses);
-        text.pose = marker.pose;
-        text.pose.position.z += 0.5;
-        text.scale.x = 0.3;
-        text.scale.y = 0.3;
-        text.scale.z = 0.3;
-        text.color.a = 1.0;
-        text.color.g = 1.0;
-        text.color.r = 1.0;
-
-        marker_array.markers.push_back(text);
-        marker_array.markers.push_back(marker);
-        total_poses++;
-        start_and_goal_poses_.header = marker.header;
-
+        marker.points.push_back(p);
+        marker.colors.push_back(getColorByIndex(it->first));
       }
-
+      total_poses++;
+      start_and_goal_poses_.header = marker.header;
+      marker_array.markers.push_back(marker);
       it++;
     }
-
 
     start_goal_poses_publisher_->publish(start_and_goal_poses_);
     plan_publisher_->publish(marker_array);
