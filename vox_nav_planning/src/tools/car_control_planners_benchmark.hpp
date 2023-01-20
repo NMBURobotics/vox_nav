@@ -310,6 +310,7 @@ namespace vox_nav_planning
         planner->as<ompl::control::InformedSGCP>()->setMinDistBetweenVertices(0.25);
         planner->as<ompl::control::InformedSGCP>()->setGoalBias(0.05);
         planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(true);
+        planner->as<ompl::control::InformedSGCP>()->setNumThreads(1);
       } else if (selected_planner_name == std::string("PDST")) {
         planner = ompl::base::PlannerPtr(new ompl::control::PDST(si));
       } else {

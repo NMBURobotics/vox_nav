@@ -84,6 +84,14 @@ void ompl::control::InformedSGCP::setup()
 {
   base::Planner::setup();
 
+  // Make sure number of threads is even and no less than 2
+  if (params_.num_threads_ < 2 || params_.num_threads_ % 2 != 0) {
+    OMPL_WARN(
+      "%s: Number of threads must be at least 2, and an even number. Setting to 2",
+      getName().c_str());
+    this->setNumThreads(2);
+  }
+
   // initialize the graphs for all geometric and control threads
   graphGeometricThreads_ = std::vector<GraphT>(params_.num_threads_, GraphT());
   graphControlThreads_ = std::vector<GraphT>(params_.num_threads_, GraphT());
@@ -376,11 +384,12 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
   // For control problem setting, in even threads we are solving from start to goal
   // and in odd threads we are solving from goal to start
-  // Due to highly non-unifrom nature of kinodynamic planning poblems,
+  // Due to highly non-unifrom nature of kinodynamic planning problems,
   // we are not sure which setting (start->goal or goal->start) will be solved first
-  // So we are solving both the settings
-  // Then we will try to establish connection between even thread and odd threads, making the planner bi-directional,
-  // we keep on doing this until we find best solution within the time limit
+  // So we are solving both for the both settings
+  // Then we will try to establish connection between even thread and odd threads,
+  // making the planner bi-directional,
+  // we keep on doing this until we find best solution within the time limit.
   for (int i = 0; i < params_.num_threads_; i++) {
     auto this_control_root_vertex = new VertexProperty();
     auto this_control_target_vertex = new VertexProperty();
@@ -395,15 +404,15 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     }
     // set the root flag on
     this_control_root_vertex->is_root = true;
-    // only push the start vertex to the nn
+    // only push the "root" vertex to the nn
     nnControlsThreads_[i]->add(this_control_root_vertex);
 
-    // push the start and goal vertex to the graph
+    // push the "root" and "yarget" vertex to the graphs
     startVerticesControl_.push_back(this_control_root_vertex);
     goalVerticesControl_.push_back(this_control_target_vertex);
   }
 
-  // If we are not in Eucledian space, then set the max distance to 1/10th of the maximum extent of the state space
+  // If we are not in Eucledian space, then set the max edge distance to 1/10th of the maximum extent of the state space
   if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
     params_.max_dist_between_vertices_ = si_->getStateSpace()->getMaximumExtent() / 10.0;
   } else {
@@ -443,7 +452,8 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   OMPL_INFORM(
     "%s: Using %u geometric graphs.\n", getName().c_str(), graphGeometricThreads_.size());
   OMPL_INFORM(
-    "%s: Using %u control graphs.\n", getName().c_str(), graphControlThreads_.size());
+    "%s: Using %u control graphs each pair of control threads expands towards each other.\n",
+    getName().c_str(), graphControlThreads_.size());
 
   // Keep a copy of shortest path in each thread, described as a list of vertex ids (vertex_descriptor)
   std::vector<std::list<std::size_t>>
