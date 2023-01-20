@@ -593,7 +593,6 @@ namespace ompl
        * \param control_graph the graph to be expanded (this thread's graph)
        * \param control_nn nearest neighbor structure to be updated (this thread's nn)
        * \param control_weightmap weight map to be updated (this thread's weightmap)
-       * \param status is the status of the thread
        */
       void expandControlGraph(
         const std::vector<ompl::base::State *> & samples,
@@ -604,8 +603,7 @@ namespace ompl
         const std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> connection_control_nn,
         GraphT & control_graph,
         std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> & control_nn,
-        WeightMap & control_weightmap,
-        int & status);
+        WeightMap & control_weightmap);
 
       /** \brief After expandControlGraph() function call,
        * make sure that the target vertex is connected to it's graph and nearest neighbors if possible.
