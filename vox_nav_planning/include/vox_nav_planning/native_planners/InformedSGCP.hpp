@@ -37,6 +37,7 @@
 #include "ompl/base/samplers/informed/PathLengthDirectInfSampler.h"
 #include "ompl/base/samplers/informed/RejectionInfSampler.h"
 #include "ompl/util/GeometricEquations.h"
+
 #include "rclcpp/rclcpp.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
@@ -236,9 +237,6 @@ namespace ompl
 
       /** \brief Directed control sampler to expand control graph */
       DirectedControlSamplerPtr directedControlSampler_{nullptr};
-
-      /** \brief Control sampler */
-      ControlSamplerPtr controlSampler_{nullptr};
 
       /** \brief The random number generator */
       RNG rng_;

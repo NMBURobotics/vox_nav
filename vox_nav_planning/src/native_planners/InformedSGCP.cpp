@@ -84,19 +84,17 @@ void ompl::control::InformedSGCP::setup()
 {
   base::Planner::setup();
 
-  // initialize the graphs for all control threads
+  // initialize the graphs for all geometric and control threads
   graphGeometricThreads_ = std::vector<GraphT>(params_.num_threads_, GraphT());
   graphControlThreads_ = std::vector<GraphT>(params_.num_threads_, GraphT());
 
-  // reset nn for geometric graph
+  // reset nn structure for geometric and control threads
   nnGeometricThreads_.clear();
   for (int i = 0; i < params_.num_threads_; i++) {
     std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> this_nn;
     this_nn.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty *>(this));
     nnGeometricThreads_.push_back(this_nn);
   }
-
-  // reset nns in all control threads
   nnControlsThreads_.clear();
   for (int i = 0; i < params_.num_threads_; i++) {
     std::shared_ptr<ompl::NearestNeighbors<VertexProperty *>> this_nn;
@@ -104,7 +102,7 @@ void ompl::control::InformedSGCP::setup()
     nnControlsThreads_.push_back(this_nn);
   }
 
-  //
+  // set distance function for all nn geometric and control threads
   for (auto & nn : nnGeometricThreads_) {
     nn->setDistanceFunction(
       [this](const VertexProperty * a, const VertexProperty * b)
@@ -112,8 +110,6 @@ void ompl::control::InformedSGCP::setup()
         return distanceFunction(a, b);
       });
   }
-
-  // set distance function for all nns control threads
   for (auto & nn : nnControlsThreads_) {
     nn->setDistanceFunction(
       [this](const VertexProperty * a, const VertexProperty * b)
@@ -122,6 +118,7 @@ void ompl::control::InformedSGCP::setup()
       });
   }
 
+  // set a default optimization objective if one is not set
   if (pdef_) {
     if (pdef_->hasOptimizationObjective()) {
       opt_ = pdef_->getOptimizationObjective();
@@ -132,29 +129,25 @@ void ompl::control::InformedSGCP::setup()
     }
   }
 
+  // set all samplers
   if (!validStateSampler_) {
     validStateSampler_ = si_->allocValidStateSampler();
   }
-
   if (!rejectionInformedSampler_) {
     rejectionInformedSampler_ = std::make_shared<base::RejectionInfSampler>(
       pdef_,
       std::numeric_limits<double>::infinity());
   }
-
   if (!directedControlSampler_) {
     directedControlSampler_ = std::make_shared<SimpleDirectedControlSampler>(
       siC_,
       params_.k_number_of_controls_);
   }
 
-  if (!controlSampler_) {
-    controlSampler_ = siC_->allocControlSampler();
-  }
-
   kRGG_ = boost::math::constants::e<double>() +
     (boost::math::constants::e<double>() / si_->getStateDimension());
 
+  // initialize the best geometric and control paths
   bestControlPath_ = std::make_shared<PathControl>(si_);
   bestGeometricPath_ = std::make_shared<PathControl>(si_);
 
