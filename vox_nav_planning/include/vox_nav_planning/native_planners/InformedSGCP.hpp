@@ -66,8 +66,8 @@ namespace ompl
     {
       /** \brief All configurable parameters of InformedSGCP. */
 
-      /** \brief The number of threads to be used in parallel for geometric and control. */
-      int num_threads_{12};
+      /** \brief The number of threads to be used in parallel for geometric and control. No odd numbers and less than 2 */
+      int num_threads_{4};
 
       /** \brief The number of samples to be added to graph in each iteration. */
       int batch_size_{100};
