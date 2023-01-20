@@ -685,7 +685,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     auto best_geometric_path(std::make_shared<PathControl>(si_));
     auto best_geometric_path_cost = opt_->infiniteCost();
     auto start_goal_l2_distance = opt_->motionCost(start_state, goal_state);
-    int best_geometric_path_index = 0; int geometric_counter = 0;
+    int geometric_counter = 0;
 
     for (auto && curr_path : geometric_ompl_paths) {
       auto path_cost = computePathCost(curr_path);
@@ -693,7 +693,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         // Aight, this path seems legit
         if (opt_->isCostBetterThan(path_cost, best_geometric_path_cost)) {
           best_geometric_path = curr_path;
-          best_geometric_path_index = geometric_counter;
+          bestGeometricPathIndex_ = geometric_counter;
           best_geometric_path_cost = path_cost;
         }
       }
@@ -720,7 +720,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
     // only for visualization, keep a copy of the best geometric and control graphs
     // Keep a copy before we change graphGeometricThreads_ and graphControlThreads_
-    auto best_geometric_graph = graphGeometricThreads_[best_geometric_path_index];
+    auto best_geometric_graph = graphGeometricThreads_[bestGeometricPathIndex_];
     auto best_control_graph = graphControlThreads_[bestControlPathIndex_];
 
     // If the cost is less than L2 norm of start and goal, this is likely an useless one.
@@ -752,23 +752,25 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         bool valid = true;
         for (auto && state : best_control_path->getStates()) {
           if (!si_->isValid(state)) {
+            // if any state is invalid, this is not a valid solution
             valid = false;
             break;
           }
         }
 
         if (valid) {
-          int temp = ompl::base::PlannerStatus::UNKNOWN;
-
+          // This is a valid solution
+          int temp_status = ompl::base::PlannerStatus::UNKNOWN;
           if (control_threads_status[bestControlPathIndex_] ==
             ompl::base::PlannerStatus::EXACT_SOLUTION)
           {
+            OMPL_INFORM(
+              "%s: Found Exact solution with %.2f cost",
+              getName().c_str(), best_control_path_cost.value());
+
             approximate_solution = false;
             exact_solution = true;
-            OMPL_INFORM(
-              "%s: Found Exact solution with %.2f cost", getName().c_str(),
-              best_control_path_cost.value());
-            temp = base::PlannerStatus::EXACT_SOLUTION;
+            temp_status = base::PlannerStatus::EXACT_SOLUTION;
             bestControlCost_ = best_control_path_cost;
             bestControlPath_ = best_control_path;
           }
@@ -780,7 +782,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             OMPL_INFORM(
               "%s: Previously Found an Exact solution with %.2f cost but control thread returned approximate solution now, we will skip this solution and keep exact solution.",
               getName().c_str(), bestControlCost_.value());
-            temp = base::PlannerStatus::EXACT_SOLUTION;
+            temp_status = base::PlannerStatus::EXACT_SOLUTION;
           } else if (control_threads_status[bestControlPathIndex_] ==
             base::PlannerStatus::APPROXIMATE_SOLUTION &&
             (currentBestSolutionStatus_ == base::PlannerStatus::APPROXIMATE_SOLUTION ||
@@ -791,7 +793,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
             OMPL_INFORM(
               "%s: Found Approximate solution with %.2f cost", getName().c_str(),
               best_control_path_cost.value());
-            temp = base::PlannerStatus::APPROXIMATE_SOLUTION;
+            temp_status = base::PlannerStatus::APPROXIMATE_SOLUTION;
             bestControlCost_ = best_control_path_cost;
             bestControlPath_ = best_control_path;
             if (static_cast<bool>(Planner::pdef_->getIntermediateSolutionCallback())) {
@@ -799,11 +801,10 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
                 this, getConstStatesFromPath(bestControlPath_), bestControlCost_);
             }
           }
-          currentBestSolutionStatus_ = temp;
+          currentBestSolutionStatus_ = temp_status;
         }
 
         if (currentBestSolutionStatus_ != base::PlannerStatus::UNKNOWN) {
-
           // print number of vertex
           OMPL_INFORM(
             "%s: Best Control Graph has %d vertices and ",
@@ -818,11 +819,10 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         // This is not a better solution, but if it is exact solution, clear graphs and populate with solution
         // print number of vertex
         OMPL_INFORM(
-          "%s: Another solution was found with cost %.2f but it did not improve previous cost %.2f so we will not update the best control path. ",
+          "%s: Another solution with cost %.2f, it did not improve previous cost %.2f, so we will not update the best control path. ",
           getName().c_str(), best_control_path_cost.value(), bestControlCost_);
         // Reset control graphs anyways
         //clearControlGraphs(control_weightmaps, control_start_goal_descriptors);
-
       }
     }
 
@@ -834,7 +834,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     // geometric path
     visualizePath(
       best_geometric_graph,
-      geometric_shortest_paths[best_geometric_path_index],
+      geometric_shortest_paths[bestGeometricPathIndex_],
       geometric_path_pub_,
       "g",
       getColor(blue),
@@ -853,8 +853,8 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       rgg_graph_pub_,
       "g",
       getColor(green),
-      geometric_start_goal_descriptors[best_geometric_path_index].first,
-      geometric_start_goal_descriptors[best_geometric_path_index].second,
+      geometric_start_goal_descriptors[bestGeometricPathIndex_].first,
+      geometric_start_goal_descriptors[bestGeometricPathIndex_].second,
       si_->getStateSpace()->getType());
 
     visualizeRGG(
@@ -865,7 +865,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
       control_start_goal_descriptors[bestControlPathIndex_].first,
       control_start_goal_descriptors[bestControlPathIndex_].second,
       si_->getStateSpace()->getType());
-
   }
 
   // Add the best path to the solution path
@@ -878,6 +877,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   // clear data structures
   clear();
 
+  // report the solution status
   return {exact_solution, approximate_solution};
 }
 

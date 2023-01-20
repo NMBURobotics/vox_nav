@@ -229,6 +229,9 @@ namespace ompl
       /** \brief keep the index of best control path, the index comes from thread id*/
       int bestControlPathIndex_{0};
 
+      /** \brief keep the index of best geometric path, the index comes from thread id*/
+      int bestGeometricPathIndex_{0};
+
       /** \brief The best path found so far. */
       std::shared_ptr<ompl::control::PathControl> bestGeometricPath_{nullptr};
 
