@@ -92,6 +92,14 @@ void ompl::control::InformedSGCP::setup()
     this->setNumThreads(2);
   }
 
+  // If we are not in Eucledian space, then set the max edge distance to 1/10th of the maximum extent of the state space
+  if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
+    params_.max_dist_between_vertices_ = si_->getStateSpace()->getMaximumExtent() / 10.0;
+  } else {
+    // on other spaces, set the max distance to 2.0
+    params_.max_dist_between_vertices_ = 2.0;
+  }
+
   // initialize the graphs for all geometric and control threads
   graphGeometricThreads_ = std::vector<GraphT>(params_.num_threads_, GraphT());
   graphControlThreads_ = std::vector<GraphT>(params_.num_threads_, GraphT());
@@ -412,14 +420,6 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     goalVerticesControl_.push_back(this_control_target_vertex);
   }
 
-  // If we are not in Eucledian space, then set the max edge distance to 1/10th of the maximum extent of the state space
-  if (si_->getStateSpace()->getType() == base::STATE_SPACE_REAL_VECTOR) {
-    params_.max_dist_between_vertices_ = si_->getStateSpace()->getMaximumExtent() / 10.0;
-  } else {
-    // on other spaces, set the max distance to 2.0
-    params_.max_dist_between_vertices_ = 2.0;
-  }
-
   // Add goal and start to geomteric graphs in all threads
   std::vector<std::pair<vertex_descriptor, vertex_descriptor>> geometric_start_goal_descriptors;
   for (auto & graph : graphGeometricThreads_) {
@@ -496,7 +496,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   // march forward until we have a solution or we run out of time
   while (ptc == false) {
 
-    // Keep track of the status of each control thread (UNKNOWN, EXACT_SOLUTION, APPROXIMATE_SOLUTION)
+    // Keep track of the solution status of each control thread (UNKNOWN, EXACT_SOLUTION, APPROXIMATE_SOLUTION)
     std::vector<int> control_threads_status(params_.num_threads_,
       ompl::base::PlannerStatus::UNKNOWN);
 
