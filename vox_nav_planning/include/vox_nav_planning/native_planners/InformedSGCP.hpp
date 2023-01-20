@@ -61,7 +61,6 @@ namespace ompl
        @par External documentation
        TBD
     */
-
     struct Parameters
     {
       /** \brief All configurable parameters of InformedSGCP. */

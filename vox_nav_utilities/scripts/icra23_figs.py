@@ -154,10 +154,18 @@ def plot_lenght():
         KPIECE1,
         PDST
     ]
+    
+    print(data)
 
 
-    m1 = np.array(data[0:2]).mean(axis=1).round(2)
-    st1 = np.array(data[0:2]).std(axis=1).round(2)
+    m1 = []
+    st1 = []
+    for i in data:
+        m = np.array(i).mean(axis=0).round(2)
+        std = np.array(i).std(axis=0).round(2)
+        m1.append(m)
+        st1.append(std)
+        
     
     print(m1)
     print(st1)
@@ -165,9 +173,9 @@ def plot_lenght():
     x = [
         'SST,\n (mean='+str(m1[0])+'\nstd='+str(st1[0])+')',
         'InformedSGCP,\n (mean='+str(m1[1])+'\nstd='+str(st1[1])+')',
-        'EST',
-        'KPIECE1',
-        'PDST'
+        'EST\n (mean='+str(m1[2])+'\nstd='+str(st1[2])+')',
+        'KPIECE1\n (mean='+str(m1[3])+'\nstd='+str(st1[3])+')',
+        'PDST\n (mean='+str(m1[4])+'\nstd='+str(st1[4])+')'
     ]
     
     fig = plt.figure(figsize=(10, 7))
