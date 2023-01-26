@@ -41,11 +41,14 @@ EXACT_SOLUTION = 'Exact'
 
 def plot_status():
     # ALL SBO PLANNERS
+    
+
     SST = []
     InformedSGCP = []
     EST = []
     KPIECE1 = []
     PDST = []
+    RRT = []
 
     file1 = open(
         '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/tools/carim.txt', 'r')
@@ -66,6 +69,8 @@ def plot_status():
             KPIECE1 = np.append(KPIECE1, line.split()[1])
         if line.split()[0] == 'PDST':
             PDST = np.append(PDST, line.split()[1])
+        if line.split()[0] == 'RRT':    
+            RRT = np.append(RRT, line.split()[1])
 
     exact_sol = []
     apprx_sol = []
@@ -76,7 +81,8 @@ def plot_status():
         InformedSGCP,
         EST,
         KPIECE1,
-        PDST
+        PDST,
+        RRT
     ]
 
     x = [
@@ -84,7 +90,8 @@ def plot_status():
         'InformedSGCP',
         'EST',
         'KPIECE1',
-        'PDST'
+        'PDST',
+        'RRT'
     ]
 
     index = 0
@@ -119,6 +126,7 @@ def plot_lenght():
     EST = []
     KPIECE1 = []
     PDST = []
+    RRT = []
 
     file1 = open(
         '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/tools/carim.txt', 'r')
@@ -140,6 +148,8 @@ def plot_lenght():
             KPIECE1 = np.append(KPIECE1, res)
         if line.split()[0] == 'PDST' and line.split()[1] == 'Exact':
             PDST = np.append(PDST, res)
+        if line.split()[0] == 'RRT' and line.split()[1] == 'Exact':
+            RRT = np.append(RRT, res)    
 
     exact_sol = []
     apprx_sol = []
@@ -152,7 +162,8 @@ def plot_lenght():
         InformedSGCP,
         EST,
         KPIECE1,
-        PDST
+        PDST,
+        RRT
     ]
     
     print(data)
@@ -175,7 +186,8 @@ def plot_lenght():
         'InformedSGCP,\n (mean='+str(m1[1])+'\nstd='+str(st1[1])+')',
         'EST\n (mean='+str(m1[2])+'\nstd='+str(st1[2])+')',
         'KPIECE1\n (mean='+str(m1[3])+'\nstd='+str(st1[3])+')',
-        'PDST\n (mean='+str(m1[4])+'\nstd='+str(st1[4])+')'
+        'PDST\n (mean='+str(m1[4])+'\nstd='+str(st1[4])+')',
+        'RRT\n (mean='+str(m1[5])+'\nstd='+str(st1[5])+')'
     ]
     
     fig = plt.figure(figsize=(10, 7))
