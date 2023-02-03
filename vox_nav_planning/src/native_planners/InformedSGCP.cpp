@@ -174,9 +174,12 @@ void ompl::control::InformedSGCP::setup()
     "vox_nav/InformedSGCP/rgg", rclcpp::SystemDefaultsQoS());
   geometric_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
     "vox_nav/InformedSGCP/g_plan", rclcpp::SystemDefaultsQoS());
-  control_graph_pub_ =
+  first_control_graph_pub_ =
     node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "vox_nav/InformedSGCP/control_rgg", rclcpp::SystemDefaultsQoS());
+    "vox_nav/InformedSGCP/first_control_rgg", rclcpp::SystemDefaultsQoS());
+  second_control_graph_pub_ =
+    node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+    "vox_nav/InformedSGCP/second_control_rgg", rclcpp::SystemDefaultsQoS());
   control_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
     "vox_nav/InformedSGCP/c_plan", rclcpp::SystemDefaultsQoS());
 }
@@ -723,6 +726,16 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
     auto best_geometric_graph = graphGeometricThreads_[bestGeometricPathIndex_];
     auto best_control_graph = graphControlThreads_[bestControlPathIndex_];
 
+    int best_control_graph_counterpart_index{0};
+    if (bestControlPathIndex_ % 2 == 0) {
+      best_control_graph_counterpart_index = bestControlPathIndex_ + 1;
+    } else {
+      best_control_graph_counterpart_index = bestControlPathIndex_ - 1;
+    }
+    auto best_control_graph_counterpart =
+      graphControlThreads_[best_control_graph_counterpart_index];
+
+
     // If the cost is less than L2 norm of start and goal, this is likely an useless one.
     // make sure the current cost is not less than L2 norm of start and goal
     if (opt_->isCostBetterThan(start_goal_l2_distance, best_geometric_path_cost)) {
@@ -859,9 +872,18 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
     visualizeRGG(
       best_control_graph,
-      control_graph_pub_,
+      first_control_graph_pub_,
       "c",
       getColor(red),
+      control_start_goal_descriptors[bestControlPathIndex_].first,
+      control_start_goal_descriptors[bestControlPathIndex_].second,
+      si_->getStateSpace()->getType());
+
+    visualizeRGG(
+      best_control_graph_counterpart,
+      second_control_graph_pub_,
+      "c",
+      getColor(blue),
       control_start_goal_descriptors[bestControlPathIndex_].first,
       control_start_goal_descriptors[bestControlPathIndex_].second,
       si_->getStateSpace()->getType());

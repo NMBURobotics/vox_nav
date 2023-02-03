@@ -653,7 +653,10 @@ namespace ompl
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr geometric_path_pub_;
 
       /** \brief The publishers for the geometric and control graph/path visulization*/
-      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_graph_pub_;
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr first_control_graph_pub_;
+
+      /** \brief The publishers for the geometric and control graph/path visulization*/
+      rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr second_control_graph_pub_;
 
       /** \brief The publishers for the geometric and control graph/path visulization*/
       rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr control_path_pub_;

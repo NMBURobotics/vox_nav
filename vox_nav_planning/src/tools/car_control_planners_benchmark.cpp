@@ -147,7 +147,7 @@ namespace vox_nav_planning
 
     octomap_publisher_ = this->create_publisher<octomap_msgs::msg::Octomap>(
       "octomap",
-      rclcpp::SystemDefaultsQoS());
+      rclcpp::SensorDataQoS());
     setupMap();
 
     // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
@@ -275,12 +275,12 @@ namespace vox_nav_planning
       goal_yaw = getRangedRandom(se_bounds_.minyaw, se_bounds_.maxyaw);
 
       start.pose.position.x = 7.9;   //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-      start.pose.position.y = 8.0;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      start.pose.position.y = 9.0;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
       start.pose.position.z = 0.5;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
       start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 1.57);
 
       goal.pose.position.x = 7.9;  //getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-      goal.pose.position.y = 3.8;  //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+      goal.pose.position.y = 2.8;  //getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
       goal.pose.position.z = 0.5;   //getRangedRandom(se_bounds_.miny, se_bounds_.maxy)
       goal.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 1.57);
 
@@ -450,6 +450,13 @@ namespace vox_nav_planning
 
     start_goal_poses_publisher_->publish(start_and_goal_poses_);
     plan_publisher_->publish(marker_array);
+
+    // Publish the octomap
+    octomap_msgs::msg::Octomap octomap_msg;
+    octomap_msgs::fullMapToMsg(*original_octomap_octree_, octomap_msg);
+    octomap_msg.header.frame_id = "map";
+    octomap_msg.header.stamp = rclcpp::Clock().now();
+    octomap_publisher_->publish(octomap_msg);
   }
 
   void CarControlPlannersBenchMarking::setupMap()

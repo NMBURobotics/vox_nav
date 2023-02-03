@@ -1035,7 +1035,7 @@ void RawCloudClusteringTracking::publishTracks(const std_msgs::msg::Header & hea
     marker_array.markers.push_back(viz_obj.arr);
     marker_array.markers.push_back(viz_obj.cyl);
     marker_array.markers.push_back(viz_obj.txt);
-    marker_array.markers.push_back(dynamic_obj_waypoints);
+    //marker_array.markers.push_back(dynamic_obj_waypoints);
     track_list.objects.push_back(track_msg);
   }
 
