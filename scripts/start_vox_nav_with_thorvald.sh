@@ -12,5 +12,8 @@ gnome-terminal -- sh -c "$ros2_launch_command"
 ros2_launch_command="ros2 launch thorvald_vox_nav vox_nav.launch.py ; bash"
 gnome-terminal -- sh -c "$ros2_launch_command"
 
-ros2_record_command="bash record.sh; bash"
-gnome-terminal -- sh -c "$ros2_record_command"
+ros2_launch_command="ros2 launch vox_nav_cupoch cupoch_gpu_icp.launch.py ; bash"
+gnome-terminal -- sh -c "$ros2_launch_command"
+
+#ros2_record_command="bash record.sh; bash"
+#gnome-terminal -- sh -c "$ros2_record_command"

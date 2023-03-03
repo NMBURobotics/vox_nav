@@ -146,18 +146,35 @@ void CupochGPUICP::liveCloudCallback(
                 params_.y_bound + curr_robot_pose.pose.position.y,
                 params_.z_bound + curr_robot_pose.pose.position.z, 1));
 
+        pcl_conversions::toPCL(cloud->header, croppped_map_cloud->header);
         croppped_map_cloud->header.frame_id = "map";
-        croppped_map_cloud->header.stamp = pcl_curr->header.stamp;
-        croppped_map_cloud->header.seq = pcl_curr->header.seq;
 
-        if (!pcl_ros::transformPointCloud(
-                "base_link", *croppped_map_cloud, *croppped_map_cloud, *tf_buffer_))
+        try
         {
-            RCLCPP_WARN(get_logger(), "Error Encountered at transfrom, doing nothing");
+            auto trans = tf_buffer_->lookupTransform("base_link", "map", cloud->header.stamp,
+                                                     rclcpp::Duration::from_seconds(1.0));
+            pcl_ros::transformPointCloud(*croppped_map_cloud, *croppped_map_cloud, trans);
+        }
+        catch (tf2::TransformException &ex)
+        {
+            RCLCPP_WARN(get_logger(),
+                        "Exception in transformPose: %s",
+                        ex.what());
             latest_icp_pose_.header.stamp = now();
             base_to_map_pose_pub_->publish(latest_icp_pose_);
             return;
         }
+
+        /*
+           if (!pcl_ros::transformPointCloud(
+                        "base_link", *croppped_map_cloud, *croppped_map_cloud, *tf_buffer_))
+                {
+                    RCLCPP_WARN(get_logger(), "Error Encountered at transfrom, doing nothing");
+                    latest_icp_pose_.header.stamp = now();
+                    base_to_map_pose_pub_->publish(latest_icp_pose_);
+                    return;
+                }
+        */
 
         croppped_map_cloud =
             vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
@@ -200,7 +217,6 @@ void CupochGPUICP::liveCloudCallback(
             std::abs(res.transformation_(1, 3)) > 0.5 ||
             std::abs(res.transformation_(2, 3)) > 0.5)
         {
-
             res.transformation_(0, 3) = clamp<double>(res.transformation_(0, 3), -0.5, 0.5);
             res.transformation_(1, 3) = clamp<double>(res.transformation_(1, 3), -0.5, 0.5);
             res.transformation_(2, 3) = clamp<double>(res.transformation_(2, 3), -0.5, 0.5);
