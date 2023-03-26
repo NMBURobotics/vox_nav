@@ -30,7 +30,7 @@ def generate_launch_description():
 
     decleare_params = DeclareLaunchArgument(
         "params",
-        default_value=os.path.join(share_dir, "params", "params.yaml"),
+        default_value=os.path.join(share_dir, "config", "osm_map.yaml"),
         description="Path to the vox_nav parameters file.",
     )
 
@@ -70,6 +70,15 @@ def generate_launch_description():
         output="screen",
         parameters=[{"use_sim_time": use_sim_time}],
         arguments=[urdf],
+    )
+
+    osm_map_node = Node(
+        package="vox_nav_map_server",
+        executable="osm_map_manager",
+        name="osm_map_manager_rclcpp_node",
+        output="screen",
+        #prefix=["xterm -e gdb -ex run --args"],
+        parameters=[params],
     )
 
     ekf_local_filter_node = Node(
@@ -113,7 +122,8 @@ def generate_launch_description():
         [
             declare_use_sim_time,
             robot_state_publisher,
-            # decleare_params,
+            decleare_params,
+            osm_map_node,
             decleare_localization_params,
             ekf_local_filter_node,
             ekf_global_filter_node,

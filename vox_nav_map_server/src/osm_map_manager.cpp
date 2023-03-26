@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "vox_nav_map_server/osm_map_manager.hpp"
-
+#include "boost/progress.hpp"
 #include <string>
 #include <vector>
 #include <memory>
@@ -25,7 +25,6 @@ namespace vox_nav_map_server
   : Node("vox_nav_osm_map_manager_rclcpp_node"),
     map_configured_(false)
   {
-    RCLCPP_INFO(this->get_logger(), "Creating.");
 
     // initialize shared pointers asap
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
@@ -53,11 +52,12 @@ namespace vox_nav_map_server
     declare_parameter("pcd_map_transform.rotation.p", 0.0);
     declare_parameter("pcd_map_transform.rotation.y", 0.0);
     declare_parameter("apply_filters", true);
-    declare_parameter("pcd_map_downsample_voxel_size", 0.1);
+    declare_parameter("downsample_leaf_size", 0.1);
 
     // get this node's parameters
     get_parameter("osm_map_roads_pcd_filename", osm_map_roads_pcd_filename_);
     get_parameter("osm_map_buildings_pcd_filename", osm_map_buildings_pcd_filename_);
+    get_parameter("publish_frequency", publish_frequency_);
     get_parameter("map_frame_id", map_frame_id_);
     get_parameter("utm_frame_id", utm_frame_id_);
     get_parameter("map_datum.latitude", map_gps_pose_->position.latitude);
@@ -73,6 +73,7 @@ namespace vox_nav_map_server
     get_parameter("pcd_map_transform.rotation.r", pcd_map_transform_matrix_.rpyIntrinsic_.x());
     get_parameter("pcd_map_transform.rotation.p", pcd_map_transform_matrix_.rpyIntrinsic_.y());
     get_parameter("pcd_map_transform.rotation.y", pcd_map_transform_matrix_.rpyIntrinsic_.z());
+    get_parameter("downsample_leaf_size", downsample_leaf_size_);
 
     // service hooks for get maps and surfels
     get_maps_service_ = this->create_service
@@ -98,8 +99,10 @@ namespace vox_nav_map_server
       std::chrono::milliseconds(static_cast<int>(1000 / publish_frequency_)),
       std::bind(&OSMMapManager::timerCallback, this));
 
-    osm_pointloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+    osm_buildings_pointcloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
       "osm_cloud", rclcpp::SystemDefaultsQoS());
+    osm_roads_pointcloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+      "osm_roads_cloud", rclcpp::SystemDefaultsQoS());
 
     osm_map_roads_pointcloud_ = vox_nav_utilities::loadPointcloudFromPcd(
       osm_map_roads_pcd_filename_.c_str());
@@ -112,6 +115,9 @@ namespace vox_nav_map_server
     RCLCPP_INFO(
       this->get_logger(), "Loaded a Map Buildings PCD map with %d points",
       static_cast<int>(osm_map_buildings_pointcloud_->points.size()));
+
+    RCLCPP_INFO(this->get_logger(), "Creating.");
+
   }
 
   OSMMapManager::~OSMMapManager()
@@ -121,20 +127,48 @@ namespace vox_nav_map_server
 
   void OSMMapManager::fixMapRoadsElevation()
   {
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr roads_with_trueelevation(
+      new pcl::PointCloud<pcl::PointXYZRGB>);
+
+    // Roads with true elevation are in black color, so extract them from map building pointcloud
+    for (auto & map_building_point : osm_map_buildings_pointcloud_->points) {
+      if (map_building_point.r == 0 && map_building_point.g == 0 && map_building_point.b == 0) {
+        roads_with_trueelevation->points.push_back(map_building_point);
+      }
+    }
+
+    boost::progress_display show_progress(roads_with_trueelevation->points.size());
+
+    int index = 0;
+
+    pcl::KdTreeFLANN<pcl::PointXYZRGB> kdtree;
+    kdtree.setInputCloud(roads_with_trueelevation);
+
     // Find the nearest point in x-y plane and set the z value to the same as the nearest point
     for (auto & map_road_point : osm_map_roads_pointcloud_->points) {
 
-      double xy_distance = std::numeric_limits<double>::max();
-      for (auto & map_building_point : osm_map_buildings_pointcloud_->points) {
-        double xy_distance_temp = std::sqrt(
-          std::pow(map_road_point.x - map_building_point.x, 2) +
-          std::pow(map_road_point.y - map_building_point.y, 2));
-        if (xy_distance_temp < xy_distance) {
-          xy_distance = xy_distance_temp;
-          map_road_point.z = map_building_point.z;
-        }
+      std::vector<int> pointIdxNKNSearch(1);
+      std::vector<float> pointNKNSquaredDistance(1);
+
+      if (kdtree.nearestKSearch(
+          map_road_point, 1, pointIdxNKNSearch,
+          pointNKNSquaredDistance) > 0)
+      {
+        map_road_point.z = roads_with_trueelevation->points[pointIdxNKNSearch[0]].z;
+      }
+
+      ++show_progress;
+      index++;
+
+      if (index % 10000 == 0) {
+        RCLCPP_INFO(
+          this->get_logger(), "handled 10K"
+        );
       }
     }
+    RCLCPP_INFO(
+      this->get_logger(), "Fixed Map Roads PCD map with %d points",
+      static_cast<int>(osm_map_roads_pointcloud_->points.size()));
   }
 
   void OSMMapManager::timerCallback()
@@ -154,13 +188,17 @@ namespace vox_nav_map_server
           "But the map and octomap will be published at %i frequency rate",
           publish_frequency_);
 
-        transfromPCDfromGPS2Map();
         preProcessPCDMap();
+
+        transfromPCDfromGPS2Map();
+
+        fixMapRoadsElevation();
+
         RCLCPP_INFO(get_logger(), "Georeferenced given map, ready to publish");
 
         map_configured_ = true;
       });
-    //publishMapVisuals();
+    publishOSMPointClouds();
   }
 
   void OSMMapManager::transfromPCDfromGPS2Map()
@@ -247,6 +285,23 @@ namespace vox_nav_map_server
     pcl_ros::transformPointCloud(
       *osm_map_roads_pointcloud_, *osm_map_roads_pointcloud_, final_tr
     );
+  }
+
+  void OSMMapManager::publishOSMPointClouds()
+  {
+    // Publish the Osm point clouds
+
+    auto osm_buildings_pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*osm_map_buildings_pointcloud_, *osm_buildings_pointcloud_msg);
+    osm_buildings_pointcloud_msg->header.frame_id = map_frame_id_;
+    osm_buildings_pointcloud_msg->header.stamp = this->get_clock()->now();
+    osm_buildings_pointcloud_publisher_->publish(*osm_buildings_pointcloud_msg);
+
+    auto osm_roads_pointcloud_msg = std::make_shared<sensor_msgs::msg::PointCloud2>();
+    pcl::toROSMsg(*osm_map_roads_pointcloud_, *osm_roads_pointcloud_msg);
+    osm_roads_pointcloud_msg->header.frame_id = map_frame_id_;
+    osm_roads_pointcloud_msg->header.stamp = this->get_clock()->now();
+    osm_roads_pointcloud_publisher_->publish(*osm_roads_pointcloud_msg);
 
   }
 

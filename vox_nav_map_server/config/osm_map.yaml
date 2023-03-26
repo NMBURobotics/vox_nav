@@ -1,0 +1,31 @@
+osm_map_manager_rclcpp_node:
+  ros__parameters:
+    osm_map_roads_pcd_filename: /home/atas/ros2_ws/src/vox_nav/vox_nav_map_server/maps/map_roads.pcd # Provide a PCD format map
+    osm_map_buildings_pcd_filename: /home/atas/ros2_ws/src/vox_nav/vox_nav_map_server/maps/map_buildings.pcd
+
+    # PCD PREPROCESS PARAMS
+    downsample_leaf_size: 0.6   
+    publish_frequency: 15                                    # Set to smaller if you do not want downsample pointclouds of the map
+    pcd_map_transform:                                                        # Apply an OPTIONAL rigid-body transrom to pcd file, leave to all zeros if not wished
+      translation:                                                            # Unit is meters
+        x: -0.0
+        y: 0.0
+        z: 0.0
+      rotation:                                                               # intrinsic rotation X-Y-Z (r-p-y)sequence, if you acquired map in camera frmae and want to represent
+                                                                              # it in base_link or lidar frmae, you can specify the rotation here, UNit is Radians
+        r: 0.0 #3.14
+        p: 0.0 #1.57
+        y: 0.0 # 1.57
+    map_frame_id: "map"                                                      # This should be consistent with Gloabl EKF node , in robot_localization
+    utm_frame_id: "utm"
+    map_datum:                                                               # Datum coordinates of map is used to geo-reference the map 
+                                                                             # If you are building a map with a SLAM method, you need to get a reading from GPS and absolute headed IMU
+                                                                             # just before you start to build the map. See for example 
+      latitude: 59.665905168154474
+      longitude: 10.777607911625102
+      altitude: 0.0
+      quaternion:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+        w: 1.0

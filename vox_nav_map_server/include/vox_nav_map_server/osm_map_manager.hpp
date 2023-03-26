@@ -127,13 +127,16 @@ namespace vox_nav_map_server
      */
     void fixMapRoadsElevation();
 
+    void publishOSMPointClouds();
+
   protected:
     // Used to call a periodic callback function IOT publish octomap visuals
     rclcpp::TimerBase::SharedPtr timer_;
     // Service to provide Octomap, elevated surfel and elevated surfel poses
     rclcpp::Service<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_service_;
     // publishes octomap in form of a point cloud message
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_pointloud_publisher_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_buildings_pointcloud_publisher_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_roads_pointcloud_publisher_;
 
     // robot_localization package provides a service to convert
     // lat,long,al GPS cooordinates to x,y,z map points
