@@ -1,0 +1,180 @@
+<?xml version="1.0"?>
+<!-- created with Phobos 1.0.1 "Capricious Choutengan" -->
+<robot name="dobbie">
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="5.11"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual name="Body">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/dae/Cube.004.dae" scale="0.66667 0.5 0.5"/>
+      </geometry>
+      <material name="rubber.001"/>
+    </visual>
+    <collision name="Body">
+      <origin xyz="0.05 0 -0.0125" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/dae/Cube.114.dae" scale="1.0 1.0 1.0"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="fl_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual name="FrontLeft">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/dae/Circle.002.dae" scale="0.015 0.015 0.01"/>
+      </geometry>
+      <material name="rubber.001"/>
+    </visual>
+    <collision name="FrontLeft">
+      <origin xyz="0.00161 0.00438 0.00609" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.13644" length="0.07393"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="fr_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual name="FrontRight">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/dae/Circle.001.dae" scale="0.015 0.015 0.01"/>
+      </geometry>
+      <material name="rim.002"/>
+    </visual>
+    <collision name="FrontRight">
+      <origin xyz="0.00161 0.00438 0.00609" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.13644" length="0.07393"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="rl_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual name="RearLeft">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/dae/Circle.023.dae" scale="0.015 0.015 0.01"/>
+      </geometry>
+      <material name="rubber.001"/>
+    </visual>
+    <collision name="RearLeft">
+      <origin xyz="0.00161 0.00438 0.00609" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.13644" length="0.07393"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="rr_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+    </inertial>
+    <visual name="RearRight">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="../meshes/dae/Circle.003.dae" scale="0.015 0.015 0.01"/>
+      </geometry>
+      <material name="rubber.001"/>
+    </visual>
+    <collision name="RearRight">
+      <origin xyz="0.00161 0.00438 0.00609" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.13644" length="0.07393"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="gps_link">
+    <visual name="gps_link_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.05" length="0.05"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="sensor_kit_base_link">
+    <visual name="lidar_link_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.05" length="0.05"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="fl_link" type="continuous">
+    <origin xyz="0.33 0.28497 -0.14839" rpy="1.5708 1.5708 0"/>
+    <parent link="base_link"/>
+    <child link="fl_link"/>
+    <axis xyz="0 0 1.0"/>
+    <limit effort="5000.0" velocity="3.06"/>
+  </joint>
+
+  <joint name="fr_link" type="continuous">
+    <origin xyz="0.33 -0.28497 -0.14839" rpy="-1.5708 1.5708 0"/>
+    <parent link="base_link"/>
+    <child link="fr_link"/>
+    <axis xyz="0 0 1.0"/>
+    <limit effort="5000.0" velocity="3.06"/>
+  </joint>
+
+  <joint name="rl_link" type="continuous">
+    <origin xyz="-0.23 0.28497 -0.14839" rpy="1.5708 1.5708 0"/>
+    <parent link="base_link"/>
+    <child link="rl_link"/>
+    <axis xyz="0 0 1.0"/>
+    <limit effort="5000.0" velocity="3.06"/>
+  </joint>
+
+  <joint name="rr_link" type="continuous">
+    <origin xyz="-0.23 -0.28497 -0.14839" rpy="-1.5708 1.5708 0"/>
+    <parent link="base_link"/>
+    <child link="rr_link"/>
+    <axis xyz="0 0 1.0"/>
+    <limit effort="5000.0" velocity="3.06"/>
+  </joint>
+
+  <joint name="gps_link" type="fixed">
+    <origin xyz="0 0 0.2" rpy="0 0.0 0"/>
+    <parent link="base_link"/>
+    <child link="gps_link"/>
+  </joint>
+
+  <joint name="lidar_link" type="fixed">
+    <origin xyz="0 0 0.35" rpy="0 0.0 0"/>
+    <parent link="base_link"/>
+    <child link="sensor_kit_base_link"/>
+  </joint>
+
+  <material name="rim.002">
+    <color rgba="0.7981 0.0218 0.00563 1.0"/>
+  </material>
+
+  <material name="rubber.001">
+    <color rgba="0 0 0 1.0"/>
+  </material>
+
+</robot>

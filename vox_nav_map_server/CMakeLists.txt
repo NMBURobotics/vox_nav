@@ -55,7 +55,7 @@ install(DIRECTORY include/
         DESTINATION include/)
 
 install(
-  DIRECTORY 
+  DIRECTORY config launch urdf meshes
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
