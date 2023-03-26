@@ -47,8 +47,12 @@ include_directories(include)
 
 add_executable(map_manager src/map_manager.cpp)
 ament_target_dependencies(map_manager ${dependencies})
- 
+
+add_executable(osm_map_manager src/osm_map_manager.cpp)
+ament_target_dependencies(osm_map_manager ${dependencies}) 
+
 install(TARGETS map_manager
+                osm_map_manager  
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

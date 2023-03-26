@@ -26,10 +26,12 @@ namespace vox_nav_map_server
     map_configured_(false)
   {
     RCLCPP_INFO(this->get_logger(), "Creating.");
+
     // initialize shared pointers asap
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
     static_transform_broadcaster_ = std::make_shared<tf2_ros::StaticTransformBroadcaster>(this);
+    map_gps_pose_ = std::make_shared<vox_nav_msgs::msg::OrientedNavSatFix>();
 
     // Declare this node's parameters
     declare_parameter("osm_map_roads_pcd_filename", "/home/ros2-foxy/f.pcd");
@@ -58,13 +60,13 @@ namespace vox_nav_map_server
     get_parameter("osm_map_buildings_pcd_filename", osm_map_buildings_pcd_filename_);
     get_parameter("map_frame_id", map_frame_id_);
     get_parameter("utm_frame_id", utm_frame_id_);
-    get_parameter("map_datum.latitude", pcd_map_gps_pose_->position.latitude);
-    get_parameter("map_datum.longitude", pcd_map_gps_pose_->position.longitude);
-    get_parameter("map_datum.altitude", pcd_map_gps_pose_->position.altitude);
-    get_parameter("map_datum.quaternion.x", pcd_map_gps_pose_->orientation.x);
-    get_parameter("map_datum.quaternion.y", pcd_map_gps_pose_->orientation.y);
-    get_parameter("map_datum.quaternion.z", pcd_map_gps_pose_->orientation.z);
-    get_parameter("map_datum.quaternion.w", pcd_map_gps_pose_->orientation.w);
+    get_parameter("map_datum.latitude", map_gps_pose_->position.latitude);
+    get_parameter("map_datum.longitude", map_gps_pose_->position.longitude);
+    get_parameter("map_datum.altitude", map_gps_pose_->position.altitude);
+    get_parameter("map_datum.quaternion.x", map_gps_pose_->orientation.x);
+    get_parameter("map_datum.quaternion.y", map_gps_pose_->orientation.y);
+    get_parameter("map_datum.quaternion.z", map_gps_pose_->orientation.z);
+    get_parameter("map_datum.quaternion.w", map_gps_pose_->orientation.w);
     get_parameter("pcd_map_transform.translation.x", pcd_map_transform_matrix_.translation_.x());
     get_parameter("pcd_map_transform.translation.y", pcd_map_transform_matrix_.translation_.y());
     get_parameter("pcd_map_transform.translation.z", pcd_map_transform_matrix_.translation_.z());
@@ -106,10 +108,10 @@ namespace vox_nav_map_server
 
     RCLCPP_INFO(
       this->get_logger(), "Loaded a Map Roads PCD map with %d points",
-      osm_map_roads_pointcloud_->points.size());
+      static_cast<int>(osm_map_roads_pointcloud_->points.size()));
     RCLCPP_INFO(
       this->get_logger(), "Loaded a Map Buildings PCD map with %d points",
-      osm_map_buildings_pointcloud_->points.size());
+      static_cast<int>(osm_map_buildings_pointcloud_->points.size()));
   }
 
   OSMMapManager::~OSMMapManager()
@@ -117,7 +119,7 @@ namespace vox_nav_map_server
     RCLCPP_INFO(this->get_logger(), "Destroying");
   }
 
-  OSMMapManager::fixMapRoadsElevation()
+  void OSMMapManager::fixMapRoadsElevation()
   {
     // Find the nearest point in x-y plane and set the z value to the same as the nearest point
     for (auto & map_road_point : osm_map_roads_pointcloud_->points) {
@@ -138,7 +140,7 @@ namespace vox_nav_map_server
   void OSMMapManager::timerCallback()
   {
     // Since this is static map we need to georefence this only once not each time
-    /*std::call_once(
+    std::call_once(
       align_static_map_once_, [this]()
       {
         while (!tf_buffer_->canTransform(utm_frame_id_, map_frame_id_, rclcpp::Time(0))) {
@@ -150,24 +152,24 @@ namespace vox_nav_map_server
         RCLCPP_INFO(
           get_logger(), "Configuring pcd map with given parameters,"
           "But the map and octomap will be published at %i frequency rate",
-          octomap_publish_frequency_);
+          publish_frequency_);
 
         transfromPCDfromGPS2Map();
         preProcessPCDMap();
         RCLCPP_INFO(get_logger(), "Georeferenced given map, ready to publish");
 
         map_configured_ = true;
-      });*/
-    publishMapVisuals();
+      });
+    //publishMapVisuals();
   }
 
   void OSMMapManager::transfromPCDfromGPS2Map()
   {
     auto request = std::make_shared<robot_localization::srv::FromLL::Request>();
     auto response = std::make_shared<robot_localization::srv::FromLL::Response>();
-    request->ll_point.latitude = pcd_map_gps_pose_->position.latitude;
-    request->ll_point.longitude = pcd_map_gps_pose_->position.longitude;
-    request->ll_point.altitude = pcd_map_gps_pose_->position.altitude;
+    request->ll_point.latitude = map_gps_pose_->position.latitude;
+    request->ll_point.longitude = map_gps_pose_->position.longitude;
+    request->ll_point.altitude = map_gps_pose_->position.altitude;
 
     while (!robot_localization_fromLL_client_->wait_for_service(std::chrono::seconds(1))) {
       if (!rclcpp::ok()) {
@@ -200,14 +202,14 @@ namespace vox_nav_map_server
         response->map_point.z));
 
     tf2::Quaternion static_map_quaternion;
-    tf2::fromMsg(pcd_map_gps_pose_->orientation, static_map_quaternion);
+    tf2::fromMsg(map_gps_pose_->orientation, static_map_quaternion);
     static_map_to_map_transfrom.setRotation(static_map_quaternion);
 
     geometry_msgs::msg::TransformStamped stamped;
     stamped.child_frame_id = "static_map";
     stamped.header.frame_id = "map";
     stamped.header.stamp = this->get_clock()->now();
-    stamped.transform.rotation = pcd_map_gps_pose_->orientation;
+    stamped.transform.rotation = map_gps_pose_->orientation;
     geometry_msgs::msg::Vector3 translation;
     translation.x = response->map_point.x;
     translation.y = response->map_point.y;
@@ -216,30 +218,43 @@ namespace vox_nav_map_server
     static_transform_broadcaster_->sendTransform(stamped);
 
     pcl_ros::transformPointCloud(
-      *pcd_map_pointcloud_, *pcd_map_pointcloud_, static_map_to_map_transfrom
+      *osm_map_buildings_pointcloud_, *osm_map_buildings_pointcloud_, static_map_to_map_transfrom
+    );
+    pcl_ros::transformPointCloud(
+      *osm_map_roads_pointcloud_, *osm_map_roads_pointcloud_, static_map_to_map_transfrom
     );
   }
 
   void OSMMapManager::preProcessPCDMap()
   {
-    if (preprocess_params_.pcd_map_downsample_voxel_size > 0.0) {
-      pcd_map_pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
-        pcd_map_pointcloud_, preprocess_params_.pcd_map_downsample_voxel_size);
+    if (downsample_leaf_size_ > 0.0) {
+      osm_map_buildings_pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+        osm_map_buildings_pointcloud_, downsample_leaf_size_);
+
+      osm_map_roads_pointcloud_ = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+        osm_map_roads_pointcloud_, downsample_leaf_size_);
     }
 
-    RCLCPP_INFO(
-      this->get_logger(), "PCD Map downsampled, it now has %d points adjust the parameters if the map looks off ",
-      pcd_map_pointcloud_->points.size());
+    Eigen::Affine3d bt = vox_nav_utilities::getRigidBodyTransform(
+      pcd_map_transform_matrix_.translation_,
+      pcd_map_transform_matrix_.rpyIntrinsic_,
+      get_logger());
+    auto final_tr = tf2::eigenToTransform(bt);
 
-    // apply a rigid body transfrom if it was given one
-    pcd_map_pointcloud_ = vox_nav_utilities::transformCloud(
-      pcd_map_pointcloud_,
-      vox_nav_utilities::getRigidBodyTransform(
-        pcd_map_transform_matrix_.translation_,
-        pcd_map_transform_matrix_.rpyIntrinsic_,
-        get_logger()));
+    pcl_ros::transformPointCloud(
+      *osm_map_buildings_pointcloud_, *osm_map_buildings_pointcloud_, final_tr
+    );
+    pcl_ros::transformPointCloud(
+      *osm_map_roads_pointcloud_, *osm_map_roads_pointcloud_, final_tr
+    );
 
   }
+
+  void OSMMapManager::getGetOSMMapCallback(
+    const std::shared_ptr<rmw_request_id_t> request_header,
+    const std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Request> request,
+    std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Response> response) {}
+
 
 }   // namespace vox_nav_map_server
 

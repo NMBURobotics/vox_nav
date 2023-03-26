@@ -21,9 +21,9 @@
 #include <rclcpp/client.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/transform_datatypes.h>
-#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_eigen/tf2_eigen.hpp>
 #include <tf2/convert.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/buffer.h>
@@ -99,13 +99,6 @@ namespace vox_nav_map_server
      */
     void transfromPCDfromGPS2Map();
 
-    /**
-   * @brief once map is georefenced, this function
-   *  is called from timerCallback to publish map related visuals
-   *  e.g point cloud, octomap markers etc
-   *
-   */
-    void publishMapVisuals();
 
     /**
      * @brief It is possible to apply some preprocessing steps to original PCD map.
@@ -176,7 +169,9 @@ namespace vox_nav_map_server
     // hther map has beene configured yet
 
     volatile bool map_configured_;
+
+    double downsample_leaf_size_;
   };
 }  // namespace vox_nav_map_server
 
-#endif  // VOX_NAV_MAP_SERVER__MAP_MANAGER_HPP_
+#endif  // VOX_NAV_MAP_SERVER__OSM_MAP_MANAGER_HPP_
