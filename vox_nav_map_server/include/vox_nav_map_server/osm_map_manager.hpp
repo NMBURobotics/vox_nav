@@ -135,8 +135,9 @@ namespace vox_nav_map_server
     // Service to provide Octomap, elevated surfel and elevated surfel poses
     rclcpp::Service<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_service_;
     // publishes octomap in form of a point cloud message
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_buildings_pointcloud_publisher_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_roads_pointcloud_publisher_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_road_topologies_pointcloud_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_road_colliders_pointcloud_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_buildings_pointcloud_pub_;
 
     // robot_localization package provides a service to convert
     // lat,long,al GPS cooordinates to x,y,z map points
@@ -147,12 +148,14 @@ namespace vox_nav_map_server
 
     vox_nav_msgs::msg::OrientedNavSatFix::SharedPtr map_gps_pose_;
 
-    std::string osm_map_roads_pcd_filename_;
-    std::string osm_map_buildings_pcd_filename_;
+    std::string osm_road_topologies_pcd_filename_;
+    std::string osm_road_colliders_pcd_filename_;
+    std::string osm_buildings_pcd_filename_;
 
     // Pointcloud map is stroed here
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_map_roads_pointcloud_;
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_map_buildings_pointcloud_;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_road_topologies_pointcloud_;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_road_colliders_pointcloud_;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_buildings_pointcloud_;
 
     // rclcpp parameters from yaml file: frame id for map typicall: "map"
     std::string map_frame_id_;

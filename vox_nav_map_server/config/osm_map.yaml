@@ -1,8 +1,8 @@
 osm_map_manager_rclcpp_node:
   ros__parameters:
-    osm_map_roads_pcd_filename: /home/atas/ros2_ws/src/vox_nav/vox_nav_map_server/maps/map_roads.pcd # Provide a PCD format map
-    osm_map_buildings_pcd_filename: /home/atas/ros2_ws/src/vox_nav/vox_nav_map_server/maps/map_buildings.pcd
-
+    osm_road_topologies_pcd_filename: /home/atas/ros2_ws/src/vox_nav/vox_nav_map_server/maps/osm_road_topologies.pcd
+    osm_road_colliders_pcd_filename: /home/atas/ros2_ws/src/vox_nav/vox_nav_map_server/maps/osm_road_colliders.pcd
+    osm_buildings_pcd_filename: /home/atas/ros2_ws/src/vox_nav/vox_nav_map_server/maps/osm_buildings.pcd
     # PCD PREPROCESS PARAMS
     downsample_leaf_size: 0.6   
     publish_frequency: 15                                    # Set to smaller if you do not want downsample pointclouds of the map
