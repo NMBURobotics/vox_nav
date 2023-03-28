@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "vox_nav_map_server/osm_map_manager.hpp"
-#include "boost/timer/timer.hpp"
+#include "boost/progress.hpp"
 #include <string>
 #include <vector>
 #include <memory>
