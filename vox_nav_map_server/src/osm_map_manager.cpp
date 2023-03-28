@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "vox_nav_map_server/osm_map_manager.hpp"
-#include "boost/progress.hpp"
+#include "boost/timer/timer.hpp"
 #include <string>
 #include <vector>
 #include <memory>
@@ -136,6 +136,9 @@ namespace vox_nav_map_server
   void OSMMapManager::fixMapRoadsElevation()
   {
     // Road topology points are wrong in elevation, so we need to fix them using the road colliders which are correct
+    RCLCPP_INFO(
+      this->get_logger(),
+      "Road topology points are wrong in elevation, so we will fix them with road colliders");
 
     boost::progress_display show_progress(osm_road_topologies_pointcloud_->points.size());
 

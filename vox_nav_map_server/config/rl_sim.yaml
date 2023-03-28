@@ -18,12 +18,12 @@ ekf_local_filter_node:
                     false, false, false, # droll , dpitch ,dyaw
                     false, false, false] # ddX , ddY , ddZ
     odom0_relative: false
-    odom0_differential: false
+    odom0_differential: true
     odom0_queue_size: 10
     imu0_config: [false,  false, false,  # X , Y , Z
                   false,  false, false,  # roll , pitch ,yaw
                   false,  false, false,  # dX , dY , dZ
-                  true,  true,  true,  # droll , dpitch ,dyaw
+                  true,  true,  false,  # droll , dpitch ,dyaw
                   true,  true,  true] # ddX , ddY , ddZ
     imu0_relative: false                
     imu0_differential: false
@@ -53,7 +53,7 @@ ekf_global_filter_node:
     filter_type: "ekf"
     frequency: 30.0
     sensor_timeout: 1.0
-    odom0: /odometry/local
+    odom0: /dobbie/odom
     odom1: /odometry/gps
     imu0: /dobbie/sensing/imu/tamagawa/imu_raw
     map_frame: map
@@ -66,7 +66,7 @@ ekf_global_filter_node:
                     false, false, false, # droll , dpitch ,dyaw
                     false, false, false] # ddX , ddY , ddZ
     odom0_relative: false
-    odom0_differential: false
+    odom0_differential: true
     odom0_queue_size: 10
 
     odom1_config: [true, true,  false, # X , Y , Z
@@ -81,7 +81,7 @@ ekf_global_filter_node:
     imu0_config: [false,  false,  false,  # X , Y , Z
                   false,  false,  false,  # roll , pitch ,yaw
                   false,  false,  false,  # dX , dY , dZ
-                  true,   true,   true,   # droll , dpitch ,dyaw
+                  true,   true,   false,   # droll , dpitch ,dyaw
                   true,   true,   true]   # ddX , ddY , ddZ
     imu0_relative: false
     imu0_differential: false
