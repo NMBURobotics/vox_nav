@@ -19,6 +19,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Object.msg"
   "msg/ObjectArray.msg"
   "msg/OrientedNavSatFix.msg"
+  "msg/SemanticRoadLabel.msg"
   "srv/GetOctomap.srv"
   "srv/GetPointCloud.srv"
   "srv/GetMapsAndSurfels.srv"

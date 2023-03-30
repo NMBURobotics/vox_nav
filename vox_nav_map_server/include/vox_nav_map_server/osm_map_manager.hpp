@@ -28,6 +28,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+#include <rviz_default_plugins/displays/pointcloud/point_cloud_helpers.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
@@ -49,11 +50,15 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/transforms.hpp>
+#include <boost/progress.hpp>
 
-#include <vector>
-#include <string>
-#include <memory>
 #include <mutex>
+#include <string>
+#include <vector>
+#include <memory>
+#include <algorithm>
+#include <iostream>
+#include <sstream>
 
 /**
  * @brief namespace for vox_nav map server. The map server reads map from disk.
@@ -64,6 +69,15 @@
  */
 namespace vox_nav_map_server
 {
+
+  struct OSM_SEMANTIC_ROAD_LABELS
+  {
+    std::string MAJOR_ROADS_WHITE = "255255255"; // WHITE
+    std::string MISC_ORANGE = "255127000";       // ORANGE
+    std::string MINOR_ROAD_MAROON = "127000000"; // MAROON
+    std::string FOOTWAY_OLIVE = "127127000";     // OLIVE
+    std::string TRACK_NAVY = "000000127";        // NAVY
+  };
 
 /**
  * @brief
@@ -122,22 +136,35 @@ namespace vox_nav_map_server
       std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Response> response);
 
     /**
-     * @brief The elevation given in the MapRoads is not accurate.
+     * @brief The elevation given in the MapRoads is not accurate. Use the road collider to get the accurate elevation
      *
      */
     void fixMapRoadsElevation();
 
+    /**
+     * @brief Extract semantic labels from the map roads, We have sampled points ont the mesh based on the texture, so some points belogining to same
+     * road may have different labels (colors). We will use cloud transformer to transfer the labels to the points.
+     *
+     */
     void extractSemanticLabels();
 
+    /**
+     * @brief Publish the map roads as pointclouds for visualization
+     *
+     */
     void publishOSMPointClouds();
 
+    /**
+     * @brief Get the Rainbow Color object
+     *
+     * @param value
+     * @param color
+     */
     inline void getRainbowColor(float value, pcl::PointXYZRGB & color)
     {
       // this is HSV color palette with hue values going only from 0.0 to 0.833333.
-
       value = std::min(value, 1.0f);
       value = std::max(value, 0.0f);
-
       float h = value * 5.0f + 1.0f;
       int i = floor(h);
       float f = h - i;
@@ -145,7 +172,6 @@ namespace vox_nav_map_server
         f = 1 - f;         // if i is even
       }
       float n = 1 - f;
-
       if (i <= 1) {
         color.r = n, color.g = 0, color.b = 1;
       } else if (i == 2) {
@@ -157,7 +183,6 @@ namespace vox_nav_map_server
       } else if (i >= 5) {
         color.r = h, color.g = h, color.b = 0;
       }
-
       color.r *= 255;
       color.g *= 255;
       color.b *= 255;
@@ -166,27 +191,30 @@ namespace vox_nav_map_server
   protected:
     // Used to call a periodic callback function IOT publish octomap visuals
     rclcpp::TimerBase::SharedPtr timer_;
-    // Service to provide Octomap, elevated surfel and elevated surfel poses
+    // Provide a service to get maps managed by this node
     rclcpp::Service<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_service_;
-    // publishes octomap in form of a point cloud message
+    // publishes pointclouds for visualization
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_road_topologies_pointcloud_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_road_colliders_pointcloud_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_buildings_pointcloud_pub_;
 
+    std::unordered_map<std::string, int> semantic_labels_map_;
+
     // robot_localization package provides a service to convert
-    // lat,long,al GPS cooordinates to x,y,z map points
+    // lat,long,alt GPS cooordinates to x,y,z map points
     rclcpp::Client<robot_localization::srv::FromLL>::SharedPtr robot_localization_fromLL_client_;
     // clint node used for spinning the service callback of robot_localization_fromLL_client_
     rclcpp::Node::SharedPtr robot_localization_fromLL_client_node_;
-    // reusable octomap point loud message, dont need to recreate each time we publish
 
+    // GPS coordinates of the map origin
     vox_nav_msgs::msg::OrientedNavSatFix::SharedPtr map_gps_pose_;
 
+    // pcd file names for map roads, colliders and buildings
     std::string osm_road_topologies_pcd_filename_;
     std::string osm_road_colliders_pcd_filename_;
     std::string osm_buildings_pcd_filename_;
 
-    // Pointcloud map is stroed here
+    // PCL Pointcloud for map roads, colliders and buildings
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_road_topologies_pointcloud_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_road_colliders_pointcloud_;
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_buildings_pointcloud_;
@@ -205,11 +233,9 @@ namespace vox_nav_map_server
     // Optional rigid body transform to apply to the cloud, if cloud
     // is depth camera frames we need to pull cloud back to conventional ROS frames
     vox_nav_utilities::RigidBodyTransformation pcd_map_transform_matrix_;
-    //  see the struct, it is used to keep preprocess params orginzed
-    // hther map has beene configured yet
 
     volatile bool map_configured_;
-
+    // rclcpp parameters from yaml file: if greater than 0, a voxel grid filter will be applied to the cloud
     double downsample_leaf_size_;
   };
 }  // namespace vox_nav_map_server

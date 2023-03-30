@@ -56,6 +56,17 @@ namespace vox_nav_utilities
     return cloud;
   }
 
+  pcl::PointCloud<pcl::PointXYZRGBL>::Ptr loadPointcloudFromPcd(
+    const std::string & filename,
+    bool label)
+  {
+    pcl::PointCloud<pcl::PointXYZRGBL>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGBL>());
+    pcl::PCLPointCloud2 cloudBlob;
+    pcl::io::loadPCDFile(filename, cloudBlob);
+    pcl::fromPCLPointCloud2(cloudBlob, *cloud);
+    return cloud;
+  }
+
   std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> extractClusterCloudsFromPointcloud(
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud,
     double tolerance,
