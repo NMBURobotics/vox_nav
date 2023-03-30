@@ -46,7 +46,7 @@ def generate_launch_description():
         name="vox_nav_map_server_rclcpp_node",
         namespace="",
         output="screen",
-        # prefix=['xterm -e gdb -ex run --args'],
+        #prefix=['xterm -e gdb -ex run --args'],
         parameters=[params],
     )
 
@@ -131,3 +131,5 @@ def generate_launch_description():
             # map_server_node,
         ]
     )
+
+

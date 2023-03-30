@@ -127,7 +127,41 @@ namespace vox_nav_map_server
      */
     void fixMapRoadsElevation();
 
+    void extractSemanticLabels();
+
     void publishOSMPointClouds();
+
+    inline void getRainbowColor(float value, pcl::PointXYZRGB & color)
+    {
+      // this is HSV color palette with hue values going only from 0.0 to 0.833333.
+
+      value = std::min(value, 1.0f);
+      value = std::max(value, 0.0f);
+
+      float h = value * 5.0f + 1.0f;
+      int i = floor(h);
+      float f = h - i;
+      if (!(i & 1) ) {
+        f = 1 - f;         // if i is even
+      }
+      float n = 1 - f;
+
+      if (i <= 1) {
+        color.r = n, color.g = 0, color.b = 1;
+      } else if (i == 2) {
+        color.r = 0, color.g = n, color.b = 1;
+      } else if (i == 3) {
+        color.r = 0, color.g = 1, color.b = n;
+      } else if (i == 4) {
+        color.r = n, color.g = 1, color.b = 0;
+      } else if (i >= 5) {
+        color.r = h, color.g = h, color.b = 0;
+      }
+
+      color.r *= 255;
+      color.g *= 255;
+      color.b *= 255;
+    }
 
   protected:
     // Used to call a periodic callback function IOT publish octomap visuals

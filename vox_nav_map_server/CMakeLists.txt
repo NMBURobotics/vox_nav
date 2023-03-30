@@ -24,6 +24,7 @@ find_package(pcl_conversions REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(OCTOMAP REQUIRED)
+find_package(rviz_default_plugins REQUIRED)
 
 set(dependencies
 rclcpp
@@ -41,6 +42,7 @@ robot_localization
 vox_nav_utilities
 Eigen3
 OCTOMAP
+rviz_default_plugins
 )
 
 include_directories(include)

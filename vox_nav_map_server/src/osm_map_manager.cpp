@@ -14,10 +14,13 @@
 
 #include "vox_nav_map_server/osm_map_manager.hpp"
 #include "boost/progress.hpp"
+#include "rviz_default_plugins/displays/pointcloud/point_cloud_helpers.hpp"
 #include <string>
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <iostream>
+#include <sstream>
 
 namespace vox_nav_map_server
 {
@@ -158,6 +161,98 @@ namespace vox_nav_map_server
     }
   }
 
+  void OSMMapManager::extractSemanticLabels()
+  {
+
+    sensor_msgs::msg::PointCloud2::SharedPtr osm_road_topologies_pointcloud_msg =
+      std::make_shared<sensor_msgs::msg::PointCloud2>();
+
+    pcl::toROSMsg(*osm_road_topologies_pointcloud_, *osm_road_topologies_pointcloud_msg);
+
+    int32_t index = rviz_default_plugins::findChannelIndex(
+      osm_road_topologies_pointcloud_msg, "rgb");
+
+    const uint32_t offset = osm_road_topologies_pointcloud_msg->fields[index].offset;
+    const uint8_t type = osm_road_topologies_pointcloud_msg->fields[index].datatype;
+    const uint32_t point_step = osm_road_topologies_pointcloud_msg->point_step;
+    const uint32_t num_points = osm_road_topologies_pointcloud_msg->width *
+      osm_road_topologies_pointcloud_msg->height;
+
+    float min_intensity = 9999999.0f;
+    float max_intensity = -9999999.0f;
+
+    for (uint32_t i = 0; i < num_points; ++i) {
+      float val = rviz_default_plugins::valueFromCloud<float>(
+        osm_road_topologies_pointcloud_msg,
+        offset, type, point_step, i);
+      min_intensity = std::min(val, min_intensity);
+      max_intensity = std::max(val, max_intensity);
+    }
+
+    min_intensity = std::max(-999999.0f, min_intensity);
+    max_intensity = std::min(999999.0f, max_intensity);
+
+    float diff_intensity = max_intensity - min_intensity;
+    if (diff_intensity == 0) {
+      // If min and max are equal, set the diff to something huge so
+      // when we divide by it, we effectively get zero.  That way the
+      // point cloud coloring will be predictably uniform when min and
+      // max are equal.
+      diff_intensity = 1e20f;
+    }
+
+    for (uint32_t i = 0; i < num_points; ++i) {
+      float val = rviz_default_plugins::valueFromCloud<float>(
+        osm_road_topologies_pointcloud_msg,
+        offset, type, point_step, i);
+      float value = 1.0f - (val - min_intensity) / diff_intensity;
+
+      getRainbowColor(value, osm_road_topologies_pointcloud_->points[i]);
+    }
+
+
+    // Each differnt color of point cloud is a different semantic label
+    int r = -1, g = -1, b = -1;
+
+    // A map of semantic labels and their corresponding color
+    std::unordered_map<std::string, int> semantic_labels_map;
+    semantic_labels_map.clear();
+
+    for (auto & point : osm_road_topologies_pointcloud_->points) {
+      if (point.r != r && point.g != g && point.b != b) {
+
+        // encode the color values to a string
+        std::stringstream ss;
+
+        ss << std::setfill('0') << std::setw(3) << std::to_string(point.r)
+           << std::setfill('0') << std::setw(3) << std::to_string(point.g)
+           << std::setfill('0') << std::setw(3) << std::to_string(point.b);
+
+        // add this color to the map
+        semantic_labels_map[ss.str()] += 1;
+
+      }
+    }
+
+    int curr_index = 4;
+    for (auto x : semantic_labels_map) {
+      std::cout << x.first.c_str() << " " << x.second << std::endl;
+      // Label the semantic labels to each point cloud
+
+      for (auto & point : osm_road_topologies_pointcloud_->points) {
+        if (point.r == std::stoi(x.first.substr(0, 3)) &&
+          point.g == std::stoi(x.first.substr(3, 3)) &&
+          point.b == std::stoi(x.first.substr(6, 3)))
+        {
+          point.r = vox_nav_utilities::getColorByIndexEig(curr_index).x() * 255;
+          point.g = vox_nav_utilities::getColorByIndexEig(curr_index).y() * 255;
+          point.b = vox_nav_utilities::getColorByIndexEig(curr_index).z() * 255;
+        }
+      }
+      curr_index++;
+    }
+  }
+
   void OSMMapManager::timerCallback()
   {
     // Since this is static map we need to georefence this only once not each time
@@ -180,6 +275,8 @@ namespace vox_nav_map_server
         transfromPCDfromGPS2Map();
 
         fixMapRoadsElevation();
+
+        extractSemanticLabels();
 
         RCLCPP_INFO(get_logger(), "Georeferenced given map, ready to publish");
 
