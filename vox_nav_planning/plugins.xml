@@ -4,6 +4,11 @@
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
+  <library path="osm_elevation_planner">
+    <class type="vox_nav_planning::OSMElevationPlanner" base_class_type="vox_nav_planning::PlannerCore">
+      <description>TODO(fetullah.atas)</description>
+    </class>
+  </library>
   <library path="elevation_planner">
     <class type="vox_nav_planning::ElevationPlanner" base_class_type="vox_nav_planning::PlannerCore">
       <description>TODO(fetullah.atas)</description>

@@ -92,6 +92,13 @@ namespace vox_nav_planning
     bool isStateValid(const ompl::base::State * state) override;
 
     /**
+     * @brief Get the Opt Objective object
+     *
+     * @return ompl::base::OptimizationObjectivePtr
+     */
+    ompl::base::OptimizationObjectivePtr getOptimizationObjective();
+
+    /**
      * @brief
      *
      * @param si
@@ -105,6 +112,14 @@ namespace vox_nav_planning
      *
      */
     void setupMap() override;
+
+    /**
+    * @brief Get the Overlayed Start and Goal poses, only x and y are provided for goal ,
+    * but internally planner finds closest valid node on octomap and reassigns goal to this pose
+    *
+    * @return std::vector<geometry_msgs::msg::PoseStamped>
+    */
+    std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() {}
 
     void initializeSelectedControlPlanner(
       ompl::base::PlannerPtr & planner,
@@ -159,6 +174,8 @@ namespace vox_nav_planning
     ompl::base::ElevationStateSpace::SE2StateType se2_space_type_;
     // curve radius for reeds and dubins only
     double rho_;
+
+    std::mutex map_mutex_;
   };
 }  // namespace vox_nav_planning
 

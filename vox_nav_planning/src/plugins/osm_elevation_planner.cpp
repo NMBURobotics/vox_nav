@@ -221,14 +221,6 @@ namespace vox_nav_planning
         logger_, "Path Smoothness, %s, %.2f",
         planner_name_.c_str(), solution_path.smoothness());
 
-      total_solution_length_ += solution_path.length();
-      total_requested_plans_ += 1;
-      double curr_average_solution = total_solution_length_ /
-        static_cast<double>(total_requested_plans_);
-      RCLCPP_INFO(
-        logger_, "total problems %i, Curr average Length, %.2f", total_requested_plans_,
-        curr_average_solution);
-
     } else {
       RCLCPP_WARN(logger_, "No solution for requested path planning !");
     }
@@ -239,42 +231,19 @@ namespace vox_nav_planning
 
   bool OSMElevationPlanner::isStateValid(const ompl::base::State * state)
   {
-    const auto * cstate = state->as<ompl::base::ElevationStateSpace::StateType>();
-    // cast the abstract state type to the type we expect
-    const auto * so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-    // extract the second component of the state and cast it to what we expect
-    const auto * xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
-    fcl::CollisionRequestf requestType(1, false, 1, false);
-    // check validity of state Fdefined by pos & rot
-    fcl::Vector3f translation(xyzv->values[0], xyzv->values[1], xyzv->values[2]);
-    tf2::Quaternion myQuaternion;
-    myQuaternion.setRPY(0, 0, so2->value);
-    fcl::Quaternionf rotation(myQuaternion.getX(), myQuaternion.getY(),
-      myQuaternion.getZ(), myQuaternion.getW());
-
-
-    robot_collision_object_->setTransform(rotation, translation);
-    fcl::CollisionResultf collisionWithSurfelsResult, collisionWithFullMapResult;
-    fcl::collide<float>(
-      robot_collision_object_.get(),
-      elevated_surfels_collision_object_.get(), requestType, collisionWithSurfelsResult);
-    fcl::collide<float>(
-      robot_collision_object_.get(),
-      original_octomap_collision_object_.get(), requestType, collisionWithFullMapResult);
-
-    return collisionWithSurfelsResult.isCollision() && !collisionWithFullMapResult.isCollision();
+    return true;
   }
 
   void OSMElevationPlanner::setupMap()
   {
-    const std::lock_guard<std::mutex> lock(octomap_mutex_);
+    const std::lock_guard<std::mutex> lock(map_mutex_);
 
     while (!is_map_ready_ && rclcpp::ok()) {
 
       auto request =
-        std::make_shared<vox_nav_msgs::srv::GetTraversabilityMap::Request>();
+        std::make_shared<vox_nav_msgs::srv::GetOSMRoadTopologyMap::Request>();
 
-      while (!get_traversability_map_client_->wait_for_service(
+      while (!get_osm_road_topology_map_client_->wait_for_service(
           std::chrono::seconds(1)))
       {
         if (!rclcpp::ok()) {
@@ -289,7 +258,7 @@ namespace vox_nav_planning
       }
 
       auto result_future =
-        get_traversability_map_client_->async_send_request(request);
+        get_osm_road_topology_map_client_->async_send_request(request);
       if (rclcpp::spin_until_future_complete(
           get_map_client_node_,
           result_future) !=
@@ -309,59 +278,6 @@ namespace vox_nav_planning
         continue;
       }
 
-      auto original_octomap_octree = dynamic_cast<octomap::OcTree *>(
-        octomap_msgs::fullMsgToMap(response->original_octomap));
-      original_octomap_octree_ =
-        std::make_shared<octomap::OcTree>(*original_octomap_octree);
-
-      auto elevated_surfel_octomap_octree = dynamic_cast<octomap::OcTree *>(
-        octomap_msgs::fullMsgToMap(response->elevated_surfel_octomap));
-      elevated_surfel_octomap_octree_ =
-        std::make_shared<octomap::OcTree>(*elevated_surfel_octomap_octree);
-
-      delete original_octomap_octree;
-      delete elevated_surfel_octomap_octree;
-
-      auto elevated_surfels_fcl_octree =
-        std::make_shared<fcl::OcTreef>(elevated_surfel_octomap_octree_);
-      elevated_surfels_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
-        std::shared_ptr<fcl::CollisionGeometryf>(elevated_surfels_fcl_octree));
-
-      auto original_octomap_fcl_octree =
-        std::make_shared<fcl::OcTreef>(original_octomap_octree_);
-      original_octomap_collision_object_ = std::make_shared<fcl::CollisionObjectf>(
-        std::shared_ptr<fcl::CollisionGeometryf>(original_octomap_fcl_octree));
-
-      elevated_surfel_poses_msg_ =
-        std::make_shared<geometry_msgs::msg::PoseArray>(
-        response->elevated_surfel_poses);
-      for (auto && i : elevated_surfel_poses_msg_->poses) {
-        pcl::PointSurfel surfel;
-        surfel.x = i.position.x;
-        surfel.y = i.position.y;
-        surfel.z = i.position.z;
-        double r, p, y;
-        vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
-        surfel.normal_x = r;
-        surfel.normal_y = p;
-        surfel.normal_z = y;
-        elevated_surfel_cloud_->points.push_back(surfel);
-      }
-
-      RCLCPP_INFO(
-        logger_,
-        "Recieved a valid Octomap with %d nodes, A FCL collision tree "
-        "will be created from this "
-        "octomap for state validity (aka collision check)",
-        original_octomap_octree_->size());
-
-      RCLCPP_INFO(
-        logger_,
-        "Recieved a valid Octomap which represents Elevated surfels "
-        "with %d nodes,"
-        " A FCL collision tree will be created from this "
-        "octomap for state validity (aka collision check)",
-        elevated_surfel_octomap_octree_->size());
     }
   }
 
@@ -372,16 +288,11 @@ namespace vox_nav_planning
     ompl::base::OptimizationObjectivePtr length_objective(
       new ompl::base::PathLengthOptimizationObjective(
         simple_setup_->getSpaceInformation()));
-    ompl::base::OptimizationObjectivePtr octocost_objective(
-      new ompl::base::OctoCostOptimizationObjective(
-        simple_setup_->getSpaceInformation(),
-        elevated_surfel_octomap_octree_));
 
     ompl::base::MultiOptimizationObjective * multi_optimization =
       new ompl::base::MultiOptimizationObjective(
       simple_setup_->getSpaceInformation());
     multi_optimization->addObjective(length_objective, 1.0);
-    multi_optimization->addObjective(octocost_objective, 1.0);
 
     return ompl::base::OptimizationObjectivePtr(multi_optimization);
   }
@@ -389,20 +300,13 @@ namespace vox_nav_planning
   ompl::base::ValidStateSamplerPtr OSMElevationPlanner::allocValidStateSampler(
     const ompl::base::SpaceInformation * si)
   {
-    auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
+    /*auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
       simple_setup_->getSpaceInformation(), nearest_elevated_surfel_to_start_,
       nearest_elevated_surfel_to_goal_, elevated_surfel_poses_msg_);
-    return valid_sampler;
+    return valid_sampler;*/
   }
 
-  std::vector<geometry_msgs::msg::PoseStamped>
-  OSMElevationPlanner::getOverlayedStartandGoal()
-  {
-    std::vector<geometry_msgs::msg::PoseStamped> start_pose_vector;
-    start_pose_vector.push_back(nearest_elevated_surfel_to_start_);
-    start_pose_vector.push_back(nearest_elevated_surfel_to_goal_);
-    return start_pose_vector;
-  }
+
 } // namespace vox_nav_planning
 
 PLUGINLIB_EXPORT_CLASS(
