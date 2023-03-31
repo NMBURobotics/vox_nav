@@ -21,6 +21,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/OrientedNavSatFix.msg"
   "msg/SemanticRoadLabel.msg"
   "srv/GetOctomap.srv"
+  "srv/GetOSMRoadTopologyMap.srv"
   "srv/GetPointCloud.srv"
   "srv/GetTraversabilityMap.srv"
   "action/ComputePathToPose.action"

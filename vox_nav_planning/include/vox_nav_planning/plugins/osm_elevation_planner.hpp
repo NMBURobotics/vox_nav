@@ -25,6 +25,7 @@
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
 #include "vox_nav_utilities/pcl_helpers.hpp"
+#include "vox_nav_msgs/srv/get_osm_road_topology_map.hpp"
 
 #include "ompl/control/SimpleDirectedControlSampler.h"
 #include "ompl/control/spaces/RealVectorControlSpace.h"
@@ -143,7 +144,8 @@ namespace vox_nav_planning
   protected:
     rclcpp::Logger logger_{rclcpp::get_logger("oms_elevation_planner")};
 
-    rclcpp::Client<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr get_traversability_map_client_;
+    rclcpp::Client<vox_nav_msgs::srv::GetOSMRoadTopologyMap>::SharedPtr
+      get_osm_road_topology_map_client_;
 
     //pcl point cloud for road topology
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_road_topology_pcd_;
