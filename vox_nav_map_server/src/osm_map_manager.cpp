@@ -74,8 +74,8 @@ namespace vox_nav_map_server
 
     // service hooks for get maps and surfels
     get_maps_service_ = this->create_service
-      <vox_nav_msgs::srv::GetMapsAndSurfels>(
-      std::string("get_maps_and_surfels"),
+      <vox_nav_msgs::srv::GetTraversabilityMap>(
+      std::string("get_traversability_map"),
       std::bind(
         &OSMMapManager::getGetOSMMapCallback,
         this,
@@ -410,8 +410,8 @@ namespace vox_nav_map_server
 
   void OSMMapManager::getGetOSMMapCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Request> request,
-    std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Response> response) {}
+    const std::shared_ptr<vox_nav_msgs::srv::GetTraversabilityMap::Request> request,
+    std::shared_ptr<vox_nav_msgs::srv::GetTraversabilityMap::Response> response) {}
 
 
 }   // namespace vox_nav_map_server

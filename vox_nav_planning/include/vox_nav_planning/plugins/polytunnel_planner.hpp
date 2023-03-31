@@ -351,7 +351,7 @@ namespace vox_nav_planning
   protected:
     rclcpp::Logger logger_ {rclcpp::get_logger("polytunnel_planner")};
 
-    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+    rclcpp::Client<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr get_traversability_map_client_;
 
     // Subscribe to RRVIZ plugin to get the selected area's point cloud
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr polytunnel_cloud_sub_;

@@ -34,7 +34,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <robot_localization/srv/from_ll.hpp>
 #include <vox_nav_msgs/msg/oriented_nav_sat_fix.hpp>
-#include <vox_nav_msgs/srv/get_maps_and_surfels.hpp>
+#include <vox_nav_msgs/srv/get_traversability_map.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_utilities/map_manager_helpers.hpp>
@@ -189,16 +189,17 @@ namespace vox_nav_map_server
      * @param request
      * @param response
      */
-    void getGetMapsAndSurfelsCallback(
+    void getGetTraversabilityMapCallback(
       const std::shared_ptr<rmw_request_id_t> request_header,
-      const std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Request> request,
-      std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Response> response);
+      const std::shared_ptr<vox_nav_msgs::srv::GetTraversabilityMap::Request> request,
+      std::shared_ptr<vox_nav_msgs::srv::GetTraversabilityMap::Response> response);
 
   protected:
     // Used to call a periodic callback function IOT publish octomap visuals
     rclcpp::TimerBase::SharedPtr timer_;
     // Service to provide Octomap, elevated surfel and elevated surfel poses
-    rclcpp::Service<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_service_;
+    rclcpp::Service<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr
+      get_traversability_map_service_;
     // publishes octomap in form of a point cloud message
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr octomap_pointloud_publisher_;
     // publishes octomap in form of a point cloud message

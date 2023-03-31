@@ -131,11 +131,11 @@ namespace vox_nav_map_server
       preprocess_params_.remove_outlier_min_neighbors_in_radius);
 
     // service hooks for get maps and surfels
-    get_maps_and_surfels_service_ = this->create_service
-      <vox_nav_msgs::srv::GetMapsAndSurfels>(
-      std::string("get_maps_and_surfels"),
+    get_traversability_map_service_ = this->create_service
+      <vox_nav_msgs::srv::GetTraversabilityMap>(
+      std::string("get_traversability_map"),
       std::bind(
-        &MapManager::getGetMapsAndSurfelsCallback,
+        &MapManager::getGetTraversabilityMapCallback,
         this,
         std::placeholders::_1,
         std::placeholders::_2,
@@ -609,14 +609,14 @@ namespace vox_nav_map_server
     }
   }
 
-  void MapManager::getGetMapsAndSurfelsCallback(
+  void MapManager::getGetTraversabilityMapCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Request> request,
-    std::shared_ptr<vox_nav_msgs::srv::GetMapsAndSurfels::Response> response)
+    const std::shared_ptr<vox_nav_msgs::srv::GetTraversabilityMap::Request> request,
+    std::shared_ptr<vox_nav_msgs::srv::GetTraversabilityMap::Response> response)
   {
     if (!map_configured_) {
       RCLCPP_INFO(
-        get_logger(), "Map has not been configured yet,  cannot handle GetMapsAndSurfels request");
+        get_logger(), "Map has not been configured yet,  cannot handle GetTraversabilityMap request");
       response->is_valid = false;
       return;
     }

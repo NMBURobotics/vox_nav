@@ -89,7 +89,7 @@ namespace vox_nav_planning
     void setupMap() override;
 
   protected:
-    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+    rclcpp::Client<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr get_traversability_map_client_;
 
     rclcpp::Logger logger_{rclcpp::get_logger("se2_planner")};
     // Which state space is slected ? REEDS,DUBINS, SE2

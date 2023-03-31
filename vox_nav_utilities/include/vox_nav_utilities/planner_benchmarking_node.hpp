@@ -155,8 +155,8 @@ namespace vox_nav_utilities
     rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr
       start_goal_poses_publisher_;
 
-    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr
-      get_maps_and_surfels_client_;
+    rclcpp::Client<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr
+      get_traversability_map_client_;
     rclcpp::Node::SharedPtr get_map_client_node_;
 
     std::mutex octomap_mutex_;

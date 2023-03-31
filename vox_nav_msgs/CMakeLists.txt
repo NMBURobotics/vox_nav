@@ -22,7 +22,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/SemanticRoadLabel.msg"
   "srv/GetOctomap.srv"
   "srv/GetPointCloud.srv"
-  "srv/GetMapsAndSurfels.srv"
+  "srv/GetTraversabilityMap.srv"
   "action/ComputePathToPose.action"
   "action/FollowPath.action"
   "action/NavigateToPose.action"

@@ -143,7 +143,7 @@ namespace vox_nav_planning
   protected:
     rclcpp::Logger logger_{rclcpp::get_logger("oms_elevation_planner")};
 
-    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+    rclcpp::Client<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr get_traversability_map_client_;
 
     //pcl point cloud for road topology
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_road_topology_pcd_;

@@ -105,12 +105,12 @@ namespace vox_nav_planning
       std::make_shared<octomap::OcTree>(octomap_voxel_size_);
 
     get_map_client_node_ =
-      std::make_shared<rclcpp::Node>("get_maps_and_surfels_client_node");
+      std::make_shared<rclcpp::Node>("get_traversability_map_client_node");
 
-    get_maps_and_surfels_client_ =
+    get_traversability_map_client_ =
       get_map_client_node_
-      ->create_client<vox_nav_msgs::srv::GetMapsAndSurfels>(
-      "get_maps_and_surfels");
+      ->create_client<vox_nav_msgs::srv::GetTraversabilityMap>(
+      "get_traversability_map");
 
     RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
 
@@ -295,30 +295,30 @@ namespace vox_nav_planning
     while (!is_map_ready_ && rclcpp::ok()) {
 
       auto request =
-        std::make_shared<vox_nav_msgs::srv::GetMapsAndSurfels::Request>();
+        std::make_shared<vox_nav_msgs::srv::GetTraversabilityMap::Request>();
 
-      while (!get_maps_and_surfels_client_->wait_for_service(
+      while (!get_traversability_map_client_->wait_for_service(
           std::chrono::seconds(1)))
       {
         if (!rclcpp::ok()) {
           RCLCPP_ERROR(
             logger_, "Interrupted while waiting for the "
-            "get_maps_and_surfels service. Exiting");
+            "get_traversability_map service. Exiting");
           return;
         }
         RCLCPP_INFO(
-          logger_, "get_maps_and_surfels service not available, "
+          logger_, "get_traversability_map service not available, "
           "waiting and trying again");
       }
 
       auto result_future =
-        get_maps_and_surfels_client_->async_send_request(request);
+        get_traversability_map_client_->async_send_request(request);
       if (rclcpp::spin_until_future_complete(
           get_map_client_node_,
           result_future) !=
         rclcpp::FutureReturnCode::SUCCESS)
       {
-        RCLCPP_ERROR(logger_, "/get_maps_and_surfels service call failed");
+        RCLCPP_ERROR(logger_, "/get_traversability_map service call failed");
       }
       auto response = result_future.get();
 
@@ -328,7 +328,7 @@ namespace vox_nav_planning
         std::this_thread::sleep_for(std::chrono::seconds(1));
         RCLCPP_INFO(
           logger_,
-          "Waiting for GetMapsAndSurfels service to provide correct maps.");
+          "Waiting for GetTraversabilityMap service to provide correct maps.");
         continue;
       }
 

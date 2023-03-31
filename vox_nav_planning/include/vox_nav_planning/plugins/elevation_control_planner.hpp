@@ -178,7 +178,7 @@ namespace vox_nav_planning
 
   protected:
     rclcpp::Logger logger_{rclcpp::get_logger("elevation_control_planner")};
-    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+    rclcpp::Client<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr get_traversability_map_client_;
 
     // Surfels centers are elevated by node_elevation_distance_, and are stored in this
     // octomap, this maps is used by planner to sample states that are

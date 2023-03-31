@@ -26,7 +26,7 @@
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_utilities/planner_helpers.hpp>
-#include <vox_nav_msgs/srv/get_maps_and_surfels.hpp>
+#include <vox_nav_msgs/srv/get_traversability_map.hpp>
 // PCL
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>

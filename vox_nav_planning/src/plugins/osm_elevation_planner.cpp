@@ -27,7 +27,7 @@
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_utilities/planner_helpers.hpp>
-#include <vox_nav_msgs/srv/get_maps_and_surfels.hpp>
+#include <vox_nav_msgs/srv/get_traversability_map.hpp>
 // PCL
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
@@ -154,7 +154,7 @@ namespace vox_nav_planning
     virtual void setupMap() = 0;
 
   protected:
-    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+    rclcpp::Client<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr get_traversability_map_client_;
 
     rclcpp::Node::SharedPtr get_map_client_node_;
     // octomap acquired from original PCD map

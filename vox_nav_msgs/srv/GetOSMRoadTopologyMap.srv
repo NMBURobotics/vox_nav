@@ -1,0 +1,14 @@
+#request
+---
+#result
+# The original octomap that was acquired by conversion of pcd map
+octomap_msgs/Octomap original_octomap
+octomap_msgs/Octomap collision_octomap
+# The map that was created by elevated surfels, these are candidate nodes for navigation
+octomap_msgs/Octomap elevated_surfel_octomap
+# 6DOF poses of each surfel
+geometry_msgs/PoseArray elevated_surfel_poses
+# 
+sensor_msgs/PointCloud2 osm_road_topology
+#
+bool is_valid
