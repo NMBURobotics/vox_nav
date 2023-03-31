@@ -36,6 +36,9 @@ namespace vox_nav_planning
     z_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
     auto v_bounds = std::make_shared<ompl::base::RealVectorBounds>(1);
 
+    osm_road_topology_pcd_ = std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
+    valid_poses_ = std::make_shared<geometry_msgs::msg::PoseArray>();
+
     // declare only planner specific parameters here
     // common parameters are declared in server
     parent->declare_parameter(plugin_name + ".se2_space", "REEDS");
@@ -105,10 +108,10 @@ namespace vox_nav_planning
     setupMap();
 
     // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
-    //state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
-    // se2_space_type_, elevated_surfel_poses_msg_,
-    // rho_ /*only valid for duins or reeds*/,
-    // false /*only valid for dubins*/);
+    state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
+      se2_space_type_,
+      rho_ /*only valid for duins or reeds*/,
+      false /*only valid for dubins*/);
 
     state_space_->as<ompl::base::ElevationStateSpace>()->setBounds(
       *se2_bounds_,
@@ -136,6 +139,8 @@ namespace vox_nav_planning
         "A valid Octomap has not been recived yet, Try later again.");
       return std::vector<geometry_msgs::msg::PoseStamped>();
     }
+    start_pose_ = start;
+    goal_pose_ = goal;
     // set the start and goal states
     double start_yaw, goal_yaw, nan;
     vox_nav_utilities::getRPYfromMsgQuaternion(
@@ -249,11 +254,11 @@ namespace vox_nav_planning
         if (!rclcpp::ok()) {
           RCLCPP_ERROR(
             logger_, "Interrupted while waiting for the "
-            "get_traversability_map service. Exiting");
+            "get_osm_map service. Exiting");
           return;
         }
         RCLCPP_INFO(
-          logger_, "get_traversability_map service not available, "
+          logger_, "get_osm_map service not available, "
           "waiting and trying again");
       }
 
@@ -264,12 +269,21 @@ namespace vox_nav_planning
           result_future) !=
         rclcpp::FutureReturnCode::SUCCESS)
       {
-        RCLCPP_ERROR(logger_, "/get_traversability_map service call failed");
+        RCLCPP_ERROR(logger_, "/get_osm_map service call failed");
       }
       auto response = result_future.get();
 
       if (response->is_valid) {
         is_map_ready_ = true;
+        pcl::fromROSMsg(response->osm_road_topology, *osm_road_topology_pcd_);
+        for (auto & point : osm_road_topology_pcd_->points) {
+          geometry_msgs::msg::Pose pose;
+          pose.position.x = point.x;
+          pose.position.y = point.y;
+          pose.position.z = point.z;
+          valid_poses_->poses.push_back(pose);
+        }
+
       } else {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         RCLCPP_INFO(
@@ -300,10 +314,12 @@ namespace vox_nav_planning
   ompl::base::ValidStateSamplerPtr OSMElevationPlanner::allocValidStateSampler(
     const ompl::base::SpaceInformation * si)
   {
-    /*auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
-      simple_setup_->getSpaceInformation(), nearest_elevated_surfel_to_start_,
-      nearest_elevated_surfel_to_goal_, elevated_surfel_poses_msg_);
-    return valid_sampler;*/
+    auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
+      simple_setup_->getSpaceInformation(),
+      start_pose_,
+      goal_pose_,
+      valid_poses_);
+    return valid_sampler;
   }
 
 

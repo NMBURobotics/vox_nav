@@ -35,7 +35,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <robot_localization/srv/from_ll.hpp>
 #include <vox_nav_msgs/msg/oriented_nav_sat_fix.hpp>
-#include <vox_nav_msgs/srv/get_traversability_map.hpp>
+#include <vox_nav_msgs/srv/get_osm_road_topology_map.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
 #include <vox_nav_utilities/map_manager_helpers.hpp>
@@ -132,8 +132,8 @@ namespace vox_nav_map_server
      */
     void getGetOSMMapCallback(
       const std::shared_ptr<rmw_request_id_t> request_header,
-      const std::shared_ptr<vox_nav_msgs::srv::GetTraversabilityMap::Request> request,
-      std::shared_ptr<vox_nav_msgs::srv::GetTraversabilityMap::Response> response);
+      const std::shared_ptr<vox_nav_msgs::srv::GetOSMRoadTopologyMap::Request> request,
+      std::shared_ptr<vox_nav_msgs::srv::GetOSMRoadTopologyMap::Response> response);
 
     /**
      * @brief The elevation given in the MapRoads is not accurate. Use the road collider to get the accurate elevation
@@ -192,7 +192,7 @@ namespace vox_nav_map_server
     // Used to call a periodic callback function IOT publish octomap visuals
     rclcpp::TimerBase::SharedPtr timer_;
     // Provide a service to get maps managed by this node
-    rclcpp::Service<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr get_maps_service_;
+    rclcpp::Service<vox_nav_msgs::srv::GetOSMRoadTopologyMap>::SharedPtr get_maps_service_;
     // publishes pointclouds for visualization
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_road_topologies_pointcloud_pub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr osm_road_colliders_pointcloud_pub_;

@@ -59,11 +59,9 @@ ompl::base::Cost OctoCostOptimizationObjective::motionCost(const State * s1, con
 
 ElevationStateSpace::ElevationStateSpace(
   const SE2StateType state_type,
-  const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses,
   double turningRadius, bool isSymmetric)
 :  rho_(turningRadius),
   isSymmetric_(isSymmetric),
-  elevated_surfels_poses_(*elevated_surfels_poses),
   se2_state_type_(state_type)
 {
   setName("ElevationStateSpace" + getName());
@@ -88,26 +86,6 @@ ElevationStateSpace::ElevationStateSpace(
   interpolation_state2_se2_ = se2_->allocState();
   interpolated_state_se2_ = se2_->allocState();
 
-  workspace_surfels_ = pcl::PointCloud<pcl::PointSurfel>::Ptr(
-    new pcl::PointCloud<pcl::PointSurfel>);
-
-  for (auto && i : elevated_surfels_poses_.poses) {
-    pcl::PointSurfel surfel;
-    surfel.x = i.position.x;
-    surfel.y = i.position.y;
-    surfel.z = i.position.z;
-    double r, p, y;
-    vox_nav_utilities::getRPYfromMsgQuaternion(i.orientation, r, p, y);
-    surfel.normal_x = r;
-    surfel.normal_y = p;
-    surfel.normal_z = y;
-    workspace_surfels_->points.push_back(surfel);
-  }
-
-  RCLCPP_INFO(
-    logger_,
-    "OctoCellStateSampler bases on an Octomap with %d surfels",
-    elevated_surfels_poses_.poses.size());
 }
 
 void ElevationStateSpace::setBounds(

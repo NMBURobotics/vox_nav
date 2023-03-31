@@ -118,7 +118,7 @@ namespace vox_nav_planning
 
     // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();
     state_space_ = std::make_shared<ompl::base::ElevationStateSpace>(
-      se2_space_type_, elevated_surfel_poses_msg_,
+      se2_space_type_,
       rho_ /*only valid for duins or reeds*/,
       false /*only valid for dubins*/);
 

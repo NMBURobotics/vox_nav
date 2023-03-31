@@ -176,6 +176,12 @@ namespace vox_nav_planning
     double rho_;
 
     std::mutex map_mutex_;
+
+    geometry_msgs::msg::PoseStamped start_pose_;
+    geometry_msgs::msg::PoseStamped goal_pose_;
+    geometry_msgs::msg::PoseArray::SharedPtr valid_poses_;
+
+
   };
 }  // namespace vox_nav_planning
 

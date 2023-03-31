@@ -74,8 +74,8 @@ namespace vox_nav_map_server
 
     // service hooks for get maps and surfels
     get_maps_service_ = this->create_service
-      <vox_nav_msgs::srv::GetTraversabilityMap>(
-      std::string("get_traversability_map"),
+      <vox_nav_msgs::srv::GetOSMRoadTopologyMap>(
+      std::string("get_osm_map"),
       std::bind(
         &OSMMapManager::getGetOSMMapCallback,
         this,
@@ -410,8 +410,25 @@ namespace vox_nav_map_server
 
   void OSMMapManager::getGetOSMMapCallback(
     const std::shared_ptr<rmw_request_id_t> request_header,
-    const std::shared_ptr<vox_nav_msgs::srv::GetTraversabilityMap::Request> request,
-    std::shared_ptr<vox_nav_msgs::srv::GetTraversabilityMap::Response> response) {}
+    const std::shared_ptr<vox_nav_msgs::srv::GetOSMRoadTopologyMap::Request> request,
+    std::shared_ptr<vox_nav_msgs::srv::GetOSMRoadTopologyMap::Response> response)
+  {
+    if (!map_configured_) {
+      RCLCPP_INFO(
+        get_logger(),
+        "OSM Map has not been configured yet,  cannot handle GetTraversabilityMap request");
+      response->is_valid = false;
+      return;
+    }
+    RCLCPP_INFO(get_logger(), "OSM Map is Cofigured Handling an incoming request");
+    // Publish the Osm point clouds
+    sensor_msgs::msg::PointCloud2 osm_road_topologies_pointcloud_msg;
+    pcl::toROSMsg(*osm_road_topologies_pointcloud_, osm_road_topologies_pointcloud_msg);
+    osm_road_topologies_pointcloud_msg.header.frame_id = "map";
+    osm_road_topologies_pointcloud_msg.header.stamp = this->get_clock()->now();
+    response->osm_road_topology = osm_road_topologies_pointcloud_msg;
+    response->is_valid = true;
+  }
 
 
 }   // namespace vox_nav_map_server

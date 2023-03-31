@@ -155,7 +155,6 @@ namespace ompl
 
       ElevationStateSpace(
         const SE2StateType state_type,
-        const geometry_msgs::msg::PoseArray::SharedPtr & elevated_surfels_poses,
         double turningRadius = 1.0,
         bool isSymmetric = false);
 
@@ -188,8 +187,6 @@ namespace ompl
 
     protected:
       rclcpp::Logger logger_ {rclcpp::get_logger("elevation_state_space")};
-      geometry_msgs::msg::PoseArray elevated_surfels_poses_;
-      pcl::PointCloud<pcl::PointSurfel>::Ptr workspace_surfels_;
 
       SE2StateType se2_state_type_;
       std::shared_ptr<DubinsStateSpace> dubins_;
