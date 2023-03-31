@@ -164,4 +164,6 @@ namespace vox_nav_planning
 
 }   // namespace vox_nav_planning
 
-PLUGINLIB_EXPORT_CLASS(vox_nav_planning::PolyTunnelPlanner, vox_nav_planning::PlannerCore)
+PLUGINLIB_EXPORT_CLASS(
+  vox_nav_planning::PolyTunnelPlanner,
+  vox_nav_planning::PlannerCore)

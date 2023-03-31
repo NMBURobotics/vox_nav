@@ -157,7 +157,7 @@ namespace vox_nav_utilities
 
     rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr
       get_maps_and_surfels_client_;
-    rclcpp::Node::SharedPtr get_maps_and_surfels_client_node_;
+    rclcpp::Node::SharedPtr get_map_client_node_;
 
     std::mutex octomap_mutex_;
 

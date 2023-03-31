@@ -96,7 +96,7 @@ namespace vox_nav_planning
   class PlannerCore
   {
   public:
-    using Ptr = typename std::shared_ptr<PlannerCore>;
+    using Ptr = std::shared_ptr<PlannerCore>;
     /**
      * @brief Construct a new Planner Core object
      *
@@ -154,19 +154,27 @@ namespace vox_nav_planning
     virtual void setupMap() = 0;
 
   protected:
-    rclcpp::Node::SharedPtr get_map_client_node_;
+    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
 
+    rclcpp::Node::SharedPtr get_map_client_node_;
+    // octomap acquired from original PCD map
+    std::shared_ptr<octomap::OcTree> original_octomap_octree_;
+    std::shared_ptr<fcl::CollisionObjectf> original_octomap_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_minimal_;
     ompl::geometric::SimpleSetupPtr simple_setup_;
     // to ensure safety when accessing global var curr_frame_
     std::mutex global_mutex_;
     // the topic to subscribe in order capture a frame
     std::string planner_name_;
-
+    // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
+    double octomap_voxel_size_;
     // related to density of created path
     int interpolation_parameter_;
     // max time the planner can spend before coming up with a solution
     double planner_timeout_;
-
+    // global mutex to guard octomap
+    std::mutex octomap_mutex_;
     volatile bool is_map_ready_;
   };
 }  // namespace vox_nav_planning

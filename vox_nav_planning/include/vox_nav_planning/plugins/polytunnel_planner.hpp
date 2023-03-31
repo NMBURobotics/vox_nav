@@ -351,6 +351,8 @@ namespace vox_nav_planning
   protected:
     rclcpp::Logger logger_ {rclcpp::get_logger("polytunnel_planner")};
 
+    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+
     // Subscribe to RRVIZ plugin to get the selected area's point cloud
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr polytunnel_cloud_sub_;
 
@@ -379,6 +381,14 @@ namespace vox_nav_planning
     double y_offset_;
     double row_extension_dist_;
 
+    // octomap acquired from original PCD map
+    std::shared_ptr<octomap::OcTree> original_octomap_octree_;
+    std::shared_ptr<fcl::CollisionObjectf> original_octomap_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_;
+    // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
+    double octomap_voxel_size_;
+    // global mutex to guard octomap
+    std::mutex octomap_mutex_;
   };
 }  // namespace vox_nav_planning
 

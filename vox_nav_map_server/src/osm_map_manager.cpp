@@ -252,7 +252,6 @@ namespace vox_nav_map_server
       curr_index++;
     }
 
-
   }
 
   void OSMMapManager::timerCallback()

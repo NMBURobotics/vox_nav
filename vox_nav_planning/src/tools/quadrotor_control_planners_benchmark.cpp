@@ -162,11 +162,11 @@ namespace vox_nav_planning
 
     fcl::CollisionObjectf robot_body_box_object(robot_body_box, fcl::Transform3f());
     robot_collision_object_ = std::make_shared<fcl::CollisionObjectf>(robot_body_box_object);
-    get_maps_and_surfels_client_node_ = std::make_shared
+    get_map_client_node_ = std::make_shared
       <rclcpp::Node>("get_maps_and_surfels_client_node");
 
     get_maps_and_surfels_client_ =
-      get_maps_and_surfels_client_node_->create_client<vox_nav_msgs::srv::GetMapsAndSurfels>(
+      get_map_client_node_->create_client<vox_nav_msgs::srv::GetMapsAndSurfels>(
       "get_maps_and_surfels");
 
 
@@ -613,7 +613,7 @@ namespace vox_nav_planning
 
         auto result_future = get_maps_and_surfels_client_->async_send_request(request);
         if (rclcpp::spin_until_future_complete(
-            get_maps_and_surfels_client_node_,
+            get_map_client_node_,
             result_future) !=
           rclcpp::FutureReturnCode::SUCCESS)
         {

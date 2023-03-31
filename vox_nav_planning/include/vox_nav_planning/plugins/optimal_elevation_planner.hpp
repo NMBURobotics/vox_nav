@@ -140,6 +140,9 @@ namespace vox_nav_planning
 
     typedef std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> SuperVoxelClusters;
     rclcpp::Logger logger_{rclcpp::get_logger("optimal_elevation_planner")};
+
+    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+
     // Surfels centers are elevated by node_elevation_distance_, and are stored in this
     // octomap, this maps is used by planner to sample states that are
     // strictly laying on ground but not touching. So it constrains the path to be on ground
@@ -185,6 +188,15 @@ namespace vox_nav_planning
     ompl::base::ElevationStateSpace::SE2StateType se2_space_type_;
     // curve radius for reeds and dubins only
     double rho_;
+
+    // octomap acquired from original PCD map
+    std::shared_ptr<octomap::OcTree> original_octomap_octree_;
+    std::shared_ptr<fcl::CollisionObjectf> original_octomap_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_;
+    // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
+    double octomap_voxel_size_;
+    // global mutex to guard octomap
+    std::mutex octomap_mutex_;
   };
 
   // euclidean distance heuristic

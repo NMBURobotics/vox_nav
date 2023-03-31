@@ -89,6 +89,8 @@ namespace vox_nav_planning
     void setupMap() override;
 
   protected:
+    rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
+
     rclcpp::Logger logger_{rclcpp::get_logger("se2_planner")};
     // Which state space is slected ? REEDS,DUBINS, SE2
     std::string selected_se2_space_name_;
@@ -102,6 +104,16 @@ namespace vox_nav_planning
     std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
     // curve radius for reeds and dubins only
     double rho_;
+
+    // octomap acquired from original PCD map
+    std::shared_ptr<octomap::OcTree> original_octomap_octree_;
+    std::shared_ptr<fcl::CollisionObjectf> original_octomap_collision_object_;
+    std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_;
+    // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
+    double octomap_voxel_size_;
+    // global mutex to guard octomap
+    std::mutex octomap_mutex_;
+
   };
 }  // namespace vox_nav_planning
 

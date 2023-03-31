@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_PLANNING__PLUGINS__ELEVATION_CONTROL_PLANNER_HPP_
-#define VOX_NAV_PLANNING__PLUGINS__ELEVATION_CONTROL_PLANNER_HPP_
+#ifndef VOX_NAV_PLANNING__PLUGINS__OSM_ELEVATION_PLANNER_HPP_
+#define VOX_NAV_PLANNING__PLUGINS__OSM_ELEVATION_PLANNER_HPP_
 
 // Our native planners
 #include "vox_nav_planning/native_planners/RRTStarF.hpp"
@@ -24,6 +24,7 @@
 #include "vox_nav_planning/planner_core.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "vox_nav_utilities/elevation_state_space.hpp"
+#include "vox_nav_utilities/pcl_helpers.hpp"
 
 #include "ompl/control/SimpleDirectedControlSampler.h"
 #include "ompl/control/spaces/RealVectorControlSpace.h"
@@ -45,21 +46,21 @@
 namespace vox_nav_planning
 {
 
-  class ElevationControlPlanner : public vox_nav_planning::PlannerCore
+  class OSMElevationPlanner : public vox_nav_planning::PlannerCore
   {
 
   public:
 /**
- * @brief Construct a new ElevationControlPlanner object
+ * @brief Construct a new OSMElevationPlanner object
  *
  */
-    ElevationControlPlanner();
+    OSMElevationPlanner();
 
 /**
- * @brief Destroy the ElevationControlPlanner object
+ * @brief Destroy the OSMElevationPlanner object
  *
  */
-    ~ElevationControlPlanner();
+    ~OSMElevationPlanner();
 
     /**
      * @brief
@@ -81,21 +82,6 @@ namespace vox_nav_planning
       const geometry_msgs::msg::PoseStamped & goal) override;
 
     /**
-     * @brief propogates the states to next phase, given the control input
-     *
-     * @param start
-     * @param control
-     * @param duration
-     * @param result
-     */
-    void propagate(
-      const ompl::control::SpaceInformation * si,
-      const ompl::base::State * start,
-      const ompl::control::Control * control,
-      const double duration,
-      ompl::base::State * result);
-
-    /**
     * @brief
     *
     * @param state
@@ -107,33 +93,11 @@ namespace vox_nav_planning
     /**
      * @brief
      *
-     * @param msg
-     */
-    void nodePosesCallback(const geometry_msgs::msg::PoseArray::SharedPtr msg);
-
-    /**
-     * @brief Get the Opt Objective object
-     *
-     * @return ompl::base::OptimizationObjectivePtr
-     */
-    ompl::base::OptimizationObjectivePtr getOptimizationObjective();
-
-    /**
-     * @brief
-     *
      * @param si
      * @return ompl::base::ValidStateSamplerPtr
      */
     ompl::base::ValidStateSamplerPtr allocValidStateSampler(
       const ompl::base::SpaceInformation * si);
-
-    /**
-   * @brief Get the Overlayed Start and Goal poses, only x and y are provided for goal ,
-   * but internally planner finds closest valid node on octomap and reassigns goal to this pose
-   *
-   * @return std::vector<geometry_msgs::msg::PoseStamped>
-   */
-    std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() override;
 
     /**
      * @brief
@@ -177,25 +141,14 @@ namespace vox_nav_planning
     }
 
   protected:
-    rclcpp::Logger logger_{rclcpp::get_logger("elevation_control_planner")};
+    rclcpp::Logger logger_{rclcpp::get_logger("oms_elevation_planner")};
+
     rclcpp::Client<vox_nav_msgs::srv::GetMapsAndSurfels>::SharedPtr get_maps_and_surfels_client_;
 
-    // Surfels centers are elevated by node_elevation_distance_, and are stored in this
-    // octomap, this maps is used by planner to sample states that are
-    // strictly laying on ground but not touching. So it constrains the path to be on ground
-    // while it can elevate thorogh ramps or slopes
-    std::shared_ptr<octomap::OcTree> elevated_surfel_octomap_octree_;
-    // it is also required to have orientation information of surfels, they are kept in
-    // elevated_surfel_poses_msg_
-    geometry_msgs::msg::PoseArray::SharedPtr elevated_surfel_poses_msg_;
-    pcl::PointCloud<pcl::PointSurfel>::Ptr elevated_surfel_cloud_;
-    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_start_;
-    geometry_msgs::msg::PoseStamped nearest_elevated_surfel_to_goal_;
-    std::shared_ptr<fcl::CollisionObjectf> elevated_surfels_collision_object_;
-    ompl::base::OptimizationObjectivePtr octocost_optimization_;
+    //pcl point cloud for road topology
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr osm_road_topology_pcd_;
+    ompl::base::OptimizationObjectivePtr obj_;
     ompl::base::StateSpacePtr state_space_;
-    ompl::control::ControlSpacePtr control_state_space_;
-    ompl::control::SimpleSetupPtr control_simple_setup_;
 
     std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
     std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
@@ -204,16 +157,7 @@ namespace vox_nav_planning
     ompl::base::ElevationStateSpace::SE2StateType se2_space_type_;
     // curve radius for reeds and dubins only
     double rho_;
-
-    // octomap acquired from original PCD map
-    std::shared_ptr<octomap::OcTree> original_octomap_octree_;
-    std::shared_ptr<fcl::CollisionObjectf> original_octomap_collision_object_;
-    std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_;
-    // Better t keep this parameter consistent with map_server, 0.2 is a OK default fo this
-    double octomap_voxel_size_;
-    // global mutex to guard octomap
-    std::mutex octomap_mutex_;
   };
 }  // namespace vox_nav_planning
 
-#endif  // VOX_NAV_PLANNING__PLUGINS__ELEVATION_CONTROL_PLANNER_HPP_
+#endif  // VOX_NAV_PLANNING__PLUGINS__OSM_ELEVATION_PLANNER_HPP_

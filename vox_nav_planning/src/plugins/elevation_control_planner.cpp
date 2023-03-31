@@ -111,11 +111,11 @@ namespace vox_nav_planning
     robot_collision_object_ = std::make_shared<fcl::CollisionObjectf>(robot_body_box_object);
     elevated_surfel_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
     original_octomap_octree_ = std::make_shared<octomap::OcTree>(octomap_voxel_size_);
-    get_maps_and_surfels_client_node_ = std::make_shared
+    get_map_client_node_ = std::make_shared
       <rclcpp::Node>("get_maps_and_surfels_client_node");
 
     get_maps_and_surfels_client_ =
-      get_maps_and_surfels_client_node_->create_client<vox_nav_msgs::srv::GetMapsAndSurfels>(
+      get_map_client_node_->create_client<vox_nav_msgs::srv::GetMapsAndSurfels>(
       "get_maps_and_surfels");
 
     RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
@@ -374,7 +374,7 @@ namespace vox_nav_planning
 
       auto result_future = get_maps_and_surfels_client_->async_send_request(request);
       if (rclcpp::spin_until_future_complete(
-          get_maps_and_surfels_client_node_,
+          get_map_client_node_,
           result_future) !=
         rclcpp::FutureReturnCode::SUCCESS)
       {
@@ -479,4 +479,6 @@ namespace vox_nav_planning
   }
 }  // namespace vox_nav_planning
 
-PLUGINLIB_EXPORT_CLASS(vox_nav_planning::ElevationControlPlanner, vox_nav_planning::PlannerCore)
+PLUGINLIB_EXPORT_CLASS(
+  vox_nav_planning::ElevationControlPlanner,
+  vox_nav_planning::PlannerCore)
