@@ -209,6 +209,8 @@ namespace vox_nav_planning
     // curve radius for reeds and dubins only
     double rho_;
 
+    double goal_tolerance_;
+
     std::mutex map_mutex_;
 
     geometry_msgs::msg::PoseStamped start_pose_;

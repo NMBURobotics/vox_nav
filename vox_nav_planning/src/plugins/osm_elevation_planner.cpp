@@ -44,6 +44,7 @@ namespace vox_nav_planning
     // common parameters are declared in server
     parent->declare_parameter(plugin_name + ".se2_space", "REEDS");
     parent->declare_parameter(plugin_name + ".rho", 1.5);
+    parent->declare_parameter(plugin_name + ".goal_tolerance", 2.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.minx", -10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxx", 10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.miny", -10.0);
@@ -60,6 +61,7 @@ namespace vox_nav_planning
     parent->get_parameter("interpolation_parameter", interpolation_parameter_);
     parent->get_parameter(plugin_name + ".se2_space", selected_se2_space_name_);
     parent->get_parameter(plugin_name + ".rho", rho_);
+    parent->get_parameter(plugin_name + ".goal_tolerance", goal_tolerance_);
 
     se2_bounds_->setLow(
       0, parent->get_parameter(plugin_name + ".state_space_boundries.minx")
@@ -182,7 +184,7 @@ namespace vox_nav_planning
     state_space_->printState(se3_start.get(), std::cout);
     state_space_->printState(se3_goal.get(), std::cout);
 
-    control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, 1.0);
+    control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, goal_tolerance_);
 
     auto si = control_simple_setup_->getSpaceInformation();
     si->setMinMaxControlDuration(20, 30);
