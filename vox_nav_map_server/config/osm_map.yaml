@@ -35,7 +35,7 @@ vox_nav_planner_server_rclcpp_node:
     planner_plugin: "OSMElevationPlanner"    # other options: "SE2Planner", "ElevationPlanner", "OptimalElevationPlanner"
     expected_planner_frequency: 1.0
     planner_name: "InformedSGCP"                            
-    planner_timeout: 20.0
+    planner_timeout: 10.0
     interpolation_parameter: 0               # set to 0 if you wanna disable interpolating and smooting, otherwise 25 is a good default value                    
     robot_body_dimens:
       x: 1.2
@@ -58,34 +58,32 @@ vox_nav_planner_server_rclcpp_node:
 
 vox_nav_controller_server_rclcpp_node:
    ros__parameters: 
-      controller_plugin: "MPCControllerCasadiROS"                             # other options: non
-      controller_frequency: 20.0                                              # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
-      goal_tolerance_distance: 0.3                                            # in meters, once smaller than this one controller tries to minimize orientation error
-      goal_tolerance_orientation: 0.3                                         # in radians, once smaller than this value,controller exits with success
+      controller_plugin: "MPCControllerAcadoROS"                               # other options: non
+      controller_frequency: 100.0                                              # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
+      goal_tolerance_distance: 0.2                                            # in meters, once smaller than this one controller tries to minimize orientation error
+      goal_tolerance_orientation: 0.2                                         # in radians, once smaller than this value,controller exits with success
       transform_timeout: 0.01                                                 # seconds, this is used to regulate lookUpTransfrom calls from tf2
-      global_plan_look_ahead_distance: 4.5                                    # look this amount of meters from current robot pose to remaining global path
-      ref_traj_se2_space: "SE2"                                               # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+      global_plan_look_ahead_distance: 5.0                                    # look this amount of meters from current robot pose to remaining global path
+      ref_traj_se2_space: "SE2"                                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 3.0                                                                # Curve radius form reeds and dubins only
       robot_radius: 1.25                                                             
-      MPCControllerCasadiROS:
-         plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
-         N: 10                                                                # timesteps in MPC Horizon
-         DT: 0.2                                                              # discretization time between timesteps(s)
+
+      MPCControllerAcadoROS:
+         plugin: "mpc_controller_acado::MPCControllerAcadoROS"
+         N: 20                                                                # timesteps in MPC Horizon
+         Ni: 1
+         DT: 0.05                                                              # discretization time between timesteps(s)
          L_F: 0.67                                                            # distance from CoG to front axle(m)
          L_R: 0.67                                                            # distance from CoG to rear axle(m)
-         V_MIN: -0.4                                                          # min / max velocity constraint(m / s)
-         V_MAX: 1.0
+         V_MIN: -0.05                                                          # min / max velocity constraint(m / s)
+         V_MAX: 0.1
          A_MIN: -0.1                                                          # min / max acceleration constraint(m / s ^ 2)
-         A_MAX: 1.0
-         DF_MIN: -0.8                                                         # min / max front steer angle constraint(rad)
-         DF_MAX: 0.8
-         A_DOT_MIN: -0.5                                                      # min / max jerk constraint(m / s ^ 3)
-         A_DOT_MAX: 0.5
-         DF_DOT_MIN: -0.5                                                     # min / max front steer angle rate constraint(rad / s)
-         DF_DOT_MAX: 0.5
-         Q: [10.0, 10.0, 0.1, 0.1]                                            # weights on x, y, psi, v.
-         R: [10.0, 100.0]                                                     # weights on jerk and slew rate(steering angle derivative)
+         A_MAX: 0.5
+         DF_MIN: -0.6                                                         # min / max front steer angle constraint(rad)
+         DF_MAX: 0.6
+         Q: [1.0, 1.0, 0.0, 0.0, 0.15]                                        # weights on x, y, psi, and v, obstacle_cost.
+         R: [10.0, 10.0]                                                      # weights on input acc and df, acceleration and steering angle
          debug_mode: False                                                    # enable/disable debug messages
          params_configured: True
-         obstacle_cost: 50.0
-         max_obstacles: 4
+         max_obstacles: 6
+         full_ackerman: True
