@@ -116,8 +116,17 @@
     </visual>
   </link>
 
-  <link name="sensor_kit_base_link">
+  <link name="lidar_link">
     <visual name="lidar_link_visual">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.05" length="0.05"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="imu_link">
+    <visual name="imu_link_visual">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <cylinder radius="0.05" length="0.05"/>
@@ -166,7 +175,13 @@
   <joint name="lidar_link" type="fixed">
     <origin xyz="0 0 0.35" rpy="0 0.0 0"/>
     <parent link="base_link"/>
-    <child link="sensor_kit_base_link"/>
+    <child link="lidar_link"/>
+  </joint>
+
+  <joint name="imu_link" type="fixed">
+    <origin xyz="0 0 0.4" rpy="0 0.0 0"/>
+    <parent link="base_link"/>
+    <child link="imu_link"/>
   </joint>
 
   <material name="rim.002">
