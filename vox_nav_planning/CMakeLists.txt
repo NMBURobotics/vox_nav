@@ -110,10 +110,10 @@ add_library(optimal_elevation_planner SHARED src/plugins/optimal_elevation_plann
 ament_target_dependencies(optimal_elevation_planner ${dependencies})
 target_link_libraries(optimal_elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
-# OPTIMAL ELEVATION PLANNER ####################################
+# OSM ELEVATION PLANNER ####################################
 add_library(osm_elevation_planner SHARED src/plugins/osm_elevation_planner.cpp)
 ament_target_dependencies(osm_elevation_planner ${dependencies})
-target_link_libraries(osm_elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
+target_link_libraries(osm_elevation_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl vox_nav_ompl_planners)
 
 # POLYTUNNEL PLANNER ####################################
 add_library(polytunnel_planner SHARED src/plugins/polytunnel_planner.cpp)

@@ -746,6 +746,9 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
         bestGeometricCost_ = best_geometric_path_cost;
         bestGeometricPath_ = best_geometric_path;
       }
+
+      approximate_solution = false;
+      exact_solution = true;
     }
 
     // If the cost is less than L2 norm of start and goal, this is likely an useless one.
@@ -892,8 +895,14 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
   // Add the best path to the solution path
   if (params_.solve_control_graph_) {
     pdef_->addSolutionPath(bestControlPath_, approximate_solution, 0.0, getName());
+    OMPL_INFORM(
+      "%s: Best Control path has %d vertices and ",
+      getName().c_str(), bestControlPath_->getStateCount());
   } else {
     pdef_->addSolutionPath(bestGeometricPath_, approximate_solution, 0.0, getName());
+    OMPL_INFORM(
+      "%s: Best Geometric path has %d vertices and ",
+      getName().c_str(), bestGeometricPath_->getStateCount());
   }
 
   // clear data structures

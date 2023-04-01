@@ -80,7 +80,33 @@ def generate_launch_description():
         #prefix=["xterm -e gdb -ex run --args"],
         parameters=[params],
     )
-
+    planner_server_node = Node(
+        package='vox_nav_planning',
+        executable='planner_server',
+        name='vox_nav_planner_server_rclcpp_node',
+        namespace='',
+        output='screen',
+        prefix=['xterm -e gdb -ex run --args'],
+        parameters=[params],
+    )
+    controller_server_node = Node(
+        package='vox_nav_control',
+        executable='vox_nav_controller_server',
+        name='vox_nav_controller_server_rclcpp_node',
+        namespace='',
+        output='screen',
+        # prefix=['xterm -e gdb -ex run --args'],
+        parameters=[params],
+    )
+    navigate_to_pose_server_node = Node(
+        package='vox_nav_navigators',
+        executable='navigate_to_pose_server_node',
+        name='navigate_to_pose_server_node',
+        namespace='',
+        output='screen',
+        #prefix=['xterm -e gdb -ex run --args'],
+        parameters=[params],
+    )
     ekf_local_filter_node = Node(
         package="robot_localization",
         executable="ekf_node",
@@ -120,15 +146,17 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            declare_use_sim_time,
-            robot_state_publisher,
-            decleare_params,
-            osm_map_node,
+            declare_use_sim_time,           
             decleare_localization_params,
+            decleare_params,
+            robot_state_publisher,
+            osm_map_node,
+            planner_server_node,
+            controller_server_node,
+            navigate_to_pose_server_node,
             ekf_local_filter_node,
             ekf_global_filter_node,
             navsat_transform_node
-            # map_server_node,
         ]
     )
 

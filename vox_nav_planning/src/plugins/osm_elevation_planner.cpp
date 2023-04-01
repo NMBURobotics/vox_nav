@@ -35,6 +35,7 @@ namespace vox_nav_planning
     se2_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(2);
     z_bounds_ = std::make_shared<ompl::base::RealVectorBounds>(1);
     auto v_bounds = std::make_shared<ompl::base::RealVectorBounds>(1);
+    auto control_bounds = std::make_shared<ompl::base::RealVectorBounds>(2);
 
     osm_road_topology_pcd_ = std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>();
     valid_poses_ = std::make_shared<geometry_msgs::msg::PoseArray>();
@@ -49,6 +50,10 @@ namespace vox_nav_planning
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxy", 10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.minz", -10.0);
     parent->declare_parameter(plugin_name + ".state_space_boundries.maxz", 10.0);
+    parent->declare_parameter(plugin_name + ".control_boundries.minv", -0.5);
+    parent->declare_parameter(plugin_name + ".control_boundries.maxv", 0.5);
+    parent->declare_parameter(plugin_name + ".control_boundries.minw", -0.5);
+    parent->declare_parameter(plugin_name + ".control_boundries.maxw", 0.5);
 
     parent->get_parameter("planner_name", planner_name_);
     parent->get_parameter("planner_timeout", planner_timeout_);
@@ -76,6 +81,14 @@ namespace vox_nav_planning
       .as_double());
     v_bounds->setLow(0, -0.5);
     v_bounds->setHigh(0, 0.5);
+    control_bounds->setLow(
+      0, parent->get_parameter(plugin_name + ".control_boundries.minv").as_double());
+    control_bounds->setHigh(
+      0, parent->get_parameter(plugin_name + ".control_boundries.maxv").as_double());
+    control_bounds->setLow(
+      1, parent->get_parameter(plugin_name + ".control_boundries.minw").as_double());
+    control_bounds->setHigh(
+      1, parent->get_parameter(plugin_name + ".control_boundries.maxw").as_double());
 
     if (selected_se2_space_name_ == "SE2") {
       se2_space_type_ = ompl::base::ElevationStateSpace::SE2StateType::SE2;
@@ -99,8 +112,7 @@ namespace vox_nav_planning
       std::make_shared<rclcpp::Node>("GetOSMRoadTopologyMap");
 
     get_osm_road_topology_map_client_ =
-      get_map_client_node_
-      ->create_client<vox_nav_msgs::srv::GetOSMRoadTopologyMap>(
+      get_map_client_node_->create_client<vox_nav_msgs::srv::GetOSMRoadTopologyMap>(
       "get_osm_map");
 
     RCLCPP_INFO(logger_, "Selected planner is: %s", planner_name_.c_str());
@@ -117,14 +129,14 @@ namespace vox_nav_planning
       *se2_bounds_,
       *z_bounds_,
       *v_bounds);
+    state_space_->setLongestValidSegmentFraction(0.1);
 
-    simple_setup_ = std::make_shared<ompl::geometric::SimpleSetup>(state_space_);
+    control_state_space_ = std::make_shared<ompl::control::RealVectorControlSpace>(state_space_, 2);
+    control_state_space_->as<ompl::control::RealVectorControlSpace>()->setBounds(*control_bounds);
 
-    ompl::base::OptimizationObjectivePtr length_objective(
-      new ompl::base::PathLengthOptimizationObjective(
-        simple_setup_->getSpaceInformation()));
-
-    simple_setup_->setStateValidityChecker(
+    control_simple_setup_ = std::make_shared<ompl::control::SimpleSetup>(control_state_space_);
+    control_simple_setup_->setOptimizationObjective(getOptimizationObjective());
+    control_simple_setup_->setStateValidityChecker(
       std::bind(&OSMElevationPlanner::isStateValid, this, std::placeholders::_1));
   }
 
@@ -163,15 +175,29 @@ namespace vox_nav_planning
     se3_goal->setXYZV(
       goal.pose.position.x,
       goal.pose.position.y,
-      goal.pose.position.z, 0);
+      start.pose.position.z, 0);
     se3_goal->setSO2(goal_yaw);
 
-    simple_setup_->setStartAndGoalStates(se3_start, se3_goal);
+    // print start and goal states
+    state_space_->printState(se3_start.get(), std::cout);
+    state_space_->printState(se3_goal.get(), std::cout);
 
-    auto si = simple_setup_->getSpaceInformation();
+    control_simple_setup_->setStartAndGoalStates(se3_start, se3_goal, 1.0);
+
+    auto si = control_simple_setup_->getSpaceInformation();
+    si->setMinMaxControlDuration(20, 30);
+    si->setPropagationStepSize(0.025);
+
+    control_simple_setup_->setStatePropagator(
+      [this, si](const ompl::base::State * state, const ompl::control::Control * control,
+      const double duration, ompl::base::State * result)
+      {
+        this->propagate(si.get(), state, control, duration, result);
+      });
+
     // create a planner for the defined space
     ompl::base::PlannerPtr planner;
-    vox_nav_utilities::initializeSelectedPlanner(
+    initializeSelectedControlPlanner(
       planner, planner_name_, si, logger_);
 
     si->setValidStateSamplerAllocator(
@@ -179,20 +205,35 @@ namespace vox_nav_planning
         &OSMElevationPlanner::allocValidStateSampler, this,
         std::placeholders::_1));
 
-    simple_setup_->setPlanner(planner);
-    simple_setup_->setup();
+    control_simple_setup_->setPlanner(planner);
+    control_simple_setup_->setup();
 
     // attempt to solve the problem within one second of planning time
-    ompl::base::PlannerStatus solved = simple_setup_->solve(planner_timeout_);
+    ompl::base::PlannerStatus solved = control_simple_setup_->solve(planner_timeout_);
     std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
 
     if (solved) {
-      ompl::geometric::PathGeometric solution_path =
-        simple_setup_->getSolutionPath();
-      ompl::geometric::PathSimplifier * path_simlifier =
-        new ompl::geometric::PathSimplifier(si);
-      solution_path.interpolate(interpolation_parameter_);
-      path_simlifier->smoothBSpline(solution_path, 1, 0.1);
+
+      ompl::control::PathControl solution_path(si);
+      try {
+        control_simple_setup_->getSolutionPath().printAsMatrix(std::cout);
+        solution_path = control_simple_setup_->getSolutionPath();
+      } catch (const std::exception & e) {
+        std::cerr << e.what() << '\n';
+        RCLCPP_WARN(
+          logger_, "Exception occured while retrivieng control solution path %s",
+          e.what());
+        control_simple_setup_->clear();
+        return plan_poses;
+      }
+
+      RCLCPP_INFO(
+        logger_, "A solution was found, the simplified solution path includes %d poses.",
+        static_cast<int>(solution_path.getStateCount()));
+
+      ompl::geometric::PathSimplifier * path_simlifier = new ompl::geometric::PathSimplifier(si);
+      //solution_path.interpolate(solution_path);
+      //path_simlifier->smoothBSpline(solution_path, 1, 0.1);
 
       for (std::size_t path_idx = 0; path_idx < solution_path.getStateCount();
         path_idx++)
@@ -222,15 +263,12 @@ namespace vox_nav_planning
 
       RCLCPP_INFO(logger_, "Found A plan with %i poses", plan_poses.size());
       RCLCPP_INFO(logger_, "Path Length, %s, %.2f", planner_name_.c_str(), solution_path.length());
-      RCLCPP_INFO(
-        logger_, "Path Smoothness, %s, %.2f",
-        planner_name_.c_str(), solution_path.smoothness());
 
     } else {
       RCLCPP_WARN(logger_, "No solution for requested path planning !");
     }
 
-    simple_setup_->clear();
+    control_simple_setup_->clear();
     return plan_poses;
   }
 
@@ -284,6 +322,10 @@ namespace vox_nav_planning
           valid_poses_->poses.push_back(pose);
         }
 
+        RCLCPP_INFO(
+          logger_, "Received a valid map with %i points",
+          osm_road_topology_pcd_->points.size());
+
       } else {
         std::this_thread::sleep_for(std::chrono::seconds(1));
         RCLCPP_INFO(
@@ -301,25 +343,33 @@ namespace vox_nav_planning
     // select a optimizatio objective
     ompl::base::OptimizationObjectivePtr length_objective(
       new ompl::base::PathLengthOptimizationObjective(
-        simple_setup_->getSpaceInformation()));
+        control_simple_setup_->getSpaceInformation()));
 
     ompl::base::MultiOptimizationObjective * multi_optimization =
       new ompl::base::MultiOptimizationObjective(
-      simple_setup_->getSpaceInformation());
+      control_simple_setup_->getSpaceInformation());
     multi_optimization->addObjective(length_objective, 1.0);
 
-    return ompl::base::OptimizationObjectivePtr(multi_optimization);
+    return length_objective;
   }
 
   ompl::base::ValidStateSamplerPtr OSMElevationPlanner::allocValidStateSampler(
     const ompl::base::SpaceInformation * si)
   {
     auto valid_sampler = std::make_shared<ompl::base::OctoCellValidStateSampler>(
-      simple_setup_->getSpaceInformation(),
+      control_simple_setup_->getSpaceInformation(),
       start_pose_,
       goal_pose_,
       valid_poses_);
     return valid_sampler;
+  }
+
+  std::vector<geometry_msgs::msg::PoseStamped> OSMElevationPlanner::getOverlayedStartandGoal()
+  {
+    std::vector<geometry_msgs::msg::PoseStamped> start_pose_vector;
+    start_pose_vector.push_back(start_pose_);
+    start_pose_vector.push_back(goal_pose_);
+    return start_pose_vector;
   }
 
 

@@ -119,7 +119,38 @@ namespace vox_nav_planning
     *
     * @return std::vector<geometry_msgs::msg::PoseStamped>
     */
-    std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal() {}
+    std::vector<geometry_msgs::msg::PoseStamped> getOverlayedStartandGoal();
+
+    void propagate(
+      const ompl::control::SpaceInformation * si,
+      const ompl::base::State * start,
+      const ompl::control::Control * control,
+      const double duration,
+      ompl::base::State * result)
+    {
+      const auto * ee_start = start->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto * ee_start_so2 = ee_start->as<ompl::base::SO2StateSpace::StateType>(0);
+      const auto * ee_start_xyzv = ee_start->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      const double * ctrl =
+        control->as<ompl::control::RealVectorControlSpace::ControlType>()->values;
+
+      auto x = ee_start_xyzv->values[0];
+      auto y = ee_start_xyzv->values[1];
+      auto z = ee_start_xyzv->values[2];
+      auto v = ee_start_xyzv->values[3];
+      auto yaw = ee_start_so2->value;
+
+      result->as<ompl::base::ElevationStateSpace::StateType>()->setXYZV(
+        x + duration * v * std::cos(yaw) /*X*/,
+        y + duration * v * std::sin(yaw) /*Y*/,
+        z /*Z*/,
+        v + duration * ctrl[0] /*V*/);
+      result->as<ompl::base::ElevationStateSpace::StateType>()->setSO2(
+        yaw + duration *
+        ctrl[1] /*W*/);
+
+      si->enforceBounds(result);
+    }
 
     void initializeSelectedControlPlanner(
       ompl::base::PlannerPtr & planner,
@@ -143,8 +174,8 @@ namespace vox_nav_planning
         planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
       } else if (selected_planner_name == std::string("InformedSGCP")) {
         planner = ompl::base::PlannerPtr(new ompl::control::InformedSGCP(si));
-        planner->as<ompl::control::InformedSGCP>()->setUseValidSampler(false);
-        planner->as<ompl::control::InformedSGCP>()->setMaxDistBetweenVertices(0.0);
+        planner->as<ompl::control::InformedSGCP>()->setUseValidSampler(true);
+        planner->as<ompl::control::InformedSGCP>()->setMaxDistBetweenVertices(5.0);
         planner->as<ompl::control::InformedSGCP>()->setUseKNearest(true);
         planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(false);
         planner->as<ompl::control::InformedSGCP>()->setBatchSize(1000);
@@ -169,6 +200,9 @@ namespace vox_nav_planning
 
     std::shared_ptr<ompl::base::RealVectorBounds> z_bounds_;
     std::shared_ptr<ompl::base::RealVectorBounds> se2_bounds_;
+
+    ompl::control::ControlSpacePtr control_state_space_;
+    ompl::control::SimpleSetupPtr control_simple_setup_;
 
     std::string selected_se2_space_name_;
     ompl::base::ElevationStateSpace::SE2StateType se2_space_type_;
