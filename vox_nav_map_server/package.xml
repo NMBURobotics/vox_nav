@@ -22,6 +22,7 @@
     <depend>vox_nav_utilities</depend>
     <depend>Eigen3</depend>
     <depend>OCTOMAP</depend>
+    <depend>rviz_default_plugins</depend>
     <test_depend>ament_lint_common</test_depend>
     <test_depend>ament_lint_auto</test_depend>
     <export>

@@ -25,7 +25,6 @@ find_package(Eigen3 REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(OCTOMAP REQUIRED)
 find_package(rviz_default_plugins REQUIRED)
-find_package(rviz_2d_overlay_msgs REQUIRED)
 
 set(dependencies
 rclcpp
@@ -44,8 +43,6 @@ vox_nav_utilities
 Eigen3
 OCTOMAP
 rviz_default_plugins
-rviz_2d_overlay_msgs
-
 )
 
 include_directories(include)
