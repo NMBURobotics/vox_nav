@@ -12,6 +12,7 @@ find_package(builtin_interfaces REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED) 
+find_package(shape_msgs REQUIRED)
 find_package(nav_msgs REQUIRED) 
 find_package(octomap_msgs REQUIRED)
 
@@ -35,6 +36,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     std_msgs 
     nav_msgs
     sensor_msgs
+    shape_msgs
     octomap_msgs
     rosidl_default_generators
 )

@@ -27,10 +27,11 @@ namespace vox_nav_utilities
 {
 
   Eigen::Vector3d calculateMeanOfPointPositions(
-    pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud)
+      pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud)
   {
     Eigen::Vector3d mean = Eigen::Vector3d::Zero();
-    for (const auto & point : inputCloud->points) {
+    for (const auto &point : inputCloud->points)
+    {
       mean += Eigen::Vector3d(point.x, point.y, point.z);
     }
     mean /= inputCloud->points.size();
@@ -39,15 +40,15 @@ namespace vox_nav_utilities
   }
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformCloud(
-    pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud,
-    const Eigen::Affine3f & transformMatrix)
+      pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud,
+      const Eigen::Affine3f &transformMatrix)
   {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformedCloud(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::transformPointCloud(*inputCloud, *transformedCloud, transformMatrix);
     return transformedCloud;
   }
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr loadPointcloudFromPcd(const std::string & filename)
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr loadPointcloudFromPcd(const std::string &filename)
   {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>());
     pcl::PCLPointCloud2 cloudBlob;
@@ -57,8 +58,8 @@ namespace vox_nav_utilities
   }
 
   pcl::PointCloud<pcl::PointXYZRGBL>::Ptr loadPointcloudFromPcd(
-    const std::string & filename,
-    bool label)
+      const std::string &filename,
+      bool label)
   {
     pcl::PointCloud<pcl::PointXYZRGBL>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGBL>());
     pcl::PCLPointCloud2 cloudBlob;
@@ -68,10 +69,10 @@ namespace vox_nav_utilities
   }
 
   std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> extractClusterCloudsFromPointcloud(
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud,
-    double tolerance,
-    int min_cluster_size,
-    int max_cluster_size)
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud,
+      double tolerance,
+      int min_cluster_size,
+      int max_cluster_size)
   {
     // Create a kd tree to cluster the input point cloud
     pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZRGB>);
@@ -88,10 +89,12 @@ namespace vox_nav_utilities
     std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> clusterClouds;
     clusterClouds.reserve(clusterIndices.size());
 
-    for (const auto & indicesSet : clusterIndices) {
+    for (const auto &indicesSet : clusterIndices)
+    {
       pcl::PointCloud<pcl::PointXYZRGB>::Ptr clusterCloud(new pcl::PointCloud<pcl::PointXYZRGB>());
       clusterCloud->points.reserve(indicesSet.indices.size());
-      for (auto index : indicesSet.indices) {
+      for (auto index : indicesSet.indices)
+      {
         clusterCloud->points.push_back(inputCloud->points[index]);
       }
       clusterCloud->is_dense = true;
@@ -102,33 +105,37 @@ namespace vox_nav_utilities
   }
 
   Eigen::Matrix3d getRotationMatrix(
-    double angle, XYZ axis,
-    const rclcpp::Logger & node_logger)
+      double angle, XYZ axis,
+      const rclcpp::Logger &node_logger)
   {
     Eigen::Matrix3d rotationMatrix = Eigen::Matrix3d::Identity();
-    switch (axis) {
-      case XYZ::X: {
-          rotationMatrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitX());
-          break;
-        }
-      case XYZ::Y: {
-          rotationMatrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY());
-          break;
-        }
-      case XYZ::Z: {
-          rotationMatrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitZ());
-          break;
-        }
-      default:
-        RCLCPP_ERROR(node_logger, "Unknown axis while trying to rotate the pointcloud");
+    switch (axis)
+    {
+    case XYZ::X:
+    {
+      rotationMatrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitX());
+      break;
+    }
+    case XYZ::Y:
+    {
+      rotationMatrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY());
+      break;
+    }
+    case XYZ::Z:
+    {
+      rotationMatrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitZ());
+      break;
+    }
+    default:
+      RCLCPP_ERROR(node_logger, "Unknown axis while trying to rotate the pointcloud");
     }
     return rotationMatrix;
   }
 
   Eigen::Affine3d getRigidBodyTransform(
-    const Eigen::Vector3d & translation,
-    const Eigen::Vector3d & intrinsicRpy,
-    const rclcpp::Logger & node_logger)
+      const Eigen::Vector3d &translation,
+      const Eigen::Vector3d &intrinsicRpy,
+      const rclcpp::Logger &node_logger)
   {
     Eigen::Affine3d rigidBodyTransform;
     rigidBodyTransform.setIdentity();
@@ -143,18 +150,21 @@ namespace vox_nav_utilities
   }
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliersFromInputCloud(
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int int_param, double double_param,
-    OutlierRemovalType outlier_removal_type)
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int int_param, double double_param,
+      OutlierRemovalType outlier_removal_type)
   {
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZRGB>());
 
-    if (outlier_removal_type == OutlierRemovalType::StatisticalOutlierRemoval) {
+    if (outlier_removal_type == OutlierRemovalType::StatisticalOutlierRemoval)
+    {
       pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
       sor.setInputCloud(inputCloud);
       sor.setMeanK(int_param);
       sor.setStddevMulThresh(double_param);
       sor.filter(*filteredCloud);
-    } else {
+    }
+    else
+    {
       pcl::RadiusOutlierRemoval<pcl::PointXYZRGB> outrem;
       outrem.setInputCloud(inputCloud);
       outrem.setMinNeighborsInRadius(int_param);
@@ -166,18 +176,21 @@ namespace vox_nav_utilities
   }
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
-    pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int int_param, double double_param,
-    OutlierRemovalType outlier_removal_type)
+      pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int int_param, double double_param,
+      OutlierRemovalType outlier_removal_type)
   {
     pcl::PointCloud<pcl::PointXYZ>::Ptr filteredCloud(new pcl::PointCloud<pcl::PointXYZ>());
 
-    if (outlier_removal_type == OutlierRemovalType::StatisticalOutlierRemoval) {
+    if (outlier_removal_type == OutlierRemovalType::StatisticalOutlierRemoval)
+    {
       pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
       sor.setInputCloud(inputCloud);
       sor.setMeanK(int_param);
       sor.setStddevMulThresh(double_param);
       sor.filter(*filteredCloud);
-    } else {
+    }
+    else
+    {
       pcl::RadiusOutlierRemoval<pcl::PointXYZ> outrem;
       outrem.setInputCloud(inputCloud);
       outrem.setMinNeighborsInRadius(int_param);
@@ -188,108 +201,148 @@ namespace vox_nav_utilities
     return filteredCloud;
   }
 
+  void fitBoxtoPointCloud(
+      const pcl::PointCloud<pcl::PointXYZ>::Ptr input,
+      vox_nav_msgs::msg::Object &output)
+  {
+    // Compute principal directions
+    Eigen::Vector4f pcaCentroid;
+    pcl::compute3DCentroid(*input, pcaCentroid);
+    Eigen::Matrix3f covariance;
+    pcl::computeCovarianceMatrixNormalized(*input, pcaCentroid, covariance);
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> eigen_solver(covariance, Eigen::ComputeEigenvectors);
+    Eigen::Matrix3f eigenVectorsPCA = eigen_solver.eigenvectors();
+    eigenVectorsPCA.col(2) = eigenVectorsPCA.col(0).cross(eigenVectorsPCA.col(1));
+
+    Eigen::Matrix4f projectionTransform(Eigen::Matrix4f::Identity());
+    projectionTransform.block<3, 3>(0, 0) = eigenVectorsPCA.transpose();
+    projectionTransform.block<3, 1>(0, 3) = -1.f * (projectionTransform.block<3, 3>(0, 0) * pcaCentroid.head<3>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPointsProjected(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::transformPointCloud(*input, *cloudPointsProjected, projectionTransform);
+    // Get the minimum and maximum points of the transformed cloud.
+    pcl::PointXYZ minPoint, maxPoint;
+    pcl::getMinMax3D(*cloudPointsProjected, minPoint, maxPoint);
+    const Eigen::Vector3f meanDiagonal = 0.5f * (maxPoint.getVector3fMap() + minPoint.getVector3fMap());
+
+    // Final transform
+    const Eigen::Quaternionf bboxQuaternion(eigenVectorsPCA);
+    const Eigen::Vector3f bboxTransform = eigenVectorsPCA * meanDiagonal + pcaCentroid.head<3>();
+
+    // return the bounding box with ros message
+    output.pose.position.x = bboxTransform.x();
+    output.pose.position.y = bboxTransform.y();
+    output.pose.position.z = bboxTransform.z();
+    output.pose.orientation.x = bboxQuaternion.x();
+    output.pose.orientation.y = bboxQuaternion.y();
+    output.pose.orientation.z = bboxQuaternion.z();
+    output.pose.orientation.w = bboxQuaternion.w();
+    output.shape.dimensions.push_back(maxPoint.x - minPoint.x);
+    output.shape.dimensions.push_back(maxPoint.y - minPoint.y);
+    output.shape.dimensions.push_back(maxPoint.z - minPoint.z);
+    output.shape.type = shape_msgs::msg::SolidPrimitive::BOX;
+  }
 
   Eigen::Vector3f getColorByIndexEig(int index)
   {
     Eigen::Vector3f result;
-    switch (index) {
-      case -2:  // BLACK:
-        result[0] = 0.0;
-        result[1] = 0.0;
-        result[2] = 0.0;
-        break;
-      case -1:  // BLACK:
-        result[0] = 0.0;
-        result[1] = 0.0;
-        result[2] = 0.0;
-        break;
-      case 0:    // RED:
-        result[0] = 0.8;
-        result[1] = 0.1;
-        result[2] = 0.1;
-        break;
-      case 1:    // GREEN:
-        result[0] = 0.1;
-        result[1] = 0.8;
-        result[2] = 0.1;
-        break;
-      case 2:    // GREY:
-        result[0] = 0.9;
-        result[1] = 0.9;
-        result[2] = 0.9;
-        break;
-      case 3:    // DARK_GREY:
-        result[0] = 0.6;
-        result[1] = 0.6;
-        result[2] = 0.6;
-        break;
-      case 4:    // WHITE:
-        result[0] = 1.0;
-        result[1] = 1.0;
-        result[2] = 1.0;
-        break;
-      case 5:    // ORANGE:
-        result[0] = 1.0;
-        result[1] = 0.5;
-        result[2] = 0.0;
-        break;
-      case 6:    // Maroon:
-        result[0] = 0.5;
-        result[1] = 0.0;
-        result[2] = 0.0;
-        break;
-      case 7:    // Olive:
-        result[0] = 0.5;
-        result[1] = 0.5;
-        result[2] = 0.0;
-        break;
-      case 8:    // Navy:
-        result[0] = 0.0;
-        result[1] = 0.0;
-        result[2] = 0.5;
-        break;
-      case 9:    // BLACK:
-        result[0] = 0.0;
-        result[1] = 0.0;
-        result[2] = 0.0;
-        break;
-      case 10:    // YELLOW:
-        result[0] = 1.0;
-        result[1] = 1.0;
-        result[2] = 0.0;
-        break;
-      case 11:    // BROWN:
-        result[0] = 0.597;
-        result[1] = 0.296;
-        result[2] = 0.0;
-        break;
-      case 12:    // PINK:
-        result[0] = 1.0;
-        result[1] = 0.4;
-        result[2] = 1;
-        break;
-      case 13:    // LIME_GREEN:
-        result[0] = 0.6;
-        result[1] = 1.0;
-        result[2] = 0.2;
-        break;
-      case 14:    // PURPLE:
-        result[0] = 0.597;
-        result[1] = 0.0;
-        result[2] = 0.597;
-        break;
-      case 15:    // CYAN:
-        result[0] = 0.0;
-        result[1] = 1.0;
-        result[2] = 1.0;
-        break;
-      case 16:    // MAGENTA:
-        result[0] = 1.0;
-        result[1] = 0.0;
-        result[2] = 1.0;
+    switch (index)
+    {
+    case -2: // BLACK:
+      result[0] = 0.0;
+      result[1] = 0.0;
+      result[2] = 0.0;
+      break;
+    case -1: // BLACK:
+      result[0] = 0.0;
+      result[1] = 0.0;
+      result[2] = 0.0;
+      break;
+    case 0: // RED:
+      result[0] = 0.8;
+      result[1] = 0.1;
+      result[2] = 0.1;
+      break;
+    case 1: // GREEN:
+      result[0] = 0.1;
+      result[1] = 0.8;
+      result[2] = 0.1;
+      break;
+    case 2: // GREY:
+      result[0] = 0.9;
+      result[1] = 0.9;
+      result[2] = 0.9;
+      break;
+    case 3: // DARK_GREY:
+      result[0] = 0.6;
+      result[1] = 0.6;
+      result[2] = 0.6;
+      break;
+    case 4: // WHITE:
+      result[0] = 1.0;
+      result[1] = 1.0;
+      result[2] = 1.0;
+      break;
+    case 5: // ORANGE:
+      result[0] = 1.0;
+      result[1] = 0.5;
+      result[2] = 0.0;
+      break;
+    case 6: // Maroon:
+      result[0] = 0.5;
+      result[1] = 0.0;
+      result[2] = 0.0;
+      break;
+    case 7: // Olive:
+      result[0] = 0.5;
+      result[1] = 0.5;
+      result[2] = 0.0;
+      break;
+    case 8: // Navy:
+      result[0] = 0.0;
+      result[1] = 0.0;
+      result[2] = 0.5;
+      break;
+    case 9: // BLACK:
+      result[0] = 0.0;
+      result[1] = 0.0;
+      result[2] = 0.0;
+      break;
+    case 10: // YELLOW:
+      result[0] = 1.0;
+      result[1] = 1.0;
+      result[2] = 0.0;
+      break;
+    case 11: // BROWN:
+      result[0] = 0.597;
+      result[1] = 0.296;
+      result[2] = 0.0;
+      break;
+    case 12: // PINK:
+      result[0] = 1.0;
+      result[1] = 0.4;
+      result[2] = 1;
+      break;
+    case 13: // LIME_GREEN:
+      result[0] = 0.6;
+      result[1] = 1.0;
+      result[2] = 0.2;
+      break;
+    case 14: // PURPLE:
+      result[0] = 0.597;
+      result[1] = 0.0;
+      result[2] = 0.597;
+      break;
+    case 15: // CYAN:
+      result[0] = 0.0;
+      result[1] = 1.0;
+      result[2] = 1.0;
+      break;
+    case 16: // MAGENTA:
+      result[0] = 1.0;
+      result[1] = 0.0;
+      result[2] = 1.0;
     }
     return result;
   }
 
-
-}  // namespace vox_nav_utilities
+} // namespace vox_nav_utilities

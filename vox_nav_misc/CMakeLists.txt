@@ -57,11 +57,11 @@ option(BUILD_VGICP_CUDA "Build GPU-powered VGICP" ON)
 add_definitions(${PCL_DEFINITIONS})
 add_definitions(-BUILD_VGICP_CUDA)
 
-cuda_add_executable(raw_cloud_clustering_tracking src/raw_cloud_clustering_tracking.cu)
-ament_target_dependencies(raw_cloud_clustering_tracking ${dependencies})
-target_include_directories(raw_cloud_clustering_tracking PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-target_link_directories(raw_cloud_clustering_tracking PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(raw_cloud_clustering_tracking ${PCL_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+add_executable(naive_lidar_clustering src/naive_lidar_clustering.cpp)
+ament_target_dependencies(naive_lidar_clustering ${dependencies})
+target_include_directories(naive_lidar_clustering PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(naive_lidar_clustering PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(naive_lidar_clustering ${PCL_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
 add_executable(pcl_cpu_ndt src/pcl_cpu_ndt.cpp)
 ament_target_dependencies(pcl_cpu_ndt ${dependencies})
@@ -69,14 +69,18 @@ target_include_directories(pcl_cpu_ndt PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE
 target_link_directories(pcl_cpu_ndt PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(pcl_cpu_ndt ${PCL_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
 
+add_executable(ukf_tracker src/ukf_tracker.cpp)
+ament_target_dependencies(ukf_tracker ${dependencies})
+
 cuda_add_executable(fast_gicp_client src/fast_gicp_client.cpp)
 ament_target_dependencies(fast_gicp_client ${dependencies})
 target_include_directories(fast_gicp_client PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${fast_gicp_INCLUDE_DIRS})
 target_link_directories(fast_gicp_client PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(fast_gicp_client ${PCL_LIBRARIES} ${CUDA_LIBRARIES} ${fast_gicp_LIBRARIES} OpenMP::OpenMP_CXX)
 
-install(TARGETS raw_cloud_clustering_tracking
+install(TARGETS naive_lidar_clustering
                 pcl_cpu_ndt
+                ukf_tracker
                 fast_gicp_client
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
