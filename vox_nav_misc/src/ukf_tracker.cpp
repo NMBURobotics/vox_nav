@@ -211,7 +211,9 @@ void UKFTracker::initTrack(const vox_nav_msgs::msg::Object &obj)
     // Get yaw from quaternion
     double roll, pitch, yaw;
     vox_nav_utilities::getRPYfromMsgQuaternion(obj.pose.orientation, roll, pitch, yaw);
-    track.geo.orientation = yaw;
+    track.geo.roll = roll;
+    track.geo.pitch = pitch;
+    track.geo.yaw = yaw;
 
     // Add unique color
     std::random_device rd;
@@ -512,6 +514,7 @@ float UKFTracker::CalculateBoxMismatch(
 
     float box_wl_ordered = std::abs(track.geo.width - object.shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y]) +
                            std::abs(track.geo.length - object.shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_X]);
+
     float box_mismatch = (box_wl_switched < box_wl_ordered) ? box_wl_switched : box_wl_ordered;
     box_mismatch += std::abs(track.geo.height - object.shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Z]);
     return box_mismatch;
@@ -641,6 +644,7 @@ void UKFTracker::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects)
                                   " from [%f] to [%f]",
                     track.id, tra_area, det_area);
             }
+
             // Update the form of the track with measurement
             track.geo.length =
                 detected_objects.objects[da_tracks_[i]].shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_X];
@@ -654,7 +658,9 @@ void UKFTracker::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects)
                 detected_objects.objects[da_tracks_[i]].pose.orientation, roll, pitch, yaw);
 
             // Update orientation and ground level
-            track.geo.orientation = yaw;
+            track.geo.roll = roll;
+            track.geo.pitch = pitch;
+            track.geo.yaw = yaw;
             track.sta.z = detected_objects.objects[da_tracks_[i]].pose.position.z;
 
             track.cluster = detected_objects.objects[da_tracks_[i]].cluster;
@@ -733,7 +739,7 @@ vox_nav_msgs::msg::ObjectArray UKFTracker::publishTracks(const std_msgs::msg::He
     // Create track message
     vox_nav_msgs::msg::ObjectArray track_list;
     track_list.header.stamp = header.stamp;
-    track_list.header.frame_id = "map";
+    track_list.header.frame_id = header.frame_id;
 
     visualization_msgs::msg::MarkerArray marker_array;
 
@@ -750,9 +756,9 @@ vox_nav_msgs::msg::ObjectArray UKFTracker::publishTracks(const std_msgs::msg::He
         track_msg.pose.position.x = track.sta.x[0];
         track_msg.pose.position.y = track.sta.x[1];
         track_msg.pose.position.z = track.sta.z;
-        track_msg.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(0, 0, track.sta.x[3]);
+        track_msg.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(track.geo.roll, track.geo.pitch, track.geo.yaw);
 
-        track_msg.heading = track.sta.x[3];
+        track_msg.heading = track.geo.yaw;
         track_msg.velocity = track.sta.x[2];
         track_msg.shape.dimensions.push_back(track.geo.length);
         track_msg.shape.dimensions.push_back(track.geo.width);
@@ -788,13 +794,22 @@ void UKFTracker::publishTrackVisuals(const vox_nav_msgs::msg::ObjectArray &track
 
     // concatenate the clusters into a single pointcloud message for visualization
     sensor_msgs::msg::PointCloud2 cloud;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZL>::Ptr cloud_ptr(new pcl::PointCloud<pcl::PointXYZL>);
 
     for (int i = 0; i < tracks.objects.size(); ++i)
     {
         pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_i(new pcl::PointCloud<pcl::PointXYZ>);
         pcl::fromROSMsg(tracks.objects[i].cluster, *cloud_i);
-        *cloud_ptr += *cloud_i;
+
+        pcl::PointCloud<pcl::PointXYZL>::Ptr cloud_i_l(new pcl::PointCloud<pcl::PointXYZL>);
+        pcl::copyPointCloud(*cloud_i, *cloud_i_l);
+
+        // also add the track id to the pointcloud
+        for (int j = 0; j < cloud_i_l->points.size(); ++j)
+        {
+            cloud_i_l->points[j].label = tracks.objects[i].id;
+        }
+        *cloud_ptr += *cloud_i_l;
     }
     pcl::toROSMsg(*cloud_ptr, cloud);
     cloud.header = tracks.header;

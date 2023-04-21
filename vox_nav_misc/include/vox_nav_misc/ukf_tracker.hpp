@@ -86,7 +86,9 @@ namespace vox_nav_misc
         float width;
         float length;
         float height;
-        float orientation;
+        float roll;
+        float pitch;
+        float yaw;
     };
 
     struct Semantic
