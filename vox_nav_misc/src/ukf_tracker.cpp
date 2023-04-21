@@ -164,7 +164,7 @@ void UKFTracker::detectionsCallback(
 
     auto tracks = publishTracks(object_array->header);
 
-    publishTrackVisuals(*object_array);
+    publishTrackVisuals(tracks);
 }
 
 void UKFTracker::initTrack(const vox_nav_msgs::msg::Object &obj)
