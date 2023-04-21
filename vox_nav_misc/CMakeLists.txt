@@ -11,6 +11,7 @@ find_package(rclcpp REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(vision_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -39,6 +40,7 @@ set(dependencies
         sensor_msgs
         geometry_msgs
         nav_msgs
+        vision_msgs
         rclcpp
         tf2
         tf2_ros

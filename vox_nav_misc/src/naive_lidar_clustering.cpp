@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "vox_nav_misc/naive_lidar_clustering.hpp"
+#include <geometry_msgs/msg/transform_stamped.hpp>
 
 using namespace vox_nav_misc;
 
@@ -119,11 +120,11 @@ NaiveLIDARClustering::~NaiveLIDARClustering()
 void NaiveLIDARClustering::cloudCallback(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
 {
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZRGB>());
+  pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZI>());
   pcl::fromROSMsg(*cloud, *pcl_curr);
 
   // Crop the cloud
-  pcl_curr = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(
+  pcl_curr = vox_nav_utilities::cropBox<pcl::PointXYZI>(
       pcl_curr,
       Eigen::Vector4f(
           -clustering_params_.x_bound,
@@ -134,22 +135,36 @@ void NaiveLIDARClustering::cloudCallback(
           clustering_params_.y_bound,
           clustering_params_.z_bound, 1));
 
+  // Grab the latest cloud -> map transform and transform the cloud
+  geometry_msgs::msg::TransformStamped t;
+  try
+  {
+    t = buffer_->lookupTransform(
+        "map", cloud->header.frame_id, tf2::TimePointZero);
+  }
+  catch (const tf2::TransformException &ex)
+  {
+    RCLCPP_WARN(
+        this->get_logger(), "Could not transform %s to map: %s",
+        cloud->header.frame_id.c_str(), ex.what());
+    return;
+  }
+
+  pcl_ros::transformPointCloud(*pcl_curr, *pcl_curr, t);
+
   // Downsample the cloud
-  pcl_curr = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
+  pcl_curr = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZI>(
       pcl_curr,
       clustering_params_.downsample_voxel_size);
 
   // Remove ground plane
-  pcl_curr = vox_nav_utilities::segmentSurfacePlane<pcl::PointXYZRGB>(
+  pcl_curr = vox_nav_utilities::segmentSurfacePlane<pcl::PointXYZI>(
       pcl_curr,
       clustering_params_.remove_ground_plane_thres,
       true);
 
-  // Transform The cloud to map frame
-  pcl_ros::transformPointCloud("map", *pcl_curr, *pcl_curr, *buffer_);
-
   // Cluster the cloud with euclidean clustering
-  auto clusters = vox_nav_utilities::euclideanClustering<pcl::PointXYZRGB>(
+  auto clusters = vox_nav_utilities::euclideanClustering<pcl::PointXYZI>(
       pcl_curr,
       clustering_params_.clustering_min_points,
       clustering_params_.clustering_max_points,
@@ -183,7 +198,7 @@ void NaiveLIDARClustering::cloudCallback(
     }
 
     // Get ROS msg from PCL point cloud
-    pcl::toROSMsg(*cluster, object.cluster);
+    pcl::toROSMsg(*cluster_pcl, object.cluster);
     object.cluster.header.frame_id = "map";
     object.cluster.header.stamp = cloud->header.stamp;
 

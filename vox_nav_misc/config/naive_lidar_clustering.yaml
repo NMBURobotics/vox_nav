@@ -1,5 +1,6 @@
 naive_lidar_clustering_node:
   ros__parameters:
+    use_sim_time: true
     clustering:
       x_bound: 15.0
       y_bound: 15.0

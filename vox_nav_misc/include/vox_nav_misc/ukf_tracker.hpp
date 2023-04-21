@@ -37,6 +37,8 @@ Credits to author: Simon Appel, https://github.com/appinho
 #include "vox_nav_utilities/tf_helpers.hpp"
 #include "vox_nav_msgs/msg/object.hpp"
 #include "vox_nav_msgs/msg/object_array.hpp"
+#include "vision_msgs/msg/detection3_d_array.hpp"
+#include "vision_msgs/msg/detection3_d.hpp"
 
 #include <queue>
 #include <vector>
@@ -116,6 +118,7 @@ namespace vox_nav_misc
         int g;
         int b;
         float prob_existence;
+        sensor_msgs::msg::PointCloud2 cluster;
     };
 
     struct VizObject
@@ -156,9 +159,16 @@ namespace vox_nav_misc
         void detectionsCallback(
             const vox_nav_msgs::msg::ObjectArray::ConstSharedPtr detections);
 
+        vox_nav_msgs::msg::ObjectArray publishTracks(const std_msgs::msg::Header &header);
+
+        void publishTrackVisuals(const vox_nav_msgs::msg::ObjectArray &tracks);
+
     private:
         rclcpp::Publisher<vox_nav_msgs::msg::ObjectArray>::SharedPtr tracks_pub_;
         rclcpp::Subscription<vox_nav_msgs::msg::ObjectArray>::SharedPtr detections_sub_;
+
+        rclcpp::Publisher<vision_msgs::msg::Detection3DArray>::SharedPtr tracks_vision_pub_;
+        rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr tracks_cluster_pub_;
 
         rclcpp::Time last_time_stamp_;
         rclcpp::Time dynamic_obejct_last_time_stamp_;
@@ -177,7 +187,7 @@ namespace vox_nav_misc
         std::vector<Track> tracks_;
 
         // Prediction
-        void publishTracks(const std_msgs::msg::Header &header);
+
         void Prediction(const double delta_t);
         void Update(const vox_nav_msgs::msg::ObjectArray &detected_objects);
         void TrackManagement(const vox_nav_msgs::msg::ObjectArray &detected_objects);

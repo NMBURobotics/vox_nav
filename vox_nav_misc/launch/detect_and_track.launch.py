@@ -33,7 +33,7 @@ def generate_launch_description():
         # prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no'],
         # remappings=[('points', '/velodyne_points')],
         remappings=[
-            ("points", "/ouster/points"),
+            ("points", "/dobbie/sensing/lidar/top/pointcloud_raw"),
             ("detections", "/vox_nav/naive_lidar_clustering/detections"),
         ],
         parameters=[detector_params],
@@ -46,15 +46,16 @@ def generate_launch_description():
         output="screen",
         remappings=[
             ("detections", "/vox_nav/naive_lidar_clustering/detections"),
-            ("tracks", "/vox_nav/naive_lidar_tracking/tracks"),
+            ("tracks", "/vox_nav/ukf_tracker/tracks"),
         ],
         parameters=[tracker_params],
     )
 
     ld = LaunchDescription()
     ld.add_action(decleare_detector_params)
-    ld.add_action(detection_node)
     ld.add_action(decleare_tracker_params)
+
+    ld.add_action(detection_node)
     ld.add_action(tracking_node)
 
     return ld

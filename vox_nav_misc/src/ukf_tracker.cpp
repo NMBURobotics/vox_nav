@@ -32,6 +32,12 @@ UKFTracker::UKFTracker()
         "detections", rclcpp::SystemDefaultsQoS(),
         std::bind(&UKFTracker::detectionsCallback, this, std::placeholders::_1));
 
+    tracks_vision_pub_ = this->create_publisher<vision_msgs::msg::Detection3DArray>(
+        "tracks_vision", rclcpp::SystemDefaultsQoS());
+
+    tracks_cluster_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
+        "tracks_cluster", rclcpp::SystemDefaultsQoS());
+
     // Define parameters
     declare_parameter("data_association.ped.dist.position", params_.da_ped_dist_pos);
     declare_parameter("data_association.ped.dist.form", params_.da_ped_dist_form);
@@ -156,7 +162,9 @@ void UKFTracker::detectionsCallback(
     last_time_stamp_ = time_stamp;
     time_frame_++;
 
-    publishTracks(object_array->header);
+    auto tracks = publishTracks(object_array->header);
+
+    publishTrackVisuals(*object_array);
 }
 
 void UKFTracker::initTrack(const vox_nav_msgs::msg::Object &obj)
@@ -219,6 +227,8 @@ void UKFTracker::initTrack(const vox_nav_msgs::msg::Object &obj)
             obj.pose.position.x,
             obj.pose.position.y,
             obj.pose.position.z));
+
+    track.cluster = obj.cluster;
 
     // Push back to track list
     tracks_.push_back(track);
@@ -647,6 +657,8 @@ void UKFTracker::Update(const vox_nav_msgs::msg::ObjectArray &detected_objects)
             track.geo.orientation = yaw;
             track.sta.z = detected_objects.objects[da_tracks_[i]].pose.position.z;
 
+            track.cluster = detected_objects.objects[da_tracks_[i]].cluster;
+
             track.hist.historic_positions.push_back(
                 Eigen::Vector3f(
                     detected_objects.objects[da_tracks_[i]].pose.position.x,
@@ -716,7 +728,7 @@ void UKFTracker::TrackManagement(
     }
 }
 
-void UKFTracker::publishTracks(const std_msgs::msg::Header &header)
+vox_nav_msgs::msg::ObjectArray UKFTracker::publishTracks(const std_msgs::msg::Header &header)
 {
     // Create track message
     vox_nav_msgs::msg::ObjectArray track_list;
@@ -728,7 +740,6 @@ void UKFTracker::publishTracks(const std_msgs::msg::Header &header)
     // Loop over all tracks
     for (int i = 0; i < tracks_.size(); ++i)
     {
-
         // Grab track
         Track &track = tracks_[i];
 
@@ -752,17 +763,42 @@ void UKFTracker::publishTracks(const std_msgs::msg::Header &header)
         track_msg.classification_probability = track.sem.confidence;
         track_msg.is_dynamic = false;
         track_msg.detection_level = vox_nav_msgs::msg::Object::OBJECT_TRACKED;
+        track_msg.cluster = track.cluster;
 
         track_list.objects.push_back(track_msg);
     }
 
     // Print
     RCLCPP_INFO(
-        get_logger(), "Publishing Tracking [%d]: # Tracks [%d]", time_frame_,
+        get_logger(), "Publishing [%d] Tracks: # Tracks [%d]", time_frame_,
         int(tracks_.size()));
 
     // Publish
     tracks_pub_->publish(track_list);
+
+    return track_list;
+}
+
+void UKFTracker::publishTrackVisuals(const vox_nav_msgs::msg::ObjectArray &tracks)
+{
+    vision_msgs::msg::Detection3DArray detection_array;
+    vox_nav_utilities::voxnavObjects2VisionObjects(tracks, detection_array);
+    detection_array.header = tracks.header;
+    tracks_vision_pub_->publish(detection_array);
+
+    // concatenate the clusters into a single pointcloud message for visualization
+    sensor_msgs::msg::PointCloud2 cloud;
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_ptr(new pcl::PointCloud<pcl::PointXYZ>);
+
+    for (int i = 0; i < tracks.objects.size(); ++i)
+    {
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_i(new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::fromROSMsg(tracks.objects[i].cluster, *cloud_i);
+        *cloud_ptr += *cloud_i;
+    }
+    pcl::toROSMsg(*cloud_ptr, cloud);
+    cloud.header = tracks.header;
+    tracks_cluster_pub_->publish(cloud);
 }
 
 int main(int argc, char const *argv[])

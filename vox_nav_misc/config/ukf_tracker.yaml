@@ -1,5 +1,6 @@
 ukf_tracker_node:
   ros__parameters:
+    use_sim_time: true
     data_association:
       ped:
         dist:

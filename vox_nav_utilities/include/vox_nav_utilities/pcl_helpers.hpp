@@ -60,7 +60,11 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "vox_nav_msgs/msg/object.hpp"
+#include "vox_nav_msgs/msg/object_array.hpp"
 #include "geometry_msgs/msg/point.hpp"
+#include "vision_msgs/msg/detection3_d_array.hpp"
+#include "vision_msgs/msg/detection3_d.hpp"
+#include "vision_msgs/msg/object_hypothesis_with_pose.hpp"
 
 namespace vox_nav_utilities
 {
@@ -770,6 +774,10 @@ namespace vox_nav_utilities
   void fitBoxtoPointCloud(
       const pcl::PointCloud<pcl::PointXYZ>::Ptr input,
       vox_nav_msgs::msg::Object &output);
+
+  void voxnavObjects2VisionObjects(
+      const vox_nav_msgs::msg::ObjectArray &input,
+      vision_msgs::msg::Detection3DArray &output);
 
 } // namespace vox_nav_utilities
 
