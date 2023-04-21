@@ -171,6 +171,7 @@ namespace vox_nav_misc
 
         rclcpp::Publisher<vision_msgs::msg::Detection3DArray>::SharedPtr tracks_vision_pub_;
         rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr tracks_cluster_pub_;
+        rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr tracks_info_pub_;
 
         rclcpp::Time last_time_stamp_;
         rclcpp::Time dynamic_obejct_last_time_stamp_;

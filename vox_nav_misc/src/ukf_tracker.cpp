@@ -38,6 +38,9 @@ UKFTracker::UKFTracker()
     tracks_cluster_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
         "tracks_cluster", rclcpp::SystemDefaultsQoS());
 
+    tracks_info_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+        "tracks_info", rclcpp::SystemDefaultsQoS());
+
     // Define parameters
     declare_parameter("data_association.ped.dist.position", params_.da_ped_dist_pos);
     declare_parameter("data_association.ped.dist.form", params_.da_ped_dist_form);
@@ -814,6 +817,95 @@ void UKFTracker::publishTrackVisuals(const vox_nav_msgs::msg::ObjectArray &track
     pcl::toROSMsg(*cloud_ptr, cloud);
     cloud.header = tracks.header;
     tracks_cluster_pub_->publish(cloud);
+
+    // Publish info such as track id, track age, track velocity,
+    visualization_msgs::msg::MarkerArray marker_array;
+    for (int i = 0; i < tracks.objects.size(); ++i)
+    {
+        visualization_msgs::msg::Marker marker;
+        marker.header = tracks.header;
+        marker.ns = "tracks_info";
+        marker.id = tracks.objects[i].id;
+        marker.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+        marker.action = visualization_msgs::msg::Marker::ADD;
+        marker.lifetime = rclcpp::Duration::from_seconds(0.1);
+        marker.pose.position.x = tracks.objects[i].pose.position.x;
+        marker.pose.position.y = tracks.objects[i].pose.position.y;
+        marker.pose.position.z = tracks.objects[i].pose.position.z + 2.0;
+        marker.pose.orientation = tracks.objects[i].pose.orientation;
+        marker.scale.z = 0.5;
+        marker.color.a = 1.0;
+        marker.color.r = 1.0;
+        marker.color.g = 1.0;
+        marker.color.b = 1.0;
+        marker.text = "\n ID: " + std::to_string(tracks.objects[i].id) +
+                      "\n Vel: " + std::to_string(tracks_[i].sta.x[2]) +
+                      "\n Yaw: " + std::to_string(tracks_[i].sta.x[3]) +
+                      "\n Yaw Rate: " + std::to_string(tracks_[i].sta.x[4]);
+        marker_array.markers.push_back(marker);
+
+        // Draw an arrow for the velocity and heading
+        visualization_msgs::msg::Marker marker_vel;
+        marker_vel.header = tracks.header;
+        marker_vel.ns = "tracks_heading_arrow";
+        marker_vel.id = tracks.objects[i].id;
+        marker_vel.type = visualization_msgs::msg::Marker::ARROW;
+        marker_vel.action = visualization_msgs::msg::Marker::ADD;
+        marker_vel.lifetime = rclcpp::Duration::from_seconds(0.1);
+        marker_vel.pose.position.x = tracks.objects[i].pose.position.x;
+        marker_vel.pose.position.y = tracks.objects[i].pose.position.y;
+        marker_vel.pose.position.z = tracks.objects[i].pose.position.z;
+        // Rotate the arrow to point in the direction of the heading
+        tf2::Quaternion q;
+        q.setRPY(0.0, 0.0, tracks_[i].sta.x[3]);
+        marker_vel.pose.orientation = tf2::toMsg(q);
+        marker_vel.scale.x = tracks_[i].sta.x[2];
+        marker_vel.scale.y = 0.2;
+        marker_vel.scale.z = 0.2;
+        marker_vel.color.a = 1.0;
+        marker_vel.color.r = 1.0;
+        marker_array.markers.push_back(marker_vel);
+
+        // Draw a polynimial for the track
+        visualization_msgs::msg::Marker marker_poly;
+        marker_poly.header = tracks.header;
+        marker_poly.ns = "tracks_polynomial_trajectory";
+        marker_poly.id = tracks.objects[i].id;
+        marker_poly.type = visualization_msgs::msg::Marker::LINE_STRIP;
+        marker_poly.action = visualization_msgs::msg::Marker::ADD;
+        marker_poly.lifetime = rclcpp::Duration::from_seconds(0.1);
+        marker_poly.scale.x = 0.1;
+
+        // Polynomially project the track forward in time for 3 seconds
+        double max_length = 3.0;
+        double dt = 0.05;
+        double initial_yaw = tracks_[i].sta.x[3];
+        for (double t = 0.0; t < max_length; t += dt)
+        {
+            double x = tracks_[i].sta.x[0] + tracks_[i].sta.x[2] * cos(initial_yaw) * t;
+            double y = tracks_[i].sta.x[1] + tracks_[i].sta.x[2] * sin(initial_yaw) * t;
+            double z = tracks.objects[i].pose.position.z;
+
+            // Update the yaw
+            initial_yaw += tracks_[i].sta.x[4] * dt;
+
+            geometry_msgs::msg::Point point;
+            point.x = x;
+            point.y = y;
+            point.z = z;
+            marker_poly.points.push_back(point);
+
+            // push red colors
+            std_msgs::msg::ColorRGBA color;
+            color.a = 1.0;
+            color.r = 1.0;
+            color.g = 0.0;
+            color.b = 0.0;
+            marker_poly.colors.push_back(color);
+        }
+        marker_array.markers.push_back(marker_poly);
+    }
+    tracks_info_pub_->publish(marker_array);
 }
 
 int main(int argc, char const *argv[])
