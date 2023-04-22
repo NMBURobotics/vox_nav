@@ -25,7 +25,7 @@ ukf_tracker_node:
       aging:
         bad: 20
       occlusion_factor: 2.0
-      min_dist_between_tracks: 0.3
+      min_dist_between_tracks: 0.5
     track:
       P_init:
         x: 1.0

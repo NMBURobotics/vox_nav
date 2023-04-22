@@ -403,8 +403,8 @@ void UKFTracker::GlobalNearestNeighbor(
             RCLCPP_WARN(get_logger(), "Wrong semantic for track [%d]", tracks_[i].id);
         }*/
         // For now treat every obstacle with pedestrian dynamics
-        gate = params_.da_ped_dist_pos;
-        box_gate = params_.da_ped_dist_form;
+        gate = params_.da_car_dist_pos;
+        box_gate = params_.da_car_dist_form;
 
         // Loop through detected objects
         for (int j = 0; j < detected_objects.objects.size(); ++j)
@@ -822,6 +822,14 @@ void UKFTracker::publishTrackVisuals(const vox_nav_msgs::msg::ObjectArray &track
     visualization_msgs::msg::MarkerArray marker_array;
     for (int i = 0; i < tracks.objects.size(); ++i)
     {
+
+        // If the track age is good enough then continue
+        // After this track is 20 FPS old , publish the info
+        if (tracks_.at(i).hist.good_age < 20)
+        {
+            continue;
+        }
+
         visualization_msgs::msg::Marker marker;
         marker.header = tracks.header;
         marker.ns = "tracks_info";
@@ -876,8 +884,8 @@ void UKFTracker::publishTrackVisuals(const vox_nav_msgs::msg::ObjectArray &track
         marker_poly.lifetime = rclcpp::Duration::from_seconds(0.1);
         marker_poly.scale.x = 0.1;
 
-        // Polynomially project the track forward in time for 3 seconds
-        double max_length = 3.0;
+        // Polynomially project the track forward in time for 2 seconds
+        double max_length = 2.0;
         double dt = 0.05;
         double initial_yaw = tracks_[i].sta.x[3];
         for (double t = 0.0; t < max_length; t += dt)

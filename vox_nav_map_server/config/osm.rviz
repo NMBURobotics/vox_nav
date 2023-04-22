@@ -12,6 +12,7 @@ Panels:
         - /Image1/Topic1
         - /Detection3DArray1/Status1
         - /TrackedClusterCloud1/Topic1
+        - /TrackInfo1/Namespaces1
       Splitter Ratio: 0.43666666746139526
     Tree Height: 582
   - Class: rviz_common/Selection
@@ -56,8 +57,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 15.639580726623535
-        Min Value: -2.253082752227783
+        Max Value: 20.799497604370117
+        Min Value: -2.9298605918884277
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -180,8 +181,6 @@ Visualization Manager:
           Value: true
         map:
           Value: true
-        odom:
-          Value: true
         static_map:
           Value: true
         utm:
@@ -194,14 +193,6 @@ Visualization Manager:
       Tree:
         utm:
           map:
-            odom:
-              base_link:
-                gps_link:
-                  {}
-                imu_link:
-                  {}
-                lidar_link:
-                  {}
             static_map:
               {}
       Update Interval: 0
@@ -450,7 +441,7 @@ Visualization Manager:
       Line Width: 0.05000000074505806
       Name: Detection3DArray
       Namespaces:
-        score: true
+        {}
       Only Edge: true
       Show Score: true
       Topic:
@@ -475,9 +466,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 81
+      Max Intensity: 88
       Min Color: 0; 0; 0
-      Min Intensity: 3
+      Min Intensity: 23
       Name: TrackedClusterCloud
       Position Transformer: XYZ
       Selectable: true
@@ -498,7 +489,7 @@ Visualization Manager:
       Enabled: true
       Name: TrackInfo
       Namespaces:
-        tracks: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -552,25 +543,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 45.33772659301758
+      Distance: 41.948974609375
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 2.5331602096557617
-        Y: -2.3326048851013184
-        Z: -0.00017535143706481904
+        X: 6.016147136688232
+        Y: 5.22873592376709
+        Z: -0.00016964359383564442
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9547963738441467
+      Pitch: 0.6797964572906494
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 0.5854829549789429
+      Yaw: 6.2664008140563965
     Saved: ~
 Window Geometry:
   Displays:
