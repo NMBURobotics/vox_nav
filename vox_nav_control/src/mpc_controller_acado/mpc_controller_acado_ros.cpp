@@ -412,9 +412,9 @@ namespace vox_nav_control
           (x - center.x()) * std::sin(i.heading) - (y - center.y()) * std::cos(i.heading),
           2) / std::pow(b, 2) = 1;
         */
-        Eigen::Vector2f center(i.world_pose.point.x, i.world_pose.point.y);
-        double a = i.length;
-        double b = i.width;
+        Eigen::Vector2f center(i.pose.position.x, i.pose.position.y);
+        double a = i.shape.dimensions[0];
+        double b = i.shape.dimensions[1];
         vox_nav_control::common::Ellipsoid e;
         e.heading = i.heading;
         e.is_dynamic = i.is_dynamic;
@@ -527,10 +527,10 @@ namespace vox_nav_control
           int k_index = (i * ACADO_NOD) + (4 * o + 1);
           int a_index = (i * ACADO_NOD) + (4 * o + 2);
           int b_index = (i * ACADO_NOD) + (4 * o + 3);
-          acadoVariables.od[h_index] = obstacle_tracks.objects[o].world_pose.point.x;
-          acadoVariables.od[k_index] = obstacle_tracks.objects[o].world_pose.point.y;
-          acadoVariables.od[a_index] = obstacle_tracks.objects[o].length;
-          acadoVariables.od[b_index] = obstacle_tracks.objects[o].width;
+          acadoVariables.od[h_index] = obstacle_tracks.objects[o].pose.position.x;
+          acadoVariables.od[k_index] = obstacle_tracks.objects[o].pose.position.y;
+          acadoVariables.od[a_index] = obstacle_tracks.objects[o].shape.dimensions[0];
+          acadoVariables.od[b_index] = obstacle_tracks.objects[o].shape.dimensions[1];
         }
       }
 

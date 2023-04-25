@@ -259,14 +259,14 @@ namespace vox_nav_control
           curr_robot_pose.pose.position.z);
 
         Eigen::Vector3f obstacle_center_vec(
-          i.world_pose.point.x,
-          i.world_pose.point.y,
-          i.world_pose.point.z);
+          i.pose.position.x,
+          i.pose.position.y,
+          i.pose.position.z);
 
         Eigen::Vector3f obstacle_head_vec(
-          i.world_pose.point.x + i.length / 2.0,
-          i.world_pose.point.y,
-          i.world_pose.point.z);
+          i.pose.position.x + i.shape.dimensions[0] / 2.0,
+          i.pose.position.y,
+          i.pose.position.z);
 
         float heading_to_robot_angle =
           std::acos(
@@ -286,9 +286,9 @@ namespace vox_nav_control
           (x - center.x()) * std::sin(i.heading) - (y - center.y()) * std::cos(i.heading),
           2) / std::pow(b, 2) = 1;
         */
-        Eigen::Vector2f center(i.world_pose.point.x, i.world_pose.point.y);
-        double a = i.length;
-        double b = i.width;
+        Eigen::Vector2f center(i.pose.position.x, i.pose.position.y);
+        double a = i.shape.dimensions[0];
+        double b = i.shape.dimensions[1];
         vox_nav_control::common::Ellipsoid e;
         e.heading = i.heading;
         e.is_dynamic = i.is_dynamic;

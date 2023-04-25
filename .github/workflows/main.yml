@@ -71,4 +71,4 @@ jobs:
                   source build/ACADO/acado_env.sh
                   source install/setup.bash 
                   colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON -DWITH_IPOPT=true --packages-select vox_nav_control; \
-              
+                  # colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=release -DACADOS_WITH_QPOASES=on -DACADO_CODE_IS_READY=on -DWITH_IPOPT=true -DTENSORRT_ROOT=/home/atas/downloads/tensorrt-8.4.1.5 -DHUMBLE_ROS=humble --packages-skip-regex archive --packages-skip vox_nav_control

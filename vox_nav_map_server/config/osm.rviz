@@ -57,8 +57,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 20.799497604370117
-        Min Value: -2.9298605918884277
+        Max Value: 20.369342803955078
+        Min Value: -2.7226195335388184
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -181,6 +181,8 @@ Visualization Manager:
           Value: true
         map:
           Value: true
+        odom:
+          Value: true
         static_map:
           Value: true
         utm:
@@ -193,6 +195,14 @@ Visualization Manager:
       Tree:
         utm:
           map:
+            odom:
+              base_link:
+                gps_link:
+                  {}
+                imu_link:
+                  {}
+                lidar_link:
+                  {}
             static_map:
               {}
       Update Interval: 0
@@ -497,6 +507,40 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /tracks_info
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: label
+      Class: rviz_default_plugins/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: Intensity
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 45
+      Min Color: 0; 0; 0
+      Min Intensity: 1
+      Name: SupervoxelCloud
+      Position Transformer: XYZ
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.10000000149011612
+      Style: Flat Squares
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Best Effort
+        Value: /supervoxel_clusters
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -543,25 +587,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 41.948974609375
+      Distance: 20.93646240234375
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 6.016147136688232
-        Y: 5.22873592376709
-        Z: -0.00016964359383564442
+        X: 6.549112319946289
+        Y: -4.331905364990234
+        Z: -0.00016713599325157702
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6797964572906494
+      Pitch: -0.03520382195711136
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 6.2664008140563965
+      Yaw: 3.041393280029297
     Saved: ~
 Window Geometry:
   Displays:

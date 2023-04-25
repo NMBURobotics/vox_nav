@@ -360,12 +360,12 @@ namespace vox_nav_control
 
         for (size_t i = 0; i < N - obstacle_tracks.objects.size(); i++) {
           vox_nav_msgs::msg::Object ghost_obstacle;
-          ghost_obstacle.world_pose.point.x = 20000.0;
-          ghost_obstacle.world_pose.point.y = 20000.0;
-          ghost_obstacle.world_pose.point.z = 20000.0;
-          ghost_obstacle.length = 0.1;
-          ghost_obstacle.width = 0.1;
-          ghost_obstacle.height = 0.1;
+          ghost_obstacle.pose.position.x = 20000.0;
+          ghost_obstacle.pose.position.y = 20000.0;
+          ghost_obstacle.pose.position.z = 20000.0;
+          ghost_obstacle.shape.dimensions[0] = 0.1;
+          ghost_obstacle.shape.dimensions[1] = 0.1;
+          ghost_obstacle.shape.dimensions[2] = 0.1;
           trimmed_N_obstacles->objects.push_back(ghost_obstacle);
         }
       } else {
@@ -375,7 +375,7 @@ namespace vox_nav_control
         std::vector<double> distances;
         for (auto && obs : obstacle_tracks.objects) {
           double dist = vox_nav_utilities::getEuclidianDistBetweenPoints(
-            obs.world_pose.point,
+            obs.pose.position,
             curr_robot_pose.pose.position);
           distances.push_back(dist);
         }

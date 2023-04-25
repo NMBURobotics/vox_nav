@@ -74,16 +74,26 @@ target_link_libraries(pcl_cpu_ndt ${PCL_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::Ope
 add_executable(ukf_tracker src/ukf_tracker.cpp)
 ament_target_dependencies(ukf_tracker ${dependencies})
 
+add_executable(traversablity_estimator src/traversablity_estimator.cpp)
+ament_target_dependencies(traversablity_estimator ${dependencies})
+target_link_libraries(traversablity_estimator ${PCL_LIBRARIES})
+
 cuda_add_executable(fast_gicp_client src/fast_gicp_client.cpp)
 ament_target_dependencies(fast_gicp_client ${dependencies})
 target_include_directories(fast_gicp_client PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${fast_gicp_INCLUDE_DIRS})
 target_link_directories(fast_gicp_client PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(fast_gicp_client ${PCL_LIBRARIES} ${CUDA_LIBRARIES} ${fast_gicp_LIBRARIES} OpenMP::OpenMP_CXX)
 
+add_executable(ouster_correction_node src/ouster_correction_node.cpp)
+ament_target_dependencies(ouster_correction_node ${dependencies})
+target_include_directories(ouster_correction_node PUBLIC ${PCL_INCLUDE_DIRS})
+
 install(TARGETS naive_lidar_clustering
                 pcl_cpu_ndt
                 ukf_tracker
+                traversablity_estimator
                 fast_gicp_client
+                ouster_correction_node
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
