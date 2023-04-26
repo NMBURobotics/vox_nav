@@ -1,5 +1,6 @@
 * [Home](/)
 * [Concepts of Vox_nav](CONCEPT_README.md)
+* [Getting started](GETTING_STARTED_README.md)
 * [Control](CONTROL_README.md)
 * [Map Server](MAP_README.md)
 * [Planners](PLANNER_README.md)
