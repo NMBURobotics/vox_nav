@@ -68,14 +68,13 @@ This will only build code generation node, then execute `acado_code_generation.l
 ```bash
 ros2 launch vox_nav_control acado_code_generation.launch.py
 ```
+Then place the generated codes under `vox_nav/vox_nav_control/include/vox_nav_control/mpc_controller_acado/auto_gen`. 
 
-Finally build the `MPCControllerAcadoROS` with;
+Finally build the `MPCControllerAcadoROS` with `-DACADO_CODE_IS_READY=ON`;
 
 ```bash
 colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DACADOS_WITH_QPOASES=ON -DACADO_CODE_IS_READY=ON
 ```
-
-Full list of paramters for controller plugins;
 
 YAML parameters for this plugin;
 
@@ -99,7 +98,7 @@ MPCControllerAcadoROS:
 ```
 
 ### `LyapunocController`
-A controller based on [Control Lyapunov Function](https://arxiv.org/pdf/2210.02837v1.pdf). Some details on this controller are linked in the publication. 
+A controller based on [Control Lyapunov Function](https://arxiv.org/pdf/2210.02837v1.pdf). Details on this controller are linked in the related publication. 
 
 YAML parameters for this plugin;
 ```yaml
