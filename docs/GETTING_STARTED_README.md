@@ -65,5 +65,5 @@ The above coammmdns will build and install them.
 > **_NOTE:_** Pay attention that we have disabled the build of archived_ packages and vox_nav_misc. The archived package are not in use and not needed but are kept for convenience.
 
 
-> **_NOTE:_**;  If for some reason you could not build vox_nav, a good place to seek for a solution is the github actions file that we have.
+> **_NOTE:_**  If for some reason you could not build vox_nav, a good place to seek for a solution is the github actions file that we have.
 After each pull-push github actions is setup to build the vox_nav on remote to ensure stability of builds. Find a recent successful build and see the commands in .github/workflows/main.yml. The commands should more or less look as in this page.

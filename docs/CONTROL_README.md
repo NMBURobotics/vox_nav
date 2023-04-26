@@ -1,4 +1,8 @@
 ## Control server
+
+This page introduces a more in-depth overview to controller server and plugins.
+
+
 This server brings up a plugin of your choice live. The controller server is implemnted with ROS2 actions. 
 Following parameters are configurable;
 
