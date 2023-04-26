@@ -5,6 +5,12 @@ A navigation framework for outdoor robotics in rough uneven terrains.
 
 ![foxy](https://github.com/jediofgever/vox_nav/workflows/foxy/badge.svg)  
 
+### Documenation
+
+Please note that the documentation is under Construction!, so some parts might be missing.
+
+https://nmburobotics.github.io/vox_nav/#/
+
 
 ### Videos 
 
