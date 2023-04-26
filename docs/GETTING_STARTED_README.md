@@ -18,7 +18,7 @@ sudo apt install -y pkg-config
 sudo apt install -y libmosquitto*
 ```
 
-* Create a ROS2 workspace and get source build dependencies;
+* Create a ROS2 workspace and get dependencies that require source build;
 
 ```bash
 mkdir -p ~/ros2_ws/src
