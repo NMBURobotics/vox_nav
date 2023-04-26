@@ -255,15 +255,14 @@ We currently have several behaviour tree nodes in `vox_nav_navigators` package. 
 - navigate_through_poses
 - navigate_thorugh_gps_poses
 
-All of this action servers navigate robot to given pose(s). If you see (botanbot_gui)[https://github.com/NMBURobotics/botanbot_sim/tree/main/botanbot_gui], we have created simple interface to send a single goal pose
+All of this action servers navigate robot to given pose(s). If you see [botanbot_gui](https://github.com/NMBURobotics/botanbot_sim/tree/main/botanbot_gui), we have created simple interface to send a single goal pose
 `navigate_to_pose` action server. 
 For other two, things are more manual. Since there are more than one pose to navigate, we use YAML file to specify the poses, the action clients in 
-(vox_nav_waypoint_nav_clients)[https://github.com/NMBURobotics/vox_nav/tree/foxy/vox_nav_waypoint_nav_clients] reads given poses and navigates robot through them. 
+[vox_nav_waypoint_nav_clients](https://github.com/NMBURobotics/vox_nav/tree/foxy/vox_nav_waypoint_nav_clients) reads given poses and navigates robot through them. 
 
 The gps poses are `[lat, lang]` format, while normal poses in map coordinate frames as `[x(meter), y(meter), yaw(radians)]`. 
 
-Watch a video of (Thorvald II)[https://sagarobotics.com/] robot navigating through gps poses with vox_nav `navigate_thorugh_gps_poses` below.
+Watch a video of [Thorvald II](https://sagarobotics.com/) robot navigating through gps poses with vox_nav `navigate_thorugh_gps_poses` in this [link](https://www.youtube.com/embed/fe--px9K61A).
 
- .. raw:: html
-
-  <iframe width="1046" height="294" src="https://www.youtube.com/embed/fe--px9K61A" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+ 
+ 
