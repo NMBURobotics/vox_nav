@@ -1,4 +1,5 @@
-Refer to bringup/params.yaml for configuring map server. 
+## Map Server
+
 
 ```yaml
 vox_nav_map_server_rclcpp_node:

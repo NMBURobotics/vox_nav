@@ -23,7 +23,7 @@ A project to develop/adapt a navigation system for outdoor robotics particularly
 * Map server manages pointclouds maps, a pointcloud map is required to have a datum(GPS coordinates and orientation), see the configuration section.
 
 
-This branch(foxy) is aiming for ROS2 Foxy distro. 
+This branch(Humble) is aiming for ROS2 Humble distro. 
 
 .. toctree::
    :hidden:
@@ -33,5 +33,3 @@ This branch(foxy) is aiming for ROS2 Foxy distro.
    running_project/index.rst
    openvslam/index.rst
    vox_nav_archived/index.rst
-
-

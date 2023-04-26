@@ -5,19 +5,9 @@ A navigation framework for outdoor robotics in rough uneven terrains.
 
 ![foxy](https://github.com/jediofgever/vox_nav/workflows/foxy/badge.svg)  
 
-
-### Getting Started
-
-### Control Server
-
-[Control](../vox_nav/vox_nav_control/README.md)
-
-
-
 ### Videos 
 
 * A video with a better resolution [Thorvald Navigation with vox_nav](https://www.youtube.com/watch?v=LIhPUCxiOAg) 
-
 
 ### Related Publications
 
