@@ -1,5 +1,5 @@
 
-### VOX_NAV Concepts;
+## VOX_NAV Concepts;
 
 This project's main use case is navigation of a mobile robot in rough outdoor environments. Although the framework allows to add navigation capablities for other robots since the envoirment 
 representation and planners are abstarct.

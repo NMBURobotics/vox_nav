@@ -46,7 +46,7 @@ If using vox_nav for scientific publications, please consider citing the followi
 ### Credits
 
 * A lot of architectural aspects of this project has been inspired by the [Navigation2.](https://github.com/ros-planning/navigation2).
-We greatly appreciate the efforts of [Navigation2.](https://github.com/ros-planning/navigation2) community for providing such high quality software design to Robotics community.
+We greatly appreciate the efforts of [Navigation2.](https://github.com/ros-planning/navigation2) community for providing such high quality software design to the Robotics community.
 
 * This systems relies on libraries e.g. [OMPL](https://github.com/ompl/ompl), [Casadi](https://github.com/casadi/casadi), [Octomap](https://github.com/OctoMap/octomap)
-  and many more, they cant all be listed here, we appriciate and recognize the efforts of people involved in development of these libraries.
+  and many more, they can't all be listed here, but we appreciate and recognize the efforts of people involved in the development of these libraries.
