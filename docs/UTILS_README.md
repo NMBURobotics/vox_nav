@@ -1,6 +1,8 @@
-# Utilities provoided
+## Utilities provoided
 
-## Converting PCD files to Octomap.
+Here is some random utilities hosted in `vox_nav_utilities` package.
+
+### 1. Converting PCD files to Octomap.
 
 Be sure to see the configuration file under config directory. 
 Give full path to pcd file you would like to convert. Also give a vaild path for output file. 
@@ -8,8 +10,6 @@ You can define transforms, e.g if your pcd file is in camera frmaes but you woul
 Octomap in another frame, then just provide the rigid body transform to cloud_transform secion below.
 
 Optionally you can remove some outliers from your cloud. Play with paraeters until your happy with your Octomap. 
-
-
 
 ```yaml
 pcl2octomap_converter_rclcpp_node:
@@ -41,7 +41,7 @@ ros2 launch vox_nav_utilities pcl2octomap_converter.launch.py
  ```
 Depending on the size of pointcloud map, this might take a while. Finally you should be able to see some meta information of created map on terminal output. 
 
-## Collecting GPS waypoints
+### 2. Collecting GPS waypoints
 
 It is possible to collect GPS waypoins. This node is very simple. 
 It basically subscribes to GPS and IMU topics and writes sensor data to terminal. 
@@ -51,7 +51,7 @@ You can then copy from terminal to another text file, for waypoint navigation. B
 ros2 launch vox_nav_utilities gps_collector.launch.py 
  ```
 
-## Executing a benchmarking for various path planners
+### 3. Executing a benchmarking for various path planners
 
 See the planner_benchmarking confif parameters. 
 Basically you select a number of OMPL planners, a state-space and some other trivial parameters. 
@@ -104,7 +104,7 @@ planner_benchmarking_rclcpp_node:
 ros2 launch vox_nav_utilities planner_benchmarking.launch.py 
  ```
 
-## Generating a octomap from a gazebo world
+### 4. Generating a octomap from a gazebo world
 
  Call the service with following to request a conversion from gazebo world to octomap
 ```bash
@@ -118,7 +118,7 @@ ros2 launch vox_nav_utilities planner_benchmarking.launch.py
 </plugin>
 ```
 
-## Generating a pointcloud map from a gazebo world
+### 5. Generating a pointcloud map from a gazebo world
 
 
 It is possible to generate label pointcloud data for training a network to assess traversability of a pointcloud map. This plugin is parelel to 

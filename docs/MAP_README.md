@@ -1,10 +1,8 @@
 ## Map Server
 
-
-
 > **_NOTE:_** Under Construction!
 
-## Point Cloud Map;
+## 1. Point Cloud Map Plugin;
 
 For an outdoor robot operating in uneven outdoor terrains, a 3D point cloud map serves as an effective tool for representing the environment. The objective of this plugin is to furnish a map that incorporates semantic data, such as whether a particular region of the environment is traversable or not. The plugin offers the map and semantic data to the planner or controller plugins through ROS servers and clients.
 
@@ -38,6 +36,6 @@ vox_nav_map_server_rclcpp_node:
 
 The point cloud map can be built with sevaral SLAM methods such as LIO-SAM or FAST-LIO. The point cloud map plugin regresses the costs to point cloud map, the resulting `traverability` map then can be used for navigation. See details of the approach in related [publication](https://arxiv.org/abs/2208.08202). 
 
-## OSM Point Cloud Map
+### 2. OSM Point Cloud Map Plugin
 
-Under Construction
+> **_NOTE:_** Under Construction!

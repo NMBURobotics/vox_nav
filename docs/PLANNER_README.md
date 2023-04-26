@@ -1,3 +1,10 @@
+## Planner Server
+
+> **_NOTE:_** Under Construction!
+
+The planner plugins are classified based on the state space in which the robot operates, such as SE2 or SE3. 
+Various parameters can be specified for the plugins, including the collision body dimensions of the robot, state boundaries, and actual planning algorithms. 
+
 Refer to bringup/params.yaml for configuring planner server. 
 
 ```yaml

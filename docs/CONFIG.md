@@ -1,7 +1,6 @@
 
 ## Configuration
 
-
 [Botanbot](https://github.com/jediofgever/botanbot_sim) is good reference to see how it is possible to configure vox_nav for your custom robot.
 
 botanbot is a basic Ackermann type robot with all essential sensors(GPS, LIDAR, CAMERA, IMU). 

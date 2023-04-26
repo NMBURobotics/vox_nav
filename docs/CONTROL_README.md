@@ -6,23 +6,13 @@ This page introduces a more in-depth overview to controller server and plugins.
 This server brings up a plugin of your choice live. The controller server is implemnted with ROS2 actions. 
 Following parameters are configurable;
 
-```yaml
-vox_nav_controller_server_rclcpp_node:
-   ros__parameters:
-      controller_plugin: "MPCControllerAcadoROS"                              # other options: MPCControllerCasadiROS, MPCControllerAcadoROS, LyapunocController
-      controller_frequency: 200.0                                             # acado is really fast(+1000.0Hz) casadi can deal up to just 20.0Hz maybe
-      goal_tolerance_distance: 0.2                                            # in meters, once smaller than this one controller tries to minimize orientation error
-      goal_tolerance_orientation: 0.1                                         # in radians, once smaller than this value,controller exits with success
-      transform_timeout: 0.01                                                 # seconds, this is used to regulate lookUpTransfrom calls from tf2
-      global_plan_look_ahead_distance: 3.5                                    # look this amount of meters from current robot pose to remaining global path
-```
 
 Available controller plugins; 
 * `MPCControllerCasadiROS`
 * `MPCControllerAcadoROS`
 * `LyapunocController`
 
-## `MPCControllerCasadiROS`
+### 1. `MPCControllerCasadiROS` Plugin
 
 Implemented with casadi non-linear optimization framework. 
 
@@ -49,7 +39,7 @@ MPCControllerCasadiROS:
    R: [10.0, 100.0]                                                     # weights on jerk and slew rate(steering angle derivative)
    debug_mode: False                                                    # enable/disable debug messages
 ```
-## `MPCControllerAcadoROS`
+### 2. `MPCControllerAcadoROS` Plugin
 
 If there has not been already, you need to generate the Acado code with; 
 
@@ -101,7 +91,7 @@ MPCControllerAcadoROS:
    debug_mode: False                                                    # enable/disable debug messages
 ```
 
-### `LyapunocController`
+### 3. `LyapunocController` Plugin
 A controller based on [Control Lyapunov Function](https://arxiv.org/pdf/2210.02837v1.pdf). Details on this controller are linked in the related publication. 
 
 YAML parameters for this plugin;
@@ -117,7 +107,7 @@ LyapunovControllerROS:
    lookahead_n_waypoints: 4                                             # Number of waypoints on the path to follow
 ```
 
-### Test
+### 4. Test
 Test the controller server by sending an all zeros path with ;
  
 ```bash
