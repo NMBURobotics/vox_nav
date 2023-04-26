@@ -1,12 +1,11 @@
 
 ## VOX_NAV Concepts;
 
-* This project's main use case is navigation of a mobile robot in rough outdoor environments. Although the framework allows to add navigation capablities for other robots since the envoirment 
-representation and planners are abstarct.
+* This project's main use case is navigation of a mobile robot in rough outdoor environments. Though the framework allows to add navigation capabilities for other robots since the envoirnment representation and planners are abstarct.
 
-* Planning of vox_nav heavily relies on OMPL, we provide SE2, Elevation, SE3 planners. Planners can also be asjusted for Ackermaan type robots with DUBINS AND REEDS-SHEEP.
+* Planning of vox_nav heavily relies on OMPL, we provide SE2, Elevation, SE3 planners among others. 
 
-* It is commonly accepted that there is no universal approach that can address the navigation needs of all robot platforms. A number of established architectures have been developed based on the publish-subscribe and action-client paradigms employed by Robot Operating System (ROS) middleware. Extending on these developments, vox_nav presents a novel robotic software architecture that enables seamless integration of different robotics software components, such as Planning, Control, and Perception. The presented architecture is designed to ensure the autonomous navigation of a mobile robot operating in uneven outdoor terrains, while also supporting indoor environments with appropriate customization.  
+* It is commonly accepted that there is no universal approach that can address the navigation needs of all robot platforms particularly in dynamic outdoors. A number of established architectures have been developed based on the publish-subscribe and action-client paradigms employed by Robot Operating System (ROS) middleware. Extending on these developments, vox_nav presents a novel robotic software architecture that enables seamless integration of different robotics software components, such as Planning, Control, and Perception. The presented architecture is designed to ensure the autonomous navigation of a mobile robot operating in uneven outdoor terrains, while also supporting indoor environments with appropriate customization.  
 
 
 ![Screenshot](pics/framework.png)
