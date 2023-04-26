@@ -1,8 +1,8 @@
 traversablity_estimator_node:
   ros__parameters:
     supervoxel_disable_transform: false
-    supervoxel_resolution: 0.1
-    supervoxel_seed_resolution: 1.0
+    supervoxel_resolution: 0.25
+    supervoxel_seed_resolution: 0.5
     supervoxel_color_importance: 0.0
     supervoxel_spatial_importance: 1.0
     supervoxel_normal_importance: 1.0

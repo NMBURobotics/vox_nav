@@ -7,6 +7,7 @@ ekf_local_filter_node:
     frequency: 30.0
     sensor_timeout: 0.1
     odom0: /dobbie/odom
+    oodm1: /lio_sam/mapping/odometry
     imu0: /dobbie/sensing/imu/tamagawa/imu_raw
     map_frame: map
     odom_frame: odom
@@ -21,6 +22,16 @@ ekf_local_filter_node:
     odom0_nodelay: true
     odom0_differential: true
     odom0_relative: false
+
+    odom1_config: [true,  true, true,
+                  false,  false, false,
+                  false,  false,  false,
+                  false,  false,  false,
+                  false,  false, false]
+    odom1_queue_size: 10
+    odom1_nodelay: true
+    odom1_differential: true
+    odom1_relative: false
 
     imu0_config: [false,  false,  false,  # X , Y , Z
                   true,   true,   true,  # roll , pitch ,yaw

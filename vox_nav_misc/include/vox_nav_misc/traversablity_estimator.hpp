@@ -24,10 +24,15 @@
 #include <pcl_ros/transforms.hpp>
 #include <pcl_conversions/pcl_conversions.h>
 
+#include <tf2/transform_datatypes.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
+
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
-
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
+#include <vox_nav_utilities/tf_helpers.hpp>
 
 namespace vox_nav_misc
 {
@@ -58,6 +63,10 @@ namespace vox_nav_misc
     float supervoxel_color_importance_;
     float supervoxel_spatial_importance_;
     float supervoxel_normal_importance_;
+
+    // tf buffers
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
     void fillSuperVoxelMarkersfromAdjacency(
       const std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> & supervoxel_clusters,

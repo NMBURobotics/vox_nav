@@ -26,7 +26,7 @@ def generate_launch_description():
         name="traversablity_estimator_node",
         output="screen",
         remappings=[
-            ("points", "/dobbie/sensing/lidar/top/pointcloud_raw"),
+            ("points", "/lio_sam/mapping/map_local"),
             ("segmenents", "/vox_nav/ukf_tracker/tracks"),
         ],
         parameters=[traversablity_estimator_params],

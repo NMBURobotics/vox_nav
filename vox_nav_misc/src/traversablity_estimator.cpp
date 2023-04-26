@@ -44,6 +44,10 @@ namespace vox_nav_misc
     this->get_parameter("supervoxel_spatial_importance", supervoxel_spatial_importance_);
     this->get_parameter("supervoxel_normal_importance", supervoxel_normal_importance_);
 
+    // setup TF buffer and listerner to read transforms
+    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
     RCLCPP_INFO(this->get_logger(), "Traversability Estimator Node is up and running!");
   }
 
@@ -58,11 +62,20 @@ namespace vox_nav_misc
     pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGBA>);
     pcl::fromROSMsg(*msg, *cloud);
 
-    cloud =
-      vox_nav_utilities::cropBox<pcl::PointXYZRGBA>(
-      cloud,
-      Eigen::Vector4f(-20.0, -20.0, -5.0, 1.0),
-      Eigen::Vector4f(20.0, 20.0, 5.0, 1.0));
+    geometry_msgs::msg::PoseStamped curr_robot_pose;
+    vox_nav_utilities::getCurrentPose(
+      curr_robot_pose, *tf_buffer_, "odom", "base_link", 0.1);
+    // Crop the cloud around the robot
+    Eigen::Vector4f min_pt;
+    min_pt[0] = curr_robot_pose.pose.position.x - 20.0;
+    min_pt[1] = curr_robot_pose.pose.position.y - 20.0;
+    min_pt[2] = curr_robot_pose.pose.position.z - 5.0;
+    Eigen::Vector4f max_pt;
+    max_pt[0] = curr_robot_pose.pose.position.x + 20.0;
+    max_pt[1] = curr_robot_pose.pose.position.y + 20.0;
+    max_pt[2] = curr_robot_pose.pose.position.z + 5.0;
+
+    cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGBA>(cloud, min_pt, max_pt);
 
     auto super = vox_nav_utilities::supervoxelizeCloud<pcl::PointXYZRGBA>(
       cloud,
