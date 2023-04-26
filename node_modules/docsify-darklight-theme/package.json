@@ -1,0 +1,67 @@
+{
+  "name": "docsify-darklight-theme",
+  "version": "3.2.0",
+  "description": "Enables dark and light mode for docsify sites with switch",
+  "main": "cli.js",
+  "scripts": {
+    "fixlint": "standard --fix",
+    "test": "standard",
+    "prebuild": "del-cli dist",
+    "build": "npm run build:css && npm run build:docsify-css && npm run build:js",
+    "build:js": "rollup docs/js/index.js -o dist/index.min.js --config rollup.config.js && rollup themeableDocs/js/main.js -o dist/docsify-themeable/main.min.js --config rollup.config.js && rollup themeableDocs/js/index.js -o dist/docsify-themeable/index.min.js --config rollup.config.js",
+    "build:css": "postcss docs/css/style.css -o dist/style.min.css --config postcss.config.js && postcss themeableDocs/css/index.css -o dist/docsify-themeable/style.min.css --config postcss.config.js",
+    "build:docsify-css": "postcss docs/css/docsify-style.css -o dist/docsify-style.min.css --config postcss.config.js",
+    "postbuild": "cpy docs/css/style.css starter/css/",
+    "postinstall": "cpy starter ../../documentation/ --dot"
+  },
+  "files": [
+    "dist",
+    "starter",
+    "icons"
+  ],
+  "keywords": [
+    "docsify",
+    "docsify-themeable",
+    "plugin",
+    "dark-mode",
+    "light-mode",
+    "theme",
+    "docsify-plugin",
+    "template",
+    "docsify-starter"
+  ],
+  "author": {
+    "name": "Boopathi Kumar",
+    "email": "boopathikumar018@gmail.com",
+    "url": "https://github.com/boopathikumar018"
+  },
+  "license": "MIT",
+  "standard": {
+    "ignore": [
+      "dist/*"
+    ],
+    "globals": [
+      "localStorage",
+      "document",
+      "cpy"
+    ]
+  },
+  "repository": "boopathikumar018/docsify-darklight-theme",
+  "homepage": "docsify-darklight-theme.boopathikumar.me",
+  "devDependencies": {
+    "autoprefixer": "^9.8.6",
+    "cpy-cli": "^3.1.1",
+    "cssnano": "^4.1.11",
+    "del-cli": "^3.0.1",
+    "postcss": "^7.0.35",
+    "postcss-cli": "^7.1.2",
+    "postcss-preset-env": "^6.7.0",
+    "rollup": "^1.31.1",
+    "rollup-plugin-terser": "^5.3.1",
+    "standard": "^14.3.4"
+  },
+  "dependencies": {
+    "cpy": "^8.1.2",
+    "cpy-cli": "^3.1.1"
+  }
+}
