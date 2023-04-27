@@ -1,7 +1,7 @@
 repositories:
   vox_nav:
     type: git
-    url: https://github.com/jediofgever/vox_nav.git
+    url: https://github.com/NMBURobotics/vox_nav.git
     version: humble
   #perception_pcl:
   #  type: git
@@ -10,7 +10,7 @@ repositories:
   casadi:
     type: git
     url: https://github.com/casadi/casadi.git
-    version: master  
+    version: main  
   ompl:
     type: git
     url: https://github.com/ompl/ompl.git
