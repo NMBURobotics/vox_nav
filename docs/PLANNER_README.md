@@ -6,6 +6,16 @@
 The planner plugins are classified based on the state space in which the robot operates, such as SE2 or SE3. 
 Various parameters can be specified for the plugins, including the collision body dimensions of the robot, state boundaries, and actual planning algorithms. 
 
+### 1. SE2Planner Plugin
+
+### 2. ElevationPlanner Plugin
+
+### 3. ElevationControlPlanner Plugin
+
+### 4. OptimalElevationPlanner Plugin
+
+### 5. PolyTunnelPlanner Plugin
+
 Refer to bringup/params.yaml for configuring planner server. 
 
 ```yaml
@@ -99,15 +109,7 @@ vox_nav_planner_server_rclcpp_node:
       extra_interpolation: 60
 ```
 
-### 1. SE2Planner Plugin
 
-### 2. ElevationPlanner Plugin
-
-### 3. ElevationControlPlanner Plugin
-
-### 4. OptimalElevationPlanner Plugin
-
-### 5. PolyTunnelPlanner Plugin
 
 ### 6. Test the planner
 
