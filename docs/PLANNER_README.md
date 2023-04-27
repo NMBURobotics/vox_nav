@@ -108,7 +108,6 @@ vox_nav_planner_server_rclcpp_node:
 
 ### 5. PolyTunnelPlanner Plugin
 
-
 ### 6. Test the planner
 
 By sending an all zeros goal with ;
