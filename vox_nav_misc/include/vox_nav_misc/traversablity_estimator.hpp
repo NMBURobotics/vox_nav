@@ -33,9 +33,39 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <vox_nav_utilities/pcl_helpers.hpp>
 #include <vox_nav_utilities/tf_helpers.hpp>
+#include <vox_nav_utilities/map_manager_helpers.hpp>
 
 namespace vox_nav_misc
 {
+  struct CostRegressionParams
+  {
+    double uniform_sample_radius;
+    double surfel_radius;
+    double max_allowed_tilt;
+    double max_allowed_point_deviation;
+    double max_allowed_energy_gap;
+    double node_elevation_distance;
+    double plane_fit_threshold;
+    double robot_mass;
+    double average_speed;
+    double max_color_range;
+    std::vector<double> cost_critic_weights;
+    CostRegressionParams()
+    : uniform_sample_radius(0.2),
+      surfel_radius(0.1),
+      max_allowed_tilt(10),
+      max_allowed_point_deviation(0.1),
+      max_allowed_energy_gap(0.1),
+      node_elevation_distance(1),
+      plane_fit_threshold(10),
+      robot_mass(0.1),
+      average_speed(0.1),
+      max_color_range(255.0),
+      cost_critic_weights({0.33, 0.33, 0.33})
+    {}
+  };
+
+
   class TraversabilityEstimator : public rclcpp::Node
   {
   public:
@@ -53,6 +83,7 @@ namespace vox_nav_misc
 
     // Visualize supervoxel graph
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr supervoxel_graph_publisher_;
+    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr traversable_cloud_publisher_;
 
     typedef std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> SuperVoxelClusters;
     SuperVoxelClusters supervoxel_clusters_;
@@ -67,6 +98,13 @@ namespace vox_nav_misc
     // tf buffers
     std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
     std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
+    //  see the struct, it is used to keep cost regression params orginzed
+    CostRegressionParams cost_params_;
+
+    void regressCosts(
+      const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+      const std_msgs::msg::Header & header);
 
     void fillSuperVoxelMarkersfromAdjacency(
       const std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> & supervoxel_clusters,

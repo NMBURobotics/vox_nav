@@ -616,7 +616,8 @@ namespace vox_nav_map_server
   {
     if (!map_configured_) {
       RCLCPP_INFO(
-        get_logger(), "Map has not been configured yet,  cannot handle GetTraversabilityMap request");
+        get_logger(),
+        "Map has not been configured yet,  cannot handle GetTraversabilityMap request");
       response->is_valid = false;
       return;
     }

@@ -6,3 +6,14 @@ traversablity_estimator_node:
     supervoxel_color_importance: 0.0
     supervoxel_spatial_importance: 1.0
     supervoxel_normal_importance: 1.0
+     # COST REGRESSION CRITICS AND PARAMS
+    uniform_sample_radius: 0.2
+    surfel_radius: 0.6                                                       # Works as resolution of cost regression onto map
+    max_allowed_tilt: 0.15                                                   # 1st Cost critic Any angle(radians) higher than this is marked as NON-traversable
+    max_allowed_point_deviation: 0.20                                        # 2nd Cost critic Point deviation from plane, this could be viewed as roughness of each cell 
+    max_allowed_energy_gap: 0.5                                              # 3rd Cost critic Max Energy in each cell, this is detemined by max height differnce between edge points of cell
+    node_elevation_distance: 1.2                                             # According to cell_radius, cell centers are sampled from original point cloud map, they are elevated from the original cloud
+    plane_fit_threshold: 0.1                                                 # when fitting a plane to each cell, a plane_fit_threshold is considered from plane fitting utility of PCL
+    robot_mass: 0.1                                                          # approximate robot mass considering cell_radius, this isnt so important
+    average_speed: 1.0                                                       # average robot speed(m/s) when calcuating kinetic energy m = 0.5 * (m * pow(v,2))
+    cost_critic_weights: [0.45, 0.45, 0.1]                                   # Give weight to each cost critic when calculating final cost, see above 3 Cost Critic descriptions
