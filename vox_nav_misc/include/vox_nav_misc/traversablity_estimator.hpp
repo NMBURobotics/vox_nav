@@ -102,7 +102,7 @@ namespace vox_nav_misc
     //  see the struct, it is used to keep cost regression params orginzed
     CostRegressionParams cost_params_;
 
-    void regressCosts(
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr  regressCosts(
       const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
       const std_msgs::msg::Header & header);
 

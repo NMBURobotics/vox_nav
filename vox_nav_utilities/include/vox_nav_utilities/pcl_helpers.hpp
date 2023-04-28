@@ -108,7 +108,7 @@ namespace vox_nav_utilities
    * @return Eigen::Vector3d
    */
   Eigen::Vector3d calculateMeanOfPointPositions(
-      pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud);
+    pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud);
 
   /**
    * @brief
@@ -118,8 +118,8 @@ namespace vox_nav_utilities
    * @return pcl::PointCloud<pcl::PointXYZRGB>::Ptr
    */
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformCloud(
-      pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud,
-      const Eigen::Affine3f &transformMatrix);
+    pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr inputCloud,
+    const Eigen::Affine3f & transformMatrix);
 
   /**
    * @brief
@@ -127,7 +127,7 @@ namespace vox_nav_utilities
    * @param filename
    * @return pcl::PointCloud<pcl::PointXYZRGB>::Ptr
    */
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr loadPointcloudFromPcd(const std::string &filename);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr loadPointcloudFromPcd(const std::string & filename);
 
   /**
    * @brief
@@ -136,8 +136,8 @@ namespace vox_nav_utilities
    * @return pcl::PointCloud<pcl::PointXYZRGB>::Ptr
    */
   pcl::PointCloud<pcl::PointXYZRGBL>::Ptr loadPointcloudFromPcd(
-      const std::string &filename,
-      bool label);
+    const std::string & filename,
+    bool label);
 
   /*!
    * Finds clusters in the input cloud and returns vector point clouds.
@@ -147,10 +147,10 @@ namespace vox_nav_utilities
    * @return vector of point clouds. Vector will be empty if no clusters are found.
    */
   std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> extractClusterCloudsFromPointcloud(
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud,
-      double tolerance = 0.1,
-      int min_cluster_size = 1,
-      int max_cluster_size = 5000);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud,
+    double tolerance = 0.1,
+    int min_cluster_size = 1,
+    int max_cluster_size = 5000);
 
   /**
    * @brief Get the Rigid Body Transform object
@@ -161,9 +161,9 @@ namespace vox_nav_utilities
    * @return Eigen::Affine3d
    */
   Eigen::Affine3d getRigidBodyTransform(
-      const Eigen::Vector3d &translation,
-      const Eigen::Vector3d &intrinsicRpy,
-      const rclcpp::Logger &node_logger);
+    const Eigen::Vector3d & translation,
+    const Eigen::Vector3d & intrinsicRpy,
+    const rclcpp::Logger & node_logger);
 
   /**
    * @brief Get the Rotation Matrix object
@@ -174,8 +174,8 @@ namespace vox_nav_utilities
    * @return Eigen::Matrix3d
    */
   Eigen::Matrix3d getRotationMatrix(
-      double angle, XYZ axis,
-      const rclcpp::Logger &node_logger);
+    double angle, XYZ axis,
+    const rclcpp::Logger & node_logger);
 
   /*!
    * Remove outliers from the point cloud. Function is based on
@@ -186,8 +186,8 @@ namespace vox_nav_utilities
    * @return Point cloud where outliers have been removed.
    */
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr removeOutliersFromInputCloud(
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int int_param, double double_param,
-      OutlierRemovalType outlier_removal_type);
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr inputCloud, int int_param, double double_param,
+    OutlierRemovalType outlier_removal_type);
 
   /*!
    * Remove outliers from the point cloud. Function is based on
@@ -198,8 +198,8 @@ namespace vox_nav_utilities
    * @return Point cloud where outliers have been removed.
    */
   pcl::PointCloud<pcl::PointXYZ>::Ptr removeOutliersFromInputCloud(
-      pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int int_param, double double_param,
-      OutlierRemovalType outlier_removal_type);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud, int int_param, double double_param,
+    OutlierRemovalType outlier_removal_type);
 
   /**
    * @brief
@@ -208,36 +208,30 @@ namespace vox_nav_utilities
    * @param header
    * @param clusters_array
    */
-  template <typename P>
+  template<typename P>
   void publishClustersCloud(
-      const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
-      const std_msgs::msg::Header header,
-      const typename std::vector<P> clusters_array)
+    const rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher,
+    const std_msgs::msg::Header header,
+    const typename std::vector<P> clusters_array)
   {
-    if (clusters_array.size() <= 0)
-    {
+    if (clusters_array.size() <= 0) {
       std::cout << "Publish empty clusters cloud. " << std::endl;
       sensor_msgs::msg::PointCloud2 msg_cloud;
       pcl::toROSMsg(*(new pcl::PointCloud<pcl::PointXYZRGB>), msg_cloud);
       msg_cloud.header = header;
       publisher->publish(msg_cloud);
       return;
-    }
-    else
-    {
+    } else {
       std::cout << "Publishing " << clusters_array.size() << " clusters in one cloud." << std::endl;
     }
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     // different clusters with different intensity
-    for (size_t cluster_idx = 0u; cluster_idx < clusters_array.size(); ++cluster_idx)
-    {
-      if (clusters_array[cluster_idx]->points.size() <= 0)
-      {
+    for (size_t cluster_idx = 0u; cluster_idx < clusters_array.size(); ++cluster_idx) {
+      if (clusters_array[cluster_idx]->points.size() <= 0) {
         std::cout << "An empty cluster " << cluster_idx << "." << std::endl;
         continue;
       }
-      for (size_t idx = 0u; idx < clusters_array[cluster_idx]->points.size(); ++idx)
-      {
+      for (size_t idx = 0u; idx < clusters_array[cluster_idx]->points.size(); ++idx) {
         pcl::PointXYZRGB point;
         auto color = getColorByIndexEig(static_cast<int>(cluster_idx % 16));
         point.x = clusters_array[cluster_idx]->points[idx].x;
@@ -250,8 +244,7 @@ namespace vox_nav_utilities
         cloud->points.push_back(point);
       }
     }
-    if (cloud->size())
-    {
+    if (cloud->size()) {
       sensor_msgs::msg::PointCloud2 msg_cloud;
       pcl::toROSMsg(*cloud, msg_cloud);
       msg_cloud.header = header;
@@ -259,10 +252,10 @@ namespace vox_nav_utilities
     }
   }
 
-  template <typename P, typename T>
+  template<typename P, typename T>
   P getNearstPoint(
-      const P &search_point,
-      const T &cloud)
+    const P & search_point,
+    const T & cloud)
   {
     P nearest_point;
     pcl::KdTreeFLANN<P> kdtree;
@@ -271,21 +264,19 @@ namespace vox_nav_utilities
     int K = 1;
     std::vector<int> pointIdxNKNSearch(K);
     std::vector<float> pointNKNSquaredDistance(K);
-    if (kdtree.nearestKSearch(search_point, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
-    {
-      for (std::size_t i = 0; i < pointIdxNKNSearch.size(); ++i)
-      {
+    if (kdtree.nearestKSearch(search_point, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0) {
+      for (std::size_t i = 0; i < pointIdxNKNSearch.size(); ++i) {
         nearest_point = cloud->points[pointIdxNKNSearch[0]];
       }
     }
     return nearest_point;
   }
 
-  template <typename P, typename T>
+  template<typename P, typename T>
   P getNearstRPoints(
-      const double radius,
-      const P &search_point,
-      const T &cloud)
+    const double radius,
+    const P & search_point,
+    const T & cloud)
   {
     // Find NN inliers in radius and select a random one
     P nearest_point;
@@ -295,8 +286,8 @@ namespace vox_nav_utilities
     std::vector<int> pointIdxNKNSearch;
     std::vector<float> pointNKNSquaredDistance;
     if (kdtree.radiusSearchT(
-            search_point, radius, pointIdxNKNSearch,
-            pointNKNSquaredDistance) > 0)
+        search_point, radius, pointIdxNKNSearch,
+        pointNKNSquaredDistance) > 0)
     {
       std::vector<int> out;
       size_t nelems = 1;
@@ -308,18 +299,18 @@ namespace vox_nav_utilities
         std::mt19937{std::random_device{} ()}
       );*/
       std::experimental::fundamentals_v2::sample(
-          pointIdxNKNSearch.begin(),
-          pointIdxNKNSearch.end(),
-          std::back_inserter(out),
-          nelems,
-          std::mt19937{std::random_device{}()});
+        pointIdxNKNSearch.begin(),
+        pointIdxNKNSearch.end(),
+        std::back_inserter(out),
+        nelems,
+        std::mt19937{std::random_device{}()});
       return cloud->points[out[0]];
     }
   }
 
-  template <typename P>
-  typename pcl::PointCloud<P>::Ptr downsampleInputCloud(
-      typename pcl::PointCloud<P>::Ptr inputCloud, double downsmaple_leaf_size)
+  template<typename P>
+  const typename pcl::PointCloud<P>::Ptr downsampleInputCloud(
+    typename pcl::PointCloud<P>::Ptr inputCloud, double downsmaple_leaf_size)
   {
     pcl::VoxelGrid<P> voxelGrid;
     voxelGrid.setInputCloud(inputCloud);
@@ -329,10 +320,10 @@ namespace vox_nav_utilities
     return downsampledCloud;
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr uniformlySampleCloud(
-      const typename pcl::PointCloud<P>::Ptr cloud,
-      const double radius)
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    const double radius)
   {
     typename pcl::PointCloud<P>::Ptr uniformly_sampled_cloud(new pcl::PointCloud<P>());
     pcl::UniformSampling<P> filter;
@@ -344,20 +335,19 @@ namespace vox_nav_utilities
     return uniformly_sampled_cloud;
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::SupervoxelClustering<P> supervoxelizeCloud(
-      const typename pcl::PointCloud<P>::Ptr cloud,
-      const bool disable_transform,
-      const double voxel_resolution,
-      const double seed_resolution,
-      const double color_importance,
-      const double spatial_importance,
-      const double normal_importance)
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    const bool disable_transform,
+    const double voxel_resolution,
+    const double seed_resolution,
+    const double color_importance,
+    const double spatial_importance,
+    const double normal_importance)
   {
     pcl::SupervoxelClustering<P> super(voxel_resolution, seed_resolution);
 
-    if (disable_transform)
-    {
+    if (disable_transform) {
       super.setUseSingleCameraTransform(false);
     }
     super.setInputCloud(cloud);
@@ -368,11 +358,11 @@ namespace vox_nav_utilities
     return super;
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr getSubCloudWithinRadius(
-      const typename pcl::PointCloud<P>::Ptr cloud,
-      const P &search_point,
-      const double radius)
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    const P & search_point,
+    const double radius)
   {
     typename pcl::PointCloud<P>::Ptr subcloud_within_radius(new pcl::PointCloud<P>());
     float resolution = 0.1;
@@ -385,28 +375,25 @@ namespace vox_nav_utilities
     std::vector<float> pointRadiusSquaredDistance;
 
     if (octree.radiusSearch(
-            search_point, radius, pointIdxRadiusSearch,
-            pointRadiusSquaredDistance) > 0)
+        search_point, radius, pointIdxRadiusSearch,
+        pointRadiusSquaredDistance) > 0)
     {
-      for (std::size_t i = 0; i < pointIdxRadiusSearch.size(); ++i)
-      {
+      for (std::size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
         subcloud_within_radius->points.push_back(cloud->points[pointIdxRadiusSearch[i]]);
       }
     }
     return subcloud_within_radius;
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr removeNans(
-      const typename pcl::PointCloud<P>::Ptr cloud)
+    const typename pcl::PointCloud<P>::Ptr cloud)
   {
     typename pcl::PointCloud<P>::Ptr nans_removed_cloud(
-        new pcl::PointCloud<P>());
+      new pcl::PointCloud<P>());
 
-    for (auto &&i : cloud->points)
-    {
-      if (pcl::isFinite<P>(i))
-      {
+    for (auto && i : cloud->points) {
+      if (pcl::isFinite<P>(i)) {
         nans_removed_cloud->points.push_back(i);
       }
     }
@@ -414,22 +401,22 @@ namespace vox_nav_utilities
     return nans_removed_cloud;
   }
 
-  template <typename P>
+  template<typename P>
   double PCLPointEuclideanDist(
-      const P &a,
-      const P &b)
+    const P & a,
+    const P & b)
   {
     double distance = std::sqrt(
-        std::pow(a.x - b.x, 2) +
-        std::pow(a.y - b.y, 2) +
-        std::pow(a.z - b.z, 2));
+      std::pow(a.x - b.x, 2) +
+      std::pow(a.y - b.y, 2) +
+      std::pow(a.z - b.z, 2));
     return distance;
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr segmentSurfacePlane(
-      const typename pcl::PointCloud<P>::Ptr cloud, double dist, bool set_negative,
-      int max_iter = 1000)
+    const typename pcl::PointCloud<P>::Ptr cloud, double dist, bool set_negative,
+    int max_iter = 1000)
   {
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
@@ -456,48 +443,45 @@ namespace vox_nav_utilities
     return filtered;
   }
 
-  template <typename KeyType, typename ValueType>
-  std::pair<KeyType, ValueType> getMax(const std::map<KeyType, ValueType> &x)
+  template<typename KeyType, typename ValueType>
+  std::pair<KeyType, ValueType> getMax(const std::map<KeyType, ValueType> & x)
   {
     using pairtype = std::pair<KeyType, ValueType>;
     return *std::max_element(
-        x.begin(), x.end(), [](const pairtype &p1, const pairtype &p2)
-        { return p1.second < p2.second; });
+      x.begin(), x.end(), [](const pairtype & p1, const pairtype & p2)
+      {return p1.second < p2.second;});
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr denoiseSegmentedCloud(
-      const typename pcl::PointCloud<P>::Ptr cloud, double radius,
-      double tolerated_divergence_rate, int min_num_neighbours)
+    const typename pcl::PointCloud<P>::Ptr cloud, double radius,
+    double tolerated_divergence_rate, int min_num_neighbours)
   {
     typename pcl::PointCloud<P>::Ptr denoised_cloud(new pcl::PointCloud<P>());
     typename pcl::KdTreeFLANN<P> kdtree;
 
     kdtree.setInputCloud(cloud);
 
-    for (size_t i = 0; i < cloud->points.size(); i++)
-    {
+    for (size_t i = 0; i < cloud->points.size(); i++) {
 
       P searchPoint = cloud->points[i];
       std::vector<int> pointIdxRadiusSearch;
       std::vector<float> pointRadiusSquaredDistance;
 
       if (kdtree.nearestKSearch(
-              searchPoint, min_num_neighbours, pointIdxRadiusSearch,
-              pointRadiusSquaredDistance) > 0)
+          searchPoint, min_num_neighbours, pointIdxRadiusSearch,
+          pointRadiusSquaredDistance) > 0)
       {
         int serach_point_key =
-            ((int)searchPoint.r) << 16 | ((int)searchPoint.g) << 8 | ((int)searchPoint.b);
+          ((int)searchPoint.r) << 16 | ((int)searchPoint.g) << 8 | ((int)searchPoint.b);
 
         typename pcl::PointCloud<P>::Ptr neighbours(new pcl::PointCloud<P>);
-        for (std::size_t j = 0; j < pointIdxRadiusSearch.size(); ++j)
-        {
+        for (std::size_t j = 0; j < pointIdxRadiusSearch.size(); ++j) {
           neighbours->points.push_back(cloud->points[pointIdxRadiusSearch[j]]);
         }
 
         std::vector<int> neighbour_labels;
-        for (std::size_t j = 0; j < neighbours->points.size(); ++j)
-        {
+        for (std::size_t j = 0; j < neighbours->points.size(); ++j) {
           int r = neighbours->points[j].r;
           int g = neighbours->points[j].g;
           int b = neighbours->points[j].b;
@@ -505,20 +489,15 @@ namespace vox_nav_utilities
           neighbour_labels.push_back(rgb);
         }
 
-        if (neighbour_labels.size() > 200)
-        {
+        if (neighbour_labels.size() > 200) {
           continue;
         }
 
         std::map<int, int> M;
-        for (int k = 0; k < neighbour_labels.size(); k++)
-        {
-          if (M.find(neighbour_labels[k]) == M.end())
-          {
+        for (int k = 0; k < neighbour_labels.size(); k++) {
+          if (M.find(neighbour_labels[k]) == M.end()) {
             M[neighbour_labels[k]] = 1;
-          }
-          else
-          {
+          } else {
             M[neighbour_labels[k]]++;
           }
         }
@@ -526,17 +505,13 @@ namespace vox_nav_utilities
         auto max = getMax<int, int>(M);
         int num_search_point_neigbours_same_class;
         auto search_point_neigbours_same_class = M.find(serach_point_key);
-        if (search_point_neigbours_same_class == M.end())
-        {
+        if (search_point_neigbours_same_class == M.end()) {
           continue;
-        }
-        else
-        {
+        } else {
           num_search_point_neigbours_same_class = search_point_neigbours_same_class->second;
         }
 
-        if (max.second > num_search_point_neigbours_same_class)
-        {
+        if (max.second > num_search_point_neigbours_same_class) {
           std::uint8_t r = (max.first >> 16) & 0x0000ff;
           std::uint8_t g = (max.first >> 8) & 0x0000ff;
           std::uint8_t b = (max.first) & 0x0000ff;
@@ -554,30 +529,29 @@ namespace vox_nav_utilities
     return denoised_cloud;
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr denoiseSegmentedCloud(
-      const typename pcl::PointCloud<P>::Ptr dynamic_points_pcl,
-      const typename pcl::PointCloud<P>::Ptr static_points_pcl,
-      double radius,
-      int min_num_neighbours)
+    const typename pcl::PointCloud<P>::Ptr dynamic_points_pcl,
+    const typename pcl::PointCloud<P>::Ptr static_points_pcl,
+    double radius,
+    int min_num_neighbours)
   {
     typename pcl::PointCloud<P>::Ptr denoised_cloud(new pcl::PointCloud<P>());
     typename pcl::KdTreeFLANN<P> kdtree;
     kdtree.setInputCloud(static_points_pcl);
 
-    for (size_t i = 0; i < dynamic_points_pcl->points.size(); i++)
-    {
+    for (size_t i = 0; i < dynamic_points_pcl->points.size(); i++) {
 
       P searchPoint = dynamic_points_pcl->points[i];
       std::vector<int> pointIdxRadiusSearch;
       std::vector<float> pointRadiusSquaredDistance;
 
       if (kdtree.radiusSearch(
-              searchPoint,
-              min_num_neighbours,
-              pointIdxRadiusSearch,
-              pointRadiusSquaredDistance) <
-          min_num_neighbours)
+          searchPoint,
+          min_num_neighbours,
+          pointIdxRadiusSearch,
+          pointRadiusSquaredDistance) <
+        min_num_neighbours)
       {
         denoised_cloud->points.push_back(searchPoint);
       }
@@ -587,11 +561,11 @@ namespace vox_nav_utilities
     return denoised_cloud;
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr cropBox(
-      const typename pcl::PointCloud<P>::Ptr cloud,
-      Eigen::Vector4f min,
-      Eigen::Vector4f max)
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    Eigen::Vector4f min,
+    Eigen::Vector4f max)
   {
     typename pcl::PointCloud<P>::Ptr crop_cloud(new pcl::PointCloud<P>());
     typename pcl::CropBox<P> boxFilter(true);
@@ -602,8 +576,7 @@ namespace vox_nav_utilities
     boxFilter.filter(indices);
 
     pcl::PointIndices::Ptr inliers_crop{new pcl::PointIndices};
-    for (int point : indices)
-    {
+    for (int point : indices) {
       inliers_crop->indices.push_back(point);
     }
     typename pcl::ExtractIndices<P> extract;
@@ -616,15 +589,15 @@ namespace vox_nav_utilities
     return crop_cloud;
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr regionGrowingRGB(
-      const typename pcl::PointCloud<P>::Ptr cloud,
-      double dist_thres = 10,
-      double point_color_thres = 6,
-      double region_color_thres = 5,
-      double filter_limit_min = 0.0,
-      double filter_limit_max = 1.0,
-      int min_cluster_size = 600)
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    double dist_thres = 10,
+    double point_color_thres = 6,
+    double region_color_thres = 5,
+    double filter_limit_min = 0.0,
+    double filter_limit_max = 1.0,
+    int min_cluster_size = 600)
   {
     typename pcl::search::Search<P>::Ptr tree(new pcl::search::KdTree<P>);
     typename pcl::PassThrough<P> pass;
@@ -651,17 +624,17 @@ namespace vox_nav_utilities
     return reg.getColoredCloud();
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr regionGrowingNormal(
-      const typename pcl::PointCloud<P>::Ptr cloud,
-      double filter_limit_min = 0.0,
-      double filter_limit_max = 1.0,
-      int k_search = 50,
-      int min_cluster_size = 50,
-      int max_cluster_size = 1000000,
-      int num_neighbours = 30,
-      double curvature_thres = 1.0,
-      double smothness_thres = 2.0)
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    double filter_limit_min = 0.0,
+    double filter_limit_max = 1.0,
+    int k_search = 50,
+    int min_cluster_size = 50,
+    int max_cluster_size = 1000000,
+    int num_neighbours = 30,
+    double curvature_thres = 1.0,
+    double smothness_thres = 2.0)
   {
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     typename pcl::search::Search<P>::Ptr tree(new pcl::search::KdTree<P>);
@@ -697,12 +670,12 @@ namespace vox_nav_utilities
     return reg.getColoredCloud();
   }
 
-  template <typename P>
+  template<typename P>
   std::vector<typename pcl::PointCloud<P>::Ptr> euclideanClustering(
-      const typename pcl::PointCloud<P>::Ptr cloud,
-      int min_cluster_size = 50,
-      int max_cluster_size = 1000000,
-      double tolerancce = 0.2)
+    const typename pcl::PointCloud<P>::Ptr cloud,
+    int min_cluster_size = 50,
+    int max_cluster_size = 1000000,
+    double tolerancce = 0.2)
   {
     typename pcl::search::Search<P>::Ptr tree(new pcl::search::KdTree<P>);
     typename pcl::EuclideanClusterExtraction<P> ec;
@@ -719,12 +692,10 @@ namespace vox_nav_utilities
     ec.extract(cluster_indices);
 
     int j = 0;
-    for (auto it = cluster_indices.begin(); it != cluster_indices.end(); ++it)
-    {
+    for (auto it = cluster_indices.begin(); it != cluster_indices.end(); ++it) {
       typename pcl::PointCloud<P>::Ptr cloud_cluster(new pcl::PointCloud<P>);
 
-      for (const auto &idx : it->indices)
-      {
+      for (const auto & idx : it->indices) {
         cloud_cluster->push_back((*cloud)[idx]); //*
       }
       cloud_cluster->width = cloud_cluster->size();
@@ -738,11 +709,11 @@ namespace vox_nav_utilities
     return clusters;
   }
 
-  template <typename P>
+  template<typename P>
   typename pcl::PointCloud<P>::Ptr removePointsWithinGroundPlaneofOtherCloud(
-      typename pcl::PointCloud<P>::Ptr cloud,
-      const typename pcl::PointCloud<P>::Ptr ground_cloud,
-      double distance_thres)
+    typename pcl::PointCloud<P>::Ptr cloud,
+    const typename pcl::PointCloud<P>::Ptr ground_cloud,
+    double distance_thres)
   {
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
     pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
@@ -772,12 +743,12 @@ namespace vox_nav_utilities
    * @param output
    */
   void fitBoxtoPointCloud(
-      const pcl::PointCloud<pcl::PointXYZ>::Ptr input,
-      vox_nav_msgs::msg::Object &output);
+    const pcl::PointCloud<pcl::PointXYZ>::Ptr input,
+    vox_nav_msgs::msg::Object & output);
 
   void voxnavObjects2VisionObjects(
-      const vox_nav_msgs::msg::ObjectArray &input,
-      vision_msgs::msg::Detection3DArray &output);
+    const vox_nav_msgs::msg::ObjectArray & input,
+    vision_msgs::msg::Detection3DArray & output);
 
 } // namespace vox_nav_utilities
 

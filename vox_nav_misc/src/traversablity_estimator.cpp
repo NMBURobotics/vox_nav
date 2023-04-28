@@ -78,7 +78,7 @@ namespace vox_nav_misc
     RCLCPP_INFO(this->get_logger(), "Traversability Estimator Node is shutting down!");
   }
 
-  void TraversabilityEstimator::regressCosts(
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr TraversabilityEstimator::regressCosts(
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
     const std_msgs::msg::Header & header)
   {
@@ -182,14 +182,14 @@ namespace vox_nav_misc
 
     traversable_cloud_publisher_->publish(*cost_regressed_cloud_msg);
 
+    return cost_regressed_cloud_final;
+
   }
 
   void TraversabilityEstimator::cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
   {
     // Convert ROS Msg to PCL Point Cloud
-    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGBA>);
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_xyzrgb(new pcl::PointCloud<pcl::PointXYZRGB>);
-    pcl::fromROSMsg(*msg, *cloud);
     pcl::fromROSMsg(*msg, *cloud_xyzrgb);
 
     geometry_msgs::msg::PoseStamped curr_robot_pose;
@@ -205,8 +205,23 @@ namespace vox_nav_misc
     max_pt[1] = curr_robot_pose.pose.position.y + 20.0;
     max_pt[2] = curr_robot_pose.pose.position.z + 5.0;
 
-    cloud = vox_nav_utilities::cropBox<pcl::PointXYZRGBA>(cloud, min_pt, max_pt);
     cloud_xyzrgb = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(cloud_xyzrgb, min_pt, max_pt);
+
+    // regress cost to cloud;
+    cloud_xyzrgb = regressCosts(cloud_xyzrgb, msg->header);
+
+    // remove non-traversable points
+    auto pure_traversable_pcl = vox_nav_utilities::get_traversable_points(cloud_xyzrgb);
+
+    // print number of traversable points and cloud_xyzrgb
+    RCLCPP_INFO(
+      get_logger(),
+      "Number of traversable points: %d, Number of points in cloud: %d",
+      pure_traversable_pcl->points.size(), cloud_xyzrgb->points.size());
+
+    // Create pointXYZRGBA cloud for supervoxelization from traversable points
+    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGBA>);
+    pcl::copyPointCloud(*pure_traversable_pcl, *cloud);
 
     auto super = vox_nav_utilities::supervoxelizeCloud<pcl::PointXYZRGBA>(
       cloud,
@@ -239,11 +254,7 @@ namespace vox_nav_misc
       supervoxel_clusters_, supervoxel_adjacency, header, marker_array);
     supervoxel_graph_publisher_->publish(marker_array);
 
-    // regress cost to cloud;
-    regressCosts(cloud_xyzrgb, msg->header);
-
   }
-
 }   // namespace vox_nav_misc
 
 int main(int argc, char ** argv)
