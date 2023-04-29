@@ -99,14 +99,21 @@ if(ACADO_CODE_IS_READY)
               include/vox_nav_control/mpc_controller_acado/auto_gen/acado_qpoases_interface.cpp
               include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.h
               include/vox_nav_control/mpc_controller_acado/auto_gen/acado_auxiliary_functions.c)
-
+  target_include_directories(mpc_solver_acado PUBLIC PUBLIC include 
+                                                                include/vox_nav_control/mpc_controller_acado/auto_gen
+                                                                ${ACADO_INCLUDE_DIRS} 
+                                                                ${ACADO_QPOASES_EMBEDDED_INC_DIRS}
+                                                                ${THIS_PACKAGE_INCLUDE_DIRS}
+                                                                ${OMPL_INCLUDE_DIRS}
+                                                                )
+              
   add_library(mpc_controller_acado SHARED  src/mpc_controller_acado/mpc_controller_acado_ros.cpp)
   target_include_directories(mpc_controller_acado PUBLIC PUBLIC include 
                                                                 include/vox_nav_control/mpc_controller_acado/auto_gen
                                                                 ${ACADO_INCLUDE_DIRS} 
                                                                 ${ACADO_QPOASES_EMBEDDED_INC_DIRS}
-                                                                ${OMPL_INCLUDE_DIRS}
                                                                 ${THIS_PACKAGE_INCLUDE_DIRS}
+                                                                ${OMPL_INCLUDE_DIRS}
                                                                 )
   ament_target_dependencies(mpc_controller_acado ${dependencies})
   target_link_libraries(mpc_controller_acado ompl ${ACADO_SHARED_LIBRARIES} mpc_solver_acado)

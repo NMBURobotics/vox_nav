@@ -37,6 +37,7 @@
 
 #include "vox_nav_control/controller_core.hpp"
 #include "vox_nav_control/common.hpp"
+#include "vox_nav_control/plan_refiner_core.hpp"
 #include "vox_nav_utilities/tf_helpers.hpp"
 #include "vox_nav_utilities/pcl_helpers.hpp"
 #include <pcl_ros/transforms.hpp>
@@ -193,6 +194,13 @@ namespace vox_nav_control
     double goal_tolerance_orientation_;
     double transform_timeout_;
 
+    // Path refiner pluginized server
+    vox_nav_control::PlanRefinerCore::Ptr plan_refiner_;
+    pluginlib::ClassLoader<vox_nav_control::PlanRefinerCore> pr_loader_;
+    std::string plan_refiner_id_;
+    std::string plan_refiner_type_;
+    bool plan_refiner_enabled_;
+
     // Clock
     rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
 
@@ -205,16 +213,6 @@ namespace vox_nav_control
 
     // MQTT stuff
     std::shared_ptr<std::thread> mqtt_thread_;
-
-    //
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_subscriber_;
-    pcl::PointCloud<pcl::PointXYZ>::Ptr latest_live_cloud_;
-    std::mutex latest_live_cloud_mutex_;
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
-      readjusted_reference_traj_publisher_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr
-      dbg_cloud_pub_;
-
 
   };
 

@@ -33,7 +33,10 @@ namespace vox_nav_control
   : Node("vox_nav_controller_server_rclcpp_node"),
     pc_loader_("vox_nav_control", "vox_nav_control::ControllerCore"),
     controller_id_("MPCControllerCasadiROS"),
-    controller_type_("mpc_controller::MPCControllerCasadiROS")
+    controller_type_("mpc_controller::MPCControllerCasadiROS"),
+    pr_loader_("vox_nav_control", "vox_nav_control::PlanRefinerCore"),
+    plan_refiner_id_("TraversabilityBasedPlanRefiner"),
+    plan_refiner_type_("vox_nav_control::TraversabilityBasedPlanRefiner")
   {
     RCLCPP_INFO(get_logger(), "Creating");
 
@@ -82,6 +85,26 @@ namespace vox_nav_control
       controller_duration_ = 0.0;
     }
 
+    // Load plan refiner
+    declare_parameter("plan_refiner_plugin", plan_refiner_id_);
+    get_parameter("plan_refiner_plugin", plan_refiner_id_);
+
+    declare_parameter(plan_refiner_id_ + ".plugin", plan_refiner_type_);
+    get_parameter(plan_refiner_id_ + ".plugin", plan_refiner_type_);
+
+    try {
+      plan_refiner_ =
+        pr_loader_.createSharedInstance(plan_refiner_type_);
+      plan_refiner_->initialize(this, plan_refiner_id_);
+      RCLCPP_INFO(
+        get_logger(), "Created and initialized plan refiner plugin %s of type %s",
+        plan_refiner_id_.c_str(), plan_refiner_type_.c_str());
+    } catch (const pluginlib::PluginlibException & ex) {
+      RCLCPP_FATAL(
+        get_logger(), "Failed to create plan refiner. Exception: %s",
+        ex.what());
+    }
+
     this->action_server_ = rclcpp_action::create_server<FollowPath>(
       this->get_node_base_interface(),
       this->get_node_clock_interface(),
@@ -104,21 +127,6 @@ namespace vox_nav_control
       std::thread(
         &ControllerServer::executeMQTTThread,
         this));*/
-
-    live_cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-      "/ouster/points",
-      rclcpp::SensorDataQoS(),
-      std::bind(
-        &ControllerServer::liveCloudCallback, this, std::placeholders::_1));
-
-    readjusted_reference_traj_publisher_ =
-      this->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "/vox_nav/controller/readjusted_plan", 1);
-
-    dbg_cloud_pub_ =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      "/vox_nav/controller/readjusted_plan_cloud", rclcpp::SensorDataQoS()
-      );
 
     RCLCPP_INFO(get_logger(), "Constructed control server ... ");
 
@@ -393,16 +401,6 @@ namespace vox_nav_control
       cmd_vel_publisher_->publish(geometry_msgs::msg::Twist());
       RCLCPP_INFO(this->get_logger(), "Follow Path Succeeded!");
     }
-  }
-
-  void ControllerServer::liveCloudCallback(
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud)
-  {
-    /*std::lock_guard<std::mutex> guard(latest_live_cloud_mutex_);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_curr(new pcl::PointCloud<pcl::PointXYZ>());
-    pcl::fromROSMsg(*cloud, *pcl_curr);
-    pcl_ros::transformPointCloud("map", *pcl_curr, *pcl_curr, *tf_buffer_);
-    latest_live_cloud_ = pcl_curr;*/
   }
 
 }  // namespace vox_nav_control
