@@ -9,7 +9,16 @@ endif()
 # Add this repository's cmake modules to CMAKE_MODULE_PATH
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_LIST_DIR}/cmake)
 
-#find_package(PkgConfig REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBFCL REQUIRED "fcl>=0.7.0")
+# replace LIBFCL_LIBRARIES with full paths to the libraries
+set(LIBFCL_LIBRARIES_FULL "")
+foreach(LIBFCL_LIBRARY ${LIBFCL_LIBRARIES})
+  find_library(${LIBFCL_LIBRARY}_LIB ${LIBFCL_LIBRARY} ${LIBFCL_LIBRARY_DIRS})
+  list(APPEND LIBFCL_LIBRARIES_FULL ${${LIBFCL_LIBRARY}_LIB})
+endforeach()
+set(LIBFCL_LIBRARIES "${LIBFCL_LIBRARIES_FULL}")
+
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
@@ -51,7 +60,8 @@ set(dependencies
     vox_nav_msgs
     vox_nav_utilities
     Eigen3
-    tf2_eigen)
+    tf2_eigen
+    LIBFCL)
 
 add_executable(vox_nav_controller_server src/controller_server.cpp)
 target_include_directories(vox_nav_controller_server PUBLIC include ${OMPL_INCLUDE_DIRS})
@@ -82,9 +92,9 @@ target_link_libraries(lyapunov_controller ompl)
 
 # Path Refiner plugins
 add_library(traversability_based_plan_refiner SHARED src/plan_refiner_plugins/traversability_based_plan_refiner.cpp)
-target_include_directories(traversability_based_plan_refiner PUBLIC include)
+target_include_directories(traversability_based_plan_refiner PUBLIC include ${OMPL_INCLUDE_DIRS})
 ament_target_dependencies(traversability_based_plan_refiner ${dependencies})
-target_link_libraries(traversability_based_plan_refiner ${PCL_LIBRARIES})
+target_link_libraries(traversability_based_plan_refiner ompl ${PCL_LIBRARIES} ${LIBFCL_LIBRARIES})
 
 option(ACADO_CODE_IS_READY "Whether Acado code has been generated" ON)
 
@@ -131,6 +141,7 @@ endif(ACADO_CODE_IS_READY)
 
 install(TARGETS mpc_controller_casadi
                 lyapunov_controller
+                traversability_based_plan_refiner
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin)

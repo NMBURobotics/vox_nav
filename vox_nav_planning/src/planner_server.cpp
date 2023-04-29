@@ -166,6 +166,7 @@ namespace vox_nav_planning
     goal_pose = goal->pose;
 
     result->path.poses = getPlan(start_pose, goal_pose, planner_id_);
+    result->path.header.frame_id = "map";
 
     if (result->path.poses.size() == 0) {
       RCLCPP_WARN(

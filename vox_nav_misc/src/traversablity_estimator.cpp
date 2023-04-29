@@ -25,13 +25,13 @@ namespace vox_nav_misc
       std::bind(&TraversabilityEstimator::cloudCallback, this, std::placeholders::_1));
 
     supervoxel_clusters_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      "supervoxel_clusters", rclcpp::SystemDefaultsQoS());
+      "supervoxel_clusters", rclcpp::SensorDataQoS());
 
     supervoxel_graph_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "supervoxel_graph", rclcpp::SystemDefaultsQoS());
+      "supervoxel_graph", rclcpp::SensorDataQoS());
 
     traversable_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      "traversable_cloud", rclcpp::SystemDefaultsQoS());
+      "traversable_cloud", rclcpp::SensorDataQoS());
 
     this->declare_parameter("supervoxel_disable_transform", false);
     this->declare_parameter("supervoxel_resolution", 0.8);

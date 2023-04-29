@@ -21,6 +21,7 @@
 #include <memory>
 #include <vector>
 
+#include "vox_nav_control/common.hpp"
 #include "vox_nav_control/plan_refiner_core.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "visualization_msgs/msg/marker_array.hpp"
@@ -30,6 +31,14 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_ros/buffer.h"
 #include "vox_nav_utilities/pcl_helpers.hpp"
+#include "pcl_ros/transforms.hpp"
+#include "pcl_conversions/pcl_conversions.h"
+
+#include <fcl/config.h>
+#include "fcl/geometry/octree/octree.h"
+#include "fcl/math/constants.h"
+#include "fcl/narrowphase/collision.h"
+#include "fcl/narrowphase/collision_object.h"
 
 namespace vox_nav_control
 {
@@ -75,8 +84,12 @@ namespace vox_nav_control
     void traversabilityMarkerCallback(const visualization_msgs::msg::MarkerArray::SharedPtr msg);
 
   private:
-    std::shared_ptr<rclcpp::Node> node_;
+    rclcpp::Node * node_;
     std::string plugin_name_;
+
+    std::mutex global_mutex_;
+    std::string map_topic_;
+    bool is_enabled_;
 
     std::string traversability_layer_name_;
     double traversability_threshold_;
@@ -86,6 +99,7 @@ namespace vox_nav_control
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr traversability_map_subscriber_;
     rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr
       traversability_marker_subscriber_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr local_goal_publisher_;
 
     sensor_msgs::msg::PointCloud2::SharedPtr traversability_map_;
     visualization_msgs::msg::MarkerArray::SharedPtr traversability_marker_;
