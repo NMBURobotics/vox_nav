@@ -271,7 +271,6 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
-
       double curr_robot_speed = 0.0;
       if (!previous_robot_pose_.header.stamp.sec || !previous_time_.seconds()) {
         RCLCPP_INFO(parent_->get_logger(), "Recieved initial compute control command");
@@ -413,8 +412,8 @@ namespace vox_nav_control
           2) / std::pow(b, 2) = 1;
         */
         Eigen::Vector2f center(i.pose.position.x, i.pose.position.y);
-        double a = i.shape.dimensions[0];
-        double b = i.shape.dimensions[1];
+        double a = i.shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_X];
+        double b = i.shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y];
         vox_nav_control::common::Ellipsoid e;
         e.heading = i.heading;
         e.is_dynamic = i.is_dynamic;
@@ -529,8 +528,10 @@ namespace vox_nav_control
           int b_index = (i * ACADO_NOD) + (4 * o + 3);
           acadoVariables.od[h_index] = obstacle_tracks.objects[o].pose.position.x;
           acadoVariables.od[k_index] = obstacle_tracks.objects[o].pose.position.y;
-          acadoVariables.od[a_index] = obstacle_tracks.objects[o].shape.dimensions[0];
-          acadoVariables.od[b_index] = obstacle_tracks.objects[o].shape.dimensions[1];
+          acadoVariables.od[a_index] =
+            obstacle_tracks.objects[o].shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_X];
+          acadoVariables.od[b_index] =
+            obstacle_tracks.objects[o].shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y];
         }
       }
 

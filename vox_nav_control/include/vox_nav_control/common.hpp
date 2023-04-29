@@ -353,6 +353,7 @@ namespace vox_nav_control
       const geometry_msgs::msg::PoseStamped & curr_robot_pose,
       int N)
     {
+
       auto trimmed_N_obstacles =
         std::make_shared<vox_nav_msgs::msg::ObjectArray>(obstacle_tracks);
 
@@ -363,9 +364,10 @@ namespace vox_nav_control
           ghost_obstacle.pose.position.x = 20000.0;
           ghost_obstacle.pose.position.y = 20000.0;
           ghost_obstacle.pose.position.z = 20000.0;
-          ghost_obstacle.shape.dimensions[0] = 0.1;
-          ghost_obstacle.shape.dimensions[1] = 0.1;
-          ghost_obstacle.shape.dimensions[2] = 0.1;
+          ghost_obstacle.shape.type = shape_msgs::msg::SolidPrimitive::BOX;
+          ghost_obstacle.shape.dimensions.push_back(0.1);
+          ghost_obstacle.shape.dimensions.push_back(0.1);
+          ghost_obstacle.shape.dimensions.push_back(0.1);
           trimmed_N_obstacles->objects.push_back(ghost_obstacle);
         }
       } else {

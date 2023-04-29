@@ -264,7 +264,7 @@ namespace vox_nav_control
           i.pose.position.z);
 
         Eigen::Vector3f obstacle_head_vec(
-          i.pose.position.x + i.shape.dimensions[0] / 2.0,
+          i.pose.position.x + i.shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_X] / 2.0,
           i.pose.position.y,
           i.pose.position.z);
 
@@ -287,8 +287,8 @@ namespace vox_nav_control
           2) / std::pow(b, 2) = 1;
         */
         Eigen::Vector2f center(i.pose.position.x, i.pose.position.y);
-        double a = i.shape.dimensions[0];
-        double b = i.shape.dimensions[1];
+        double a = i.shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_X];
+        double b = i.shape.dimensions[shape_msgs::msg::SolidPrimitive::BOX_Y];
         vox_nav_control::common::Ellipsoid e;
         e.heading = i.heading;
         e.is_dynamic = i.is_dynamic;

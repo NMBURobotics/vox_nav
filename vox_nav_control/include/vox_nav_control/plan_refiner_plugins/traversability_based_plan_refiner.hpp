@@ -13,41 +13,41 @@
 // limitations under the License.
 
 
-#ifndef VOX_NAV_CONTROL__PLAN_REFINER_PLUGINS__CAM_BASED_PLAN_REFINER_HPP_
-#define VOX_NAV_CONTROL__PLAN_REFINER_PLUGINS__CAM_BASED_PLAN_REFINER_HPP_
+#ifndef VOX_NAV_CONTROL__PLAN_REFINER_PLUGINS__TRAVERSABILITY_BASED_PLAN_REFINER_HPP_
+#define VOX_NAV_CONTROL__PLAN_REFINER_PLUGINS__TRAVERSABILITY_BASED_PLAN_REFINER_HPP_
 #pragma once
 
 #include <string>
 #include <memory>
 #include <vector>
 
-#include "vox_nav_control/plan_refiner.hpp"
-#include "sensor_msgs/msg/image.hpp"
-#include "sensor_msgs/msg/camera_info.hpp"
-#include "cv_bridge/cv_bridge.h"
-#include "opencv2/opencv.hpp"
+#include "vox_nav_control/plan_refiner_core.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
+#include "nav_msgs/msg/path.hpp"
 
 #include "tf2_ros/transform_listener.h"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.h"
 #include "tf2_ros/buffer.h"
+#include "vox_nav_utilities/pcl_helpers.hpp"
 
 namespace vox_nav_control
 {
 
-  class CamBasedPlanRefiner : public vox_nav_control::PlanRefinerCore
+  class TraversabilityBasedPlanRefiner : public vox_nav_control::PlanRefinerCore
   {
   public:
     /**
      * @brief Construct a new Cam Based Plan Refiner object
      *
      */
-    CamBasedPlanRefiner();
+    TraversabilityBasedPlanRefiner();
 
     /**
      * @brief Destroy the Cam Based Plan Refiner object
      *
      */
-    ~CamBasedPlanRefiner();
+    ~TraversabilityBasedPlanRefiner();
 
     /**
      * @brief
@@ -56,7 +56,7 @@ namespace vox_nav_control
      * @param plugin_name refiner plugin name
      */
     void initialize(
-      const rclcpp::Node * parent,
+      rclcpp::Node * parent,
       const std::string & plugin_name) override;
 
     /**
@@ -70,23 +70,32 @@ namespace vox_nav_control
       const geometry_msgs::msg::PoseStamped & curr_pose,
       nav_msgs::msg::Path & plan_to_refine) override;
 
+    void traversabilityMapCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+
+    void traversabilityMarkerCallback(const visualization_msgs::msg::MarkerArray::SharedPtr msg);
+
   private:
     std::shared_ptr<rclcpp::Node> node_;
     std::string plugin_name_;
 
+    std::string traversability_layer_name_;
+    double traversability_threshold_;
+
     // Subscribe to image topic
     // Subscribe to camera info topic
+    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr traversability_map_subscriber_;
+    rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr
+      traversability_marker_subscriber_;
 
-    rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
-    rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr cam_info_sub_;
+    sensor_msgs::msg::PointCloud2::SharedPtr traversability_map_;
+    visualization_msgs::msg::MarkerArray::SharedPtr traversability_marker_;
 
     // Project the plan to the image plane with tf and camera info
-
-    tf2_ros::Buffer tf_buffer_;
-    tf2_ros::TransformListener tf_listener_;
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer_ptr_;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_ptr_;
   };
 
 }      // namespace vox_nav_control
 
 
-#endif  // VOX_NAV_CONTROL__PLAN_REFINER_PLUGINS__CAM_BASED_PLAN_REFINER_HPP_
+#endif  // VOX_NAV_CONTROL__PLAN_REFINER_PLUGINS__TRAVERSABILITY_BASED_PLAN_REFINER_HPP_

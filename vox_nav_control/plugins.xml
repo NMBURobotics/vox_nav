@@ -18,4 +18,10 @@
     </class>
   </library>
 
+  <library path="traversability_based_plan_refiner">
+    <class type="vox_nav_control::TraversabilityBasedPlanRefiner" base_class_type="vox_nav_control::PlanRefinerCore">
+      <description>TODO(fetullah.atas)</description>
+    </class>
+  </library>
+
 </class_libraries>

@@ -210,7 +210,6 @@ namespace vox_nav_control
     auto start_time = steady_clock_.now();
     rclcpp::Rate loop_rate(controller_frequency_);
 
-
     auto goal = goal_handle->get_goal();
     auto feedback = std::make_shared<FollowPath::Feedback>();
     auto result = std::make_shared<FollowPath::Result>();
@@ -252,9 +251,7 @@ namespace vox_nav_control
 
     while (rclcpp::ok() && !is_goal_distance_tolerance_satisfied) {
 
-
       auto & clock = *this->get_clock();
-
 
       auto loop_start_time = steady_clock_.now();
       // Check if there is a cancel request

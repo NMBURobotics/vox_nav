@@ -4,8 +4,8 @@ osm_map_manager_rclcpp_node:
     osm_road_colliders_pcd_filename: /home/atas/ros2_ws/src/vox_nav/vox_nav_map_server/maps/osm_road_colliders.pcd
     osm_buildings_pcd_filename: /home/atas/ros2_ws/src/vox_nav/vox_nav_map_server/maps/osm_buildings.pcd
     # PCD PREPROCESS PARAMS
-    downsample_leaf_size: 0.2   
-    publish_frequency: 15                                    # Set to smaller if you do not want downsample pointclouds of the map
+    downsample_leaf_size: 0.25   
+    publish_frequency: 15                                                     # Set to smaller if you do not want downsample pointclouds of the map
     pcd_map_transform:                                                        # Apply an OPTIONAL rigid-body transrom to pcd file, leave to all zeros if not wished
       translation:                                                            # Unit is meters
         x: -0.0
