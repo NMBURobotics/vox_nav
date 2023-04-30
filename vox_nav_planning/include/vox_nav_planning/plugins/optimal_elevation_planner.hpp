@@ -118,6 +118,7 @@ namespace vox_nav_planning
       const pcl::PointXYZRGBA & b);
 
   protected:
+  
     struct VertexProperty
     {
       std::uint32_t label;

@@ -82,6 +82,28 @@ namespace vox_nav_utilities
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr get_non_traversable_points(
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud);
 
+  /**
+   * @brief Get the traversable points object,
+   * this is to seperate traversable points from rest.
+   * Traverability is encoded in RGB color channels. G > 0 is traversale
+   *
+   * @param cloud
+   * @return pcl::PointCloud<pcl::PointXYZRGBA>::Ptr
+   */
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr get_traversable_points(
+    const pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud);
+
+  /**
+   * @brief Get the NON traversable points object,
+   * this is to seperate NON traversable points from rest.
+   * Traverability is encoded in RGB color channels. R > 0 is  NON traversale
+   *
+   * @param cloud
+   * @return pcl::PointCloud<pcl::PointXYZRGBA>::Ptr
+   */
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr get_non_traversable_points(
+    const pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud);
+
 /**
  * @brief This function, partitionates full pure traversable cloud into cells with given radius.
  * Center of these cells are basically uniformly sampled cloud.
@@ -102,12 +124,12 @@ namespace vox_nav_utilities
 
 /**
  * @brief This function is used o fit a plane model to each cell of traversability cloud.
- * 
- * @param coefficients 
- * @param cloud 
- * @param dist_thes 
- * @return true 
- * @return false 
+ *
+ * @param coefficients
+ * @param cloud
+ * @param dist_thes
+ * @return true
+ * @return false
  */
   bool fit_plane_to_cloud(
     pcl::ModelCoefficients::Ptr coefficients,

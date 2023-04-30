@@ -143,6 +143,36 @@ namespace vox_nav_utilities
     return pure_traversable_points;
   }
 
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr get_non_traversable_points(
+    const pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud)
+  {
+    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr pure_non_traversable_points(
+      new pcl::PointCloud<pcl::PointXYZRGBA>);
+    for (size_t i = 0; i < cloud->points.size(); i++) {
+      if (cloud->points[i].r) {
+        pure_non_traversable_points->points.push_back(cloud->points[i]);
+      }
+    }
+    pure_non_traversable_points->height = 1;
+    pure_non_traversable_points->width = pure_non_traversable_points->points.size();
+    return pure_non_traversable_points;
+  }
+
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr get_traversable_points(
+    const pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud)
+  {
+    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr pure_traversable_points(
+      new pcl::PointCloud<pcl::PointXYZRGBA>);
+    for (size_t i = 0; i < cloud->points.size(); i++) {
+      if (cloud->points[i].g > cloud->points[i].r) {
+        pure_traversable_points->points.push_back(cloud->points[i]);
+      }
+    }
+    pure_traversable_points->height = 1;
+    pure_traversable_points->width = pure_traversable_points->points.size();
+    return pure_traversable_points;
+  }
+
   std::vector<std::pair<pcl::PointXYZRGB,
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr>> surfelize_traversability_cloud(
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pure_traversable_pcl,

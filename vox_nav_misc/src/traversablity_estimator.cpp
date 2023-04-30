@@ -24,21 +24,9 @@ namespace vox_nav_misc
       rclcpp::SensorDataQoS(),
       std::bind(&TraversabilityEstimator::cloudCallback, this, std::placeholders::_1));
 
-    supervoxel_clusters_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      "supervoxel_clusters", rclcpp::SensorDataQoS());
-
-    supervoxel_graph_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "supervoxel_graph", rclcpp::SensorDataQoS());
-
     traversable_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
       "traversable_cloud", rclcpp::SensorDataQoS());
 
-    this->declare_parameter("supervoxel_disable_transform", false);
-    this->declare_parameter("supervoxel_resolution", 0.8);
-    this->declare_parameter("supervoxel_seed_resolution", 1.0);
-    this->declare_parameter("supervoxel_color_importance", 0.0);
-    this->declare_parameter("supervoxel_spatial_importance", 1.0);
-    this->declare_parameter("supervoxel_normal_importance", 1.0);
     declare_parameter("uniform_sample_radius", 0.2);
     declare_parameter("surfel_radius", 0.8);
     declare_parameter("max_allowed_tilt", 40.0);
@@ -50,12 +38,6 @@ namespace vox_nav_misc
     declare_parameter("average_speed", 1.0);
     declare_parameter("cost_critic_weights", std::vector<double>({0.8, 0.1, 0.1}));
 
-    this->get_parameter("supervoxel_disable_transform", supervoxel_disable_transform_);
-    this->get_parameter("supervoxel_resolution", supervoxel_resolution_);
-    this->get_parameter("supervoxel_seed_resolution", supervoxel_seed_resolution_);
-    this->get_parameter("supervoxel_color_importance", supervoxel_color_importance_);
-    this->get_parameter("supervoxel_spatial_importance", supervoxel_spatial_importance_);
-    this->get_parameter("supervoxel_normal_importance", supervoxel_normal_importance_);
     get_parameter("uniform_sample_radius", cost_params_.uniform_sample_radius);
     get_parameter("surfel_radius", cost_params_.surfel_radius);
     get_parameter("max_allowed_tilt", cost_params_.max_allowed_tilt);
@@ -172,15 +154,7 @@ namespace vox_nav_misc
     // Downsample the clouddown
     auto cost_regressed_cloud_final = vox_nav_utilities::downsampleInputCloud<pcl::PointXYZRGB>(
       std::make_shared<pcl::PointCloud<pcl::PointXYZRGB>>(cost_regressed_cloud),
-      0.15);
-
-    // Publish the cost regressor cloud
-    sensor_msgs::msg::PointCloud2::SharedPtr cost_regressed_cloud_msg(
-      new sensor_msgs::msg::PointCloud2);
-    pcl::toROSMsg(*cost_regressed_cloud_final, *cost_regressed_cloud_msg);
-    cost_regressed_cloud_msg->header = header;
-
-    traversable_cloud_publisher_->publish(*cost_regressed_cloud_msg);
+      0.08);
 
     return cost_regressed_cloud_final;
 
@@ -197,12 +171,13 @@ namespace vox_nav_misc
       curr_robot_pose, *tf_buffer_, "odom", "base_link", 0.1);
     // Crop the cloud around the robot
     Eigen::Vector4f min_pt;
-    min_pt[0] = curr_robot_pose.pose.position.x - 20.0;
-    min_pt[1] = curr_robot_pose.pose.position.y - 20.0;
+    min_pt[0] = curr_robot_pose.pose.position.x - 10.0;
+    min_pt[1] = curr_robot_pose.pose.position.y - 10.0;
+
     min_pt[2] = curr_robot_pose.pose.position.z - 5.0;
     Eigen::Vector4f max_pt;
-    max_pt[0] = curr_robot_pose.pose.position.x + 20.0;
-    max_pt[1] = curr_robot_pose.pose.position.y + 20.0;
+    max_pt[0] = curr_robot_pose.pose.position.x + 10.0;
+    max_pt[1] = curr_robot_pose.pose.position.y + 10.0;
     max_pt[2] = curr_robot_pose.pose.position.z + 5.0;
 
     cloud_xyzrgb = vox_nav_utilities::cropBox<pcl::PointXYZRGB>(cloud_xyzrgb, min_pt, max_pt);
@@ -210,49 +185,13 @@ namespace vox_nav_misc
     // regress cost to cloud;
     cloud_xyzrgb = regressCosts(cloud_xyzrgb, msg->header);
 
-    // remove non-traversable points
-    auto pure_traversable_pcl = vox_nav_utilities::get_traversable_points(cloud_xyzrgb);
+    // Publish the cost regressor cloud
+    sensor_msgs::msg::PointCloud2::SharedPtr cost_regressed_cloud_msg(
+      new sensor_msgs::msg::PointCloud2);
+    pcl::toROSMsg(*cloud_xyzrgb, *cost_regressed_cloud_msg);
+    cost_regressed_cloud_msg->header = msg->header;
 
-    // print number of traversable points and cloud_xyzrgb
-    RCLCPP_INFO(
-      get_logger(),
-      "Number of traversable points: %d, Number of points in cloud: %d",
-      pure_traversable_pcl->points.size(), cloud_xyzrgb->points.size());
-
-    // Create pointXYZRGBA cloud for supervoxelization from traversable points
-    pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGBA>);
-    pcl::copyPointCloud(*pure_traversable_pcl, *cloud);
-
-    auto super = vox_nav_utilities::supervoxelizeCloud<pcl::PointXYZRGBA>(
-      cloud,
-      supervoxel_disable_transform_,
-      supervoxel_resolution_,
-      supervoxel_seed_resolution_,
-      supervoxel_color_importance_,
-      supervoxel_spatial_importance_,
-      supervoxel_normal_importance_);
-
-    super.extract(supervoxel_clusters_);
-    RCLCPP_INFO(get_logger(), "Found %d supervoxels", supervoxel_clusters_.size());
-
-    pcl::PointCloud<pcl::PointXYZL>::Ptr supervoxel_cloud = super.getLabeledVoxelCloud();
-    sensor_msgs::msg::PointCloud2 supervoxel_cloud_msg;
-    pcl::toROSMsg(*supervoxel_cloud, supervoxel_cloud_msg);
-    supervoxel_cloud_msg.header = msg->header;
-    supervoxel_clusters_publisher_->publish(supervoxel_cloud_msg);
-
-    // Get the supervoxel adjacency
-    std::multimap<uint32_t, uint32_t> supervoxel_adjacency;
-    super.getSupervoxelAdjacency(supervoxel_adjacency);
-
-    std_msgs::msg::Header header;
-    header.frame_id = msg->header.frame_id;
-    header.stamp = msg->header.stamp;
-    visualization_msgs::msg::MarkerArray marker_array;
-    // Publish empty to reset previous
-    fillSuperVoxelMarkersfromAdjacency(
-      supervoxel_clusters_, supervoxel_adjacency, header, marker_array);
-    supervoxel_graph_publisher_->publish(marker_array);
+    traversable_cloud_publisher_->publish(*cost_regressed_cloud_msg);
 
   }
 }   // namespace vox_nav_misc

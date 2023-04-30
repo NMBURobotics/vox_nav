@@ -44,6 +44,7 @@ find_package(Eigen3 REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(casadi REQUIRED)
 find_package(ACADO REQUIRED)
+find_package(vision_msgs REQUIRED)
 
 set(dependencies
     rclcpp
@@ -61,7 +62,8 @@ set(dependencies
     vox_nav_utilities
     Eigen3
     tf2_eigen
-    LIBFCL)
+    LIBFCL
+    vision_msgs)
 
 add_executable(vox_nav_controller_server src/controller_server.cpp)
 target_include_directories(vox_nav_controller_server PUBLIC include ${OMPL_INCLUDE_DIRS})
