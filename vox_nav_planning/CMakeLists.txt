@@ -6,13 +6,6 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
-if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
-set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBFCL REQUIRED "fcl>=0.7.0")
 # replace LIBFCL_LIBRARIES with full paths to the libraries
@@ -49,7 +42,6 @@ find_package(tf2_ros REQUIRED)
 find_package(trajectory_msgs REQUIRED)
 find_package(vox_nav_msgs REQUIRED)
 find_package(vox_nav_utilities REQUIRED)
-#find_package(vox_nav_misc REQUIRED)
 find_package(pcl_ros REQUIRED)
 find_package(pluginlib REQUIRED)
 
@@ -64,7 +56,6 @@ octomap_msgs
 sensor_msgs
 vox_nav_msgs
 vox_nav_utilities
-#vox_nav_misc
 std_msgs
 tf2_eigen
 tf2_geometry_msgs

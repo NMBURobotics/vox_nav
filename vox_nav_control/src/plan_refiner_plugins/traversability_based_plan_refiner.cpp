@@ -33,7 +33,6 @@ namespace vox_nav_control
     node_ = parent;
 
     traversability_map_ = std::make_shared<sensor_msgs::msg::PointCloud2>();
-    traversability_marker_ = std::make_shared<visualization_msgs::msg::MarkerArray>();
 
     // init tf2 buffer and listener
     tf_buffer_ptr_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
@@ -69,8 +68,6 @@ namespace vox_nav_control
     node_->declare_parameter(plugin_name + ".supervoxel_normal_importance", 1.0);
     node_->declare_parameter(plugin_name + ".traversability_layer_name", "traversability");
     node_->declare_parameter(plugin_name + ".traversability_threshold", 0.5);
-    node_->get_parameter(plugin_name + ".traversability_layer_name", traversability_layer_name_);
-    node_->get_parameter(plugin_name + ".traversability_threshold", traversability_threshold_);
 
     node_->get_parameter(
       plugin_name + ".supervoxel_disable_transform",
@@ -223,11 +220,11 @@ namespace vox_nav_control
     nn_to_local_goal.z = local_goal.pose.position.z;
 
     // Get the nearest vertex to the current pose, that will ne the start vertex
-    vertex_descriptor start_vertex = get_nearest(g_, nn_to_curr_pose);
+    vox_nav_utilities::vertex_descriptor start_vertex = get_nearest(g_, nn_to_curr_pose);
     pcl::PointCloud<pcl::PointXYZRGBA>::Ptr graph_vertices(new pcl::PointCloud<pcl::PointXYZRGBA>);
     fillCloudfromGraph(g_, graph_vertices);
 
-    std::list<vertex_descriptor> shortest_path;
+    std::list<vox_nav_utilities::vertex_descriptor> shortest_path;
     pcl::PointCloud<pcl::PointXYZRGBA> local_optimal_path;
 
     // Get the radius neighbors of the local goal vertex on the graph
@@ -245,7 +242,7 @@ namespace vox_nav_control
       for (size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
         auto nn_id = pointIdxRadiusSearch[i];
         auto nn = graph_vertices->points[nn_id];
-        vertex_descriptor goal_vertex = get_nearest(g_, nn);
+        vox_nav_utilities::vertex_descriptor goal_vertex = get_nearest(g_, nn);
 
         local_optimal_path.points.clear();
         // Push start and goal vertices to the local optimal path
@@ -371,13 +368,13 @@ namespace vox_nav_control
 
     // Create a graph
     // Add a vertex for each label, store ids in a map
-    std::map<std::uint32_t, vertex_descriptor> supervoxel_label_id_map;
+    std::map<std::uint32_t, vox_nav_utilities::vertex_descriptor> supervoxel_label_id_map;
 
     for (auto it = supervoxel_adjacency.cbegin();
       it != supervoxel_adjacency.cend(); )
     {
       std::uint32_t supervoxel_label = it->first;
-      vertex_descriptor supervoxel_id = boost::add_vertex(g_);
+      vox_nav_utilities::vertex_descriptor supervoxel_id = boost::add_vertex(g_);
       g_[supervoxel_id].label = (supervoxel_label);
       g_[supervoxel_id].point = supervoxel_clusters_.at(supervoxel_label)->centroid_;
       supervoxel_label_id_map.insert(std::make_pair(supervoxel_label, supervoxel_id));
@@ -397,9 +394,11 @@ namespace vox_nav_control
         std::uint32_t neighbour_supervoxel_label = adjacent_it->second;
         auto neighbour_supervoxel = supervoxel_clusters_.at(neighbour_supervoxel_label);
 
-        edge_descriptor e; bool edge_added;
-        vertex_descriptor u = (supervoxel_label_id_map.find(supervoxel_label))->second;
-        vertex_descriptor v = (supervoxel_label_id_map.find(neighbour_supervoxel_label))->second;
+        vox_nav_utilities::edge_descriptor e; bool edge_added;
+        vox_nav_utilities::vertex_descriptor u =
+          (supervoxel_label_id_map.find(supervoxel_label))->second;
+        vox_nav_utilities::vertex_descriptor v =
+          (supervoxel_label_id_map.find(neighbour_supervoxel_label))->second;
 
         try {
           boost::tie(e, edge_added) = boost::add_edge(u, v, g_);

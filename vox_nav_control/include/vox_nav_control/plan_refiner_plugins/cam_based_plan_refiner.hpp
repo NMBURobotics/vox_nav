@@ -21,7 +21,7 @@
 #include <memory>
 #include <vector>
 
-#include "vox_nav_control/plan_refiner.hpp"
+#include "vox_nav_control/plan_refiner_core.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "cv_bridge/cv_bridge.h"
@@ -52,11 +52,11 @@ namespace vox_nav_control
     /**
      * @brief
      *
-     * @param parent rclcpp node
+     * @param parent rclcpp parent node
      * @param plugin_name refiner plugin name
      */
     void initialize(
-      const rclcpp::Node * parent,
+      rclcpp::Node * parent,
       const std::string & plugin_name) override;
 
     /**
@@ -71,17 +71,17 @@ namespace vox_nav_control
       nav_msgs::msg::Path & plan_to_refine) override;
 
   private:
-    std::shared_ptr<rclcpp::Node> node_;
+    // Pointer to the node that owns this plugin
+    rclcpp::Node * node_;
+    // Name for this path refiner plugin
     std::string plugin_name_;
 
     // Subscribe to image topic
-    // Subscribe to camera info topic
-
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
+    // Subscribe to camera info topic
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr cam_info_sub_;
 
-    // Project the plan to the image plane with tf and camera info
-
+    // Just in case we need to transform the image to the map frame
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
   };

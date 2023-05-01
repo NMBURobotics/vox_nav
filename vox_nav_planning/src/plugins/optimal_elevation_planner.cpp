@@ -327,17 +327,17 @@ namespace vox_nav_planning
     // we can then use all boost::graph algortihms on this graph
     // edge weights are set as distances or elevations, see the configration to
     // adjust the weights of penalties
-    GraphT g;
-    WeightMap weightmap = get(boost::edge_weight, g);
+    vox_nav_utilities::GraphT g;
+    vox_nav_utilities::WeightMap weightmap = get(boost::edge_weight, g);
     //Add a vertex for each label, store ids in a map
-    std::map<std::uint32_t, vertex_descriptor> supervoxel_label_id_map;
+    std::map<std::uint32_t, vox_nav_utilities::vertex_descriptor> supervoxel_label_id_map;
 
     try {
       for (auto it = supervoxel_adjacency.cbegin();
         it != supervoxel_adjacency.cend(); )
       {
         std::uint32_t supervoxel_label = it->first;
-        vertex_descriptor supervoxel_id = boost::add_vertex(g);
+        vox_nav_utilities::vertex_descriptor supervoxel_id = boost::add_vertex(g);
         g[supervoxel_id].label = (supervoxel_label);
         supervoxel_label_id_map.insert(std::make_pair(supervoxel_label, supervoxel_id));
         it = supervoxel_adjacency.upper_bound(supervoxel_label);
@@ -357,9 +357,11 @@ namespace vox_nav_planning
           if (isEdgeinCollision(supervoxel->centroid_, neighbour_supervoxel->centroid_)) {
             continue;
           }
-          edge_descriptor e; bool edge_added;
-          vertex_descriptor u = (supervoxel_label_id_map.find(supervoxel_label))->second;
-          vertex_descriptor v = (supervoxel_label_id_map.find(neighbour_supervoxel_label))->second;
+          vox_nav_utilities::edge_descriptor e; bool edge_added;
+          vox_nav_utilities::vertex_descriptor u =
+            (supervoxel_label_id_map.find(supervoxel_label))->second;
+          vox_nav_utilities::vertex_descriptor v =
+            (supervoxel_label_id_map.find(neighbour_supervoxel_label))->second;
           boost::tie(e, edge_added) = boost::add_edge(u, v, g);
           // Calc distance between centers, set this as edge weight
           // the more distane the heavier final cost
@@ -401,7 +403,7 @@ namespace vox_nav_planning
     goal_as_pcl_point.z = goal.pose.position.z;
 
     // Match requested start and goal poses with valid vertexes on Graph
-    vertex_descriptor start_vertex, goal_vertex;
+    vox_nav_utilities::vertex_descriptor start_vertex, goal_vertex;
 
     // Simple O(N) algorithm to find closest vertex to start and goal poses on boost::graph g
     double start_dist_min = INFINITY, goal_dist_min = INFINITY;
@@ -422,8 +424,8 @@ namespace vox_nav_planning
         goal_vertex = itr->second;
       }
     }
-    std::vector<vertex_descriptor> p(boost::num_vertices(g));
-    std::vector<Cost> d(boost::num_vertices(g));
+    std::vector<vox_nav_utilities::vertex_descriptor> p(boost::num_vertices(g));
+    std::vector<vox_nav_utilities::Cost> d(boost::num_vertices(g));
     std::vector<geometry_msgs::msg::PoseStamped> plan_poses;
     ompl::geometric::PathGeometricPtr solution_path =
       std::make_shared<ompl::geometric::PathGeometric>(simple_setup_->getSpaceInformation());
@@ -444,16 +446,25 @@ namespace vox_nav_planning
       }
 
       auto heuristic =
-        distance_heuristic<GraphT, Cost, SuperVoxelClusters *>(
+        vox_nav_utilities::distance_heuristic<vox_nav_utilities::GraphT, vox_nav_utilities::Cost,
+          SuperVoxelClusters *>(
         &supervoxel_clusters_, goal_vertex,
         g);
-      auto c_visitor = custom_goal_visitor<vertex_descriptor>(goal_vertex, &num_visited_nodes);
 
       if (graph_search_method_ == "dijkstra") {
+        // TODO: WHY DIJSKTRA IS NOT WORKING?
+        /*auto c_visitor =
+          vox_nav_utilities::custom_goal_visitor_dijkstra<vox_nav_utilities::vertex_descriptor>(
+          goal_vertex,
+          &num_visited_nodes);
         boost::dijkstra_shortest_paths(
           g, start_vertex,
-          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
+          boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));*/
       } else { // astar
+        auto c_visitor =
+          vox_nav_utilities::custom_goal_visitor<vox_nav_utilities::vertex_descriptor>(
+          goal_vertex,
+          &num_visited_nodes);
         boost::astar_search_tree(
           g, start_vertex, heuristic /*only difference*/,
           boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(c_visitor));
@@ -465,7 +476,7 @@ namespace vox_nav_planning
       RCLCPP_WARN(logger_, "%s search failed to find a valid path!", graph_search_method_.c_str());
       return plan_poses;
 
-    } catch (FoundGoal found_goal) {
+    } catch (vox_nav_utilities::FoundGoal found_goal) {
       auto a2 = std::chrono::high_resolution_clock::now();
       std::chrono::duration<double, std::milli> graph_search_ms_double = a2 - a1;
       RCLCPP_INFO(
@@ -473,8 +484,8 @@ namespace vox_nav_planning
         graph_search_method_.c_str(), graph_search_ms_double.count());
 
       // Found a path to the goal, catch the exception
-      std::list<vertex_descriptor> shortest_path;
-      for (vertex_descriptor v = goal_vertex;; v = p[v]) {
+      std::list<vox_nav_utilities::vertex_descriptor> shortest_path;
+      for (vox_nav_utilities::vertex_descriptor v = goal_vertex;; v = p[v]) {
         shortest_path.push_front(v);
         if (p[v] == v) {break;}
       }
@@ -504,7 +515,6 @@ namespace vox_nav_planning
           solution_state_position.z,
           0 /*assume a 0 v here*/);
         compound_elevation_state->setSO2(0);
-
 
         solution_path->append(compound_elevation_state);
       }
