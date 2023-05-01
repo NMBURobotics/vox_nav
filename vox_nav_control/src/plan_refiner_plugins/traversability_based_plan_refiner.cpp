@@ -220,7 +220,7 @@ namespace vox_nav_control
     nn_to_local_goal.z = local_goal.pose.position.z;
 
     // Get the nearest vertex to the current pose, that will ne the start vertex
-    vox_nav_utilities::vertex_descriptor start_vertex = get_nearest(g_, nn_to_curr_pose);
+    vox_nav_utilities::vertex_descriptor start_vertex = get_nearest_vertex(g_, nn_to_curr_pose);
     pcl::PointCloud<pcl::PointXYZRGBA>::Ptr graph_vertices(new pcl::PointCloud<pcl::PointXYZRGBA>);
     fillCloudfromGraph(g_, graph_vertices);
 
@@ -242,7 +242,7 @@ namespace vox_nav_control
       for (size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {
         auto nn_id = pointIdxRadiusSearch[i];
         auto nn = graph_vertices->points[nn_id];
-        vox_nav_utilities::vertex_descriptor goal_vertex = get_nearest(g_, nn);
+        vox_nav_utilities::vertex_descriptor goal_vertex = get_nearest_vertex(g_, nn);
 
         local_optimal_path.points.clear();
         // Push start and goal vertices to the local optimal path
