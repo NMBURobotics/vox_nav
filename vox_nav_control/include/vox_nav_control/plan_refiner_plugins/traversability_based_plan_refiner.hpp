@@ -135,9 +135,10 @@ namespace vox_nav_control
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr supervoxel_graph_publisher_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr supervoxel_clusters_publisher_;
 
+    // typedefs for supervoxel clustering
     typedef std::map<std::uint32_t, pcl::Supervoxel<pcl::PointXYZRGBA>::Ptr> SuperVoxelClusters;
     SuperVoxelClusters supervoxel_clusters_;
-    // Supervoxel parameters
+    // Supervoxel parameters, e.g. resolution, seed resolution, color importance, spatial importance, normal importance
     bool supervoxel_disable_transform_;
     float supervoxel_resolution_;
     float supervoxel_seed_resolution_;
@@ -145,6 +146,18 @@ namespace vox_nav_control
     float supervoxel_spatial_importance_;
     float supervoxel_normal_importance_;
 
+    /**
+     * @brief Find the shortest path from #start_vertex to #goal_vertex in the boost graph #g
+     *        append the shortest path to #shortest_path and report whether the path was found or not
+     *
+     * @param g
+     * @param weightmap
+     * @param start_vertex
+     * @param goal_vertex
+     * @param shortest_path
+     * @return true
+     * @return false
+     */
     bool find_astar_path(
       const vox_nav_utilities::GraphT & g,
       const vox_nav_utilities::WeightMap & weightmap,
@@ -190,11 +203,17 @@ namespace vox_nav_control
       }
     }
 
-    vox_nav_utilities::vertex_descriptor get_nearest(
+    /**
+     * @brief Given a PCL #point find the nearest vertex to it on the boost graph #g
+     *
+     * @param g
+     * @param point
+     * @return vox_nav_utilities::vertex_descriptor
+     */
+    vox_nav_utilities::vertex_descriptor get_nearest_vertex(
       const vox_nav_utilities::GraphT & g,
       const pcl::PointXYZRGBA & point)
     {
-      // Simple O(N) algorithm to find closest vertex to start and goal poses on boost::graph g
       double dist_min = INFINITY;
       vox_nav_utilities::vertex_descriptor nn_vertex;
       for (auto vd : boost::make_iterator_range(vertices(g))) {
@@ -210,6 +229,12 @@ namespace vox_nav_control
       return nn_vertex;
     }
 
+    /**
+     * @brief Fill a PCL pointcloud from a boost graph
+     *
+     * @param g
+     * @param cloud
+     */
     void fillCloudfromGraph(
       const vox_nav_utilities::GraphT & g,
       pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud)
