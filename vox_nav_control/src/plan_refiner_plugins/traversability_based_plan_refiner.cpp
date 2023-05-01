@@ -66,8 +66,6 @@ namespace vox_nav_control
     node_->declare_parameter(plugin_name + ".supervoxel_color_importance", 0.0);
     node_->declare_parameter(plugin_name + ".supervoxel_spatial_importance", 1.0);
     node_->declare_parameter(plugin_name + ".supervoxel_normal_importance", 1.0);
-    node_->declare_parameter(plugin_name + ".traversability_layer_name", "traversability");
-    node_->declare_parameter(plugin_name + ".traversability_threshold", 0.5);
 
     node_->get_parameter(
       plugin_name + ".supervoxel_disable_transform",
@@ -121,8 +119,8 @@ namespace vox_nav_control
 
     // Get the first point outside of the traversability map box on the path
     geometry_msgs::msg::PointStamped closest_point_on_path;
-    int closest_point_index = -1;
-    int nearest_traj_pose_index = vox_nav_control::common::nearestStateIndex(
+    int closest_traj_pose_idx_local_goal = -1;
+    int closest_traj_pose_idx_curr_pose = vox_nav_control::common::nearestStateIndex(
       plan_to_refine, curr_pose);
 
     // Check using FCL if the point is inside the traversability map box
@@ -168,7 +166,7 @@ namespace vox_nav_control
     traversability_map_bbox_publisher_->publish(traversability_map_bbox);
 
     bool traj_endpoint_inside = true;
-    for (int i = nearest_traj_pose_index; i < plan_to_refine.poses.size(); i++) {
+    for (int i = closest_traj_pose_idx_curr_pose; i < plan_to_refine.poses.size(); i++) {
       geometry_msgs::msg::PoseStamped point = plan_to_refine.poses[i];
 
       CollisionGeometryPtr_t point_box(new fcl::Box<float>(0.1, 0.1, 1.0));
@@ -190,7 +188,7 @@ namespace vox_nav_control
       } else {
         // If the point is outside the traversability map box, break
         closest_point_on_path.point = point.pose.position;
-        closest_point_index = i;
+        closest_traj_pose_idx_local_goal = i;
         traj_endpoint_inside = false;
         break;
       }
@@ -207,7 +205,8 @@ namespace vox_nav_control
     local_goal.header.frame_id = plan_to_refine.header.frame_id;
     local_goal.header.stamp = node_->now();
     local_goal.pose.position = closest_point_on_path.point;
-    local_goal.pose.orientation = plan_to_refine.poses[closest_point_index].pose.orientation;
+    local_goal.pose.orientation =
+      plan_to_refine.poses[closest_traj_pose_idx_local_goal].pose.orientation;
     local_goal_publisher_->publish(local_goal);
 
     // Now construct a local path from the current pose to the local goal using boost graph
@@ -244,14 +243,6 @@ namespace vox_nav_control
         auto nn = graph_vertices->points[nn_id];
         vox_nav_utilities::vertex_descriptor goal_vertex = get_nearest_vertex(g_, nn);
 
-        local_optimal_path.points.clear();
-        // Push start and goal vertices to the local optimal path
-        local_optimal_path.points.push_back(graph_vertices->points[start_vertex]);
-        local_optimal_path.points.push_back(graph_vertices->points[goal_vertex]);
-        // paint the points
-        local_optimal_path.points[0].r = 255; local_optimal_path.points[0].a = 255;
-        local_optimal_path.points[1].b = 255; local_optimal_path.points[1].a = 255;
-
         // Now we have a local optimal path from current pose to local goal
         // Lets publish it as a sensor_msgs::PointCloud2
         sensor_msgs::msg::PointCloud2 local_optimal_path_cloud;
@@ -259,9 +250,13 @@ namespace vox_nav_control
         local_optimal_path_cloud.header = traversability_map_->header;
         local_optimal_path_publisher_->publish(local_optimal_path_cloud);
 
-
         // See if there is a path from start to goal
         if (find_astar_path(g_, weightmap_, start_vertex, goal_vertex, shortest_path)) {
+          local_optimal_path.points.clear();
+          // Push start and goal vertices to the local optimal path
+          local_optimal_path.points.push_back(graph_vertices->points[start_vertex]);
+          // paint the start point red
+          local_optimal_path.points[0].r = 255; local_optimal_path.points[0].a = 255;
           break;
         }
       }
@@ -281,6 +276,10 @@ namespace vox_nav_control
       path_point.g = 255; path_point.a = 255;
       local_optimal_path.points.push_back(path_point);
     }
+    // Push local goal vertices to the local optimal path
+    local_optimal_path.points.push_back(graph_vertices->points[start_vertex]);
+    // paint the start point green
+    local_optimal_path.points.back().g = 255; local_optimal_path.points.back().a = 255;
 
     // Now we have a local optimal path from current pose to local goal
     // Lets publish it as a sensor_msgs::PointCloud2
@@ -289,9 +288,27 @@ namespace vox_nav_control
     local_optimal_path_cloud.header = traversability_map_->header;
     local_optimal_path_publisher_->publish(local_optimal_path_cloud);
 
-    RCLCPP_INFO(
-      node_->get_logger(),
-      "Local optimal path published with %d points", local_optimal_path.points.size());
+    // replace the plan with the local optimal path from #closest_traj_pose_idx_curr_pose to #closest_traj_pose_idx_local_goal
+    std::vector<geometry_msgs::msg::PoseStamped> local_optimal_plan_poses;
+    for (auto local_optimal_path_point : local_optimal_path.points) {
+      geometry_msgs::msg::PoseStamped local_optimal_plan_pose;
+      local_optimal_plan_pose.header = traversability_map_->header;
+      local_optimal_plan_pose.pose.position.x = local_optimal_path_point.x;
+      local_optimal_plan_pose.pose.position.y = local_optimal_path_point.y;
+      local_optimal_plan_pose.pose.position.z = local_optimal_path_point.z;
+      local_optimal_plan_pose.pose.orientation = curr_pose.pose.orientation;
+      local_optimal_plan_poses.push_back(local_optimal_plan_pose);
+    }
+
+    // erase the poses from the plan_to_refine from begining to #closest_local_goal_pose_idx
+    plan_to_refine.poses.erase(
+      plan_to_refine.poses.begin(),
+      plan_to_refine.poses.begin() + closest_traj_pose_idx_local_goal);
+
+    // insert the local optimal plan poses to in front of #plan_to_refine
+    plan_to_refine.poses.insert(
+      plan_to_refine.poses.begin(),
+      local_optimal_plan_poses.begin(), local_optimal_plan_poses.end());
 
     return true;
   }
@@ -320,12 +337,6 @@ namespace vox_nav_control
 
     // remove non-traversable points
     auto pure_traversable_pcl = vox_nav_utilities::get_traversable_points(cloud_xyzrgba);
-
-    // print number of traversable points and cloud_xyzrgb
-    RCLCPP_INFO(
-      node_->get_logger(),
-      "Number of traversable points: %d, Number of points in cloud: %d",
-      pure_traversable_pcl->points.size(), cloud_xyzrgba->points.size());
 
     // Create pointXYZRGBA cloud for supervoxelization from traversable points
     pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGBA>);
@@ -377,8 +388,14 @@ namespace vox_nav_control
       vox_nav_utilities::vertex_descriptor supervoxel_id = boost::add_vertex(g_);
       g_[supervoxel_id].label = (supervoxel_label);
       g_[supervoxel_id].point = supervoxel_clusters_.at(supervoxel_label)->centroid_;
+      // Embed the Cost value in the R value of the supervoxel centroid
+      g_[supervoxel_id].point.r = computeAverageTraversability(
+        supervoxel_clusters_.at(supervoxel_label)->voxels_,
+        supervoxel_clusters_.at(supervoxel_label)->centroid_);
+
       supervoxel_label_id_map.insert(std::make_pair(supervoxel_label, supervoxel_id));
       it = supervoxel_adjacency.upper_bound(supervoxel_label);
+
     }
 
     // fill edges acquired from supervoxel clustering
@@ -420,8 +437,8 @@ namespace vox_nav_control
             centroid_data,
             neighbour_centroid_data);
           // Lets also add elevation as weight
-          float absolute_elevation = std::abs(centroid_data.z - neighbour_centroid_data.z);
-          weightmap_[e] = 0.5 * absolute_distance + 0.5 * absolute_elevation;
+          float absolute_traversal_cost = std::abs(centroid_data.r + neighbour_centroid_data.z);
+          weightmap_[e] = 0.75 * absolute_distance + 0.25 * absolute_traversal_cost;
         }
       }
       it = supervoxel_adjacency.upper_bound(supervoxel_label);

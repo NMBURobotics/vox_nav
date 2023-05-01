@@ -67,8 +67,8 @@ vox_nav_controller_server_rclcpp_node:
       global_plan_look_ahead_distance: 5.0                                    # look this amount of meters from current robot pose to remaining global path
       ref_traj_se2_space: "SE2"                                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 3.0                                                                # Curve radius form reeds and dubins only
-      robot_radius: 1.25                                                             
-
+      robot_radius: 1.25                                                          
+      
       MPCControllerAcadoROS:
          plugin: "mpc_controller_acado::MPCControllerAcadoROS"
          N: 20                                                                # timesteps in MPC Horizon
@@ -88,3 +88,12 @@ vox_nav_controller_server_rclcpp_node:
          params_configured: True
          max_obstacles: 6
          full_ackerman: True
+      plan_refiner_plugin: "TraversabilityBasedPlanRefiner"
+      TraversabilityBasedPlanRefiner:
+        plugin: "vox_nav_control::TraversabilityBasedPlanRefiner"
+        supervoxel_disable_transform: false
+        supervoxel_resolution: 0.2
+        supervoxel_seed_resolution: 0.4
+        supervoxel_color_importance: 0.0
+        supervoxel_spatial_importance: 1.0
+        supervoxel_normal_importance: 0.0

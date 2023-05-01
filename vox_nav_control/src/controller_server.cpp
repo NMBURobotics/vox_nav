@@ -277,6 +277,8 @@ namespace vox_nav_control
 
       // NRefine the plan to ensure that we can get to the goal
       plan_refiner_->refinePlan(curr_robot_pose, path);
+      // Set the plan again
+      controller_->setPlan(path);
 
       int nearest_traj_pose_index = vox_nav_control::common::nearestStateIndex(
         path,

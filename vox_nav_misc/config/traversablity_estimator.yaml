@@ -1,11 +1,5 @@
 traversablity_estimator_node:
   ros__parameters:
-    supervoxel_disable_transform: false
-    supervoxel_resolution: 0.25
-    supervoxel_seed_resolution: 0.5
-    supervoxel_color_importance: 0.0
-    supervoxel_spatial_importance: 1.0
-    supervoxel_normal_importance: 1.0
      # COST REGRESSION CRITICS AND PARAMS
     uniform_sample_radius: 0.2
     surfel_radius: 0.6                                                       # Works as resolution of cost regression onto map

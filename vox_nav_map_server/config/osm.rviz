@@ -285,8 +285,7 @@ Visualization Manager:
       Enabled: true
       Name: PlannerGeometricplan
       Namespaces:
-        gcosts: true
-        gpath: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -298,7 +297,7 @@ Visualization Manager:
       Enabled: true
       Name: VoxNavMPCComputedTraj
       Namespaces:
-        actual_traj: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -310,7 +309,7 @@ Visualization Manager:
       Enabled: true
       Name: VoxNavInterpolatedMPCPlan
       Namespaces:
-        ref_traj: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -494,7 +493,7 @@ Visualization Manager:
       Name: CostRegressedCloud
       Position Transformer: XYZ
       Selectable: true
-      Size (Pixels): 1
+      Size (Pixels): 2
       Size (m): 0.10000000149011612
       Style: Points
       Topic:
@@ -822,25 +821,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 39.43007278442383
+      Distance: 23.096660614013672
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 5.021234512329102
-        Y: -0.810816764831543
-        Z: -0.00017625871987547725
+        X: -3.7795374393463135
+        Y: -3.1161670684814453
+        Z: -0.00016672197671141475
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2947964668273926
+      Pitch: 0.7997965216636658
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.8486979007720947
+      Yaw: 3.028698682785034
     Saved: ~
 Window Geometry:
   Displays:

@@ -20,6 +20,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <algorithm>
 
 #include <fcl/config.h>
 #include <fcl/geometry/octree/octree.h>
@@ -248,6 +249,33 @@ namespace vox_nav_control
         cloud->points.push_back(point);
       }
     }
+
+    /**
+     * @brief Given a PCL #point, compute the average traversability of the points within radius #r based on the PCL #cloud
+     *
+     * @param cloud
+     * @param point
+     * @param radius
+     * @return int
+     */
+    int computeAverageTraversability(
+      const pcl::PointCloud<pcl::PointXYZRGBA>::Ptr & cloud,
+      const pcl::PointXYZRGBA & point
+    )
+    {
+      int sum_traversability = 0;
+      int num_points = 0;
+      for (size_t i = 0; i < cloud->points.size(); i++) {
+        auto traversability = cloud->points[i].r;
+        sum_traversability += traversability;
+        num_points++;
+      }
+      if (num_points == 0) {
+        return 0;
+      }
+      return sum_traversability / num_points;
+    }
+
   };
 
 }      // namespace vox_nav_control
