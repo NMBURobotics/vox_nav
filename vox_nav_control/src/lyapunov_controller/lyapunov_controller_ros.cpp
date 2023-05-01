@@ -157,6 +157,7 @@ namespace vox_nav_control
     geometry_msgs::msg::Twist LyapunovControllerROS::computeVelocityCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
+      std::lock_guard<std::mutex> guard(global_plan_mutex_);
 
       double robot_roll, robot_pitch, robot_yaw;
       vox_nav_utilities::getRPYfromMsgQuaternion(
@@ -239,6 +240,7 @@ namespace vox_nav_control
     geometry_msgs::msg::Twist LyapunovControllerROS::computeHeadingCorrectionCommands(
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
+      std::lock_guard<std::mutex> plan_guard(global_plan_mutex_);
 
       auto goal_pose = reference_traj_.poses.back();
 
@@ -275,6 +277,7 @@ namespace vox_nav_control
 
     void LyapunovControllerROS::setPlan(const nav_msgs::msg::Path & path)
     {
+      std::lock_guard<std::mutex> guard(global_plan_mutex_);
       reference_traj_ = path;
 
       readjustPlanbyPropogation();

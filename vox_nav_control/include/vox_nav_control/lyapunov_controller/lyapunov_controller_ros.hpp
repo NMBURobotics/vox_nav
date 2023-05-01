@@ -139,6 +139,8 @@ namespace vox_nav_control
       double k1_;
       double k2_;
       int lookahead_n_waypoints_;
+      std::mutex global_plan_mutex_;
+
     };
 
   } // namespace lyapunov_controller

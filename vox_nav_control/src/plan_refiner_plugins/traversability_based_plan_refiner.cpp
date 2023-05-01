@@ -91,6 +91,11 @@ namespace vox_nav_control
     const geometry_msgs::msg::PoseStamped & curr_pose,
     nav_msgs::msg::Path & plan_to_refine)
   {
+    if (traversability_map_->data.empty()) {
+      RCLCPP_WARN(node_->get_logger(), "Traversability map is empty, cannot refine plan");
+      return false;
+    }
+
     // Convert most recent traversability map to pcl pointcloud
     std::lock_guard<std::mutex> guard(global_mutex_);
     pcl::PointCloud<pcl::PointXYZ>::Ptr traversability_map_pcl(new pcl::PointCloud<pcl::PointXYZ>);

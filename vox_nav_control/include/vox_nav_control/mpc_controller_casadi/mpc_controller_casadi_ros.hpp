@@ -144,6 +144,7 @@ namespace vox_nav_control
       ompl::base::SpaceInformationPtr state_space_information_;
 
       bool solved_at_least_once_;
+      std::mutex global_plan_mutex_;
     };
 
   } // namespace mpc_controller_casadi

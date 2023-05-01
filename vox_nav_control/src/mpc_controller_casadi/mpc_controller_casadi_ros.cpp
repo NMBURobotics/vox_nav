@@ -127,6 +127,8 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
+      std::lock_guard<std::mutex> plan_guard(global_plan_mutex_);
+
       double robot_roll, robot_pitch, robot_psi;
       vox_nav_utilities::getRPYfromMsgQuaternion(
         curr_robot_pose.pose.orientation, robot_roll, robot_pitch, robot_psi);
@@ -145,7 +147,7 @@ namespace vox_nav_control
       // There is a limit of number of obstacles we can handle,
       // There will be always a fixed amount of obstacles
       // If there is no obstacles at all just fill with ghost obstacles(all zeros)
-      std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
+      std::lock_guard<std::mutex> obstacle_guard(obstacle_tracks_mutex_);
 
       vox_nav_msgs::msg::ObjectArray trimmed_N_obstacles =
         *vox_nav_control::common::trimObstaclesToN(
@@ -191,6 +193,7 @@ namespace vox_nav_control
       geometry_msgs::msg::PoseStamped curr_robot_pose)
     {
 
+      std::lock_guard<std::mutex> plan_guard(global_plan_mutex_);
 
       // we dont really need roll and pitch here
       double nan, robot_psi;
@@ -212,7 +215,7 @@ namespace vox_nav_control
       mpc_controller_->updateReferences(local_interpolated_reference_states);
       mpc_controller_->updatePreviousControlInput(previous_control_);
 
-      std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
+      std::lock_guard<std::mutex> obstacle_guard(obstacle_tracks_mutex_);
       auto obstacles = trackMsg2Ellipsoids(obstacle_tracks_, curr_robot_pose);
       MPCControllerCasadiCore::SolutionResult res = mpc_controller_->solve(obstacles);
 
@@ -228,6 +231,8 @@ namespace vox_nav_control
 
     void MPCControllerCasadiROS::setPlan(const nav_msgs::msg::Path & path)
     {
+      std::lock_guard<std::mutex> guard(global_plan_mutex_);
+
       reference_traj_ = path;
     }
 
@@ -236,7 +241,6 @@ namespace vox_nav_control
     {
       std::lock_guard<std::mutex> guard(obstacle_tracks_mutex_);
       obstacle_tracks_ = *msg;
-
     }
 
     std::vector<vox_nav_control::common::Ellipsoid> MPCControllerCasadiROS::trackMsg2Ellipsoids(

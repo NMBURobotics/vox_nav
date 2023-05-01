@@ -89,8 +89,15 @@ namespace vox_nav_control
     declare_parameter("plan_refiner_plugin", plan_refiner_id_);
     get_parameter("plan_refiner_plugin", plan_refiner_id_);
 
+    declare_parameter("plan_refiner_frequency", 30.0);
+    get_parameter("plan_refiner_frequency", plan_refiner_frequency_);
+
     declare_parameter(plan_refiner_id_ + ".plugin", plan_refiner_type_);
     get_parameter(plan_refiner_id_ + ".plugin", plan_refiner_type_);
+
+    if (plan_refiner_frequency_ > 0.0) {
+      plan_refiner_duration_ = 1000.0 / plan_refiner_frequency_;
+    }
 
     try {
       plan_refiner_ =
@@ -136,8 +143,39 @@ namespace vox_nav_control
         &ControllerServer::executeMQTTThread,
         this));*/
 
+    global_path_ = std::make_shared<nav_msgs::msg::Path>();
+
+    path_refiner_thread_ =
+      std::make_shared<std::thread>(
+      std::thread(
+        &ControllerServer::executePathRefinerThread,
+        this));
+
     RCLCPP_INFO(get_logger(), "Constructed control server ... ");
 
+  }
+
+  void ControllerServer::executePathRefinerThread()
+  {
+    while (rclcpp::ok()) {
+      geometry_msgs::msg::PoseStamped curr_robot_pose;
+      vox_nav_utilities::getCurrentPose(
+        curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
+      if (global_path_->poses.empty()) {continue;}
+      // NRefine the plan to ensure that we can get to the goal
+      if (plan_refiner_->refinePlan(curr_robot_pose, *global_path_)) {
+        // Set the plan again
+        controller_->setPlan(*global_path_);
+        geometry_msgs::msg::Vector3 scale;
+        scale.x = 0.2;  scale.y = 0.2;  scale.z = 0.2;
+        vox_nav_utilities::publishPlan(
+          global_path_->poses, global_path_->poses.front(),
+          global_path_->poses.back(), scale, plan_publisher_, nav_msgs_path_pub_
+        );
+      }
+      std::this_thread::sleep_for(
+        std::chrono::milliseconds(static_cast<int>(plan_refiner_duration_)));
+    }
   }
 
   void ControllerServer::executeMQTTThread()
@@ -220,8 +258,7 @@ namespace vox_nav_control
       goal_handle}.detach();
   }
 
-  void
-  ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_handle)
+  void ControllerServer::followPath(const std::shared_ptr<GoalHandleFollowPath> goal_handle)
   {
     auto start_time = steady_clock_.now();
     rclcpp::Rate loop_rate(controller_frequency_);
@@ -244,18 +281,18 @@ namespace vox_nav_control
     geometry_msgs::msg::PoseStamped initial_robot_pose;
     vox_nav_utilities::getCurrentPose(
       initial_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
-    nav_msgs::msg::Path path;
-    path.header = goal->path.header;
+    global_path_ = std::make_shared<nav_msgs::msg::Path>();
+    global_path_->header = goal->path.header;
     initial_robot_pose.pose.position.z = goal->path.poses.front().pose.position.z;
-    path.poses.push_back(initial_robot_pose);
+    global_path_->poses.push_back(initial_robot_pose);
 
     for (auto && i : goal->path.poses) {
-      path.poses.push_back(i);
+      global_path_->poses.push_back(i);
     }
 
     geometry_msgs::msg::Twist computed_velocity_commands;
     // set Plan
-    controller_->setPlan(path);
+    controller_->setPlan(*global_path_);
 
     rclcpp::WallRate rate(controller_frequency_);
 
@@ -266,6 +303,8 @@ namespace vox_nav_control
     double control_cycles = 0;
 
     while (rclcpp::ok() && !is_goal_distance_tolerance_satisfied) {
+
+      std::lock_guard<std::mutex> guard(global_path_mutex_);
 
       auto & clock = *this->get_clock();
 
@@ -278,28 +317,16 @@ namespace vox_nav_control
         return;
       }
 
-      geometry_msgs::msg::PoseStamped curr_robot_pose, curr_robot_steering_angle;
-
+      geometry_msgs::msg::PoseStamped curr_robot_pose;
       vox_nav_utilities::getCurrentPose(
-        curr_robot_pose, *tf_buffer_, "map", "base_link", transform_timeout_);
-
-      // NRefine the plan to ensure that we can get to the goal
-      plan_refiner_->refinePlan(curr_robot_pose, path);
-      // Set the plan again
-      controller_->setPlan(path);
-      geometry_msgs::msg::Vector3 scale;
-      scale.x = 0.2;
-      scale.y = 0.2;
-      scale.z = 0.2;
-      vox_nav_utilities::publishPlan(
-        path.poses, path.poses.front(),
-        path.poses.back(), scale, plan_publisher_, nav_msgs_path_pub_
-      );
+        curr_robot_pose, *tf_buffer_, "map",
+        "base_link", transform_timeout_);
 
       int nearest_traj_pose_index = vox_nav_control::common::nearestStateIndex(
-        path,
+        *global_path_,
         curr_robot_pose);
-      curr_robot_pose.pose.position.z = path.poses[nearest_traj_pose_index].pose.position.z;
+      curr_robot_pose.pose.position.z =
+        global_path_->poses[nearest_traj_pose_index].pose.position.z;
 
       // MQTT Subscriber, used to determine PAUSE/RESUME behaviour
       if (curr_comand_ == 0) {
@@ -317,12 +344,12 @@ namespace vox_nav_control
         clock, 1000, "Remaining Distance to goal %.4f ...",
         vox_nav_utilities::getEuclidianDistBetweenPoses(
           curr_robot_pose,
-          path.poses.back()));
+          global_path_->poses.back()));
 
       // check if we have arrived to goal, note the goal is last pose of path
       if (vox_nav_utilities::getEuclidianDistBetweenPoses(
           curr_robot_pose,
-          path.poses.back()) < goal_tolerance_distance_)
+          global_path_->poses.back()) < goal_tolerance_distance_)
       {
         // goal has been reached
         is_goal_distance_tolerance_satisfied = true;
@@ -354,7 +381,7 @@ namespace vox_nav_control
             curr_robot_pose.pose.orientation, nan, nan, curr_robot_psi);
 
           vox_nav_utilities::getRPYfromMsgQuaternion(
-            path.poses.back().pose.orientation, nan, nan, goal_psi);
+            global_path_->poses.back().pose.orientation, nan, nan, goal_psi);
 
           if (std::abs(curr_robot_psi - goal_psi) < goal_tolerance_orientation_) {
             // goal has been reached

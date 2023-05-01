@@ -171,6 +171,12 @@ namespace vox_nav_control
     */
     void executeMQTTThread();
 
+    /**
+     * @brief Refine path in this thread
+     *
+     */
+    void executePathRefinerThread();
+
   protected:
     // FollowPath action server
     rclcpp_action::Server<FollowPath>::SharedPtr action_server_;
@@ -192,6 +198,8 @@ namespace vox_nav_control
     std::string plan_refiner_id_;
     std::string plan_refiner_type_;
     bool plan_refiner_enabled_;
+    double plan_refiner_frequency_;
+    double plan_refiner_duration_;
 
     // Clock
     rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
@@ -208,6 +216,13 @@ namespace vox_nav_control
     // Publishers for the path
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr nav_msgs_path_pub_;
+
+    // Dedicated thread to run path refiner
+    std::shared_ptr<std::thread> path_refiner_thread_;
+
+    nav_msgs::msg::Path::SharedPtr global_path_;
+    // Mutex for global path
+    std::mutex global_path_mutex_;
 
   };
 

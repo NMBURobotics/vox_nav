@@ -195,6 +195,7 @@ namespace vox_nav_control
       // curve radius for reeds and dubins only
       double rho_;
       ompl::base::SpaceInformationPtr state_space_information_;
+      std::mutex global_plan_mutex_;
 
     };
 
