@@ -15,28 +15,34 @@
 
 #ifndef VOX_NAV_PLANNING__PLANNER_SERVER_HPP_
 #define VOX_NAV_PLANNING__PLANNER_SERVER_HPP_
+#pragma once
 
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+#include <pluginlib/class_loader.hpp>
+#include <pluginlib/class_list_macros.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2/transform_datatypes.h>
+#include <tf2_ros/create_timer_interface.h>
+#include <builtin_interfaces/msg/duration.hpp>
 
-#include <chrono>
-#include <string>
-#include <memory>
-#include <vector>
-#include <unordered_map>
-
-#include "rclcpp_action/rclcpp_action.hpp"
-#include "geometry_msgs/msg/point.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "visualization_msgs/msg/marker.hpp"
-#include "visualization_msgs/msg/marker_array.hpp"
-#include "pluginlib/class_loader.hpp"
-#include "pluginlib/class_list_macros.hpp"
 #include "vox_nav_planning/planner_core.hpp"
 #include "vox_nav_utilities/tf_helpers.hpp"
 #include "vox_nav_msgs/action/compute_path_to_pose.hpp"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-#include "tf2_ros/transform_listener.h"
-#include "tf2/transform_datatypes.h"
-#include "tf2_ros/create_timer_interface.h"
+
+#include <chrono>
+#include <cmath>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <memory>
+#include <string>
+#include <vector>
+#include <utility>
 
 namespace vox_nav_planning
 {
@@ -105,18 +111,6 @@ namespace vox_nav_planning
      * @brief The action server callback which calls planner to get the path
      */
     void computePlan(const std::shared_ptr<GoalHandleComputePathToPose> goal_handle);
-
-    /**
-     * @brief Publish a path for visualization purposes, add start and goal poses too
-     *
-     * @param path
-     * @param start_pose
-     * @param goal_pose
-     */
-    void publishPlan(
-      const std::vector<geometry_msgs::msg::PoseStamped> & path,
-      const geometry_msgs::msg::PoseStamped & start_pose,
-      const geometry_msgs::msg::PoseStamped & goal_pose);
 
     // Planner
     PlannerMap planners_;

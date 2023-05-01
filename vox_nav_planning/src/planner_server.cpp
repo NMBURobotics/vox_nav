@@ -14,17 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <chrono>
-#include <cmath>
-#include <iomanip>
-#include <iostream>
-#include <limits>
-#include <memory>
-#include <string>
-#include <vector>
-#include <utility>
-
-#include "builtin_interfaces/msg/duration.hpp"
 #include "vox_nav_planning/planner_server.hpp"
 
 using namespace std::chrono_literals;
@@ -51,7 +40,6 @@ namespace vox_nav_planning
     declare_parameter("robot_body_dimens.z", 0.6);
     declare_parameter("robot_mesh_path", "");
     declare_parameter("publish_segment_ids", true);
-
 
     get_parameter("expected_planner_frequency", expected_planner_frequency_);
     get_parameter("planner_plugin", planner_id_);
@@ -209,7 +197,13 @@ namespace vox_nav_planning
           goal_pose = overlayed_start_goal.back();
         }
       }
-      publishPlan(result->path.poses, start_pose, goal_pose);
+      geometry_msgs::msg::Vector3 scale;
+      scale.x = get_parameter("robot_body_dimens.x").as_double();
+      scale.y = get_parameter("robot_body_dimens.y").as_double();
+      scale.z = get_parameter("robot_body_dimens.z").as_double();
+      vox_nav_utilities::publishPlan(
+        result->path.poses, start_pose, goal_pose, scale, plan_publisher_, nav_msgs_path_pub_
+      );
     }
     cycle_duration = steady_clock_.now() - start_time;
     if (max_planner_duration_ && cycle_duration.seconds() > max_planner_duration_) {
@@ -242,93 +236,6 @@ namespace vox_nav_planning
     return std::vector<geometry_msgs::msg::PoseStamped>();
   }
 
-  void PlannerServer::publishPlan(
-    const std::vector<geometry_msgs::msg::PoseStamped> & path,
-    const geometry_msgs::msg::PoseStamped & start_pose,
-    const geometry_msgs::msg::PoseStamped & goal_pose)
-  {
-    // Clear All previous markers
-    visualization_msgs::msg::MarkerArray clear_markers;
-    visualization_msgs::msg::Marker clear_path, rgg_costs, rgg_edges;
-    clear_path.id = 0;
-    clear_path.ns = "path";
-    clear_path.action = visualization_msgs::msg::Marker::DELETEALL;
-    clear_markers.markers.push_back(clear_path);
-    plan_publisher_->publish(clear_markers);
-
-    visualization_msgs::msg::MarkerArray marker_array;
-    visualization_msgs::msg::Marker start_marker, goal_marker;
-    nav_msgs::msg::Path nav_msgs_path;
-
-    auto path_idx = 0;
-    for (auto && i : path) {
-      visualization_msgs::msg::Marker marker;
-      marker.header.frame_id = "map";
-      marker.header.stamp = rclcpp::Clock().now();
-      marker.ns = "path";
-      marker.id = path_idx;
-      if (!robot_mesh_path_.empty()) {
-        marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
-        marker.mesh_resource = robot_mesh_path_;
-      } else {
-        marker.type = visualization_msgs::msg::Marker::CUBE;
-      }
-      marker.action = visualization_msgs::msg::Marker::ADD;
-      marker.lifetime = rclcpp::Duration::from_seconds(0);
-      marker.text = std::to_string(path_idx);
-      marker.pose = i.pose;
-      marker.scale.x = get_parameter("robot_body_dimens.x").as_double() / 3;
-      marker.scale.y = get_parameter("robot_body_dimens.y").as_double() / 4;
-      marker.scale.z = get_parameter("robot_body_dimens.z").as_double() / 4;
-      marker.color.a = 0.5;
-      marker.color.r = 1.0;
-      marker_array.markers.push_back(marker);
-      start_marker = marker;
-      goal_marker = marker;
-
-      double void_s, yaw;
-      vox_nav_utilities::getRPYfromMsgQuaternion(i.pose.orientation, void_s, void_s, yaw);
-
-      visualization_msgs::msg::Marker text;
-      text.header.frame_id = "map";
-      text.header.stamp = rclcpp::Clock().now();
-      text.ns = "path";
-      text.id = path_idx + 1000;
-      text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
-      text.action = visualization_msgs::msg::Marker::ADD;
-      text.lifetime = rclcpp::Duration::from_seconds(0);
-      std::string dis(std::to_string(path_idx) + "," + std::to_string(yaw));
-      if (publish_segment_ids_) {
-        text.text = dis;
-      }
-      text.pose = i.pose;
-      text.pose.position.z += 0.5;
-      text.scale.x = 0.3;
-      text.scale.y = 0.3;
-      text.scale.z = 0.3;
-      text.color.a = 1.0;
-      text.color.g = 1.0;
-      text.color.r = 1.0;
-      path_idx++;
-
-      marker_array.markers.push_back(text);
-
-      /*geometry_msgs::msg::PoseStamped mutable_pose = i;
-      mutable_pose.header.frame_id = "map";
-      mutable_pose.header.stamp = rclcpp::Clock().now();
-      nav_msgs_path.poses.push_back(mutable_pose);
-      nav_msgs_path.header = mutable_pose.header;*/
-    }
-    // Publish goal and start states for debuging
-    start_marker.pose = start_pose.pose;
-    start_marker.color.b = 0;
-    goal_marker.pose = goal_pose.pose;
-    goal_marker.color.b = 0;
-    marker_array.markers.push_back(start_marker);
-    marker_array.markers.push_back(goal_marker);
-    plan_publisher_->publish(marker_array);
-    nav_msgs_path_pub_->publish(nav_msgs_path);
-  }
 }  // namespace vox_nav_planning
 
 int main(int argc, char ** argv)

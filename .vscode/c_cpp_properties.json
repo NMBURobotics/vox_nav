@@ -34,7 +34,7 @@
         "/home/atas/colcon_ws/src/clock_publisher/include/**",
         "/home/atas/colcon_ws/src/vox_nav/vox_nav_misc/include/**",
         "/home/atas/colcon_ws/install/fast_gicp/include/**",
-        "/usr/local/cuda-11.7/targets/x86_64-linux/include/**",
+        "/usr/local/cuda-11.7/targets/x86_64-linux/include/**"
       ],
       "defines": [],
       "compilerPath": "/usr/bin/gcc",

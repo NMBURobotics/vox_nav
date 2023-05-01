@@ -122,6 +122,14 @@ namespace vox_nav_control
     cmd_vel_publisher_ =
       this->create_publisher<geometry_msgs::msg::Twist>("vox_nav/cmd_vel", 10);
 
+    // Initialize pubs & subs
+    plan_publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "vox_nav/planning/plan", 1);
+
+    nav_msgs_path_pub_ =
+      this->create_publisher<nav_msgs::msg::Path>(
+      "vox_nav/planning/nav_msgs_path", rclcpp::SystemDefaultsQoS());
+
     /*mqtt_thread_ =
       std::make_shared<std::thread>(
       std::thread(
@@ -279,6 +287,14 @@ namespace vox_nav_control
       plan_refiner_->refinePlan(curr_robot_pose, path);
       // Set the plan again
       controller_->setPlan(path);
+      geometry_msgs::msg::Vector3 scale;
+      scale.x = 0.2;
+      scale.y = 0.2;
+      scale.z = 0.2;
+      vox_nav_utilities::publishPlan(
+        path.poses, path.poses.front(),
+        path.poses.back(), scale, plan_publisher_, nav_msgs_path_pub_
+      );
 
       int nearest_traj_pose_index = vox_nav_control::common::nearestStateIndex(
         path,

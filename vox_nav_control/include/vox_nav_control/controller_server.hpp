@@ -14,6 +14,30 @@
 
 #ifndef VOX_NAV_CONTROL__CONTROLLER_SERVER_HPP_
 #define VOX_NAV_CONTROL__CONTROLLER_SERVER_HPP_
+#pragma once
+
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <geometry_msgs/msg/point.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/create_timer_ros.h>
+#include <pluginlib/class_loader.hpp>
+#include <pluginlib/class_list_macros.hpp>
+#include <pcl_ros/transforms.hpp>
+
+#include <mosquittopp.h>
+#include <mosquitto.h>
+
+#include "vox_nav_msgs/action/follow_path.hpp"
+#include "vox_nav_control/controller_core.hpp"
+#include "vox_nav_control/common.hpp"
+#include "vox_nav_control/plan_refiner_core.hpp"
+#include "vox_nav_utilities/tf_helpers.hpp"
+#include "vox_nav_utilities/pcl_helpers.hpp"
+#include "vox_nav_utilities/planner_helpers.hpp"
 
 #include <chrono>
 #include <string>
@@ -21,29 +45,6 @@
 #include <vector>
 #include <mutex>
 #include <unordered_map>
-
-#include "rclcpp_action/rclcpp_action.hpp"
-#include "geometry_msgs/msg/point.hpp"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "sensor_msgs/msg/point_cloud2.hpp"
-
-#include "vox_nav_msgs/action/follow_path.hpp"
-#include "visualization_msgs/msg/marker.hpp"
-#include "visualization_msgs/msg/marker_array.hpp"
-#include "tf2_ros/transform_listener.h"
-#include "tf2_ros/create_timer_ros.h"
-#include "pluginlib/class_loader.hpp"
-#include "pluginlib/class_list_macros.hpp"
-
-#include "vox_nav_control/controller_core.hpp"
-#include "vox_nav_control/common.hpp"
-#include "vox_nav_control/plan_refiner_core.hpp"
-#include "vox_nav_utilities/tf_helpers.hpp"
-#include "vox_nav_utilities/pcl_helpers.hpp"
-#include <pcl_ros/transforms.hpp>
-
-#include <mosquittopp.h>
-#include "mosquitto.h"
 
 volatile int curr_comand_{1};
 
@@ -103,7 +104,6 @@ void on_subscribe(
     mosquitto_disconnect(mosq);
   }
 }
-
 
 /* Callback called when the client receives a message. */
 void on_message(struct mosquitto * mosq, void * obj, const struct mosquitto_message * msg)
@@ -171,14 +171,6 @@ namespace vox_nav_control
     */
     void executeMQTTThread();
 
-    /**
-   * @brief Processing done in this func.
-   *
-   * @param cloud
-   */
-    void liveCloudCallback(
-      const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
-
   protected:
     // FollowPath action server
     rclcpp_action::Server<FollowPath>::SharedPtr action_server_;
@@ -213,6 +205,9 @@ namespace vox_nav_control
 
     // MQTT stuff
     std::shared_ptr<std::thread> mqtt_thread_;
+    // Publishers for the path
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr nav_msgs_path_pub_;
 
   };
 

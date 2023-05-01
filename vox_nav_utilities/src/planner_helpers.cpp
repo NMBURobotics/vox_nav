@@ -279,4 +279,96 @@ namespace vox_nav_utilities
     linear_interpolated_pose.pose.position.z = (a.pose.position.z + b.pose.position.z) / 2.0;
     return linear_interpolated_pose;
   }
+
+  void publishPlan(
+    const std::vector<geometry_msgs::msg::PoseStamped> & path,
+    const geometry_msgs::msg::PoseStamped & start_pose,
+    const geometry_msgs::msg::PoseStamped & goal_pose,
+    const geometry_msgs::msg::Vector3 & marker_scale,
+    const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & plan_publisher,
+    const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr & nav_path_publisher,
+    const bool & publish_segment_ids,
+    const std::string & robot_mesh_path
+  )
+  {
+    // Clear All previous markers
+    visualization_msgs::msg::MarkerArray clear_markers;
+    visualization_msgs::msg::Marker clear_path, rgg_costs, rgg_edges;
+    clear_path.id = 0;
+    clear_path.ns = "path";
+    clear_path.action = visualization_msgs::msg::Marker::DELETEALL;
+    clear_markers.markers.push_back(clear_path);
+    plan_publisher->publish(clear_markers);
+
+    visualization_msgs::msg::MarkerArray marker_array;
+    visualization_msgs::msg::Marker start_marker, goal_marker;
+    nav_msgs::msg::Path nav_msgs_path;
+
+    auto path_idx = 0;
+    for (auto && i : path) {
+      visualization_msgs::msg::Marker marker;
+      marker.header.frame_id = "map";
+      marker.header.stamp = rclcpp::Clock().now();
+      marker.ns = "path";
+      marker.id = path_idx;
+      if (!robot_mesh_path.empty()) {
+        marker.type = visualization_msgs::msg::Marker::MESH_RESOURCE;
+        marker.mesh_resource = robot_mesh_path;
+      } else {
+        marker.type = visualization_msgs::msg::Marker::CUBE;
+      }
+      marker.action = visualization_msgs::msg::Marker::ADD;
+      marker.lifetime = rclcpp::Duration::from_seconds(0.5);
+      marker.text = std::to_string(path_idx);
+      marker.pose = i.pose;
+      marker.scale = marker_scale;
+      marker.color.a = 0.5;
+      marker.color.r = 1.0;
+      marker_array.markers.push_back(marker);
+      start_marker = marker;
+      goal_marker = marker;
+
+      double void_s, yaw;
+      vox_nav_utilities::getRPYfromMsgQuaternion(i.pose.orientation, void_s, void_s, yaw);
+
+      visualization_msgs::msg::Marker text;
+      text.header.frame_id = "map";
+      text.header.stamp = rclcpp::Clock().now();
+      text.ns = "text";
+      text.id = path_idx;
+      text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
+      text.action = visualization_msgs::msg::Marker::ADD;
+      text.lifetime = rclcpp::Duration::from_seconds(0);
+      std::string dis(std::to_string(path_idx) + "," + std::to_string(yaw));
+      if (publish_segment_ids) {
+        text.text = dis;
+      }
+      text.pose = i.pose;
+      text.pose.position.z += 0.5;
+      text.scale.x = 0.3;
+      text.scale.y = 0.3;
+      text.scale.z = 0.3;
+      text.color.a = 1.0;
+      text.color.g = 1.0;
+      text.color.r = 1.0;
+      path_idx++;
+
+      marker_array.markers.push_back(text);
+
+      /*geometry_msgs::msg::PoseStamped mutable_pose = i;
+      mutable_pose.header.frame_id = "map";
+      mutable_pose.header.stamp = rclcpp::Clock().now();
+      nav_msgs_path.poses.push_back(mutable_pose);
+      nav_msgs_path.header = mutable_pose.header;*/
+    }
+    // Publish goal and start states for debuging
+    start_marker.pose = start_pose.pose;
+    start_marker.color.b = 0;
+    goal_marker.pose = goal_pose.pose;
+    goal_marker.color.b = 0;
+    marker_array.markers.push_back(start_marker);
+    marker_array.markers.push_back(goal_marker);
+    plan_publisher->publish(marker_array);
+    nav_path_publisher->publish(nav_msgs_path);
+  }
 }  // namespace vox_nav_utilities

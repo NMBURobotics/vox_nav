@@ -7,6 +7,8 @@ Panels:
         - /OdomGPS1/Shape1
         - /OdomGlobal1/Shape1
         - /OdomLIOSAM1/Topic1
+        - /Path1/Topic1
+        - /VoxNavPlan1/Namespaces1
         - /PlannerGeometricplan1/Namespaces1
         - /SupervoxelGraph1/Topic1
         - /TrackedClusterCloud1/Topic1
@@ -250,11 +252,11 @@ Visualization Manager:
       Shaft Diameter: 0.10000000149011612
       Shaft Length: 0.10000000149011612
       Topic:
-        Depth: 5
-        Durability Policy: Volatile
+        Depth: 10
+        Durability Policy: System Default
         Filter size: 10
         History Policy: Keep Last
-        Reliability Policy: Reliable
+        Reliability Policy: System Default
         Value: /vox_nav/planning/nav_msgs_path
       Value: true
     - Class: rviz_default_plugins/MarkerArray
@@ -270,22 +272,24 @@ Visualization Manager:
         Value: /vox_nav/InformedSGCP/rgg
       Value: true
     - Class: rviz_default_plugins/MarkerArray
-      Enabled: false
+      Enabled: true
       Name: VoxNavPlan
       Namespaces:
-        {}
+        path: true
+        text: false
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /vox_nav/planning/plan
-      Value: false
+      Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: PlannerGeometricplan
       Namespaces:
-        {}
+        gcosts: true
+        gpath: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -297,7 +301,7 @@ Visualization Manager:
       Enabled: true
       Name: VoxNavMPCComputedTraj
       Namespaces:
-        {}
+        actual_traj: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -309,7 +313,7 @@ Visualization Manager:
       Enabled: true
       Name: VoxNavInterpolatedMPCPlan
       Namespaces:
-        {}
+        ref_traj: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -821,25 +825,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/ThirdPersonFollower
-      Distance: 23.096660614013672
+      Distance: 23.12537384033203
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -3.7795374393463135
-        Y: -3.1161670684814453
-        Z: -0.00016672197671141475
+        X: 0.5013976097106934
+        Y: -0.3679685592651367
+        Z: -0.00015315630298573524
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7997965216636658
+      Pitch: 1.0697965621948242
       Target Frame: base_link
       Value: ThirdPersonFollower (rviz_default_plugins)
-      Yaw: 3.028698682785034
+      Yaw: 3.1937007904052734
     Saved: ~
 Window Geometry:
   Displays:

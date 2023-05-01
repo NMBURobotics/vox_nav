@@ -14,17 +14,8 @@
 
 #ifndef VOX_NAV_UTILITIES__PLANNER_HELPERS_HPP_
 #define VOX_NAV_UTILITIES__PLANNER_HELPERS_HPP_
+#pragma once
 
-#include <string>
-#include <memory>
-#include "rclcpp/rclcpp.hpp"
-#include "tf2_ros/buffer.h"
-#include "geometry_msgs/msg/pose_stamped.hpp"
-#include "geometry_msgs/msg/pose_array.hpp"
-#include "visualization_msgs/msg/marker_array.hpp"
-#include "tf2_geometry_msgs/tf2_geometry_msgs.h"
-#include "vox_nav_utilities/tf_helpers.hpp"
-#include "vox_nav_utilities/pcl_helpers.hpp"
 // OMPL BASE
 #include <ompl/base/samplers/ObstacleBasedValidStateSampler.h>
 #include <ompl/base/OptimizationObjective.h>
@@ -56,8 +47,6 @@
 #include <ompl/geometric/planners/informedtrees/AITstar.h>
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/base/OptimizationObjective.h>
-
-
 // OCTOMAP
 #include <octomap_msgs/msg/octomap.hpp>
 #include <octomap_msgs/conversions.h>
@@ -68,6 +57,21 @@
 #include <pcl/common/pca.h>
 #include <pcl/common/transforms.h>
 #include <pcl/point_types.h>
+#include <rclcpp/rclcpp.hpp>
+
+#include <tf2_ros/buffer.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/pose_array.hpp>
+#include <geometry_msgs/msg/point.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+
+#include "vox_nav_utilities/tf_helpers.hpp"
+#include "vox_nav_utilities/pcl_helpers.hpp"
+
+#include <string>
+#include <memory>
 
 namespace vox_nav_utilities
 {
@@ -175,6 +179,27 @@ namespace vox_nav_utilities
     const geometry_msgs::msg::PoseStamped a,
     const geometry_msgs::msg::PoseStamped b
   );
+
+  /**
+   * @brief Publish a plan as a nav_msgs::msg::Path and a visualization_msgs::msg::MarkerArray
+   *
+   * @param path
+   * @param start_pose
+   * @param goal_pose
+   * @param marker_scale
+   * @param plan_publisher
+   * @param nav_path_publisher
+   * @param robot_mesh_path
+   */
+  void publishPlan(
+    const std::vector<geometry_msgs::msg::PoseStamped> & path,
+    const geometry_msgs::msg::PoseStamped & start_pose,
+    const geometry_msgs::msg::PoseStamped & goal_pose,
+    const geometry_msgs::msg::Vector3 & marker_scale,
+    const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr & plan_publisher,
+    const rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr & nav_path_publisher,
+    const bool & publish_segment_ids = true,
+    const std::string & robot_mesh_path = "");
 
 }  // namespace vox_nav_utilities
 
