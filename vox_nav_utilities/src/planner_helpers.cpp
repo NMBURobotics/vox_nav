@@ -218,6 +218,7 @@ namespace vox_nav_utilities
       line_strip.id = index;
       line_strip.type = visualization_msgs::msg::Marker::LINE_STRIP;
       line_strip.action = visualization_msgs::msg::Marker::ADD;
+      line_strip.lifetime = rclcpp::Duration::from_seconds(0.5);
       line_strip.scale.x = 0.1;
       geometry_msgs::msg::Point point;
       point.x = supervoxel->centroid_.x;
@@ -236,6 +237,7 @@ namespace vox_nav_utilities
       sphere.id = index + 10000;
       sphere.type = visualization_msgs::msg::Marker::SPHERE;
       sphere.action = visualization_msgs::msg::Marker::ADD;
+      sphere.lifetime = rclcpp::Duration::from_seconds(0.5);
       sphere.pose.position = point;
       sphere.scale.x = 0.3;
       sphere.scale.y = 0.3;

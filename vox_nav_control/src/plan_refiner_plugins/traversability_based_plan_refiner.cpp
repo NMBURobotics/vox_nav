@@ -362,7 +362,7 @@ namespace vox_nav_control
     header.stamp = msg->header.stamp;
     visualization_msgs::msg::MarkerArray marker_array;
     // Publish empty to reset previous
-    fillSuperVoxelMarkersfromAdjacency(
+    vox_nav_utilities::fillSuperVoxelMarkersfromAdjacency(
       supervoxel_clusters_, supervoxel_adjacency, header, marker_array);
     supervoxel_graph_publisher_->publish(marker_array);
 
