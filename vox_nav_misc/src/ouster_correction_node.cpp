@@ -44,6 +44,7 @@ struct OutOusterPointXYZIRT
 {
   PCL_ADD_POINT4D;
   float intensity;
+  float ambient;
   uint32_t t;
   uint16_t reflectivity;
   uint8_t ring;
@@ -53,7 +54,9 @@ struct OutOusterPointXYZIRT
 } EIGEN_ALIGN16;
 POINT_CLOUD_REGISTER_POINT_STRUCT(
   OutOusterPointXYZIRT,
-  (float, x, x)(float, y, y) (float, z, z) (float, intensity, intensity)(uint32_t, t, t) (
+  (float, x, x)(float, y, y) (float, z, z) (float, intensity, intensity)(uint32_t, t, t)(
+    float,
+    ambient, ambient)(
     uint16_t,
     reflectivity, reflectivity)(uint8_t, ring, ring) (uint16_t, noise, noise) (
     uint32_t, range,
@@ -102,6 +105,7 @@ public:
         // Convert the pcl/PointCloud to sensor_msgs/PointCloud2 and publish it
         pcl::toROSMsg(*cloud_out, *output);
         output->header = msg->header;
+        output->header.stamp = now();
 
         // Publish the data.
         publisher_->publish(*output);

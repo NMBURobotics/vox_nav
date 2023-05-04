@@ -177,7 +177,7 @@ namespace vox_nav_planning
         planner->as<ompl::control::InformedSGCP>()->setUseValidSampler(true);
         planner->as<ompl::control::InformedSGCP>()->setMaxDistBetweenVertices(5.0);
         planner->as<ompl::control::InformedSGCP>()->setUseKNearest(true);
-        planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(false);
+        planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(true);
         planner->as<ompl::control::InformedSGCP>()->setBatchSize(1000);
       } else {
         RCLCPP_WARN(

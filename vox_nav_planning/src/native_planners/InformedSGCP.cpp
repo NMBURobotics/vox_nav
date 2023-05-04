@@ -658,6 +658,10 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(
 
       // Populate the OMPL control paths from vertexes found by A* in the control threads
       for (size_t i = 0; i < control_shortest_paths.size(); i++) {
+        // Reverse the plans which were planned from goal to start
+        if (i % 2 == 1) {
+          std::reverse(control_shortest_paths[i].begin(), control_shortest_paths[i].end());
+        }
         bestControlVertex[i].resize(control_shortest_paths[i].size());
         populateOmplPathfromVertexPath(
           control_shortest_paths[i],

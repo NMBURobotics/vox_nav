@@ -189,6 +189,7 @@ namespace vox_nav_control
 
       if (result.isCollision()) {
         // If the point is inside the traversability map box, continue
+        closest_point_on_path.point = point.pose.position;
         continue;
       } else {
         // If the point is outside the traversability map box, break
@@ -199,10 +200,12 @@ namespace vox_nav_control
       }
     }
 
+
     if (traj_endpoint_inside) {
       // If the entire trajectory is inside the traversability map box,
       // The local goal is the last point on the trajectory
       closest_point_on_path.point = plan_to_refine.poses.back().pose.position;
+      closest_traj_pose_idx_local_goal = plan_to_refine.poses.size() - 1;
     }
 
     // Lets publish the closest point on the path to the traversability map as local goal
