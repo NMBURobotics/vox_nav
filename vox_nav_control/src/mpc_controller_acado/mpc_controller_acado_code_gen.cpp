@@ -186,7 +186,7 @@ int main(int argc, char ** argv)
 
   std::string home = std::getenv("HOME");
   std::string full_path = home +
-    "/colcon_ws/src/vox_nav/vox_nav_control/include/vox_nav_control/mpc_controller_acado/auto_gen";
+    "/ros2_ws/src/vox_nav/vox_nav_control/include/vox_nav_control/mpc_controller_acado/auto_gen";
 
   if (mpc.exportCode(full_path.c_str()) != ACADO::SUCCESSFUL_RETURN) {
     exit(EXIT_FAILURE);

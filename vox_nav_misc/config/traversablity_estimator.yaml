@@ -3,7 +3,7 @@ traversablity_estimator_node:
      # COST REGRESSION CRITICS AND PARAMS
     uniform_sample_radius: 0.2
     surfel_radius: 0.6                                                       # Works as resolution of cost regression onto map
-    max_allowed_tilt: 0.15                                                   # 1st Cost critic Any angle(radians) higher than this is marked as NON-traversable
+    max_allowed_tilt: 0.10                                                   # 1st Cost critic Any angle(radians) higher than this is marked as NON-traversable
     max_allowed_point_deviation: 0.20                                        # 2nd Cost critic Point deviation from plane, this could be viewed as roughness of each cell 
     max_allowed_energy_gap: 0.5                                              # 3rd Cost critic Max Energy in each cell, this is detemined by max height differnce between edge points of cell
     node_elevation_distance: 1.2                                             # According to cell_radius, cell centers are sampled from original point cloud map, they are elevated from the original cloud

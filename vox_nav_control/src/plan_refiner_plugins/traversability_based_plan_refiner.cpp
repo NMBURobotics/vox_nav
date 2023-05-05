@@ -60,6 +60,7 @@ namespace vox_nav_control
     traversability_map_bbox_publisher_ = node_->create_publisher<vision_msgs::msg::Detection3D>(
       "traversability_map_bbox", rclcpp::SensorDataQoS());
 
+    node_->declare_parameter(plugin_name + ".local_goal_max_nn_dist", 3.0);
     node_->declare_parameter(plugin_name + ".supervoxel_disable_transform", false);
     node_->declare_parameter(plugin_name + ".supervoxel_resolution", 0.25);
     node_->declare_parameter(plugin_name + ".supervoxel_seed_resolution", 0.5);
@@ -67,6 +68,9 @@ namespace vox_nav_control
     node_->declare_parameter(plugin_name + ".supervoxel_spatial_importance", 1.0);
     node_->declare_parameter(plugin_name + ".supervoxel_normal_importance", 1.0);
 
+    node_->get_parameter(
+      plugin_name + ".local_goal_max_nn_dist",
+      local_goal_max_nn_dist_);
     node_->get_parameter(
       plugin_name + ".supervoxel_disable_transform",
       supervoxel_disable_transform_);
@@ -240,10 +244,9 @@ namespace vox_nav_control
     kdtree.setInputCloud(graph_vertices);
     std::vector<int> pointIdxRadiusSearch;
     std::vector<float> pointRadiusSquaredDistance;
-    float radius = 3.5;
     pcl::PointXYZRGBA searchPoint = nn_to_local_goal;
     if (kdtree.radiusSearch(
-        searchPoint, radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0)
+        searchPoint, local_goal_max_nn_dist_, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0)
     {
       shortest_path.clear();
       for (size_t i = 0; i < pointIdxRadiusSearch.size(); ++i) {

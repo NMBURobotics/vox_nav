@@ -21,7 +21,7 @@ namespace vox_nav_misc
   {
     cloud_subscriber_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
       "points",
-      rclcpp::SensorDataQoS(),
+      rclcpp::QoS(rclcpp::KeepLast(1)).reliable(),
       std::bind(&TraversabilityEstimator::cloudCallback, this, std::placeholders::_1));
 
     traversable_cloud_publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
@@ -173,7 +173,6 @@ namespace vox_nav_misc
     Eigen::Vector4f min_pt;
     min_pt[0] = curr_robot_pose.pose.position.x - 10.0;
     min_pt[1] = curr_robot_pose.pose.position.y - 10.0;
-
     min_pt[2] = curr_robot_pose.pose.position.z - 5.0;
     Eigen::Vector4f max_pt;
     max_pt[0] = curr_robot_pose.pose.position.x + 10.0;

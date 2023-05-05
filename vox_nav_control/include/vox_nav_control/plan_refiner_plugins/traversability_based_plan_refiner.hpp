@@ -112,6 +112,7 @@ namespace vox_nav_control
     std::string map_topic_;
     // is this plugin enabled ?
     bool is_enabled_;
+    float local_goal_max_nn_dist_;
 
     // Subscribe to traversability map topic
     rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr traversability_map_subscriber_;
