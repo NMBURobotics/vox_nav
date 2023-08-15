@@ -136,8 +136,8 @@ def generate_launch_description():
         output="screen",
         parameters=[localization_params],
         remappings=[
-            ("imu", "/dobbie/sensing/imu/tamagawa/imu_raw"),
-            ("gps/fix", "fix"),
+            ("imu", "AGV0/dobbie/sensing/imu/tamagawa/imu_raw"),
+            ("gps/fix", "AGV0/fix"),
             ("gps/filtered", "gps/filtered"),
             ("odometry/gps", "odometry/gps"),
             ("odometry/filtered", "odometry/global"),

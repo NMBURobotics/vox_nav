@@ -65,13 +65,13 @@ vox_nav_controller_server_rclcpp_node:
       goal_tolerance_orientation: 0.2                                         # in radians, once smaller than this value,controller exits with success
       transform_timeout: 0.01                                                 # seconds, this is used to regulate lookUpTransfrom calls from tf2
       global_plan_look_ahead_distance: 5.0                                    # look this amount of meters from current robot pose to remaining global path
-      ref_traj_se2_space: "REEDS"                                               # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
+      ref_traj_se2_space: "REEDS"                                             # "DUBINS","REEDS", "SE2" ### PS. Use DUBINS OR REEDS for Ackermann
       rho: 3.0                                                                # Curve radius form reeds and dubins only
       robot_radius: 1.25                                                          
 
       MPCControllerCasadiROS:
          plugin: "mpc_controller_casadi::MPCControllerCasadiROS"
-         N: 8                                                                # timesteps in MPC Horizon
+         N: 8                                                                 # timesteps in MPC Horizon
          DT: 0.2                                                              # discretization time between timesteps(s)
          L_F: 0.67                                                            # distance from CoG to front axle(m)
          L_R: 0.67                                                            # distance from CoG to rear axle(m)

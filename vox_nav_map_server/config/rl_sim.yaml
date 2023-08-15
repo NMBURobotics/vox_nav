@@ -6,9 +6,9 @@ ekf_local_filter_node:
     filter_type: "ekf"
     frequency: 30.0
     sensor_timeout: 0.1
-    odom0: /dobbie/odom
-    oodm1: /lio_sam/mapping/odometry
-    imu0: /dobbie/sensing/imu/tamagawa/imu_raw
+    odom0: /AGV0/dobbie/odom
+    odom1: /lio_sam/mapping/odometry
+    imu0: AGV0/dobbie/sensing/imu/tamagawa/imu_raw
     map_frame: map
     odom_frame: odom
     base_link_frame: base_link
@@ -85,9 +85,9 @@ ekf_global_filter_node:
     filter_type: "ekf"
     frequency: 30.0
     sensor_timeout: 0.2
-    odom0: /dobbie/odom
+    odom0: /AGV0/dobbie/odom
     odom1: /odometry/gps
-    imu0: /dobbie/sensing/imu/tamagawa/imu_raw
+    imu0: /AGV0/dobbie/sensing/imu/tamagawa/imu_raw
     map_frame: map
     odom_frame: odom
     base_link_frame: base_link
@@ -165,6 +165,6 @@ navsat_transform_node:
     broadcast_cartesian_transform: true
     broadcast_cartesian_transform_as_parent_frame: true
     publish_filtered_gps: true
-    use_odometry_yaw: true
+    use_odometry_yaw: false
     #wait_for_datum: true
     #datum: [-2.846001584706555e-09, -8.984332830094866e-06, 0.0]
