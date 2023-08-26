@@ -88,12 +88,17 @@ add_executable(ouster_correction_node src/ouster_correction_node.cpp)
 ament_target_dependencies(ouster_correction_node ${dependencies})
 target_include_directories(ouster_correction_node PUBLIC ${PCL_INCLUDE_DIRS})
 
+add_executable(traversablity_integrator src/traversablity_integrator.cpp)
+ament_target_dependencies(traversablity_integrator ${dependencies})
+target_include_directories(traversablity_integrator PUBLIC ${PCL_INCLUDE_DIRS})
+
 install(TARGETS naive_lidar_clustering
                 pcl_cpu_ndt
                 ukf_tracker
                 traversablity_estimator
                 fast_gicp_client
                 ouster_correction_node
+                traversablity_integrator
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

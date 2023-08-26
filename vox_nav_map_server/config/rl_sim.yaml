@@ -2,7 +2,7 @@ ekf_local_filter_node:
   ros__parameters:
     use_sim_time: true
     clear_params: true
-    publish_tf: true
+    publish_tf: false
     filter_type: "ekf"
     frequency: 30.0
     sensor_timeout: 0.1
@@ -81,7 +81,7 @@ ekf_global_filter_node:
   ros__parameters:
     use_sim_time: true
     clear_params: true
-    publish_tf: true
+    publish_tf: false
     filter_type: "ekf"
     frequency: 30.0
     sensor_timeout: 0.2
@@ -157,6 +157,7 @@ ekf_global_filter_node:
 navsat_transform_node:
   ros__parameters:
     use_sim_time: true
+    publish_tf: true
     frequency: 30.0
     delay: 0.0
     magnetic_declination_radians: 0.0  # For lat/long 55.944831, -3.186998
