@@ -1,5 +1,3 @@
-// Write a Node to correct the ouster lidar data
-
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
@@ -20,27 +18,35 @@
 #include <pcl/point_cloud.h>
 #include <pcl_ros/transforms.hpp>
 
-// Eigen includes
 #include <Eigen/StdVector>
 #include <eigen3/Eigen/Geometry>
 
-class TraversanlityINtegrator : public rclcpp::Node
+/**
+ * @brief This node integrates the traversable cloud into a global traversablity map
+ *        The node assumes that incoming "local" cloud has traversablity information and
+ *        is algined with the global map. The global map is assumed to be in the "map" frame
+ *        but it lcak the traversablity information. The node will integrate the local traversable cloud
+ *        into the global map and publish the global map with traversablity information.
+ *        The approach uses PCL octree to integrate the local cloud into the global map.
+ *
+ */
+class TraversablityIntegrator : public rclcpp::Node
 {
 public:
-  TraversanlityINtegrator() : Node("traversanlity_integrator_rclcpp_node")
+  TraversablityIntegrator() : Node("traversablity_integrator_node")
   {
     // Create a publisher.
-    traversable_map_publisher_ =
-        this->create_publisher<sensor_msgs::msg::PointCloud2>("traversable_map", rclcpp::SensorDataQoS());
+    traversablity_map_publisher_ =
+        this->create_publisher<sensor_msgs::msg::PointCloud2>("traversability_map_points_out", rclcpp::SensorDataQoS());
 
     // Subscribe to lio_sam map and convert the points to PointXYZRGB format
     map_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "lio_sam/mapping/map_local", 1, std::bind(&TraversanlityINtegrator::mapCallback, this, std::placeholders::_1));
+        "map_points_in", 1, std::bind(&TraversablityIntegrator::mapCallback, this, std::placeholders::_1));
 
     // Subscribe to traversable cloud and convert the points to PointXYZRGB format
     traversable_cloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "traversable_map_cloud", rclcpp::SensorDataQoS(),
-        std::bind(&TraversanlityINtegrator::traversableCloudCallback, this, std::placeholders::_1));
+        "traversability_cloud_in", rclcpp::SensorDataQoS(),
+        std::bind(&TraversablityIntegrator::traversableCloudCallback, this, std::placeholders::_1));
 
     // initialize octree
     octree_ = std::make_shared<pcl::octree::OctreePointCloudSearch<pcl::PointXYZRGB>>(resolution_);
@@ -48,10 +54,13 @@ public:
     // initialize tf listener
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+    RCLCPP_INFO(this->get_logger(), "Traversablity Integrator Node has been initialized");
   }
 
-  ~TraversanlityINtegrator()
+  ~TraversablityIntegrator()
   {
+    RCLCPP_INFO(this->get_logger(), "Traversablity Integrator Node has been destroyed");
   }
 
   void mapCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
@@ -64,9 +73,9 @@ public:
     if (!first_map_received_)
     {
       // Initialize the traversable map with the first map received
-      traversable_map_ = map_cloud;
+      traversablity_map_ = map_cloud;
       first_map_received_ = true;
-      octree_->setInputCloud(traversable_map_);
+      octree_->setInputCloud(traversablity_map_);
       octree_->addPointsFromInputCloud();
       return;
     }
@@ -82,7 +91,7 @@ public:
       }
       else
       {
-        octree_->addPointToCloud(point, traversable_map_);
+        octree_->addPointToCloud(point, traversablity_map_);
       }
     }
   }
@@ -103,10 +112,10 @@ public:
 
     // publish the traversable map
     sensor_msgs::msg::PointCloud2 traversable_map_msg;
-    pcl::toROSMsg(*traversable_map_, traversable_map_msg);
+    pcl::toROSMsg(*traversablity_map_, traversable_map_msg);
     traversable_map_msg.header.frame_id = "map";
     traversable_map_msg.header.stamp = msg->header.stamp;
-    traversable_map_publisher_->publish(traversable_map_msg);
+    traversablity_map_publisher_->publish(traversable_map_msg);
   }
 
   void insertTraversableCloud(const std_msgs::msg::Header& header, const std::string& from, const std::string& to)
@@ -140,34 +149,45 @@ public:
         for (auto& idx : pointIdxVec)
         {
           // Update the point in the traversable map
-          traversable_map_->points[idx].r = point.r;
-          traversable_map_->points[idx].g = point.g;
-          traversable_map_->points[idx].b = point.b;
+          traversablity_map_->points[idx].r = point.r;
+          traversablity_map_->points[idx].g = point.g;
+          traversablity_map_->points[idx].b = point.b;
         }
       }
       else
       {
-        octree_->addPointToCloud(point, traversable_map_);
+        octree_->addPointToCloud(point, traversablity_map_);
       }
     }
   }
 
 private:
+  // This is raw map from lio_sam, it does not have traversablity information
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr map_sub_;
+  // This is the traversable cloud from pointnet node which has traversablity information but it is only local
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr traversable_cloud_sub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr traversable_map_publisher_;
+  // This is the traversable map with global coverage
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr traversablity_map_publisher_;
 
-  // create a OCTREE for traversable map
+  // Use PCL octree to integrate the traversable cloud into the traversable map
   pcl::octree::OctreePointCloudSearch<pcl::PointXYZRGB>::Ptr octree_;
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr traversable_map_;
+  // This is the traversable map with global coverage
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr traversablity_map_;
+  // This is the latest map from lio_sam
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr latest_map_;
+  // This is the latest traversable cloud from pointnet node
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr latest_traversable_cloud_;
 
+  // resolution of the octree
   double resolution_{ 0.2 };
+
+  // This is to make sure that we have received the first map before we start integrating the traversable cloud
   bool first_map_received_ = false;
+
   std::mutex traversable_map_mutex_;
 
+  // tf2 listener and buffer for transforming the traversable cloud into the map frame it its stamp
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 };
@@ -175,7 +195,7 @@ private:
 int main(int argc, char* argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<TraversanlityINtegrator>());
+  rclcpp::spin(std::make_shared<TraversablityIntegrator>());
   rclcpp::shutdown();
   return 0;
 }
