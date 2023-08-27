@@ -21,6 +21,14 @@
 #include <Eigen/StdVector>
 #include <eigen3/Eigen/Geometry>
 
+struct Config
+{
+  double prob_hit = 0.8;
+  double prob_miss = 0.1;
+  double prob_thres_min = 0.12;
+  double prob_thres_max = 0.8;
+};
+
 /**
  * @brief This node integrates the traversable cloud into a global traversablity map
  *        The node assumes that incoming "local" cloud has traversablity information and
@@ -54,6 +62,13 @@ public:
     // initialize tf listener
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+    m_logodds_miss_ = log(config_.prob_miss) - log(1 - config_.prob_miss);
+    m_logodds_hit_ = log(config_.prob_hit) - log(1 - config_.prob_hit);
+    m_logodds_thres_min_ = log(config_.prob_thres_min) - log(1 - config_.prob_thres_min);
+    m_logodds_thres_max_ = log(config_.prob_thres_max) - log(1 - config_.prob_thres_max);
+    m_max_logodds_ = log(0.99) - log(0.01);  // 2
+    m_min_logodds_ = log(0.01) - log(0.99);  // -2
 
     RCLCPP_INFO(this->get_logger(), "Traversablity Integrator Node has been initialized");
   }
@@ -146,17 +161,74 @@ public:
         // GET THE INDEX OF THE POINT
         std::vector<int> pointIdxVec;
         octree_->voxelSearch(point, pointIdxVec);
+
+        // Find the mean r and g values within the voxel
+        std::vector<int> r_values;
+        std::vector<int> g_values;
         for (auto& idx : pointIdxVec)
         {
           // Update the point in the traversable map
-          traversablity_map_->points[idx].r = point.r;
+          /*traversablity_map_->points[idx].r = point.r;
           traversablity_map_->points[idx].g = point.g;
-          traversablity_map_->points[idx].b = point.b;
+          traversablity_map_->points[idx].b = point.b;*/
+          r_values.push_back(traversablity_map_->points[idx].r);
+          g_values.push_back(traversablity_map_->points[idx].g);
         }
-      }
-      else
-      {
-        octree_->addPointToCloud(point, traversablity_map_);
+        int r_sum = std::accumulate(r_values.begin(), r_values.end(), 0);
+        int g_sum = std::accumulate(g_values.begin(), g_values.end(), 0);
+        double r_mean = r_sum / r_values.size() * 1.0 / 255.0;
+        double g_mean = g_sum / g_values.size() * 1.0 / 255.0;
+
+        // Normalize the r and g values
+        point.r = point.r / 255.0;
+        point.g = point.g / 255.0;
+
+        double traversablity_of_voxel = 0.0;
+        r_mean = r_mean + (point.r / r_values.size());
+        g_mean = g_mean + (point.g / g_values.size());
+
+        if (r_mean > g_mean)
+        {
+          traversablity_of_voxel = r_mean;
+        }
+        else
+        {
+          traversablity_of_voxel = 1.0 - g_mean;
+        }
+
+        // a hit non traversable voxel a miss is a traversable voxel
+        if (traversablity_of_voxel > 0.8)
+        {
+          // apply hit to the voxel
+          traversablity_of_voxel += m_logodds_hit_;
+          if (traversablity_of_voxel > m_logodds_thres_max_)
+          {
+            traversablity_of_voxel = m_max_logodds_;
+          }
+        }
+        else
+        {
+          // apply miss to the voxel
+          traversablity_of_voxel += m_logodds_miss_;
+          if (traversablity_of_voxel < m_logodds_thres_min_)
+          {
+            traversablity_of_voxel = m_min_logodds_;
+          }
+        }
+
+        for (auto& idx : pointIdxVec)
+        {
+          if (traversablity_of_voxel > 0.5)
+          {
+            traversablity_map_->points[idx].r = (traversablity_of_voxel)*255.0;
+            traversablity_map_->points[idx].g = 0;
+          }
+          else
+          {
+            traversablity_map_->points[idx].g = (1.0 - traversablity_of_voxel) * 255.0;
+            traversablity_map_->points[idx].r = 0;
+          }
+        }
       }
     }
   }
@@ -190,6 +262,14 @@ private:
   // tf2 listener and buffer for transforming the traversable cloud into the map frame it its stamp
   std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
+  Config config_;
+  double m_logodds_miss_;
+  double m_logodds_hit_;
+  double m_logodds_thres_min_;
+  double m_logodds_thres_max_;
+  double m_max_logodds_;  // 2
+  double m_min_logodds_;  // -2
 };
 
 int main(int argc, char* argv[])
