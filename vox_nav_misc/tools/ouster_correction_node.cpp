@@ -15,6 +15,11 @@
 #include <pcl/segmentation/region_growing_rgb.h>
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
+#include <pcl/common/common.h>
+#include <pcl_ros/transforms.hpp>
+
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/buffer.h>
 
 #include <Eigen/StdVector>
 #include <eigen3/Eigen/Geometry>
@@ -80,16 +85,29 @@ public:
       pcl::PointCloud<InOusterPointXYZIRT>::Ptr cloud_in(new pcl::PointCloud<InOusterPointXYZIRT>);
       pcl::fromROSMsg(*msg, *cloud_in);
 
-      // Create a container for the data.
       pcl::PointCloud<OutOusterPointXYZIRT>::Ptr cloud_out(new pcl::PointCloud<OutOusterPointXYZIRT>);
+
+      // Transform the cloud from lidar frame to base_link frame
+      geometry_msgs::msg::TransformStamped transform_stamped;
+      try
+      {
+        transform_stamped = tf_buffer_->lookupTransform("base_link", msg->header.frame_id, tf2::TimePointZero);
+      }
+      catch (tf2::TransformException& ex)
+      {
+        RCLCPP_WARN(this->get_logger(), "%s", ex.what());
+      }
 
       // Convert the ouster data to the correct format
       for (size_t i = 0; i < cloud_in->points.size(); i++)
       {
+        // TRandform the point to the correct frame
+        Eigen::Vector3f point_in(cloud_in->points[i].x, cloud_in->points[i].y, cloud_in->points[i].z);
+
         OutOusterPointXYZIRT point;
-        point.x = cloud_in->points[i].x;
-        point.y = cloud_in->points[i].y;
-        point.z = cloud_in->points[i].z;
+        point.x = point_in.x();
+        point.y = point_in.y();
+        point.z = point_in.z();
         point.intensity = cloud_in->points[i].intensity;
         point.t = cloud_in->points[i].time_stamp;
         point.reflectivity = cloud_in->points[i].intensity * 255;
@@ -119,6 +137,10 @@ public:
     // Create a publisher.
     publisher_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("points_out", rclcpp::SensorDataQoS());
 
+    // init tf buffer and listener
+    tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
     // since this node is for simulated case, set use_sim_time to true
     this->set_parameter(rclcpp::Parameter("use_sim_time", true));
     RCLCPP_INFO(this->get_logger(), "Ouster Correction Node has been started.");
@@ -132,6 +154,10 @@ public:
 private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subscription_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr publisher_;
+
+  // tf buffer and listener
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 };
 
 int main(int argc, char* argv[])

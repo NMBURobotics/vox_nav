@@ -9,6 +9,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/filters/crop_box.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/conditional_euclidean_clustering.h>
@@ -23,10 +24,11 @@
 
 struct Config
 {
-  double prob_hit = 0.8;
+  double prob_hit = 0.9;
   double prob_miss = 0.1;
   double prob_thres_min = 0.12;
   double prob_thres_max = 0.8;
+  double resolution = 0.2;
 };
 
 /**
@@ -45,7 +47,7 @@ public:
   {
     // Create a publisher.
     traversablity_map_publisher_ =
-        this->create_publisher<sensor_msgs::msg::PointCloud2>("traversability_map_points_out", rclcpp::SensorDataQoS());
+        this->create_publisher<sensor_msgs::msg::PointCloud2>("traversability_map_points_out", 1);
 
     // Subscribe to lio_sam map and convert the points to PointXYZRGB format
     map_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
@@ -53,16 +55,34 @@ public:
 
     // Subscribe to traversable cloud and convert the points to PointXYZRGB format
     traversable_cloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
-        "traversability_cloud_in", rclcpp::SensorDataQoS(),
+        "traversability_cloud_in", 1,
         std::bind(&TraversablityIntegrator::traversableCloudCallback, this, std::placeholders::_1));
-
-    // initialize octree
-    octree_ = std::make_shared<pcl::octree::OctreePointCloudSearch<pcl::PointXYZRGB>>(resolution_);
 
     // initialize tf listener
     tf_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
+    this->declare_parameter("prob_hit", config_.prob_hit);
+    this->declare_parameter("prob_miss", config_.prob_miss);
+    this->declare_parameter("prob_thres_min", config_.prob_thres_min);
+    this->declare_parameter("prob_thres_max", config_.prob_thres_max);
+    this->declare_parameter("resolution", config_.resolution);
+
+    this->get_parameter("prob_hit", config_.prob_hit);
+    this->get_parameter("prob_miss", config_.prob_miss);
+    this->get_parameter("prob_thres_min", config_.prob_thres_min);
+    this->get_parameter("prob_thres_max", config_.prob_thres_max);
+    this->get_parameter("resolution", config_.resolution);
+
+    // Print the parameters
+    RCLCPP_INFO(this->get_logger(), "prob_hit: %f", config_.prob_hit);
+    RCLCPP_INFO(this->get_logger(), "prob_miss: %f", config_.prob_miss);
+    RCLCPP_INFO(this->get_logger(), "prob_thres_min: %f", config_.prob_thres_min);
+    RCLCPP_INFO(this->get_logger(), "prob_thres_max: %f", config_.prob_thres_max);
+    RCLCPP_INFO(this->get_logger(), "resolution: %f", config_.resolution);
+
+    // initialize octree
+    octree_ = std::make_shared<pcl::octree::OctreePointCloudSearch<pcl::PointXYZRGB>>(config_.resolution);
     m_logodds_miss_ = log(config_.prob_miss) - log(1 - config_.prob_miss);
     m_logodds_hit_ = log(config_.prob_hit) - log(1 - config_.prob_hit);
     m_logodds_thres_min_ = log(config_.prob_thres_min) - log(1 - config_.prob_thres_min);
@@ -197,7 +217,7 @@ public:
         }
 
         // a hit non traversable voxel a miss is a traversable voxel
-        if (traversablity_of_voxel > 0.8)
+        if (traversablity_of_voxel > 0.5)
         {
           // apply hit to the voxel
           traversablity_of_voxel += m_logodds_hit_;
@@ -241,6 +261,9 @@ private:
   // This is the traversable map with global coverage
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr traversablity_map_publisher_;
 
+  // Use locally cropped map and publish for pointnet node
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cropped_map_publisher_;
+
   // Use PCL octree to integrate the traversable cloud into the traversable map
   pcl::octree::OctreePointCloudSearch<pcl::PointXYZRGB>::Ptr octree_;
 
@@ -250,9 +273,6 @@ private:
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr latest_map_;
   // This is the latest traversable cloud from pointnet node
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr latest_traversable_cloud_;
-
-  // resolution of the octree
-  double resolution_{ 0.2 };
 
   // This is to make sure that we have received the first map before we start integrating the traversable cloud
   bool first_map_received_ = false;
