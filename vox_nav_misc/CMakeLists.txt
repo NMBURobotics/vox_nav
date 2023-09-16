@@ -84,6 +84,12 @@ target_include_directories(fast_gicp_client PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_IN
 target_link_directories(fast_gicp_client PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(fast_gicp_client ${PCL_LIBRARIES} ${CUDA_LIBRARIES} ${fast_gicp_LIBRARIES} OpenMP::OpenMP_CXX)
 
+cuda_add_executable(fast_gicp_client_no_gps src/fast_gicp_client_no_gps.cpp)
+ament_target_dependencies(fast_gicp_client_no_gps ${dependencies})
+target_include_directories(fast_gicp_client_no_gps PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${fast_gicp_INCLUDE_DIRS})
+target_link_directories(fast_gicp_client_no_gps PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(fast_gicp_client_no_gps ${PCL_LIBRARIES} ${CUDA_LIBRARIES} ${fast_gicp_LIBRARIES} OpenMP::OpenMP_CXX)
+
 add_executable(ouster_correction_node tools/ouster_correction_node.cpp)
 ament_target_dependencies(ouster_correction_node ${dependencies})
 target_include_directories(ouster_correction_node PUBLIC ${PCL_INCLUDE_DIRS})
@@ -92,13 +98,19 @@ add_executable(traversablity_integrator_node tools/traversablity_integrator_node
 ament_target_dependencies(traversablity_integrator_node ${dependencies})
 target_include_directories(traversablity_integrator_node PUBLIC ${PCL_INCLUDE_DIRS})
 
+add_executable(fix_ouster_direction tools/fix_ouster_direction.cpp)
+ament_target_dependencies(fix_ouster_direction ${dependencies})
+target_include_directories(fix_ouster_direction PUBLIC ${PCL_INCLUDE_DIRS})
+
 install(TARGETS naive_lidar_clustering
                 pcl_cpu_ndt
                 ukf_tracker
                 traversablity_estimator
                 fast_gicp_client
+                fast_gicp_client_no_gps
                 ouster_correction_node
                 traversablity_integrator_node
+                fix_ouster_direction
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

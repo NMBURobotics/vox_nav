@@ -53,7 +53,11 @@ ament_target_dependencies(map_manager ${dependencies})
 add_executable(osm_map_manager src/osm_map_manager.cpp)
 ament_target_dependencies(osm_map_manager ${dependencies}) 
 
+add_executable(map_manager_no_gps src/map_manager_no_gps.cpp)
+ament_target_dependencies(map_manager_no_gps ${dependencies})
+
 install(TARGETS map_manager
+                map_manager_no_gps
                 osm_map_manager  
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
