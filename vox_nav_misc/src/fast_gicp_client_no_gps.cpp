@@ -209,7 +209,7 @@ void FastGICPClientNoGPS::liveCloudCallback(const sensor_msgs::msg::PointCloud2:
     live_cloud_pub_->publish(live_cloud_crop_msg);
     map_cloud_pub_->publish(map_cloud_crop_msg);
 
-    initial_pose_->pose = resulting_pose.pose;
+    // initial_pose_->pose = resulting_pose.pose;
 
     if (params_.debug)
     {
