@@ -26,25 +26,13 @@ public:
 
   void callback(sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
   {
-    pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_in(new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::fromROSMsg(*msg, *cloud_in);
-
-    // Transform the cloud from lidar frame to base_link frame
-    geometry_msgs::msg::TransformStamped transform_stamped;
-    try
-    {
-      transform_stamped = tf_buffer_->lookupTransform("base_link", msg->header.frame_id, tf2::TimePointZero);
-    }
-    catch (tf2::TransformException& ex)
-    {
-      RCLCPP_WARN(this->get_logger(), "%s", ex.what());
-    }
-
-    pcl_ros::transformPointCloud(*cloud_in, *cloud_in, transform_stamped);
-
+    // create Eigen::Affine3d with rotation PI around z axis
+    Eigen::Affine3d transform;
+    transform = Eigen::AngleAxisd(M_PI, Eigen::Vector3d::UnitZ());
     sensor_msgs::msg::PointCloud2::SharedPtr output(new sensor_msgs::msg::PointCloud2);
-
-    pcl::toROSMsg(*cloud_in, *output);
+    pcl_ros::transformPointCloud(transform.matrix().cast<float>(), *msg, *output);
+    output->header.frame_id = "os_sensor";
+    output->header.stamp = msg->header.stamp;
 
     pub_->publish(*output);
   }

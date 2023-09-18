@@ -33,10 +33,10 @@ def generate_launch_description():
             {
                 "use_sim_time": False,
                 "prob_hit": 0.9,
-                "prob_miss": 0.1,
+                "prob_miss": 0.2,
                 "prob_thres_min": 0.12,
                 "prob_thres_max": 0.8,
-                "resolution": 0.1,
+                "resolution": 0.2,
             }
         ],
         # prefix=["xterm -e gdb -ex run --args"],

@@ -126,6 +126,8 @@ public:
       }
       else
       {
+        // This voxel is empty, so we need to add the point to the traversable map
+        // But there is no traversablity information in the original map, so we will set the color to black
         octree_->addPointToCloud(point, traversablity_map_);
       }
     }
@@ -160,8 +162,8 @@ public:
     geometry_msgs::msg::TransformStamped transformStamped;
     try
     {
-      transformStamped =
-          tf_buffer_->lookupTransform(to.c_str(), from.c_str(), header.stamp, rclcpp::Duration::from_seconds(0.1));
+      // Transform to the map frame
+      transformStamped = tf_buffer_->lookupTransform(to.c_str(), from.c_str(), header.stamp);
     }
     catch (tf2::TransformException& ex)
     {
@@ -172,7 +174,7 @@ public:
     pcl::PointCloud<pcl::PointXYZRGB>::Ptr transformed_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
     pcl_ros::transformPointCloud(*latest_traversable_cloud_, *transformed_cloud, transformStamped);
 
-    // Now integrate the traversable cloud into the traversable map
+    // Now integrate the local traversable cloud into the traversable map
     for (auto& point : transformed_cloud->points)
     {
       if (octree_->isVoxelOccupiedAtPoint(point))
@@ -187,66 +189,35 @@ public:
         std::vector<int> g_values;
         for (auto& idx : pointIdxVec)
         {
-          // Update the point in the traversable map
-          /*traversablity_map_->points[idx].r = point.r;
-          traversablity_map_->points[idx].g = point.g;
-          traversablity_map_->points[idx].b = point.b;*/
           r_values.push_back(traversablity_map_->points[idx].r);
           g_values.push_back(traversablity_map_->points[idx].g);
         }
+        // Also add the current point to the r and g values
+        r_values.push_back(point.r);
+        g_values.push_back(point.g);
+
         int r_sum = std::accumulate(r_values.begin(), r_values.end(), 0);
         int g_sum = std::accumulate(g_values.begin(), g_values.end(), 0);
-        double r_mean = r_sum / r_values.size() * 1.0 / 255.0;
-        double g_mean = g_sum / g_values.size() * 1.0 / 255.0;
+        double r_mean = r_sum / r_values.size() * 1.0 / 255.0;  // Probbality of being non traversable
+        double g_mean = g_sum / g_values.size() * 1.0 / 255.0;  // Probbality of being traversable
 
         // Normalize the r and g values
         point.r = point.r / 255.0;
         point.g = point.g / 255.0;
 
-        double traversablity_of_voxel = 0.0;
-        r_mean = r_mean + (point.r / r_values.size());
-        g_mean = g_mean + (point.g / g_values.size());
-
-        if (r_mean > g_mean)
-        {
-          traversablity_of_voxel = r_mean;
-        }
-        else
-        {
-          traversablity_of_voxel = 1.0 - g_mean;
-        }
-
-        // a hit non traversable voxel a miss is a traversable voxel
-        if (traversablity_of_voxel > 0.5)
-        {
-          // apply hit to the voxel
-          traversablity_of_voxel += m_logodds_hit_;
-          if (traversablity_of_voxel > m_logodds_thres_max_)
-          {
-            traversablity_of_voxel = m_max_logodds_;
-          }
-        }
-        else
-        {
-          // apply miss to the voxel
-          traversablity_of_voxel += m_logodds_miss_;
-          if (traversablity_of_voxel < m_logodds_thres_min_)
-          {
-            traversablity_of_voxel = m_min_logodds_;
-          }
-        }
+        double traversablity_of_voxel = traversablity_of_voxel = r_mean > g_mean ? r_mean : 1.0 - g_mean;
 
         for (auto& idx : pointIdxVec)
         {
           if (traversablity_of_voxel > 0.5)
           {
             traversablity_map_->points[idx].r = (traversablity_of_voxel)*255.0;
-            traversablity_map_->points[idx].g = 0;
+            traversablity_map_->points[idx].g = (1.0 - traversablity_of_voxel) * 255.0;
           }
           else
           {
             traversablity_map_->points[idx].g = (1.0 - traversablity_of_voxel) * 255.0;
-            traversablity_map_->points[idx].r = 0;
+            traversablity_map_->points[idx].r = (traversablity_of_voxel)*255.0;
           }
         }
       }

@@ -30,10 +30,14 @@ find_package(OpenMP REQUIRED)
 find_package(fast_gicp REQUIRED)
 find_package(CUDA REQUIRED)
 
+find_package(ouster_ros REQUIRED)
+find_package(ouster_msgs REQUIRED)
+
 include_directories(include
         ${PCL_INCLUDE_DIRS}
         ${CUDA_INCLUDE_DIRS}
-        ${fast_gicp_INCLUDE_DIRS})
+        ${fast_gicp_INCLUDE_DIRS}
+        ${ouster_ros_INCLUDE_DIRS})
 
 set(dependencies
         rclcpp
@@ -53,6 +57,8 @@ set(dependencies
         vox_nav_msgs
         vox_nav_utilities
         fast_gicp
+        ouster_ros
+        ouster_msgs
         )
         
 option(BUILD_VGICP_CUDA "Build GPU-powered VGICP" ON)
@@ -100,7 +106,7 @@ target_include_directories(traversablity_integrator_node PUBLIC ${PCL_INCLUDE_DI
 
 add_executable(fix_ouster_direction tools/fix_ouster_direction.cpp)
 ament_target_dependencies(fix_ouster_direction ${dependencies})
-target_include_directories(fix_ouster_direction PUBLIC ${PCL_INCLUDE_DIRS})
+target_include_directories(fix_ouster_direction PUBLIC ${PCL_INCLUDE_DIRS} )
 
 install(TARGETS naive_lidar_clustering
                 pcl_cpu_ndt
