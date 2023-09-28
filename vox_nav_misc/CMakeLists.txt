@@ -29,15 +29,15 @@ find_package(vox_nav_utilities REQUIRED)
 find_package(OpenMP REQUIRED)
 find_package(fast_gicp REQUIRED)
 find_package(CUDA REQUIRED)
-
-find_package(ouster_ros REQUIRED)
-find_package(ouster_msgs REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(cv_bridge REQUIRED)
 
 include_directories(include
         ${PCL_INCLUDE_DIRS}
         ${CUDA_INCLUDE_DIRS}
         ${fast_gicp_INCLUDE_DIRS}
-        ${ouster_ros_INCLUDE_DIRS})
+        ${OpenCV_INCLUDE_DIRS}
+        )
 
 set(dependencies
         rclcpp
@@ -57,33 +57,14 @@ set(dependencies
         vox_nav_msgs
         vox_nav_utilities
         fast_gicp
-        ouster_ros
-        ouster_msgs
+        cv_bridge
         )
         
 option(BUILD_VGICP_CUDA "Build GPU-powered VGICP" ON)
 add_definitions(${PCL_DEFINITIONS})
 add_definitions(-BUILD_VGICP_CUDA)
 
-add_executable(naive_lidar_clustering src/naive_lidar_clustering.cpp)
-ament_target_dependencies(naive_lidar_clustering ${dependencies})
-target_include_directories(naive_lidar_clustering PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-target_link_directories(naive_lidar_clustering PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(naive_lidar_clustering ${PCL_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
-
-add_executable(pcl_cpu_ndt src/pcl_cpu_ndt.cpp)
-ament_target_dependencies(pcl_cpu_ndt ${dependencies})
-target_include_directories(pcl_cpu_ndt PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
-target_link_directories(pcl_cpu_ndt PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
-target_link_libraries(pcl_cpu_ndt ${PCL_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
-
-add_executable(ukf_tracker src/ukf_tracker.cpp)
-ament_target_dependencies(ukf_tracker ${dependencies})
-
-add_executable(traversablity_estimator src/traversablity_estimator.cpp)
-ament_target_dependencies(traversablity_estimator ${dependencies})
-target_link_libraries(traversablity_estimator ${PCL_LIBRARIES})
-
+# ICP AND NDT LOCALIZATION NODES
 cuda_add_executable(fast_gicp_client src/fast_gicp_client.cpp)
 ament_target_dependencies(fast_gicp_client ${dependencies})
 target_include_directories(fast_gicp_client PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${fast_gicp_INCLUDE_DIRS})
@@ -96,27 +77,62 @@ target_include_directories(fast_gicp_client_no_gps PUBLIC ${CUDA_INCLUDE_DIRS} $
 target_link_directories(fast_gicp_client_no_gps PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
 target_link_libraries(fast_gicp_client_no_gps ${PCL_LIBRARIES} ${CUDA_LIBRARIES} ${fast_gicp_LIBRARIES} OpenMP::OpenMP_CXX)
 
-add_executable(ouster_correction_node tools/ouster_correction_node.cpp)
-ament_target_dependencies(ouster_correction_node ${dependencies})
-target_include_directories(ouster_correction_node PUBLIC ${PCL_INCLUDE_DIRS})
+add_executable(pcl_cpu_ndt src/pcl_cpu_ndt.cpp)
+ament_target_dependencies(pcl_cpu_ndt ${dependencies})
+target_include_directories(pcl_cpu_ndt PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(pcl_cpu_ndt PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(pcl_cpu_ndt ${PCL_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+
+# CLUSTERING AND TRACKING NODES
+add_executable(naive_lidar_clustering src/naive_lidar_clustering.cpp)
+ament_target_dependencies(naive_lidar_clustering ${dependencies})
+target_include_directories(naive_lidar_clustering PUBLIC ${CUDA_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
+target_link_directories(naive_lidar_clustering PUBLIC ${PCL_LIBRARY_DIRS} ${CUDA_LIBRARY_DIRS})
+target_link_libraries(naive_lidar_clustering ${PCL_LIBRARIES} ${CUDA_LIBRARIES} OpenMP::OpenMP_CXX)
+
+add_executable(ukf_tracker src/ukf_tracker.cpp)
+ament_target_dependencies(ukf_tracker ${dependencies})
+
+# TRULY MISC NODES
+add_executable(traversablity_estimator src/traversablity_estimator.cpp)
+ament_target_dependencies(traversablity_estimator ${dependencies})
+target_link_libraries(traversablity_estimator ${PCL_LIBRARIES})
+
+add_executable(lidar_rgb_image_fuser src/lidar_rgb_image_fuser.cpp)
+ament_target_dependencies(lidar_rgb_image_fuser ${dependencies})
+target_include_directories(lidar_rgb_image_fuser PUBLIC ${PCL_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} )
+target_link_libraries(lidar_rgb_image_fuser ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(stick_imu_to_inertial_frame src/stick_imu_to_inertial_frame.cpp)
+ament_target_dependencies(stick_imu_to_inertial_frame ${dependencies})
+target_include_directories(stick_imu_to_inertial_frame PUBLIC ${PCL_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS} )
+target_link_libraries(stick_imu_to_inertial_frame ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+
+# TOOLS
+add_executable(fix_ouster_direction_node tools/fix_ouster_direction_node.cpp)
+ament_target_dependencies(fix_ouster_direction_node ${dependencies})
+target_include_directories(fix_ouster_direction_node PUBLIC ${PCL_INCLUDE_DIRS})
+
+add_executable(fix_ouster_pointtype_node tools/fix_ouster_pointtype_node.cpp)
+ament_target_dependencies(fix_ouster_pointtype_node ${dependencies})
+target_include_directories(fix_ouster_pointtype_node PUBLIC ${PCL_INCLUDE_DIRS})
+target_link_libraries(fix_ouster_pointtype_node ${PCL_LIBRARIES})
 
 add_executable(traversablity_integrator_node tools/traversablity_integrator_node.cpp)
 ament_target_dependencies(traversablity_integrator_node ${dependencies})
 target_include_directories(traversablity_integrator_node PUBLIC ${PCL_INCLUDE_DIRS})
 
-add_executable(fix_ouster_direction tools/fix_ouster_direction.cpp)
-ament_target_dependencies(fix_ouster_direction ${dependencies})
-target_include_directories(fix_ouster_direction PUBLIC ${PCL_INCLUDE_DIRS} )
-
-install(TARGETS naive_lidar_clustering
-                pcl_cpu_ndt
-                ukf_tracker
-                traversablity_estimator
-                fast_gicp_client
-                fast_gicp_client_no_gps
-                ouster_correction_node
-                traversablity_integrator_node
-                fix_ouster_direction
+install(TARGETS   fast_gicp_client
+                  fast_gicp_client_no_gps
+                  pcl_cpu_ndt
+                  naive_lidar_clustering
+                  ukf_tracker
+                  traversablity_estimator
+                  lidar_rgb_image_fuser
+                  stick_imu_to_inertial_frame
+                  fix_ouster_direction_node
+                  fix_ouster_pointtype_node
+                  traversablity_integrator_node
         RUNTIME DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

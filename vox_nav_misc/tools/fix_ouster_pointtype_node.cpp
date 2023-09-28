@@ -1,4 +1,16 @@
-// Write a Node to correct the ouster lidar data
+// Copyright (c) 2023 Fetullah Atas, Norwegian University of Life Sciences
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -71,10 +83,10 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(
  *
  *
  */
-class OusterCorrectionNode : public rclcpp::Node
+class fix_ouster_pointtype_node : public rclcpp::Node
 {
 public:
-  OusterCorrectionNode() : Node("ouster_correction_node")
+  fix_ouster_pointtype_node() : Node("ouster_correction_node")
   {
     // Create a callback function for when messages are received.
     auto callback = [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) -> void {
@@ -86,17 +98,6 @@ public:
       pcl::fromROSMsg(*msg, *cloud_in);
 
       pcl::PointCloud<OutOusterPointXYZIRT>::Ptr cloud_out(new pcl::PointCloud<OutOusterPointXYZIRT>);
-
-      // Transform the cloud from lidar frame to base_link frame
-      geometry_msgs::msg::TransformStamped transform_stamped;
-      try
-      {
-        transform_stamped = tf_buffer_->lookupTransform("base_link", msg->header.frame_id, tf2::TimePointZero);
-      }
-      catch (tf2::TransformException& ex)
-      {
-        RCLCPP_WARN(this->get_logger(), "%s", ex.what());
-      }
 
       // Convert the ouster data to the correct format
       for (size_t i = 0; i < cloud_in->points.size(); i++)
@@ -146,7 +147,7 @@ public:
     RCLCPP_INFO(this->get_logger(), "Ouster Correction Node has been started.");
   }
 
-  ~OusterCorrectionNode()
+  ~fix_ouster_pointtype_node()
   {
     RCLCPP_INFO(this->get_logger(), "Ouster Correction Node has been destroyed");
   }
@@ -163,7 +164,7 @@ private:
 int main(int argc, char* argv[])
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<OusterCorrectionNode>());
+  rclcpp::spin(std::make_shared<fix_ouster_pointtype_node>());
   rclcpp::shutdown();
   return 0;
 }

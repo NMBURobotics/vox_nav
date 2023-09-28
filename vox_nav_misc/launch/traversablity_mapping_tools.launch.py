@@ -8,13 +8,13 @@ import os
 
 
 def generate_launch_description():
-    ouster_correction_node = Node(
+    fix_ouster_pointtype_node = Node(
         package="vox_nav_misc",
-        executable="ouster_correction_node",
-        name="ouster_correction_node",
+        executable="fix_ouster_pointtype_node",
+        name="fix_ouster_pointtype_node",
         output="screen",
         remappings=[
-            ("points_in", "AGV0/dobbie/sensing/lidar/top/pointcloud_raw_ex"),
+            ("points_in", "/AGV0/dobbie/sensing/lidar/top/pointcloud_raw_ex"),
             ("points_out", "AGV0/dobbie/sensing/lidar/top/pointcloud_raw_correct"),
         ],
     )
@@ -36,14 +36,14 @@ def generate_launch_description():
                 "prob_miss": 0.2,
                 "prob_thres_min": 0.12,
                 "prob_thres_max": 0.8,
-                "resolution": 0.2,
+                "resolution": 0.4,
             }
         ],
         # prefix=["xterm -e gdb -ex run --args"],
     )
 
     ld = LaunchDescription()
-    ld.add_action(traversablity_integrator_node)
-    # ld.add_action(ouster_correction_node)
+    # ld.add_action(traversablity_integrator_node)
+    ld.add_action(fix_ouster_pointtype_node)
 
     return ld
