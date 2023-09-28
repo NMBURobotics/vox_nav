@@ -14,12 +14,8 @@
 
 #include "vox_nav_misc/fast_gicp_client.hpp"
 
-#include <string>
-#include <vector>
-#include <memory>
-#include <algorithm>
-
-using namespace vox_nav_misc;
+namespace vox_nav_misc
+{
 
 FastGICPClient::FastGICPClient() : Node("fast_gicp_client_rclcpp_node")
 {
@@ -279,23 +275,12 @@ pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr FastGICPClient::createRegis
   return nullptr;
 }
 
-void FastGICPClient::swap_source_and_target(pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr reg)
-{
-  fast_gicp::LsqRegistration<pcl::PointXYZ, pcl::PointXYZ>* lsq_reg =
-      dynamic_cast<fast_gicp::LsqRegistration<pcl::PointXYZ, pcl::PointXYZ>*>(reg.get());
-  if (lsq_reg != nullptr)
-  {
-    lsq_reg->swapSourceAndTarget();
-    return;
-  }
-
-  std::cerr << "failed to swap source and target" << std::endl;
-}
+}  // namespace vox_nav_misc
 
 int main(int argc, char const* argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<FastGICPClient>();
+  auto node = std::make_shared<vox_nav_misc::FastGICPClient>();
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;

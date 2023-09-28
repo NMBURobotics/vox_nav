@@ -8,17 +8,6 @@ import os
 
 
 def generate_launch_description():
-    fix_ouster_pointtype_node = Node(
-        package="vox_nav_misc",
-        executable="fix_ouster_pointtype_node",
-        name="fix_ouster_pointtype_node",
-        output="screen",
-        remappings=[
-            ("points_in", "/AGV0/dobbie/sensing/lidar/top/pointcloud_raw_ex"),
-            ("points_out", "AGV0/dobbie/sensing/lidar/top/pointcloud_raw_correct"),
-        ],
-    )
-
     traversablity_integrator_node = Node(
         package="vox_nav_misc",
         executable="traversablity_integrator_node",
@@ -43,7 +32,6 @@ def generate_launch_description():
     )
 
     ld = LaunchDescription()
-    # ld.add_action(traversablity_integrator_node)
-    ld.add_action(fix_ouster_pointtype_node)
+    ld.add_action(traversablity_integrator_node)
 
     return ld

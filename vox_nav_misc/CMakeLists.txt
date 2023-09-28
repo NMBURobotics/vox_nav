@@ -122,6 +122,7 @@ add_executable(traversablity_integrator_node tools/traversablity_integrator_node
 ament_target_dependencies(traversablity_integrator_node ${dependencies})
 target_include_directories(traversablity_integrator_node PUBLIC ${PCL_INCLUDE_DIRS})
 
+
 install(TARGETS   fast_gicp_client
                   fast_gicp_client_no_gps
                   pcl_cpu_ndt

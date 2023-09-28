@@ -46,12 +46,6 @@
 #include "vox_nav_msgs/msg/object.hpp"
 #include "vox_nav_msgs/msg/object_array.hpp"
 
-#include <queue>
-#include <vector>
-#include <string>
-#include <memory>
-#include <mutex>
-
 #include <fast_gicp/gicp/fast_gicp.hpp>
 #include <fast_gicp/gicp/fast_gicp_st.hpp>
 #include <fast_gicp/gicp/fast_vgicp.hpp>
@@ -59,6 +53,12 @@
 #include <fast_gicp/gicp/fast_vgicp_cuda.hpp>
 
 #include <Eigen/Core>
+#include <queue>
+#include <vector>
+#include <string>
+#include <memory>
+#include <mutex>
+#include <algorithm>
 
 namespace vox_nav_misc
 {
@@ -77,27 +77,33 @@ struct ICPParameters
 };
 
 /**
- * @brief Given a raw point cloud,
- * clusterize it and use UKF to track clusters. Publish vis of tracks in RVIZ
- * and publish vox_nav_msgs::msg::ObjectArray
+ * @brief Given a Point cloud map and an initial pose estimate, this class
+ * performs ICP to find the best pose estimate for the robot. This class is
+ * designed to be used with a live point cloud stream from a sensor, and a
+ * pre-built map point cloud. The map point cloud is assumed to be in the
+ * reference frame of the map, and the live point cloud is assumed to be in the
+ * reference frame of the robot. The initial pose estimate is assumed to be in
+ * the reference frame of the map. The output of this class is a pose estimate
+ * of the robot in the reference frame of the map.
  *
  */
 class FastGICPClientNoGPS : public rclcpp::Node
 {
 public:
   /**
-   * @brief Construct a new Raw Cloud Clustering Tracking object
+   * @brief  Construct a new Fast GICP Client No GPS object
    *
    */
   FastGICPClientNoGPS();
+
   /**
-   * @brief Destroy the Raw Cloud Clustering Tracking object
+   * @brief Destroy the Fast GICP Client No G P S object
    *
    */
   ~FastGICPClientNoGPS();
 
   /**
-   * @brief Processing done in this func.
+   * @brief Processing done in this func. Perform icp on live cloud and publish
    *
    * @param cloud
    * @param poses
@@ -112,7 +118,7 @@ public:
   void initialPoseCallback(const geometry_msgs::msg::PoseWithCovarianceStamped::ConstSharedPtr msg);
 
   /**
-   * @brief Processing done in this func.
+   * @brief Recieves and stores map in the form of a point cloud as a member of this class
    *
    * @param cloud
    * @param poses
@@ -120,26 +126,13 @@ public:
   void mapCloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr cloud);
 
   /**
-   * @brief Create a reg object
+   * @brief Create a reg object, based on the method and number of threads specified in the params
    *
    * @param method
    * @param num_threads
    * @return pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr
    */
   pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr createRegistration(std::string method, int num_threads);
-
-  /**
-   * @brief
-   *
-   * @param reg
-   */
-  void swap_source_and_target(pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr reg);
-
-  template <typename T>
-  T clamp(const T& n, const T& lower, const T& upper)
-  {
-    return std::max(lower, std::min(n, upper));
-  }
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr live_cloud_subscriber_;

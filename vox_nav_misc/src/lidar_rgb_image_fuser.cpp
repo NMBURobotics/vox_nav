@@ -57,9 +57,17 @@ void lidar_rgb_image_fuser::transform3DPointsToImage(const Eigen::MatrixXf& poin
 void lidar_rgb_image_fuser::ousterCamCallback(const sensor_msgs::msg::Image::ConstSharedPtr& image,
                                               const sensor_msgs::msg::PointCloud2::ConstSharedPtr& cloud)
 {
-  // convert cloud to os_sensor link first
+  // convert cloud to os_sensor if it is not already
   sensor_msgs::msg::PointCloud2::SharedPtr output(new sensor_msgs::msg::PointCloud2);
-  pcl_ros::transformPointCloud("os_sensor", *cloud, *output, *tf_buffer_);
+
+  if (cloud->header.frame_id != "os_sensor")
+  {
+    pcl_ros::transformPointCloud("os_sensor", *cloud, *output, *tf_buffer_);
+  }
+  else
+  {
+    output = std::make_shared<sensor_msgs::msg::PointCloud2>(*cloud);
+  }
 
   // get the camera LIDAR extrinsic transformation
   try

@@ -14,12 +14,8 @@
 
 #include "vox_nav_misc/fast_gicp_client_no_gps.hpp"
 
-#include <string>
-#include <vector>
-#include <memory>
-#include <algorithm>
-
-using namespace vox_nav_misc;
+namespace vox_nav_misc
+{
 
 FastGICPClientNoGPS::FastGICPClientNoGPS() : Node("fast_gicp_client_rclcpp_node")
 {
@@ -264,24 +260,12 @@ pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr FastGICPClientNoGPS::create
   std::cerr << "unknown registration method:" << method << std::endl;
   return nullptr;
 }
-
-void FastGICPClientNoGPS::swap_source_and_target(pcl::Registration<pcl::PointXYZ, pcl::PointXYZ>::Ptr reg)
-{
-  fast_gicp::LsqRegistration<pcl::PointXYZ, pcl::PointXYZ>* lsq_reg =
-      dynamic_cast<fast_gicp::LsqRegistration<pcl::PointXYZ, pcl::PointXYZ>*>(reg.get());
-  if (lsq_reg != nullptr)
-  {
-    lsq_reg->swapSourceAndTarget();
-    return;
-  }
-
-  std::cerr << "failed to swap source and target" << std::endl;
-}
+}  // namespace vox_nav_misc
 
 int main(int argc, char const* argv[])
 {
   rclcpp::init(argc, argv);
-  auto node = std::make_shared<FastGICPClientNoGPS>();
+  auto node = std::make_shared<vox_nav_misc::FastGICPClientNoGPS>();
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;

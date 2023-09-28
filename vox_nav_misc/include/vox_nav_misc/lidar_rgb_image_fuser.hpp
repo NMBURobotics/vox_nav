@@ -65,9 +65,16 @@ private:
   // fx 0 cx 0
   // 0 fy cy 0
   // 0 0 1 0
-  Eigen::MatrixXf K_{ { 605.36, 0, 322.282, 0 },  // NOLINT
-                      { 0, 604.94, 248.99, 0 },   // NOLINT
-                      { 0, 0, 1, 0 } };           // NOLINT
+  // Eigen::MatrixXf K_{ { 605.36, 0, 322.282, 0 },  // NOLINT
+  //                    { 0, 604.94, 248.99, 0 },   // NOLINT
+  //                    { 0, 0, 1, 0 } };           // NOLINT
+
+  // Simulated camera parameters
+  Eigen::MatrixXf K_{ { 365.71429443359375, 0, 640.5, 0 },  // NOLINT
+                      { 0, 365.4822082519531, 360.5, 0 },   // NOLINT
+                      { 0, 0, 1, 0 } };                     // NOLINT
+
+  // Camera distortion parameters
 
   // Get Eigen::Matrix4d transform from os_sensor to camera
   // This will come from tf
