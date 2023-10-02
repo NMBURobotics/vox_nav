@@ -24,8 +24,10 @@ stick_imu_to_inertial_frame::stick_imu_to_inertial_frame() : rclcpp::Node("stick
   tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
   imu_sub_ = this->create_subscription<sensor_msgs::msg::Imu>(
-      "/imu", rclcpp::SensorDataQoS(),
+      "imu", rclcpp::SensorDataQoS(),
       std::bind(&stick_imu_to_inertial_frame::imuCallback, this, std::placeholders::_1));
+
+  corrected_imu_pub_ = this->create_publisher<sensor_msgs::msg::Imu>("imu_corrected", rclcpp::SensorDataQoS());
 
   // inform user the node has started
   RCLCPP_INFO(get_logger(), "stick_imu_to_inertial_frame has started.");
@@ -43,7 +45,7 @@ void stick_imu_to_inertial_frame::imuCallback(sensor_msgs::msg::Imu::ConstShared
   geometry_msgs::msg::TransformStamped transform_stamped;
   try
   {
-    transform_stamped = tf_buffer_->lookupTransform("base_link", "map", tf2::TimePointZero);
+    transform_stamped = tf_buffer_->lookupTransform("base_link", "odom", tf2::TimePointZero);
   }
   catch (tf2::TransformException& ex)
   {
