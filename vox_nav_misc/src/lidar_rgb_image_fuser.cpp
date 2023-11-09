@@ -27,7 +27,7 @@ lidar_rgb_image_fuser::lidar_rgb_image_fuser() : rclcpp::Node("lidar_rgb_image_f
   lidar_subscriber_.subscribe(this, "points", rmw_qos_profile_sensor_data);
 
   time_syncher_.reset(
-      new LidarCamApprxTimeSyncer(LidarCamApprxTimeSyncPolicy(20), image_subscriber_, lidar_subscriber_));
+      new LidarCamApprxTimeSyncer(LidarCamApprxTimeSyncPolicy(200), image_subscriber_, lidar_subscriber_));
   time_syncher_->registerCallback(
       std::bind(&lidar_rgb_image_fuser::ousterCamCallback, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -88,8 +88,8 @@ void lidar_rgb_image_fuser::ousterCamCallback(const sensor_msgs::msg::Image::Con
   Eigen::MatrixXf colors = Eigen::MatrixXf::Zero(3, cloud->height * cloud->width);
 
   // Convert to pcl pointcloud XYZRGB
-  // pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-  pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZI>);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  // pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZI>);
 
   pcl::fromROSMsg(*output, *pcl_cloud);
 
@@ -105,13 +105,13 @@ void lidar_rgb_image_fuser::ousterCamCallback(const sensor_msgs::msg::Image::Con
     points(1, index_of_iterator) = point.y;
     points(2, index_of_iterator) = point.z;
     points(3, index_of_iterator) = 1;
-    /*colors(0, index_of_iterator) = point.r;
+    colors(0, index_of_iterator) = point.r;
     colors(1, index_of_iterator) = point.g;
-    colors(2, index_of_iterator) = point.b;*/
+    colors(2, index_of_iterator) = point.b;
 
-    colors(0, index_of_iterator) = point.intensity * 10;
-    colors(1, index_of_iterator) = point.intensity;
-    colors(2, index_of_iterator) = point.intensity * 10;
+    // colors(0, index_of_iterator) = point.intensity * 10;
+    // colors(1, index_of_iterator) = point.intensity;
+    // colors(2, index_of_iterator) = point.intensity * 10;
 
     index_of_iterator++;
   }
@@ -140,13 +140,13 @@ void lidar_rgb_image_fuser::ousterCamCallback(const sensor_msgs::msg::Image::Con
     if (u > 0 && u < cv_ptr->image.cols && v > 0 && v < cv_ptr->image.rows)
     {
       // get the color of the point from the pointcloud
-      // auto r = colors(0, i);
-      // auto g = colors(1, i);
-      // auto b = colors(2, i);
+      auto r = colors(0, i);
+      auto g = colors(1, i);
+      auto b = colors(2, i);
       // colorize based on point x y z
-      auto r = points(0, i) * 20;
+      /*auto r = points(0, i) * 20;
       auto g = points(1, i) * 0;
-      auto b = points(2, i) * 20;
+      auto b = points(2, i) * 20;*/
       cv::circle(cv_ptr->image, cv::Point(u, v), 2, cv::Scalar(r, g, b), 2);
     }
   }

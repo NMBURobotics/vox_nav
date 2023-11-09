@@ -15,17 +15,18 @@ def generate_launch_description():
         output="screen",
         remappings=[
             ("map_points_in", "lio_sam/mapping/map_local"),
-            ("traversability_cloud_in", "pointnet/traversability/map_local"),
+            # ("traversability_cloud_in", "pointnet/traversability/map_local"),
+            ("traversability_cloud_in", "/smoothed_traversability"),
             ("traversability_map_points_out", "pointnet/traversability/map"),
         ],
         parameters=[
             {
-                "use_sim_time": False,
+                "use_sim_time": True,
                 "prob_hit": 0.9,
                 "prob_miss": 0.2,
                 "prob_thres_min": 0.12,
                 "prob_thres_max": 0.8,
-                "resolution": 0.4,
+                "resolution": 0.1,
             }
         ],
         # prefix=["xterm -e gdb -ex run --args"],

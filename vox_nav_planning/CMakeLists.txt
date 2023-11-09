@@ -86,6 +86,12 @@ add_library(se2_planner SHARED src/plugins/se2_planner.cpp)
 ament_target_dependencies(se2_planner ${dependencies})
 target_link_libraries(se2_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
 
+# SE3 PLANNE R##################################################
+set(se3_planner vox_nav_se3_planner)
+add_library(se3_planner SHARED src/plugins/se3_planner.cpp)
+ament_target_dependencies(se3_planner ${dependencies})
+target_link_libraries(se3_planner ${OCTOMAP_LIBRARIES} ${LIBFCL_LIBRARIES} ompl)
+
 # ELEVATION PLANNER ############################################
 add_library(elevation_planner SHARED src/plugins/elevation_planner.cpp)
 ament_target_dependencies(elevation_planner ${dependencies})
@@ -127,6 +133,7 @@ install(TARGETS optimal_elevation_planner
                 elevation_control_planner
                 polytunnel_planner
                 se2_planner
+                se3_planner
                 vox_nav_ompl_planners
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -159,6 +166,7 @@ ament_export_libraries( optimal_elevation_planner
                         elevation_planner
                         elevation_control_planner
                         polytunnel_planner
-                        se2_planner)
+                        se2_planner
+                        se3_planner)
 pluginlib_export_plugin_description_file(${PROJECT_NAME} plugins.xml)
 ament_package()

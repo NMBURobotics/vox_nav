@@ -116,8 +116,8 @@
     </visual>
   </link>
 
-  <link name="lidar_link">
-    <visual name="lidar_link_visual">
+  <link name="os_sensor">
+    <visual name="os_sensor_visual">
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
         <cylinder radius="0.05" length="0.05"/>
@@ -172,10 +172,10 @@
     <child link="gps_link"/>
   </joint>
 
-  <joint name="lidar_link" type="fixed">
+  <joint name="os_sensor" type="fixed">
     <origin xyz="0 0 0.35" rpy="0 0.0 0"/>
     <parent link="base_link"/>
-    <child link="lidar_link"/>
+    <child link="os_sensor"/>
   </joint>
 
   <joint name="imu_link" type="fixed">

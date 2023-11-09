@@ -24,6 +24,11 @@
       <description>TODO(fetullah.atas)</description>
     </class>
   </library>
+  <library path="se3_planner">
+    <class type="vox_nav_planning::SE3Planner" base_class_type="vox_nav_planning::PlannerCore">
+      <description>TODO(fetullah.atas)</description>
+    </class>
+  </library>
   <library path="polytunnel_planner">
     <class type="vox_nav_planning::PolyTunnelPlanner" base_class_type="vox_nav_planning::PlannerCore">
       <description>TODO(fetullah.atas)</description>

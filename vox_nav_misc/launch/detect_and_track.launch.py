@@ -33,7 +33,7 @@ def generate_launch_description():
         # prefix=['valgrind --tool=callgrind --dump-instr=yes -v --instr-atstart=no'],
         # remappings=[('points', '/velodyne_points')],
         remappings=[
-            ("points", "/dobbie/sensing/lidar/top/pointcloud_raw"),
+            ("points", "/AGV0/dobbie/sensing/lidar/top/pointcloud_raw_ex"),
             ("detections", "/vox_nav/naive_lidar_clustering/detections"),
         ],
         parameters=[detector_params],

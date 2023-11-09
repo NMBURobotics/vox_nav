@@ -9,10 +9,11 @@ def generate_launch_description():
         name="lidar_rgb_image_fuser",
         output="screen",
         remappings=[
-            # ("image", "/camera/color/image_raw"),
+            #("image", "/camera/color/image_raw"),
+            ("points", "/traversable_cloud"),
             # ("points", "/ouster/points"),
-            ("image", "/AGV0/dobbie/sensing/camera/traffic_light/image_raw"),
-            ("points", "/AGV0/dobbie/sensing/lidar/top/pointcloud_raw_correct"),
+             ("image", "/AGV0/dobbie/sensing/camera/traffic_light/image_raw"),
+            # ("points", "/AGV0/dobbie/sensing/lidar/top/pointcloud_raw_correct"),
         ],
     )
 

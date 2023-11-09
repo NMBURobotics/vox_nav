@@ -142,8 +142,17 @@ public:
       else
       {
         // This voxel is empty, so we need to add the point to the traversable map
-        // But there is no traversablity information in the original map, so we will set the color to black
-        octree_->addPointToCloud(point, traversablity_map_);
+        // K nearest neighbor search
+        int K = 1;
+        std::vector<int> pointIdxNKNSearch;
+        std::vector<float> pointNKNSquaredDistance;
+        if (octree_->nearestKSearch(point, K, pointIdxNKNSearch, pointNKNSquaredDistance) > 0)
+        {
+          point.r = traversablity_map_->points[pointIdxNKNSearch[0]].r;
+          point.g = traversablity_map_->points[pointIdxNKNSearch[0]].g;
+          point.b = traversablity_map_->points[pointIdxNKNSearch[0]].b;
+          octree_->addPointToCloud(point, traversablity_map_);
+        }
       }
     }
   }
@@ -202,38 +211,31 @@ public:
         // Find the mean r and g values within the voxel
         std::vector<int> r_values;
         std::vector<int> g_values;
+        std::vector<int> b_values;
         for (auto& idx : pointIdxVec)
         {
           r_values.push_back(traversablity_map_->points[idx].r);
           g_values.push_back(traversablity_map_->points[idx].g);
+          b_values.push_back(traversablity_map_->points[idx].b);
         }
         // Also add the current point to the r and g values
         r_values.push_back(point.r);
         g_values.push_back(point.g);
+        b_values.push_back(point.b);
 
         int r_sum = std::accumulate(r_values.begin(), r_values.end(), 0);
         int g_sum = std::accumulate(g_values.begin(), g_values.end(), 0);
-        double r_mean = r_sum / r_values.size() * 1.0 / 255.0;  // Probbality of being non traversable
-        double g_mean = g_sum / g_values.size() * 1.0 / 255.0;  // Probbality of being traversable
-
-        // Normalize the r and g values
-        point.r = point.r / 255.0;
-        point.g = point.g / 255.0;
-
-        double traversablity_of_voxel = traversablity_of_voxel = r_mean > g_mean ? r_mean : 1.0 - g_mean;
+        int b_sum = std::accumulate(b_values.begin(), b_values.end(), 0);
+        double r_mean = r_sum / r_values.size() * 1.0 / 255.0;  //
+        double g_mean = g_sum / g_values.size() * 1.0 / 255.0;  //
+        double b_mean = b_sum / b_values.size() * 1.0 / 255.0;  //
 
         for (auto& idx : pointIdxVec)
         {
-          if (traversablity_of_voxel > 0.5)
-          {
-            traversablity_map_->points[idx].r = (traversablity_of_voxel)*255.0;
-            traversablity_map_->points[idx].g = (1.0 - traversablity_of_voxel) * 255.0;
-          }
-          else
-          {
-            traversablity_map_->points[idx].g = (1.0 - traversablity_of_voxel) * 255.0;
-            traversablity_map_->points[idx].r = (traversablity_of_voxel)*255.0;
-          }
+          // Update the traversablity of the voxel
+          traversablity_map_->points[idx].r = r_mean * 255.0;
+          traversablity_map_->points[idx].g = g_mean * 255.0;
+          traversablity_map_->points[idx].b = b_mean * 255.0;
         }
       }
     }

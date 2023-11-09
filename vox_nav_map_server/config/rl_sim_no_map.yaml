@@ -1,0 +1,82 @@
+ekf_global_filter_node:
+  ros__parameters:
+    use_sim_time: true
+    clear_params: true
+    publish_tf: false
+    filter_type: "ekf"
+    frequency: 30.0
+    sensor_timeout: 0.2
+    odom0: /kiss_icp/odometry
+    #imu0: /AGV0/dobbie/sensing/imu/tamagawa/imu_raw
+    map_frame: map
+    odom_frame: map   
+    base_link_frame: base_link
+    world_frame: map
+
+    odom0_config: [true, true, true,
+                   false, false, false,
+                  false, false, false,
+                  false, false, false,
+                  false, false, false]
+    odom0_queue_size: 10
+    odom0_nodelay: true
+    odom0_differential: true
+    odom0_relative: false
+
+    imu0_config: [false,  false,  false,  # X , Y , Z
+                  true,  true,  true,  # roll , pitch ,yaw
+                  false,  false,  false,  # dX , dY , dZ
+                  true,   true,   true,   # droll , dpitch ,dyaw
+                  false,   false,   false]   # ddX , ddY , ddZ
+    imu0_nodelay: true
+    imu0_relative: false
+    imu0_differential: false
+    imu0_queue_size: 10
+    imu0_remove_gravitational_acceleration: true
+    process_noise_covariance: [0.03,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.03,   0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.04,   0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.03,   0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.03, 0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.0,    0.06, 0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.025, 0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.025, 0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.05, 0.0,    0.0,    0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.002, 0.0,    0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.002, 0.0,    0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.004, 0.0,    0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.01, 0.0,    0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.01, 0.0,
+                                0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.01]
+
+    initial_estimate_covariance: [1.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    1.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    1e-9,   0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    1.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    1.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0,    1e-9,   0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    1.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    1.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    1.0,    0.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    1.0,     0.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     1.0,     0.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     1.0,     0.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     1.0,    0.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    1.0,    0.0,
+                                  0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,    0.0,     0.0,     0.0,     0.0,    0.0,    1.0]
+
+navsat_transform_node:
+  ros__parameters:
+    use_sim_time: true
+    publish_tf: true
+    frequency: 30.0
+    delay: 0.0
+    magnetic_declination_radians: 0.0  # For lat/long 55.944831, -3.186998
+    yaw_offset: 1.57                   # IMU reads 0 facing magnetic north, not east
+    zero_altitude: false
+    broadcast_cartesian_transform: true
+    broadcast_cartesian_transform_as_parent_frame: true
+    publish_filtered_gps: true
+    use_odometry_yaw: true
+    #wait_for_datum: true
+    #datum: [-2.846001584706555e-09, -8.984332830094866e-06, 0.0]

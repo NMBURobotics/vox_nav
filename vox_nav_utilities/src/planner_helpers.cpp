@@ -326,7 +326,7 @@ void publishPlan(const std::vector<geometry_msgs::msg::PoseStamped>& path,
       marker.type = visualization_msgs::msg::Marker::CUBE;
     }
     marker.action = visualization_msgs::msg::Marker::ADD;
-    marker.lifetime = rclcpp::Duration::from_seconds(0.5);
+    marker.lifetime = rclcpp::Duration::from_seconds(0);
     marker.text = std::to_string(path_idx);
     marker.pose = i.pose;
     marker.scale = marker_scale;
@@ -373,8 +373,10 @@ void publishPlan(const std::vector<geometry_msgs::msg::PoseStamped>& path,
   // Publish goal and start states for debuging
   start_marker.pose = start_pose.pose;
   start_marker.color.b = 0;
+  start_marker.id = path_idx + 1;
   goal_marker.pose = goal_pose.pose;
   goal_marker.color.b = 0;
+  goal_marker.id = path_idx + 2;
   marker_array.markers.push_back(start_marker);
   marker_array.markers.push_back(goal_marker);
   plan_publisher->publish(marker_array);
