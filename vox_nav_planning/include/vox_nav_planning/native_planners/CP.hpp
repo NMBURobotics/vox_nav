@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_PLANNING__RRT__InformedSGCP_HPP_
-#define VOX_NAV_PLANNING__RRT__InformedSGCP_HPP_
+#ifndef VOX_NAV_PLANNING__RRT__CP_HPP_
+#define VOX_NAV_PLANNING__RRT__CP_HPP_
 
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
@@ -53,9 +53,9 @@ namespace ompl
 namespace control
 {
 /**
-   @anchor cInformedSGCP
+   @anchor cCP
    @par Short description
-   \ref Informed Simultaneous Geometric and Control Planner (InformedSGCP).
+   \ref Informed Simultaneous Geometric and Control Planner (CP).
    The implementation is based on boost graph library.
    An accompanying paper explaining novelities of this planner will be published soon.
    @par External documentation
@@ -63,7 +63,7 @@ namespace control
 */
 struct Parameters
 {
-  /** \brief All configurable parameters of InformedSGCP. */
+  /** \brief All configurable parameters of CP. */
 
   /** \brief The number of threads to be used in parallel for geometric and control. No odd numbers and less than 2 */
   int num_threads_{ 4 };
@@ -104,14 +104,14 @@ struct Parameters
   bool solve_control_graph_{ true };
 };
 
-class InformedSGCP : public base::Planner
+class CP : public base::Planner
 {
 public:
   /** \brief Constructor */
-  InformedSGCP(const SpaceInformationPtr& si);
+  CP(const SpaceInformationPtr& si);
 
   /** \brief Destructor */
-  ~InformedSGCP() override;
+  ~CP() override;
 
   /** \brief Setup the planner */
   void setup() override;
@@ -142,6 +142,11 @@ public:
     double g{ 1.0e+3 };
     bool blacklisted{ false };
     bool is_root{ false };
+    std::vector<VertexProperty*> branches;
+
+    ompl::base::Cost cost{ std::numeric_limits<double>::infinity() };
+
+    VertexProperty* parent{ nullptr };
   };
 
   /** \brief Compute distance between Vertexes (actually distance between contained states) */
@@ -149,14 +154,6 @@ public:
 
   /** \brief Compute distance between states */
   double distanceFunction(const base::State* a, const base::State* b) const;
-
-  /** \brief Given its vertex_descriptor (id),
-   * return a const pointer to VertexProperty in geometric graph g_geometric_  */
-  const VertexProperty* getVertex(std::size_t id, int thread_id);
-
-  /** \brief Given its vertex_descriptor (id),
-   * return a mutable pointer to VertexProperty in geometric graph g_  */
-  VertexProperty* getVertexMutable(std::size_t id, int thread_id);
 
   /** \brief Given its vertex_descriptor (id),
    * return a const pointer to VertexProperty in control graph g_forward_control_  */
@@ -222,19 +219,10 @@ private:
   base::OptimizationObjectivePtr opt_{ nullptr };
 
   /** \brief Current cost of best path. The informed sampling strategy needs it. */
-  ompl::base::Cost bestGeometricCost_{ std::numeric_limits<double>::infinity() };
-
-  /** \brief Current cost of best path. The informed sampling strategy needs it. */
   ompl::base::Cost bestControlCost_{ std::numeric_limits<double>::infinity() };
 
   /** \brief keep the index of best control path, the index comes from thread id*/
   int bestControlPathIndex_{ 0 };
-
-  /** \brief keep the index of best geometric path, the index comes from thread id*/
-  int bestGeometricPathIndex_{ 0 };
-
-  /** \brief The best path found so far. */
-  std::shared_ptr<ompl::control::PathControl> bestGeometricPath_{ nullptr };
 
   /** \brief The best path found so far. */
   std::shared_ptr<ompl::control::PathControl> bestControlPath_{ nullptr };
@@ -242,11 +230,10 @@ private:
   /** \brief Directed control sampler to expand control graph */
   DirectedControlSamplerPtr directedControlSampler_{ nullptr };
 
+  ControlSamplerPtr controlSampler_{ nullptr };
+
   /** \brief The random number generator */
   RNG rng_;
-
-  /** \brief The NN datastructure for geometric graph */
-  std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>> nnGeometricThreads_;
 
   /** \brief The NN datastructure for control graph */
   std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>> nnControlsThreads_;
@@ -276,7 +263,7 @@ private:
   typedef GraphT::edge_descriptor edge_descriptor;
 
   /** \brief The generic eucledean distance heuristic, this is used for all graphs when we perform A* on them.
-   * Make it a friend of InformedSGCP so it can access private members of InformedSGCP.
+   * Make it a friend of CP so it can access private members of CP.
    */
   friend class GenericDistanceHeuristic;
   template <class Graph, class VertexProperty, class CostType>
@@ -284,60 +271,21 @@ private:
   {
   public:
     typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-    GenericDistanceHeuristic(InformedSGCP* alg, VertexProperty* goal, bool control = false, int thread_id = 0)
+    GenericDistanceHeuristic(CP* alg, VertexProperty* goal, bool control = false, int thread_id = 0)
       : alg_(alg), goal_(goal), control_(control), threadId_(thread_id)
     {
     }
     double operator()(vertex_descriptor i)
     {
-      if (control_)
-      {
-        return alg_->opt_->motionCost(alg_->getVertexControls(i, threadId_)->state, goal_->state).value();
-      }
-      else
-      {
-        return alg_->opt_->motionCost(alg_->getVertex(i, threadId_)->state, goal_->state).value();
-      }
+      return alg_->opt_->motionCost(alg_->getVertexControls(i, threadId_)->state, goal_->state).value();
     }
 
   private:
-    InformedSGCP* alg_{ nullptr };
+    CP* alg_{ nullptr };
     VertexProperty* goal_{ nullptr };
     bool control_{ false };
     int threadId_{ 0 };
   };  // GenericDistanceHeuristic
-
-  /** \brief The precomputed cost heuristic, this is used for geometric graph when we perform A* with collision checks.
-   * Make it a friend of InformedSGCP so it can access private members of InformedSGCP.
-   */
-  friend class PrecomputedCostHeuristic;
-  template <class Graph, class CostType>
-  class PrecomputedCostHeuristic : public boost::astar_heuristic<Graph, CostType>
-  {
-  public:
-    typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-    PrecomputedCostHeuristic(InformedSGCP* alg, int thread_id = 0) : alg_(alg), threadId_(thread_id)
-    {
-    }
-    double operator()(vertex_descriptor i)
-    {
-      double cost{ std::numeric_limits<double>::infinity() };
-      // verify that the state is valid
-      if (alg_->si_->isValid(alg_->getVertex(i, threadId_)->state))
-      {
-        cost = alg_->getVertex(i, threadId_)->g;
-      }
-      else
-      {
-        alg_->getVertexMutable(i, threadId_)->blacklisted = true;
-      }
-      return cost;
-    }
-
-  private:
-    InformedSGCP* alg_{ nullptr };
-    int threadId_{ 0 };
-  };  // PrecomputedCostHeuristic
 
   /** \brief Exception thrown when goal vertex is found */
   struct FoundVertex
@@ -376,9 +324,6 @@ private:
 
   std::vector<VertexProperty*> startVerticesControl_;
   std::vector<VertexProperty*> goalVerticesControl_;
-
-  /** \brief The geometric graphs, the numbers of graphs equals to number of threads */
-  std::vector<GraphT> graphGeometricThreads_;
 
   /** \brief The control graphs, the numbers of graphs equals to number of threads */
   std::vector<GraphT> graphControlThreads_;
@@ -478,31 +423,20 @@ private:
     }
   }
 
+  void selectFrontiers(int max_number, std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
+                       std::vector<VertexProperty*> frontier_nodes);
+
+  void extendFrontiers(std::vector<VertexProperty*>& frontier_nodes, int num_branch_to_extend,
+                       std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
+                       const base::PlannerTerminationCondition& ptc, VertexProperty* target_vertex_property,
+                       std::shared_ptr<PathControl>& path);
+
   /** \brief generate a requested amound of states with preffered state sampler
    * \param batch_size number of states to generate
    * \param use_valid_sampler if true, use valid state sampler, otherwise use uniform sampler
    * \param samples vector of states to be filled with generated samples
    */
   void generateBatchofSamples(int batch_size, bool use_valid_sampler, std::vector<ompl::base::State*>& samples);
-
-  /** \brief Keep expanding geometric graph with generated samples, thread-safe.
-   * This function is called by each thread in parallel to expand the geometric graphs.
-   * For each sample in \e samples, check if it is valid,
-   * Check if it is in withing min-max edge range,
-   * check if it is unique enough,
-   * If all checks pass, add it to the graph and nn structure.
-   * Validity check is done with motionCheck, so the edges are collisiosn free.
-   * However the user needs to set setLongestValidSegmentFraction() to low value, e.g. 0.01
-   * \param samples vector of states to be added to the graph
-   * \param ptc termination condition
-   * \param geometric_graph the graph to be expanded
-   * \param geometric_nn nearest neighbor structure to be updated
-   * \param geometric_weightmap weight map to be updated
-   */
-  void expandGeometricGraph(const std::vector<ompl::base::State*>& samples,
-                            const base::PlannerTerminationCondition& ptc, GraphT& geometric_graph,
-                            std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& geometric_nn,
-                            WeightMap& geometric_weightmap);
 
   /** \brief After expandGeometricGraph() function call,
    * make sure that the target vertex is connected to it's graph and nearest neighbor.
@@ -514,43 +448,6 @@ private:
   void ensureGeometricGoalVertexConnectivity(VertexProperty* target_vertex_property, GraphT& geometric_graph,
                                              std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& geometric_nn,
                                              WeightMap& geometric_weightmap);
-
-  /** \brief Keep expanding control graph with generated samples.
-   * This function is called by each thread in parallel to expand the control graphs.
-   * The even threads are used to expand the control graphs from start->goal, e.g. 0,2,...
-   * and the odd threads are used to expand the control graphs from goal->start. e.g. 1,3,...
-   * However, the even threads tries to connect to odd threads after each sample addition.
-   * For instance, the even thread 0 will try to connect to odd thread 1,
-   * and the odd thread 1 will try to connect to even thread 0, and so on. This ultimately makes the control search
-   * bidirectional. Each thread has its own control graph and nearest neighbor structure. For each sample in \e samples,
-   * check if it is valid, Check if it is in withing min-max edge range, check if it is unique enough, If all checks
-   * pass, add it to the graph and nn structure. \param samples vector of states to be added to the graph \param
-   * target_vertex_state the target vertex state \param target_vertex_descriptor the target vertex descriptor \param ptc
-   * termination condition \param connection_control_graph is the graph,  this thread will try to connect to \param
-   * connection_control_nn is the nearest neighbor structure, this thread will try to connect to \param control_graph
-   * the graph to be expanded (this thread's graph) \param control_nn nearest neighbor structure to be updated (this
-   * thread's nn) \param control_weightmap weight map to be updated (this thread's weightmap)
-   */
-  void expandControlGraph(const std::vector<ompl::base::State*>& samples, const ompl::base::State* target_vertex_state,
-                          const vertex_descriptor& target_vertex_descriptor,
-                          const base::PlannerTerminationCondition& ptc, const GraphT* connection_control_graph,
-                          const std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>> connection_control_nn,
-                          GraphT& control_graph, std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& control_nn,
-                          WeightMap& control_weightmap);
-
-  /** \brief After expandControlGraph() function call,
-   * make sure that the target vertex is connected to it's graph and nearest neighbors if possible.
-   * \param target_vertex_state the target vertex state
-   * \param target_vertex_descriptor the target vertex descriptor
-   * \param control_graph the graph to be expanded (this thread's graph)
-   * \param control_nn nearest neighbor structure to be updated (this thread's nn)
-   * \param control_weightmap weight map to be updated (this thread's weightmap)
-   * \param status is the status of the thread (exact solution ? , unknown ?)
-   * */
-  void ensureControlGoalVertexConnectivity(const ompl::base::State* target_vertex_state,
-                                           const vertex_descriptor& target_vertex_descriptor, GraphT& control_graph,
-                                           std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& control_nn,
-                                           WeightMap& control_weightmap, int& status);
 
   /** \brief original AIT* function, get number of samples in informed set */
   std::size_t computeNumberOfSamplesInInformedSet() const;
@@ -598,11 +495,9 @@ private:
   // RVIZ Visualization of planner progess, this will be removed in the future
 
   /** \brief static method to visulize a graph in RVIZ*/
-  static void visualizeRGG(const GraphT& g,
+  static void visualizeRGG(const std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
                            const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr& publisher,
-                           const std::string& ns, const std_msgs::msg::ColorRGBA& color,
-                           const vertex_descriptor& start_vertex, const vertex_descriptor& goal_vertex,
-                           const int& state_space_type);
+                           const std::string& ns, const std_msgs::msg::ColorRGBA& color, const int& state_space_type);
 
   /** \brief static method to visulize a path in RVIZ*/
   static void visualizePath(const GraphT& g, const std::list<vertex_descriptor>& path,
@@ -634,8 +529,8 @@ private:
   /** \brief The node*/
   rclcpp::Node::SharedPtr node_;
 
-};  // class InformedSGCP
+};  // class CP
 }  // namespace control
 }  // namespace ompl
 
-#endif  // VOX_NAV_PLANNING__RRT__InformedSGCP_HPP_
+#endif  // VOX_NAV_PLANNING__RRT__CP_HPP_

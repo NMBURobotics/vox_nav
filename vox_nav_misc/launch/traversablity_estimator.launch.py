@@ -26,7 +26,7 @@ def generate_launch_description():
         name="traversablity_estimator_node",
         output="screen",
         remappings=[
-            ("points", "/modified_map"),
+            ("points", "/cvut_point_cloud"),
         ],
         parameters=[traversablity_estimator_params],
     )

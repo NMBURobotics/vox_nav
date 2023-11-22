@@ -37,61 +37,61 @@
 
 namespace vox_nav_misc
 {
-  struct CostRegressionParams
+struct CostRegressionParams
+{
+  double uniform_sample_radius;
+  double surfel_radius;
+  double max_allowed_tilt;
+  double max_allowed_point_deviation;
+  double max_allowed_energy_gap;
+  double node_elevation_distance;
+  double plane_fit_threshold;
+  double robot_mass;
+  double average_speed;
+  double max_color_range;
+  std::vector<double> cost_critic_weights;
+  CostRegressionParams()
+    : uniform_sample_radius(0.2)
+    , surfel_radius(0.1)
+    , max_allowed_tilt(10)
+    , max_allowed_point_deviation(0.1)
+    , max_allowed_energy_gap(0.1)
+    , node_elevation_distance(1)
+    , plane_fit_threshold(10)
+    , robot_mass(0.1)
+    , average_speed(0.1)
+    , max_color_range(255.0)
+    , cost_critic_weights({ 0.33, 0.33, 0.33 })
   {
-    double uniform_sample_radius;
-    double surfel_radius;
-    double max_allowed_tilt;
-    double max_allowed_point_deviation;
-    double max_allowed_energy_gap;
-    double node_elevation_distance;
-    double plane_fit_threshold;
-    double robot_mass;
-    double average_speed;
-    double max_color_range;
-    std::vector<double> cost_critic_weights;
-    CostRegressionParams()
-    : uniform_sample_radius(0.2),
-      surfel_radius(0.1),
-      max_allowed_tilt(10),
-      max_allowed_point_deviation(0.1),
-      max_allowed_energy_gap(0.1),
-      node_elevation_distance(1),
-      plane_fit_threshold(10),
-      robot_mass(0.1),
-      average_speed(0.1),
-      max_color_range(255.0),
-      cost_critic_weights({0.33, 0.33, 0.33})
-    {}
-  };
+  }
+};
 
+class TraversabilityEstimator : public rclcpp::Node
+{
+public:
+  TraversabilityEstimator();
 
-  class TraversabilityEstimator : public rclcpp::Node
-  {
-  public:
-    TraversabilityEstimator();
+  ~TraversabilityEstimator();
 
-    ~TraversabilityEstimator();
+  void cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
 
-    void cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+private:
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr traversable_cloud_publisher_;
 
-  private:
-    rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_subscriber_;
-    rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr traversable_cloud_publisher_;
+  int traversable_cloud_publisher_counter_ = 0;
 
-    // tf buffers
-    std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
-    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  // tf buffers
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
-    //  see the struct, it is used to keep cost regression params orginzed
-    CostRegressionParams cost_params_;
+  //  see the struct, it is used to keep cost regression params orginzed
+  CostRegressionParams cost_params_;
 
-    pcl::PointCloud<pcl::PointXYZRGB>::Ptr  regressCosts(
-      const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
-      const std_msgs::msg::Header & header);
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr regressCosts(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+                                                      const std_msgs::msg::Header& header);
+};
 
-  };
+}  // namespace vox_nav_misc
 
-} // namespace vox_nav_misc
-
-#endif // VOX_NAV_MISC__TRAVERSABILITY_ESTIMATOR_HPP_
+#endif  // VOX_NAV_MISC__TRAVERSABILITY_ESTIMATOR_HPP_
