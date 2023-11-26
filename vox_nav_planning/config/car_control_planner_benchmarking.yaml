@@ -1,10 +1,10 @@
 car_control_planners_benchmark:
   ros__parameters:
-    planner_timeout: 15.0
+    planner_timeout: 30.0
     interpolation_parameter: 50
     octomap_voxel_size: 0.2
     selected_state_space: "SE2" # "DUBINS","REEDS", "SE2", "SE3" ### PS. Use DUBINS OR REEDS for Ackermann
-    selected_planners: [InformedSGCP]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
+    selected_planners: [CP]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
     min_turning_radius: 1.5
     robot_mesh_path: "" # leave empty if you do not have one, robot_mesh_path: ""    
     state_space_boundries:
@@ -21,8 +21,8 @@ car_control_planners_benchmark:
     control_boundries:
       minv: -1.0
       maxv:  1.0
-      minw: -1.0
-      maxw:  1.0
+      minw: -0.6
+      maxw:  0.6
     robot_body_dimens:
       x: 0.2
       y: 0.2

@@ -61,7 +61,7 @@ namespace control
    @par External documentation
    TBD
 */
-struct Parameters
+struct CPParameters
 {
   /** \brief All configurable parameters of CP. */
 
@@ -142,10 +142,9 @@ public:
     double g{ 1.0e+3 };
     bool blacklisted{ false };
     bool is_root{ false };
+    bool belongs_to_solution{ false };
     std::vector<VertexProperty*> branches;
-
     ompl::base::Cost cost{ std::numeric_limits<double>::infinity() };
-
     VertexProperty* parent{ nullptr };
   };
 
@@ -191,7 +190,7 @@ public:
 
 private:
   /** \brief All configurable parames live here. */
-  Parameters params_;
+  CPParameters params_;
 
   /** \brief The radius to construct edges in construction of RGG, this is meant to be used in geometric graph,
    * determines max edge length. */
@@ -237,6 +236,10 @@ private:
 
   /** \brief The NN datastructure for control graph */
   std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>> nnControlsThreads_;
+
+  std::once_flag equate_graphs_once_;
+
+  std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>> bestControlPathNN_{ nullptr };
 
   std::mutex nnMutex_;
 
@@ -423,20 +426,32 @@ private:
     }
   }
 
-  void selectFrontiers(int max_number, std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
-                       std::vector<VertexProperty*> frontier_nodes);
+  void selectExplorativeFrontiers(int max_number,
+                                  std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
+                                  std::vector<VertexProperty*>& frontier_nodes);
+
+  void selectExploitaveFrontiers(int max_number, std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
+                                 std::vector<VertexProperty*>& frontier_nodes);
 
   void extendFrontiers(std::vector<VertexProperty*>& frontier_nodes, int num_branch_to_extend,
                        std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
                        const base::PlannerTerminationCondition& ptc, VertexProperty* target_vertex_property,
-                       std::shared_ptr<PathControl>& path);
+                       std::shared_ptr<PathControl>& path, std::vector<VertexProperty*>& control_paths_vertices,
+                       const bool exact_solution_found, bool* should_stop_exploration,
+                       const std::shared_ptr<PathControl>& current_best_path);
+
+  void extendFrontiersAfter(std::vector<VertexProperty*>& frontier_nodes, int num_branch_to_extend,
+                            std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
+                            const base::PlannerTerminationCondition& ptc, VertexProperty* target_vertex_property,
+                            std::shared_ptr<PathControl>& path, const std::shared_ptr<PathControl>& current_best_path);
 
   /** \brief generate a requested amound of states with preffered state sampler
    * \param batch_size number of states to generate
    * \param use_valid_sampler if true, use valid state sampler, otherwise use uniform sampler
    * \param samples vector of states to be filled with generated samples
    */
-  void generateBatchofSamples(int batch_size, bool use_valid_sampler, std::vector<ompl::base::State*>& samples);
+  void generateBatchofSamples(int batch_size, bool use_valid_sampler, std::vector<VertexProperty*>& samples,
+                              const std::vector<VertexProperty*>& current_graph);
 
   /** \brief After expandGeometricGraph() function call,
    * make sure that the target vertex is connected to it's graph and nearest neighbor.
@@ -463,6 +478,12 @@ private:
    * \param vertex_path is the path
    */
   ompl::base::Cost computePathCost(std::shared_ptr<ompl::control::PathControl>& path) const;
+
+  /** \brief compute path cost by finding cost between
+   * consecutive vertices in the path
+   * \param vertex_path is the path
+   */
+  ompl::base::Cost computePathCost(const std::shared_ptr<ompl::control::PathControl>& path) const;
 
   /** \brief Given a path defined as list of vertex_descriptor \e vertex_path,
    * extract the corresponding states and controls from the graph \e g

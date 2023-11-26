@@ -142,6 +142,9 @@ void ompl::control::CP::setup()
   // initialize the best geometric and control paths
   bestControlPath_ = std::make_shared<PathControl>(si_);
 
+  // initialize the best control cost
+  bestControlCost_ = opt_->infiniteCost();
+
   // RVIZ VISUALIZATIONS, this is likely to be removed in the future, but for now it is useful
   node_ = std::make_shared<rclcpp::Node>("CP_rclcpp_node");
   rgg_graph_pub_ =
@@ -364,9 +367,15 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
       this_control_root_vertex->state = goal_state;
       this_control_target_vertex->state = start_state;
     }
+
+    this_control_root_vertex->belongs_to_solution = true;
+    this_control_target_vertex->belongs_to_solution = true;
+
     // set the root flag on
     this_control_root_vertex->is_root = true;
     this_control_root_vertex->cost = opt_->identityCost();
+    // empty control
+    this_control_root_vertex->control = siC_->allocControl();
     // only push the "root" vertex to the nn
     nnControlsThreads_[i]->add(this_control_root_vertex);
 
@@ -375,36 +384,16 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
     goalVerticesControl_.push_back(this_control_target_vertex);
   }
 
-  // Add start and goal (or root and target) vertexes to control graphs in all threads
-  std::vector<std::pair<vertex_descriptor, vertex_descriptor>> control_start_goal_descriptors;
-  for (int i = 0; i < params_.num_threads_; i++)
-  {
-    vertex_descriptor control_g_root = boost::add_vertex(graphControlThreads_[i]);
-    vertex_descriptor control_g_target = boost::add_vertex(graphControlThreads_[i]);
-    graphControlThreads_[i][control_g_root] = *startVerticesControl_[i];
-    graphControlThreads_[i][control_g_root].id = control_g_root;
-    graphControlThreads_[i][control_g_root].is_root = true;
-    graphControlThreads_[i][control_g_target] = *goalVerticesControl_[i];
-    graphControlThreads_[i][control_g_target].id = control_g_target;
-    control_start_goal_descriptors.push_back(
-        std::make_pair(graphControlThreads_[i][control_g_root].id, graphControlThreads_[i][control_g_target].id));
-  }
-
   OMPL_INFORM("%s: Using %u control graphs each pair of control threads expands towards each other.\n",
               getName().c_str(), graphControlThreads_.size());
 
   std::vector<std::shared_ptr<PathControl>> control_ompl_paths(params_.num_threads_,
                                                                std::make_shared<PathControl>(si_));
 
-  // Keep a copy of shortest path in each thread, described as vector of VertexProperty for   and control graphs
-  std::vector<std::vector<VertexProperty*>> bestControlVertex(params_.num_threads_, std::vector<VertexProperty*>({}));
+  std::vector<std::vector<VertexProperty*>> control_paths_vertices(params_.num_threads_,
+                                                                   std::vector<VertexProperty*>());
 
-  // A Boost weightmap for each graph in each control thread, used to store the cost of each edge
-  std::vector<WeightMap> control_weightmaps;
-  for (auto& graph : graphControlThreads_)
-  {
-    control_weightmaps.push_back(get(boost::edge_weight, graph));
-  }
+  std::vector<bool*> should_stop_exploration_flags(params_.num_threads_, new bool(false));
 
   // The thread ids needs to be immutable for the lambda function
   std::vector<int> thread_ids;
@@ -423,54 +412,49 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
     // Keep track of the solution status of each control thread (UNKNOWN, EXACT_SOLUTION, APPROXIMATE_SOLUTION)
     std::vector<int> control_threads_status(params_.num_threads_, ompl::base::PlannerStatus::UNKNOWN);
 
-    // compute the number of neighbors and the connection radius and numNeighbors
-    auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
-    numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
-    radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
-
     // Launch control planning threads
-    if (params_.solve_control_graph_)
+
+    std::vector<std::thread*> control_threads(params_.num_threads_);
+    for (int t = 0; t < params_.num_threads_; t++)
     {
-      std::vector<std::thread*> control_threads(params_.num_threads_);
-      for (int t = 0; t < params_.num_threads_; t++)
-      {
-        int immutable_t = t;
-        // Pass all the variables by reference to the lambda function
-        auto& thread_id = thread_ids.at(immutable_t);
-        auto& control_graph = graphControlThreads_.at(thread_id);
-        auto& control_nn = nnControlsThreads_.at(thread_id);
-        auto& control_weightmap = control_weightmaps.at(thread_id);
-        auto& control_shortest_path = control_ompl_paths.at(thread_id);
-        auto& start_goal_descriptor_pair = control_start_goal_descriptors.at(thread_id);
-        auto& planner_status = control_threads_status.at(thread_id);
+      int immutable_t = t;
+      // Pass all the variables by reference to the lambda function
+      auto& thread_id = thread_ids.at(immutable_t);
+      auto& control_graph = graphControlThreads_.at(thread_id);
+      auto& control_nn = nnControlsThreads_.at(thread_id);
+      auto& control_shortest_path = control_ompl_paths.at(thread_id);
+      auto& planner_status = control_threads_status.at(thread_id);
+      auto& target_property = goalVerticesControl_.at(thread_id);
+      auto& this_control_path_vertices = control_paths_vertices.at(thread_id);
+      auto& should_stop_exploration = should_stop_exploration_flags.at(immutable_t);
 
-        control_threads[thread_id] =
-            new std::thread([this, &start_goal_descriptor_pair, &control_graph, &control_nn, &control_weightmap,
-                             &control_shortest_path, &thread_id, &planner_status, &ptc] {
-              std::vector<VertexProperty*> frontier_nodes;
-              // Select frontier nodes to expand
-              selectFrontiers(params_.batch_size_, control_nn, frontier_nodes);
+      control_threads[thread_id] = new std::thread(
+          [this, &target_property, &control_graph, &control_nn, &control_shortest_path, &thread_id, &planner_status,
+           &ptc, &exact_solution, &approximate_solution, &this_control_path_vertices, &should_stop_exploration] {
+            std::vector<VertexProperty*> frontier_nodes;
+            // Extend frontier nodes with random controls
+            // Add random branch no in the range of 5 to 10
+            int random_branch_no = rng_.uniformInt(5, 10);
+            selectExplorativeFrontiers(50, control_nn, frontier_nodes);
+            extendFrontiers(frontier_nodes, random_branch_no, control_nn, ptc, target_property, control_shortest_path,
+                            this_control_path_vertices, exact_solution, should_stop_exploration, bestControlPath_);
+          });
+    }
 
-              // Extend frontier nodes with random controls
-              extendFrontiers(frontier_nodes, 10, control_nn, ptc, &control_graph[start_goal_descriptor_pair.second],
-                              control_shortest_path);
-            });
-      }
-
-      // Let the control threads finish and join to the main thread
-      for (auto& thread : control_threads)
-      {
-        thread->join();
-        delete thread;
-      }
+    // Let the control threads finish and join to the main thread
+    for (auto& thread : control_threads)
+    {
+      // Wait for the thread to finish
+      thread->join();
+      delete thread;
     }
 
     auto start_goal_l2_distance = opt_->motionCost(start_state, goal_state);
 
     // Determine best control path found by current threads
-    auto best_control_path(std::make_shared<PathControl>(si_));
-    auto best_control_path_cost = opt_->infiniteCost();
     int control_counter = 0;
+
+    bool should_update_nn{ false };
 
     for (auto&& curr_path : control_ompl_paths)
     {
@@ -478,17 +462,142 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
       if (!opt_->isCostBetterThan(path_cost, start_goal_l2_distance))
       {
         // Aight, this path seems legit
-        if (opt_->isCostBetterThan(path_cost, best_control_path_cost))
+        if (opt_->isCostBetterThan(path_cost, bestControlCost_))
         {
-          best_control_path = curr_path;
+          OMPL_INFORM("%s: Found a better control path with cost %.2f", getName().c_str(), path_cost.value());
+          OMPL_INFORM("%s: Previous best control path cost was %.2f", getName().c_str(), bestControlCost_.value());
+
+          bestControlPath_ = curr_path;
           bestControlPathIndex_ = control_counter;
-          best_control_path_cost = path_cost;
+          bestControlCost_ = path_cost;
+          bestControlPathNN_ = nnControlsThreads_[bestControlPathIndex_];
+
+          should_update_nn = true;
+        }
+        else
+        {
+          // We don't have a solution
+          approximate_solution = false;
+          exact_solution = false;
         }
       }
       control_counter++;
     }
 
-    // only for visualization, keep a copy of the best geometric and control graphs
+    // if all of the NN are telling that we should stop exploration, then we should stop exploration and update the NN
+    // structures
+    bool all_nn_are_telling_to_stop_exploration{ true };
+    for (auto&& should_stop_exploration : should_stop_exploration_flags)
+    {
+      if (!*should_stop_exploration)
+      {
+        all_nn_are_telling_to_stop_exploration = false;
+      }
+    }
+
+    if (all_nn_are_telling_to_stop_exploration)
+    {
+      should_update_nn = true;
+      OMPL_WARN("%s: All NN are telling to stop exploration", getName().c_str());
+      // set all the should_stop_exploration flags to false again
+      for (auto&& should_stop_exploration : should_stop_exploration_flags)
+      {
+        *should_stop_exploration = false;
+      }
+    }
+
+    // Update the NN structures
+    if (bestControlPath_->getStateCount() > 0 && should_update_nn)
+    {
+      // We have a solution
+      approximate_solution = true;
+      exact_solution = true;
+
+      OMPL_INFORM("%s: Updating the NN structures with the best control path", getName().c_str());
+
+      // fill this_nn with the best control path NN structure
+      std::vector<VertexProperty*> vertices = control_paths_vertices[bestControlPathIndex_];
+
+      // Choose the random state from the frist half of the best control path
+      // This is to avoid the case where the random state is in the second half of the best control path
+      int random_state_index = rng_.uniformInt(0, bestControlPath_->getStateCount() / 2 - 1);
+
+      for (int t = 0; t < params_.num_threads_; t++)
+      {
+        // equate this NN structure with the best bestControlPathIndex_ but create a copy
+        std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>> this_nn;
+        this_nn.reset(tools::SelfConfig::getDefaultNearestNeighbors<VertexProperty*>(this));
+        this_nn->setDistanceFunction(
+            [this](const VertexProperty* a, const VertexProperty* b) { return distanceFunction(a, b); });
+
+        // also equate the shortest paths with the best bestControlPathIndex_
+        control_ompl_paths[t] = control_ompl_paths[bestControlPathIndex_];
+        control_paths_vertices[t] = control_paths_vertices[bestControlPathIndex_];
+        // also equate the root and target vertices with the best bestControlPathIndex_
+        startVerticesControl_[t] = startVerticesControl_[bestControlPathIndex_];
+        goalVerticesControl_[t] = goalVerticesControl_[bestControlPathIndex_];
+
+        std::vector<VertexProperty*> solution_vertices;
+        for (auto&& vertex : vertices)
+        {
+          if (!vertex->belongs_to_solution)
+          {
+            continue;
+          }
+          solution_vertices.push_back(vertex);
+        }
+
+        // Now pick a random vertex from the solution vertices and add it to the new NN structure
+        // make sure the random_state_index is not out of bounds
+        if (random_state_index > solution_vertices.size() - 1)
+        {
+          OMPL_WARN("%s: Random state index is out of bounds, setting it to the last index", getName().c_str());
+          OMPL_WARN("%s: Random state index is %d but the solution vertices size is %d", getName().c_str(),
+                    random_state_index, solution_vertices.size());
+          random_state_index = solution_vertices.size() - 1;
+        }
+
+        // from start up to the random state index, add the vertices to the new NN structure and black list them
+        for (int i = 0; i < random_state_index; i++)
+        {
+          auto vertex = vertices[i];
+          auto* new_vertex = new VertexProperty();
+          new_vertex->state = vertex->state;
+          new_vertex->control = vertex->control;
+          new_vertex->control_duration = vertex->control_duration;
+          new_vertex->cost = vertex->cost;
+          new_vertex->parent = vertex->parent;
+          new_vertex->is_root = vertex->is_root;
+          new_vertex->belongs_to_solution = vertex->belongs_to_solution;
+          new_vertex->blacklisted = true;
+          this_nn->add(new_vertex);
+        }
+
+        // Now add the random state to the new NN structure and do not black list it
+        auto vertex = vertices[random_state_index];
+        auto* new_vertex = new VertexProperty();
+        new_vertex->state = vertex->state;
+        new_vertex->control = vertex->control;
+        new_vertex->control_duration = vertex->control_duration;
+        new_vertex->cost = vertex->cost;
+        new_vertex->parent = vertex->parent;
+        new_vertex->is_root = vertex->is_root;
+        new_vertex->belongs_to_solution = vertex->belongs_to_solution;
+        new_vertex->blacklisted = false;
+        this_nn->add(new_vertex);
+
+        nnControlsThreads_[t] = this_nn;
+      }
+
+      OMPL_INFORM("%s: Updated the NN structures with the best control path", getName().c_str());
+    }
+
+    // compute the number of neighbors and the connection radius and numNeighbors
+    auto numSamplesInInformedSet = computeNumberOfSamplesInInformedSet();
+    numNeighbors_ = computeNumberOfNeighbors(numSamplesInInformedSet /*- 2 goal and start */);
+    radius_ = computeConnectionRadius(numSamplesInInformedSet /*- 2 goal and start*/);
+
+    // only for visualization, keep a copy of the best control graphs
     // Keep a copy before we change and graphControlThreads_
     auto best_control_nn_structure = nnControlsThreads_[bestControlPathIndex_];
 
@@ -534,16 +643,69 @@ void ompl::control::CP::getPlannerData(base::PlannerData& data) const
   Planner::getPlannerData(data);
 }
 
-void ompl::control::CP::selectFrontiers(int max_number,
-                                        std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
-                                        std::vector<VertexProperty*> frontier_nodes)
+void ompl::control::CP::selectExplorativeFrontiers(
+    int max_number, std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
+    std::vector<VertexProperty*>& frontier_nodes)
 {
   nn_structure->list(frontier_nodes);
+
+  // remove the blacklisted nodes
+  frontier_nodes.erase(std::remove_if(frontier_nodes.begin(), frontier_nodes.end(),
+                                      [](const VertexProperty* a) { return a->blacklisted; }),
+                       frontier_nodes.end());
 
   // sort the frontier nodes by their number of branches, favor the ones with less branches
   std::sort(frontier_nodes.begin(), frontier_nodes.end(), [this](const VertexProperty* a, const VertexProperty* b) {
     return a->branches.size() < b->branches.size();
   });
+
+  // vertex with min number of branches is the first element in the vector, get the number of branches
+  auto min_branches = frontier_nodes.front()->branches.size();
+
+  // remove the frontier nodes with more branches than the minimum number of branches
+  frontier_nodes.erase(
+      std::remove_if(frontier_nodes.begin(), frontier_nodes.end(),
+                     [min_branches](const VertexProperty* a) { return a->branches.size() > min_branches; }),
+      frontier_nodes.end());
+
+  // sort the frontier nodes by their cost, favor the ones with more cost
+  std::sort(frontier_nodes.begin(), frontier_nodes.end(),
+            [this](const VertexProperty* a, const VertexProperty* b) { return a->cost.value() > b->cost.value(); });
+
+  // clip the number of frontier nodes to max_number
+  if (frontier_nodes.size() > max_number)
+  {
+    frontier_nodes.resize(max_number);
+  }
+}
+
+void ompl::control::CP::selectExploitaveFrontiers(
+    int max_number, std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
+    std::vector<VertexProperty*>& frontier_nodes)
+{
+  nn_structure->list(frontier_nodes);
+
+  // remove the blacklisted nodes
+  frontier_nodes.erase(std::remove_if(frontier_nodes.begin(), frontier_nodes.end(),
+                                      [](const VertexProperty* a) { return a->blacklisted; }),
+                       frontier_nodes.end());
+
+  // sort the frontier nodes by their number of branches, favor the ones with less branches
+  std::sort(frontier_nodes.begin(), frontier_nodes.end(), [this](const VertexProperty* a, const VertexProperty* b) {
+    return a->branches.size() < b->branches.size();
+  });
+
+  // vertex with min number of branches is the first element in the vector, get the number of branches
+  auto min_branches = frontier_nodes.front()->branches.size();
+
+  // remove the frontier nodes with more branches than the minimum number of branches
+  frontier_nodes.erase(
+      std::remove_if(frontier_nodes.begin(), frontier_nodes.end(),
+                     [min_branches](const VertexProperty* a) { return a->branches.size() > min_branches; }),
+      frontier_nodes.end());
+
+  // randomly shuffle the frontier nodes
+  std::random_shuffle(frontier_nodes.begin(), frontier_nodes.end());
 
   // clip the number of frontier nodes to max_number
   if (frontier_nodes.size() > max_number)
@@ -555,7 +717,10 @@ void ompl::control::CP::selectFrontiers(int max_number,
 void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_nodes, int num_branch_to_extend,
                                         std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
                                         const base::PlannerTerminationCondition& ptc, VertexProperty* target_property,
-                                        std::shared_ptr<PathControl>& path)
+                                        std::shared_ptr<PathControl>& path,
+                                        std::vector<VertexProperty*>& control_paths_vertices,
+                                        const bool exact_solution_found, bool* should_stop_exploration,
+                                        const std::shared_ptr<PathControl>& current_best_path)
 {
   // Now lets expand the frontier nodes with random controls and add them to the graph
   for (auto&& frontier_node : frontier_nodes)
@@ -566,26 +731,25 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
       break;
     }
 
+    // If all of the propogated states from this node end up with higher cost than the current best path, then we can
+    // set should_stop_exploration to true
+    bool all_propogated_states_are_worse_than_best_path{ true };
+
     // Add max number of branches to the frontier nodes
     for (size_t i = 0; i < num_branch_to_extend; i++)
     {
-      // generate random controls from the frontier node
       // allocate a control
       Control* control = siC_->allocControl();
-
-      // generate a random control
-      controlSampler_->sampleNext(control, frontier_node->control);
-
       // allocate a new state
       auto* new_state = si_->allocState();
 
-      // chose the step size based on  min max control duration
-      // generate a random step size between min and max control duration
-      int random_step_size = rng_.uniformInt(siC_->getMinControlDuration(), siC_->getMaxControlDuration());
+      int control_duration = 0;
 
+      controlSampler_->sampleNext(control, frontier_node->control);
+      control_duration = rng_.uniformInt(siC_->getMinControlDuration(), siC_->getMaxControlDuration());
       // propagate the control from the frontier node
       // this will generate a new state
-      int num_steps_taken = siC_->propagateWhileValid(frontier_node->state, control, random_step_size, new_state);
+      control_duration = siC_->propagateWhileValid(frontier_node->state, control, control_duration, new_state);
 
       // Create a new vertex.
       VertexProperty* vertex_property = new VertexProperty();
@@ -593,7 +757,134 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
 
       // if the number of steps taken is less than the random step size, then the propagation failed blacklist the new
       // node because states propogated from this new node will also fail most likely
-      if (num_steps_taken < random_step_size)
+      if (control_duration < siC_->getMinControlDuration())
+      {
+        vertex_property->blacklisted = true;
+      }
+
+      // the parent of the new node is the frontier node
+      vertex_property->parent = frontier_node;
+
+      // do add accumulated cost to the new node
+      vertex_property->cost =
+          opt_->combineCosts(frontier_node->cost, opt_->motionCost(frontier_node->state, new_state));
+
+      // check if the cost of the new node is better than the current best path
+      // this is relevant if there is an exact solution
+
+      if (exact_solution_found)
+      {
+        if (opt_->isCostBetterThan(vertex_property->cost, computePathCost(current_best_path)))
+        {
+          all_propogated_states_are_worse_than_best_path = false;
+        }
+      }
+
+      frontier_node->branches.push_back(vertex_property);
+
+      // add the new node to the graph
+      nn_structure->add(vertex_property);
+
+      // check if the new node is close to the goal
+      // if it is, connect it to the goal
+      double dist = distanceFunction(vertex_property, target_property);
+
+      if (dist < 0.25)
+      {
+        // proceed only if the cost is better than the current best cost
+        auto current_best_cost = computePathCost(current_best_path);
+
+        if (!opt_->isCostBetterThan(vertex_property->cost, current_best_cost))
+        {
+          continue;
+        }
+
+        // back track the path from the new node to the root node and add it to the path
+        VertexProperty* current_vertex = vertex_property;
+        control_paths_vertices.clear();
+        while (current_vertex != nullptr)
+        {
+          current_vertex->belongs_to_solution = true;
+          control_paths_vertices.push_back(current_vertex);
+          current_vertex = current_vertex->parent;
+        }
+        std::reverse(control_paths_vertices.begin(), control_paths_vertices.end());
+
+        // reset the path from previous successful iteration
+        path = std::make_shared<PathControl>(si_);
+
+        for (auto&& vertex : control_paths_vertices)
+        {
+          // if control is not allocated for this vertex, allocate it
+          if (vertex->control == nullptr)
+          {
+            vertex->control = siC_->allocControl();
+          }
+
+          path->append(vertex->state, vertex->control, vertex->control_duration * siC_->getMinControlDuration());
+        }
+
+        // add the goal state to the path
+        path->append(target_property->state);
+      }
+    }
+
+    if (exact_solution_found && all_propogated_states_are_worse_than_best_path)
+    {
+      *should_stop_exploration = true;
+    }
+  }
+}
+
+void ompl::control::CP::extendFrontiersAfter(std::vector<VertexProperty*>& frontier_nodes, int num_branch_to_extend,
+                                             std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
+                                             const base::PlannerTerminationCondition& ptc,
+                                             VertexProperty* target_property, std::shared_ptr<PathControl>& path,
+                                             const std::shared_ptr<PathControl>& current_best_path)
+{
+  // when this function is called, we already have a solution and we are trying to improve it
+  std::vector<VertexProperty*> solution_vertices;
+
+  // get all the vertices in the solution
+  nn_structure->list(solution_vertices);
+
+  // SORT THE SOLUTION VERTICES BY THEIR COST
+  std::sort(solution_vertices.begin(), solution_vertices.end(),
+            [this](const VertexProperty* a, const VertexProperty* b) { return a->cost.value() > b->cost.value(); });
+
+  // PICK THE MID POINT OF THE SOLUTION VERTICES
+  auto mid_point = solution_vertices[solution_vertices.size() / 2];
+
+  // START FROM HERE AND TRY TO IMPROVE THE SOLUTION
+
+  while (!ptc)
+  {
+    // Add max number of branches to the frontier nodes
+    for (size_t i = 0; i < num_branch_to_extend; i++)
+    {
+      // allocate a control
+      Control* control = siC_->allocControl();
+      // allocate a new state
+      auto* new_state = si_->allocState();
+
+      int control_duration = 0;
+
+      auto frontier_node = mid_point;
+
+      controlSampler_->sampleNext(control, frontier_node->control);
+
+      control_duration = rng_.uniformInt(siC_->getMinControlDuration(), siC_->getMaxControlDuration());
+      // propagate the control from the frontier node
+      // this will generate a new state
+      control_duration = siC_->propagateWhileValid(frontier_node->state, control, control_duration, new_state);
+
+      // Create a new vertex.
+      VertexProperty* vertex_property = new VertexProperty();
+      vertex_property->state = new_state;
+
+      // if the number of steps taken is less than the random step size, then the propagation failed blacklist the new
+      // node because states propogated from this new node will also fail most likely
+      if (control_duration < siC_->getMinControlDuration())
       {
         vertex_property->blacklisted = true;
       }
@@ -613,16 +904,23 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
       // check if the new node is close to the goal
       // if it is, connect it to the goal
       double dist = distanceFunction(vertex_property, target_property);
-      if (dist < params_.max_dist_between_vertices_)
+
+      if (dist < 0.25)
       {
-        OMPL_INFORM("%s: Connecting frontier node to the goal with cost %.2f", getName().c_str(),
-                    vertex_property->cost.value());
+        // proceed only if the cost is better than the current best cost
+        auto current_best_cost = computePathCost(current_best_path);
+
+        if (!opt_->isCostBetterThan(vertex_property->cost, current_best_cost))
+        {
+          continue;
+        }
 
         // back track the path from the new node to the root node and add it to the path
         std::vector<VertexProperty*> path_to_root;
         VertexProperty* current_vertex = vertex_property;
         while (current_vertex != nullptr)
         {
+          current_vertex->belongs_to_solution = true;
           path_to_root.push_back(current_vertex);
           current_vertex = current_vertex->parent;
         }
@@ -633,8 +931,15 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
 
         for (auto&& vertex : path_to_root)
         {
+          // if control is not allocated for this vertex, allocate it
+          if (vertex->control == nullptr)
+          {
+            vertex->control = siC_->allocControl();
+          }
+
           path->append(vertex->state, vertex->control, vertex->control_duration * siC_->getMinControlDuration());
         }
+
         // add the goal state to the path
         path->append(target_property->state);
       }
@@ -643,37 +948,31 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
 }
 
 void ompl::control::CP::generateBatchofSamples(int batch_size, bool use_valid_sampler,
-                                               std::vector<ompl::base::State*>& samples)
+                                               std::vector<VertexProperty*>& samples,
+                                               const std::vector<VertexProperty*>& current_graph)
 {
   samples.reserve(batch_size);
   do
   {
-    // Create a new vertex.
-    auto state = si_->allocState();
-    samples.push_back(state);
-    if (use_valid_sampler)
+    // select a random state from the current graph
+    auto vertex = current_graph[rng_.uniformInt(0, current_graph.size() - 1)];
+
+    // check that if the state is in the informed set
+
+    // Get the best cost to come from any start.
+    auto costToCome = opt_->infiniteCost();
+    costToCome = opt_->betterCost(costToCome, opt_->motionCostHeuristic(startVertexGeometric_->state, vertex->state));
+
+    // Get the best cost to go to any goal.
+    auto costToGo = opt_->infiniteCost();
+    costToGo = opt_->betterCost(costToCome, opt_->motionCostHeuristic(vertex->state, goalVertexGeometric_->state));
+
+    // If this can possibly improve the current solution, it is in the informed set.
+    if (opt_->isCostBetterThan(opt_->combineCosts(costToCome, costToGo), bestControlCost_))
     {
-      // sample from the valid sampler
-      validStateSampler_->sample(samples.back());
+      samples.push_back(vertex);
     }
-    else
-    {
-      do
-      {
-        // Sample in the informed set after an control solution has been found.
-        // Otherwise, sample uniformly in the state space.
-        ompl::base::Cost min_cost = opt_->infiniteCost();
-        if (opt_->isCostBetterThan(bestControlCost_, opt_->infiniteCost()))
-        {
-          auto euc_cost = opt_->motionCost(startVertexGeometric_->state, goalVertexGeometric_->state);
-          if (opt_->isCostBetterThan(euc_cost, bestControlCost_))
-          {
-            min_cost = bestControlCost_;
-          }
-        }
-        rejectionInformedSampler_->sampleUniform(samples.back(), min_cost);
-      } while (!si_->getStateValidityChecker()->isValid(samples.back()));
-    }
+
   } while (samples.size() < batch_size);  // Keep sampling until batch_size is reached
 }
 
@@ -681,9 +980,19 @@ std::size_t ompl::control::CP::computeNumberOfSamplesInInformedSet() const
 {
   // Loop over all vertices and count the ones in the informed set.
   std::size_t numberOfSamplesInInformedSet{ 0u };
-  for (auto vd : boost::make_iterator_range(vertices(graphControlThreads_[0])))
+
+  if (bestControlPathNN_ == nullptr)
   {
-    auto vertex = graphControlThreads_[0][vd].state;
+    return numberOfSamplesInInformedSet;
+  }
+
+  std::vector<VertexProperty*> vertices;
+
+  bestControlPathNN_->list(vertices);
+
+  for (auto vd : vertices)
+  {
+    auto vertex = vd->state;
 
     // Get the best cost to come from any start.
     auto costToCome = opt_->infiniteCost();
@@ -782,11 +1091,27 @@ void ompl::control::CP::populateOmplPathfromVertexPath(const std::list<vertex_de
 
 ompl::base::Cost ompl::control::CP::computePathCost(std::shared_ptr<ompl::control::PathControl>& path) const
 {
-  ompl::base::Cost path_cost = opt_->identityCost();
+  ompl::base::Cost path_cost = opt_->infiniteCost();
   if (path->getStateCount() == 0)
   {
     return path_cost;
   }
+  path_cost = opt_->identityCost();
+  for (std::size_t i = 0; i < path->getStateCount() - 1; ++i)
+  {
+    path_cost = opt_->combineCosts(path_cost, opt_->motionCost(path->getState(i), path->getState(i + 1)));
+  }
+  return path_cost;
+}
+
+ompl::base::Cost ompl::control::CP::computePathCost(const std::shared_ptr<ompl::control::PathControl>& path) const
+{
+  ompl::base::Cost path_cost = opt_->infiniteCost();
+  if (path->getStateCount() == 0)
+  {
+    return path_cost;
+  }
+  path_cost = opt_->identityCost();
   for (std::size_t i = 0; i < path->getStateCount() - 1; ++i)
   {
     path_cost = opt_->combineCosts(path_cost, opt_->motionCost(path->getState(i), path->getState(i + 1)));
@@ -918,7 +1243,6 @@ void ompl::control::CP::visualizeRGG(
       line_stripes.colors.push_back(color);
       line_stripes.points.push_back(target_point);
       line_stripes.colors.push_back(color);
-      edge_index++;
     }
   }
 
