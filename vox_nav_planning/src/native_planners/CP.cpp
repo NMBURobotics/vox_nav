@@ -21,7 +21,7 @@ ompl::control::CP::CP(const SpaceInformationPtr& si) : base::Planner(si, "CP")
   specs_.optimizingPaths = true;
   specs_.multithreaded = true;
   specs_.canReportIntermediateSolutions = true;
-  specs_.approximateSolutions = false;
+  specs_.approximateSolutions = true;
 
   siC_ = si.get();
 
@@ -464,8 +464,8 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
         // Aight, this path seems legit
         if (opt_->isCostBetterThan(path_cost, bestControlCost_))
         {
-          OMPL_INFORM("%s: Found a better control path with cost %.2f", getName().c_str(), path_cost.value());
-          OMPL_INFORM("%s: Previous best control path cost was %.2f", getName().c_str(), bestControlCost_.value());
+          OMPL_INFORM("%s: Found a better control path with cost %.2f over previous cost %.2f", getName().c_str(),
+                      path_cost.value(), bestControlCost_.value());
 
           bestControlPath_ = curr_path;
           bestControlPathIndex_ = control_counter;
@@ -475,14 +475,8 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
           should_update_nn = true;
 
           // We have a solution
-          approximate_solution = true;
-          exact_solution = true;
-        }
-        else
-        {
-          // We don't have a solution
           approximate_solution = false;
-          exact_solution = false;
+          exact_solution = true;
         }
       }
       control_counter++;
@@ -503,7 +497,6 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
     if (any_nn_is_telling_to_stop_exploration)
     {
       should_update_nn = true;
-      OMPL_WARN("%s: All NN are telling to stop exploration", getName().c_str());
       // set all the should_stop_exploration flags to false again
       for (auto&& should_stop_exploration : should_stop_exploration_flags)
       {
@@ -514,8 +507,6 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
     // Update the NN structures
     if (bestControlPath_->getStateCount() > 0 && should_update_nn)
     {
-      OMPL_INFORM("%s: Updating the NN structures with the best control path", getName().c_str());
-
       // fill this_nn with the best control path NN structure
       std::vector<VertexProperty*> vertices = control_paths_vertices[bestControlPathIndex_];
 
@@ -589,8 +580,6 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
 
         nnControlsThreads_[t] = this_nn;
       }
-
-      OMPL_INFORM("%s: Updated the NN structures with the best control path", getName().c_str());
     }
 
     // compute the number of neighbors and the connection radius and numNeighbors
@@ -626,11 +615,16 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
 
     visualizeRGG(best_control_nn_structure_counterpart, second_control_graph_pub_, "c", getColor(blue),
                  si_->getStateSpace()->getType());
+
+    if (static_cast<bool>(Planner::pdef_->getIntermediateSolutionCallback()))
+    {
+      pdef_->getIntermediateSolutionCallback()(this, getConstStatesFromPath(bestControlPath_), bestControlCost_);
+    }
   }
 
   // Add the best path to the solution path
-  pdef_->addSolutionPath(bestControlPath_, approximate_solution, 0.0, getName());
   OMPL_INFORM("%s: Best Control path has %d vertices and ", getName().c_str(), bestControlPath_->getStateCount());
+  pdef_->addSolutionPath(bestControlPath_, approximate_solution, 0.0, getName());
 
   // clear data structures
   clear();
@@ -726,15 +720,15 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
   // Now lets expand the frontier nodes with random controls and add them to the graph
   for (auto&& frontier_node : frontier_nodes)
   {
-    // Check if the planner has been terminated
-    if (ptc == true)
-    {
-      break;
-    }
-
     // Add max number of branches to the frontier nodes
     for (size_t i = 0; i < num_branch_to_extend; i++)
     {
+      // Check if the planner has been terminated
+      if (ptc == true)
+      {
+        return;
+      }
+
       // allocate a control
       Control* control = siC_->allocControl();
       // allocate a new state
@@ -761,6 +755,8 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
 
       // the parent of the new node is the frontier node
       vertex_property->parent = frontier_node;
+
+      vertex_property->control_duration = control_duration;
 
       // do add accumulated cost to the new node
       vertex_property->cost =
@@ -814,7 +810,7 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
             vertex->control = siC_->allocControl();
           }
 
-          path->append(vertex->state, vertex->control, vertex->control_duration * siC_->getMinControlDuration());
+          path->append(vertex->state, vertex->control, vertex->control_duration * siC_->getPropagationStepSize());
         }
 
         // add the goal state to the path
