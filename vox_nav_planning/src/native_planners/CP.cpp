@@ -426,7 +426,7 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
       auto& planner_status = control_threads_status.at(thread_id);
       auto& target_property = goalVerticesControl_.at(thread_id);
       auto& this_control_path_vertices = control_paths_vertices.at(thread_id);
-      auto& should_stop_exploration = should_stop_exploration_flags.at(immutable_t);
+      auto should_stop_exploration = should_stop_exploration_flags.at(thread_id);
 
       control_threads[thread_id] = new std::thread(
           [this, &target_property, &control_graph, &control_nn, &control_shortest_path, &thread_id, &planner_status,
@@ -473,6 +473,10 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
           bestControlPathNN_ = nnControlsThreads_[bestControlPathIndex_];
 
           should_update_nn = true;
+
+          // We have a solution
+          approximate_solution = true;
+          exact_solution = true;
         }
         else
         {
@@ -484,18 +488,19 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
       control_counter++;
     }
 
-    // if all of the NN are telling that we should stop exploration, then we should stop exploration and update the NN
+    // if any of the NN are telling that we should stop exploration, then we should stop exploration and update the NN
     // structures
-    bool all_nn_are_telling_to_stop_exploration{ true };
+    bool any_nn_is_telling_to_stop_exploration{ false };
     for (auto&& should_stop_exploration : should_stop_exploration_flags)
     {
-      if (!*should_stop_exploration)
+      if (*should_stop_exploration)
       {
-        all_nn_are_telling_to_stop_exploration = false;
+        any_nn_is_telling_to_stop_exploration = true;
+        break;
       }
     }
 
-    if (all_nn_are_telling_to_stop_exploration)
+    if (any_nn_is_telling_to_stop_exploration)
     {
       should_update_nn = true;
       OMPL_WARN("%s: All NN are telling to stop exploration", getName().c_str());
@@ -509,10 +514,6 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
     // Update the NN structures
     if (bestControlPath_->getStateCount() > 0 && should_update_nn)
     {
-      // We have a solution
-      approximate_solution = true;
-      exact_solution = true;
-
       OMPL_INFORM("%s: Updating the NN structures with the best control path", getName().c_str());
 
       // fill this_nn with the best control path NN structure
@@ -731,10 +732,6 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
       break;
     }
 
-    // If all of the propogated states from this node end up with higher cost than the current best path, then we can
-    // set should_stop_exploration to true
-    bool all_propogated_states_are_worse_than_best_path{ true };
-
     // Add max number of branches to the frontier nodes
     for (size_t i = 0; i < num_branch_to_extend; i++)
     {
@@ -771,13 +768,9 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
 
       // check if the cost of the new node is better than the current best path
       // this is relevant if there is an exact solution
-
-      if (exact_solution_found)
+      if (opt_->isCostBetterThan(bestControlCost_, vertex_property->cost))
       {
-        if (opt_->isCostBetterThan(vertex_property->cost, computePathCost(current_best_path)))
-        {
-          all_propogated_states_are_worse_than_best_path = false;
-        }
+        *should_stop_exploration = true;
       }
 
       frontier_node->branches.push_back(vertex_property);
@@ -827,11 +820,6 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
         // add the goal state to the path
         path->append(target_property->state);
       }
-    }
-
-    if (exact_solution_found && all_propogated_states_are_worse_than_best_path)
-    {
-      *should_stop_exploration = true;
     }
   }
 }
