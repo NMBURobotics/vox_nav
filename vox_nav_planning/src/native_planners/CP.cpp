@@ -889,7 +889,10 @@ void ompl::control::CP::extendFrontiersAfter(std::vector<VertexProperty*>& front
       // if it is, connect it to the goal
       double dist = distanceFunction(vertex_property, target_property);
 
-      if (dist < 0.25)
+      // get goal tolerance from the pdef
+      auto goal_tolerance = pdef_->getGoal()->as<base::GoalRegion>()->getThreshold();
+
+      if (dist < goal_tolerance)
       {
         // proceed only if the cost is better than the current best cost
         auto current_best_cost = computePathCost(current_best_path);
