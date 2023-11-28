@@ -69,6 +69,7 @@
 #include "vox_nav_planning/native_planners/LQRPlanner.hpp"
 #include "vox_nav_planning/native_planners/LQRRRTStar.hpp"
 #include "vox_nav_planning/native_planners/InformedSGCP.hpp"
+#include "vox_nav_planning/native_planners/CP.hpp"
 #include "Quadrotor.hpp"
 // OMPL BASE
 #include <ompl/base/OptimizationObjective.h>
@@ -105,201 +106,219 @@
 namespace vox_nav_planning
 {
 
-  struct StateBounds
-  { // 15 state bounds
-    std::pair<double, double> x_pos = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> y_pos = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> z_pos = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> roll = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> pitch = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> yaw = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> x_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> y_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> z_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> roll_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> pitch_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> yaw_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> x_acc = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> y_acc = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> z_acc = std::make_pair<double, double>(0.0, 0.0);
-  };
+struct StateBounds
+{  // 15 state bounds
+  std::pair<double, double> x_pos = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> y_pos = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> z_pos = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> roll = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> pitch = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> yaw = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> x_vel = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> y_vel = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> z_vel = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> roll_vel = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> pitch_vel = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> yaw_vel = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> x_acc = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> y_acc = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> z_acc = std::make_pair<double, double>(0.0, 0.0);
+};
 
-  struct ControlBounds
-  {  // 6 DOF
-    std::pair<double, double> z_pos = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> z_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> yaw_vel = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> x_acc = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> y_acc = std::make_pair<double, double>(0.0, 0.0);
-    std::pair<double, double> z_acc = std::make_pair<double, double>(0.0, 0.0);
-  };
+struct ControlBounds
+{  // 6 DOF
+  std::pair<double, double> z_pos = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> z_vel = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> yaw_vel = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> x_acc = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> y_acc = std::make_pair<double, double>(0.0, 0.0);
+  std::pair<double, double> z_acc = std::make_pair<double, double>(0.0, 0.0);
+};
 
-  class QuadrotorControlPlannersBenchMarking : public rclcpp::Node
+class QuadrotorControlPlannersBenchMarking : public rclcpp::Node
+{
+private:
+  rclcpp::Logger logger_{ rclcpp::get_logger("quadrotor_control_benchmarking_rclcpp_node") };
+  StateBounds state_bounds_;      // struct for keeping things clean
+  ControlBounds control_bounds_;  // struct for keeping things clean
+  ompl::base::StateSpacePtr state_space_;
+  ompl::control::ControlSpacePtr control_state_space_;
+  ompl::control::SimpleSetupPtr control_simple_setup_;
+
+  QuadrotorControl quadrotor_controller_;
+
+  std::vector<std::string> selected_planners_;
+  std::string robot_mesh_path_;
+  std::string results_output_dir_;
+  std::string results_file_regex_;
+  double planner_timeout_;
+  double goal_tolerance_;
+  double min_euclidean_dist_start_to_goal_;
+  int interpolation_parameter_;
+  int batch_size_;
+  int epochs_;
+  int max_memory_;
+  bool publish_a_sample_bencmark_;
+  std::string octomap_from_file_;
+  std::string sample_bencmark_plans_topic_;
+  geometry_msgs::msg::PoseArray start_and_goal_poses_;
+
+  geometry_msgs::msg::Vector3 robot_body_dimensions_;
+
+  std::shared_ptr<octomap::OcTree> original_octomap_octree_;
+  std::shared_ptr<fcl::CollisionObjectf> original_octomap_collision_object_;
+  std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_;
+
+  // Publishers for the path
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr plan_publisher_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr start_goal_poses_publisher_;
+
+  rclcpp::Client<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr get_traversability_map_client_;
+  rclcpp::Node::SharedPtr get_map_client_node_;
+  // Publish the octomap
+  rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_publisher_;
+
+  std::mutex octomap_mutex_;
+
+public:
+  volatile bool is_map_ready_;
+  /**
+   * @brief Construct a new Planner Bench Marking object
+   *
+   */
+  QuadrotorControlPlannersBenchMarking();
+
+  /**
+   * @brief Destroy the Planner Bench Marking object
+   *
+   */
+  ~QuadrotorControlPlannersBenchMarking();
+
+  /**
+   * @brief perfrom actual benchmark and return a sample run
+   *
+   */
+  std::map<int, ompl::control::PathControl> doBenchMarking();
+
+  /**
+   * @brief Callback to subscribe ang get octomap
+   *
+   * @param octomap
+   */
+  void setupMap();
+
+  /**
+   * @brief propogates the states to next phase, given the control input
+   *
+   * @param start
+   * @param control
+   * @param duration
+   * @param result
+   */
+  void propagate(const ompl::control::SpaceInformation* si, const ompl::base::State* start,
+                 const ompl::control::Control* control, const double duration, ompl::base::State* result);
+
+  /**
+   * @brief
+   *
+   * @param state
+   * @return true
+   * @return false
+   */
+  bool isStateValid(const ompl::base::State* state);
+
+  /**
+   * @brief publish sample plan from bencmarking as marker array into RVIZ
+   *
+   */
+  void publishSamplePlans(std::map<int, ompl::control::PathControl> sample_paths);
+
+  /**
+   * @brief Get the Color By Index object
+   *
+   * @param index
+   * @return std_msgs::msg::ColorRGBA
+   */
+  std_msgs::msg::ColorRGBA getColorByIndex(int index);
+
+  /**
+   * @brief Get the Opt Objective object
+   *
+   * @return ompl::base::OptimizationObjectivePtr
+   */
+  ompl::base::OptimizationObjectivePtr getOptimizationObjective();
+
+  /**
+   * @brief Get the Ranged Random object, return a random double in min max
+   * range
+   *
+   * @param min
+   * @param max
+   * @return double
+   */
+  double getRangedRandom(double min, double max);
+
+  void initializeSelectedControlPlanner(ompl::base::PlannerPtr& planner, const std::string& selected_planner_name,
+                                        const ompl::control::SpaceInformationPtr& si, const rclcpp::Logger& logger)
   {
-  private:
-    rclcpp::Logger logger_{rclcpp::get_logger("quadrotor_control_benchmarking_rclcpp_node")};
-    StateBounds state_bounds_;             // struct for keeping things clean
-    ControlBounds control_bounds_;         // struct for keeping things clean
-    ompl::base::StateSpacePtr state_space_;
-    ompl::control::ControlSpacePtr control_state_space_;
-    ompl::control::SimpleSetupPtr control_simple_setup_;
-
-    QuadrotorControl quadrotor_controller_;
-
-    std::vector<std::string> selected_planners_;
-    std::string robot_mesh_path_;
-    std::string results_output_dir_;
-    std::string results_file_regex_;
-    double planner_timeout_;
-    double goal_tolerance_;
-    double min_euclidean_dist_start_to_goal_;
-    int interpolation_parameter_;
-    int batch_size_;
-    int epochs_;
-    int max_memory_;
-    bool publish_a_sample_bencmark_;
-    std::string octomap_from_file_;
-    std::string sample_bencmark_plans_topic_;
-    geometry_msgs::msg::PoseArray start_and_goal_poses_;
-
-    geometry_msgs::msg::Vector3 robot_body_dimensions_;
-
-    std::shared_ptr<octomap::OcTree> original_octomap_octree_;
-    std::shared_ptr<fcl::CollisionObjectf> original_octomap_collision_object_;
-    std::shared_ptr<fcl::CollisionObjectf> robot_collision_object_;
-
-    // Publishers for the path
-    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr
-      plan_publisher_;
-    rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr
-      start_goal_poses_publisher_;
-
-    rclcpp::Client<vox_nav_msgs::srv::GetTraversabilityMap>::SharedPtr
-      get_traversability_map_client_;
-    rclcpp::Node::SharedPtr get_map_client_node_;
-    // Publish the octomap
-    rclcpp::Publisher<octomap_msgs::msg::Octomap>::SharedPtr octomap_publisher_;
-
-    std::mutex octomap_mutex_;
-
-  public:
-    volatile bool is_map_ready_;
-    /**
-     * @brief Construct a new Planner Bench Marking object
-     *
-     */
-    QuadrotorControlPlannersBenchMarking();
-
-    /**
-     * @brief Destroy the Planner Bench Marking object
-     *
-     */
-    ~QuadrotorControlPlannersBenchMarking();
-
-    /**
-     * @brief perfrom actual benchmark and return a sample run
-     *
-     */
-    std::map<int, ompl::control::PathControl> doBenchMarking();
-
-    /**
-     * @brief Callback to subscribe ang get octomap
-     *
-     * @param octomap
-     */
-    void setupMap();
-
-    /**
-     * @brief propogates the states to next phase, given the control input
-     *
-     * @param start
-     * @param control
-     * @param duration
-     * @param result
-     */
-    void propagate(
-      const ompl::control::SpaceInformation * si,
-      const ompl::base::State * start,
-      const ompl::control::Control * control,
-      const double duration,
-      ompl::base::State * result);
-
-    /**
-    * @brief
-    *
-    * @param state
-    * @return true
-    * @return false
-    */
-    bool isStateValid(const ompl::base::State * state);
-
-    /**
-     * @brief publish sample plan from bencmarking as marker array into RVIZ
-     *
-     */
-    void publishSamplePlans(
-      std::map<int, ompl::control::PathControl> sample_paths);
-
-    /**
-     * @brief Get the Color By Index object
-     *
-     * @param index
-     * @return std_msgs::msg::ColorRGBA
-     */
-    std_msgs::msg::ColorRGBA getColorByIndex(int index);
-
-    /**
-    * @brief Get the Opt Objective object
-    *
-    * @return ompl::base::OptimizationObjectivePtr
-    */
-    ompl::base::OptimizationObjectivePtr getOptimizationObjective();
-
-    /**
-     * @brief Get the Ranged Random object, return a random double in min max
-     * range
-     *
-     * @param min
-     * @param max
-     * @return double
-     */
-    double getRangedRandom(double min, double max);
-
-    void initializeSelectedControlPlanner(
-      ompl::base::PlannerPtr & planner,
-      const std::string & selected_planner_name,
-      const ompl::control::SpaceInformationPtr & si,
-      const rclcpp::Logger & logger)
+    if (selected_planner_name == std::string("RRT"))
     {
-      if (selected_planner_name == std::string("RRT")) {
-        planner = ompl::base::PlannerPtr(new ompl::control::RRT(si));
-      } else if (selected_planner_name == std::string("RRTStarF")) {
-        planner = ompl::base::PlannerPtr(new ompl::control::RRTStarF(si));
-      } else if (selected_planner_name == std::string("LQRPlanner")) {
-        planner = ompl::base::PlannerPtr(new ompl::control::LQRPlanner(si));
-      } else if (selected_planner_name == std::string("LQRRRTStar")) {
-        planner = ompl::base::PlannerPtr(new ompl::control::LQRRRTStar(si));
-      } else if (selected_planner_name == std::string("SST")) {
-        planner = ompl::base::PlannerPtr(new ompl::control::SST(si));
-      } else if (selected_planner_name == std::string("EST")) {
-        planner = ompl::base::PlannerPtr(new ompl::control::EST(si));
-      } else if (selected_planner_name == std::string("KPIECE1")) {
-        planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
-      } else if (selected_planner_name == std::string("InformedSGCP")) {
-        planner = ompl::base::PlannerPtr(new ompl::control::InformedSGCP(si));
-        planner->as<ompl::control::InformedSGCP>()->setMinDistBetweenVertices(0.5);
-        planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(true);
-      } else if (selected_planner_name == std::string("PDST")) {
-        planner = ompl::base::PlannerPtr(new ompl::control::PDST(si));
-      } else {
-        RCLCPP_WARN(
-          logger,
-          "Selected planner is not Found in available planners, using the default planner: RRTStarF");
-        planner = ompl::base::PlannerPtr(new ompl::control::RRTStarF(si));
-      }
+      planner = ompl::base::PlannerPtr(new ompl::control::RRT(si));
     }
+    else if (selected_planner_name == std::string("RRTStarF"))
+    {
+      planner = ompl::base::PlannerPtr(new ompl::control::RRTStarF(si));
+    }
+    else if (selected_planner_name == std::string("LQRPlanner"))
+    {
+      planner = ompl::base::PlannerPtr(new ompl::control::LQRPlanner(si));
+    }
+    else if (selected_planner_name == std::string("LQRRRTStar"))
+    {
+      planner = ompl::base::PlannerPtr(new ompl::control::LQRRRTStar(si));
+    }
+    else if (selected_planner_name == std::string("SST"))
+    {
+      planner = ompl::base::PlannerPtr(new ompl::control::SST(si));
+    }
+    else if (selected_planner_name == std::string("EST"))
+    {
+      planner = ompl::base::PlannerPtr(new ompl::control::EST(si));
+    }
+    else if (selected_planner_name == std::string("KPIECE1"))
+    {
+      planner = ompl::base::PlannerPtr(new ompl::control::KPIECE1(si));
+    }
+    else if (selected_planner_name == std::string("InformedSGCP"))
+    {
+      planner = ompl::base::PlannerPtr(new ompl::control::InformedSGCP(si));
+      planner->as<ompl::control::InformedSGCP>()->setMinDistBetweenVertices(0.5);
+      planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(true);
+    }
+    else if (selected_planner_name == std::string("CP"))
+    {
+      planner = ompl::base::PlannerPtr(new ompl::control::CP(si));
+      planner->as<ompl::control::CP>()->setNumThreads(6);
+      planner->as<ompl::control::CP>()->setMinNumberOfBranchesToExtend(5);
+      planner->as<ompl::control::CP>()->setMaxNumberOfBranchesToExtend(10);
+      planner->as<ompl::control::CP>()->setMaxNumberOfFrontierNodes(25);
+      planner->as<ompl::control::CP>()->setMinDistanceBetweenNodes(1.0);
+      planner->as<ompl::control::CP>()->setKPreferNodesWithLowBranches(1.0);
+      planner->as<ompl::control::CP>()->setKPreferNodesWithHighCost(5.0);
+      planner->as<ompl::control::CP>()->setNumOfNeighborsToConsiderForDensity(20);
+    }
+    else if (selected_planner_name == std::string("PDST"))
+    {
+      planner = ompl::base::PlannerPtr(new ompl::control::PDST(si));
+    }
+    else
+    {
+      RCLCPP_WARN(logger, "Selected planner is not Found in available planners, using the default planner: RRTStarF");
+      planner = ompl::base::PlannerPtr(new ompl::control::RRTStarF(si));
+    }
+  }
 
-  };   // class ControlPlannersBenchMarking
-}   // namespace vox_nav_planning
+};  // class ControlPlannersBenchMarking
+}  // namespace vox_nav_planning
 
-#endif // VOX_NAV_PLANNING__PLUGINS__QUADROTOR_CONTROL_PLANNERS_BENCHMARKING_HPP_
+#endif  // VOX_NAV_PLANNING__PLUGINS__QUADROTOR_CONTROL_PLANNERS_BENCHMARKING_HPP_

@@ -33,6 +33,7 @@
 #include "ompl/base/objectives/PathLengthOptimizationObjective.h"
 #include "ompl/tools/config/SelfConfig.h"
 #include "ompl/datastructures/NearestNeighbors.h"
+#include "ompl/datastructures/NearestNeighborsFLANN.h"
 #include "ompl/datastructures/LPAstarOnGraph.h"
 #include "ompl/base/samplers/informed/PathLengthDirectInfSampler.h"
 #include "ompl/base/samplers/informed/RejectionInfSampler.h"
@@ -66,42 +67,28 @@ struct CPParameters
   /** \brief All configurable parameters of CP. */
 
   /** \brief The number of threads to be used in parallel for geometric and control. No odd numbers and less than 2 */
-  int num_threads_{ 4 };
+  int num_threads_{ 6 };
 
-  /** \brief The number of samples to be added to graph in each iteration. */
-  int batch_size_{ 100 };
+  /** \brief The minimum number of branches to be extended from one frontier node */
+  int min_number_of_branches_to_extend_{ 5 };
 
-  /** \brief The a single vertex, do not construct more edges (neighbours) more than max_neighbors_. */
-  int max_neighbors_{ 15 };
+  /** \brief The maximum number of branches to be extended from one frontier node */
+  int max_number_of_branches_to_extend_{ 10 };
 
-  /** \brief Adding almost identical samples does not help much, so we regulate this by min_dist_between_vertices_. */
-  double min_dist_between_vertices_{ 0.1 };
+  /** \brief The maximum number of frontier nodes to be selected for extension */
+  int max_number_of_frontier_nodes_{ 25 };
 
-  /** \brief The edges connecting samples in geometric and control graphs cannot be longer than this */
-  double max_dist_between_vertices_{ 0.0 };  // works ok for elevation
+  /** \brief The minimum distance between nodes in the graph */
+  double min_distance_between_nodes_{ 0.1 };
 
-  /** \brief If available, use valid sampler. */
-  bool use_valid_sampler_{ false };
+  /** \brief The coefficient for determining score of best frontier node to be extended */
+  double k_prefer_nodes_with_low_branches_{ 1.0 };
 
-  /** \brief For directed control, set a number of samples to iterate though, to get a more accurate sampleTo behviour.
-   * It comes as costy!. */
-  int k_number_of_controls_{ 2 };
+  /** \brief The coefficient for determining score of best frontier node to be extended */
+  double k_prefer_nodes_with_high_cost_{ 5.0 };
 
-  /** \brief For adaptive heuristic, there is two options, dijkstra and astar.
-   *  Default is dijkstra as it computes shortest path from each vertex to specified one */
-  bool use_astar_hueristic_{ false };
-
-  /** \brief Frequently push goal to graph. It is used in control graph */
-  double goal_bias_{ 0.1 };
-
-  /** \brief a constant that effects numNeighbors_ and radius_*/
-  double rewire_factor_{ 1.0 };
-
-  /** \brief Whether to use nearest neighbor or radius as connection strategy. */
-  bool use_k_nearest_{ true };
-
-  /** \brief whether to solve the kinodyanmic solution */
-  bool solve_control_graph_{ true };
+  /** \brief The coefficient for determining score of best frontier node to be extended */
+  int num_of_neighbors_to_consider_for_density_{ 20 };
 };
 
 class CP : public base::Planner
@@ -136,15 +123,13 @@ public:
   {
     ompl::base::State* state{ nullptr };
     ompl::control::Control* control{ nullptr };
+    ompl::base::Cost cost{ std::numeric_limits<double>::infinity() };
+    ompl::base::Cost cost_to_go{ std::numeric_limits<double>::infinity() };
     unsigned int control_duration{ 0 };
-    std::size_t id{ 0 };
-    std::size_t parent_id{ 0 };
-    double g{ 1.0e+3 };
     bool blacklisted{ false };
     bool is_root{ false };
     bool belongs_to_solution{ false };
     std::vector<VertexProperty*> branches;
-    ompl::base::Cost cost{ std::numeric_limits<double>::infinity() };
     VertexProperty* parent{ nullptr };
   };
 
@@ -161,55 +146,30 @@ public:
   void setNumThreads(int num_threads);
   int getNumThreads() const;
 
-  void setBatchSize(int batch_size);
-  int getBatchSize() const;
+  void setMinNumberOfBranchesToExtend(int min_number_of_branches_to_extend);
+  int getMinNumberOfBranchesToExtend() const;
 
-  void setMaxNeighbors(int max_neighbors);
-  int getMaxNeighbors() const;
+  void setMaxNumberOfBranchesToExtend(int max_number_of_branches_to_extend);
+  int getMaxNumberOfBranchesToExtend() const;
 
-  void setMinDistBetweenVertices(double min_dist_between_vertices);
-  double getMinDistBetweenVertices() const;
+  void setMaxNumberOfFrontierNodes(int max_number_of_frontier_nodes);
+  int getMaxNumberOfFrontierNodes() const;
 
-  void setMaxDistBetweenVertices(double max_dist_between_vertices);
-  double getMaxDistBetweenVertices() const;
+  void setMinDistanceBetweenNodes(double min_distance_between_nodes);
+  double getMinDistanceBetweenNodes() const;
 
-  void setUseValidSampler(bool use_valid_sampler);
-  bool getUseValidSampler() const;
+  void setKPreferNodesWithLowBranches(double k_prefer_nodes_with_low_branches);
+  double getKPreferNodesWithLowBranches() const;
 
-  void setKNumberControls(int k_number_of_controls);
-  int getKNumberControls() const;
+  void setKPreferNodesWithHighCost(double k_prefer_nodes_with_high_cost);
+  double getKPreferNodesWithHighCost() const;
 
-  void setGoalBias(double goal_bias);
-  double getGoalBias() const;
-
-  void setUseKNearest(bool use_k_nearest);
-  bool getUseKNearest() const;
-
-  void setSolveControlGraph(bool solve_control_graph);
-  bool getSolveControlGraph() const;
+  void setNumOfNeighborsToConsiderForDensity(int num_of_neighbors_to_consider_for_density);
+  int getNumOfNeighborsToConsiderForDensity() const;
 
 private:
   /** \brief All configurable parames live here. */
   CPParameters params_;
-
-  /** \brief The radius to construct edges in construction of RGG, this is meant to be used in geometric graph,
-   * determines max edge length. */
-  double radius_{ std::numeric_limits<double>::infinity() };
-
-  /** \brief A constant for the computation of the number of neighbors when using a k-nearest model. */
-  std::size_t kRGG_{ std::numeric_limits<std::size_t>::max() };
-
-  /** \brief Auto calculate neighbours to connect. */
-  std::size_t numNeighbors_{ std::numeric_limits<std::size_t>::max() };
-
-  /** \brief Keep status of current status*/
-  int currentBestSolutionStatus_{ ompl::base::PlannerStatus::UNKNOWN };
-
-  /** \brief Informed sampling strategy */
-  std::shared_ptr<base::RejectionInfSampler> rejectionInformedSampler_{ nullptr };
-
-  /** \brief Valid state sampler */
-  base::ValidStateSamplerPtr validStateSampler_{ nullptr };
 
   /** \brief Control space information */
   const SpaceInformation* siC_{ nullptr };
@@ -226,9 +186,6 @@ private:
   /** \brief The best path found so far. */
   std::shared_ptr<ompl::control::PathControl> bestControlPath_{ nullptr };
 
-  /** \brief Directed control sampler to expand control graph */
-  DirectedControlSamplerPtr directedControlSampler_{ nullptr };
-
   ControlSamplerPtr controlSampler_{ nullptr };
 
   /** \brief The random number generator */
@@ -237,201 +194,14 @@ private:
   /** \brief The NN datastructure for control graph */
   std::vector<std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>> nnControlsThreads_;
 
-  std::once_flag equate_graphs_once_;
-
   std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>> bestControlPathNN_{ nullptr };
-
-  std::mutex nnMutex_;
-
-  /** \brief The typedef of Edge cost as double,
-   * note that ompl::base::Cost wont work as some operators are not provided (e.g. +) */
-  typedef double GraphEdgeCost;
-
-  /** \brief The typedef of Graph, note that we use setS for edge container, as we want to avoid duplicate edges */
-  typedef boost::adjacency_list<boost::setS,                                           // edge
-                                boost::vecS,                                           // vertex
-                                boost::undirectedS,                                    // type
-                                VertexProperty,                                        // vertex property
-                                boost::property<boost::edge_weight_t, GraphEdgeCost>>  // edge property
-      GraphT;
-
-  /** \brief The typedef of Graph, note that we use setS for edge container, as we want to avoid duplicate edges */
-  typedef boost::property_map<GraphT, boost::edge_weight_t>::type WeightMap;
-
-  /** \brief The typedef of vertex_descriptor, note that we keep a copy of vertex_descriptor in VertexProperty as "id"
-   */
-  typedef GraphT::vertex_descriptor vertex_descriptor;
-
-  /** \brief The typedef of edge_descriptor. */
-  typedef GraphT::edge_descriptor edge_descriptor;
-
-  /** \brief The generic eucledean distance heuristic, this is used for all graphs when we perform A* on them.
-   * Make it a friend of CP so it can access private members of CP.
-   */
-  friend class GenericDistanceHeuristic;
-  template <class Graph, class VertexProperty, class CostType>
-  class GenericDistanceHeuristic : public boost::astar_heuristic<Graph, CostType>
-  {
-  public:
-    typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-    GenericDistanceHeuristic(CP* alg, VertexProperty* goal, bool control = false, int thread_id = 0)
-      : alg_(alg), goal_(goal), control_(control), threadId_(thread_id)
-    {
-    }
-    double operator()(vertex_descriptor i)
-    {
-      return alg_->opt_->motionCost(alg_->getVertexControls(i, threadId_)->state, goal_->state).value();
-    }
-
-  private:
-    CP* alg_{ nullptr };
-    VertexProperty* goal_{ nullptr };
-    bool control_{ false };
-    int threadId_{ 0 };
-  };  // GenericDistanceHeuristic
-
-  /** \brief Exception thrown when goal vertex is found */
-  struct FoundVertex
-  {
-  };
-
-  /** \brief The visitor class for A* search,
-   *  this is used for all graphs when we perform A* on them.
-   */
-  template <class Vertex>
-  class SimpleVertexVisitor : public boost::default_astar_visitor
-  {
-  public:
-    SimpleVertexVisitor(Vertex goal_vertex, int* num_visits) : goalVertex_(goal_vertex), numVisits_(num_visits)
-    {
-    }
-    template <class Graph>
-    void examine_vertex(Vertex u, Graph& g)
-    {
-      // check whether examined vertex was goal, if yes throw
-      ++(*numVisits_);
-      if (u == goalVertex_)
-      {
-        throw FoundVertex();
-      }
-    }
-
-  private:
-    Vertex goalVertex_;
-    int* numVisits_;
-  };  // SimpleVertexVisitor
-
-  /** \brief Keep a global copy of start and goal vertex properties*/
-  VertexProperty* startVertexGeometric_{ nullptr };
-  VertexProperty* goalVertexGeometric_{ nullptr };
 
   std::vector<VertexProperty*> startVerticesControl_;
   std::vector<VertexProperty*> goalVerticesControl_;
 
-  /** \brief The control graphs, the numbers of graphs equals to number of threads */
-  std::vector<GraphT> graphControlThreads_;
-
-  /** \brief A templetaed function to run shortest path algorithms such as A* or Dijkstra on boost graphs
-   * \param[in] g The boost graph
-   * \param[in] weightmap The weightmap of the boost graph indicating edge weights
-   * \param[in] heuristic The heuristic function to be used for A* search
-   * \param[in] start_vertex The start vertex of the search
-   * \param[in] goal_vertex The goal vertex of the search
-   * \param[in] precompute_heuristic Whether to precompute heuristic values for all vertices with Dijkstra
-   * \param[in] use_full_collision_check Whether to use full collision check for A* search
-   * \return The shortest path from start to goal as a list of vertex_descriptors
-   */
-  template <class Heuristic>
-  std::list<vertex_descriptor> computeShortestPath(GraphT& g, WeightMap& weightmap, const Heuristic& heuristic,
-                                                   const vertex_descriptor& start_vertex,
-                                                   const vertex_descriptor& goal_vertex,
-                                                   const bool& precompute_heuristic = false,
-                                                   const bool& use_full_collision_check = false)
-  {
-    std::list<vertex_descriptor> shortest_path;
-    std::vector<vertex_descriptor> p(boost::num_vertices(g));
-    std::vector<GraphEdgeCost> d(boost::num_vertices(g));
-    int num_visited_nodes{ 0 };
-    auto visitor = SimpleVertexVisitor<vertex_descriptor>(goal_vertex, &num_visited_nodes);
-
-    // Now we can run A* forwards from start to goal and check for collisions
-    try
-    {
-      if (precompute_heuristic)
-      {
-        if (params_.use_astar_hueristic_)
-        {
-          boost::astar_search_tree(g, start_vertex, heuristic,
-                                   boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
-        }
-        else
-        {
-          boost::dijkstra_shortest_paths(g, start_vertex,
-                                         boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
-        }
-      }
-      else
-      {
-        boost::astar_search_tree(g, start_vertex, heuristic,
-                                 boost::predecessor_map(&p[0]).distance_map(&d[0]).visitor(visitor));
-      }
-
-      // No path found
-      return shortest_path;
-    }
-    catch (FoundVertex found_goal)
-    {
-      // Catch the exception
-
-      // Found a Heuristic from start to the goal (no collision checks),
-      // We now have H function, distrbute the precomputed cost values to graph
-      for (auto vd : boost::make_iterator_range(vertices(g)))
-      {
-        g[vd].g = d[vd];
-      }
-
-      // Found a collision free path to the goal, catch the exception
-      bool is_valid_path = true;
-      for (vertex_descriptor v = goal_vertex;; v = p[v])
-      {
-        if (use_full_collision_check)
-        {
-          if (g[v].blacklisted)
-          {
-            is_valid_path = false;
-            //   Found a blacklisted vertex most likely due to collision, Marking in/out edges as invalid for this
-            //   vertex
-            for (auto ed : boost::make_iterator_range(boost::out_edges(v, g)))
-            {
-              weightmap[ed] = opt_->infiniteCost().value();
-            }
-          }
-        }
-        shortest_path.push_front(v);
-        if (p[v] == v)
-        {
-          break;
-        }
-      }
-
-      if (is_valid_path)
-      {
-        return shortest_path;
-      }
-      else
-      {
-        // the path is not valid, return empty path
-        return std::list<vertex_descriptor>({});
-      }
-    }
-  }
-
   void selectExplorativeFrontiers(int max_number,
                                   std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
                                   std::vector<VertexProperty*>& frontier_nodes);
-
-  void selectExploitaveFrontiers(int max_number, std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
-                                 std::vector<VertexProperty*>& frontier_nodes);
 
   void extendFrontiers(std::vector<VertexProperty*>& frontier_nodes, int num_branch_to_extend,
                        std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
@@ -439,39 +209,6 @@ private:
                        std::shared_ptr<PathControl>& path, std::vector<VertexProperty*>& control_paths_vertices,
                        const bool exact_solution_found, bool* should_stop_exploration,
                        const std::shared_ptr<PathControl>& current_best_path);
-
-  void extendFrontiersAfter(std::vector<VertexProperty*>& frontier_nodes, int num_branch_to_extend,
-                            std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
-                            const base::PlannerTerminationCondition& ptc, VertexProperty* target_vertex_property,
-                            std::shared_ptr<PathControl>& path, const std::shared_ptr<PathControl>& current_best_path);
-
-  /** \brief generate a requested amound of states with preffered state sampler
-   * \param batch_size number of states to generate
-   * \param use_valid_sampler if true, use valid state sampler, otherwise use uniform sampler
-   * \param samples vector of states to be filled with generated samples
-   */
-  void generateBatchofSamples(int batch_size, bool use_valid_sampler, std::vector<VertexProperty*>& samples,
-                              const std::vector<VertexProperty*>& current_graph);
-
-  /** \brief After expandGeometricGraph() function call,
-   * make sure that the target vertex is connected to it's graph and nearest neighbor.
-   * \param target_vertex_property the target vertex to be connected
-   * \param geometric_graph the graph to be expanded
-   * \param geometric_nn nearest neighbor structure to be updated
-   * \param geometric_weightmap weight map to be updated
-   * */
-  void ensureGeometricGoalVertexConnectivity(VertexProperty* target_vertex_property, GraphT& geometric_graph,
-                                             std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& geometric_nn,
-                                             WeightMap& geometric_weightmap);
-
-  /** \brief original AIT* function, get number of samples in informed set */
-  std::size_t computeNumberOfSamplesInInformedSet() const;
-
-  /** \brief original AIT* function */
-  double computeConnectionRadius(std::size_t numSamples) const;
-
-  /** \brief original AIT* function */
-  std::size_t computeNumberOfNeighbors(std::size_t numSamples) const;
 
   /** \brief compute path cost by finding cost between
    * consecutive vertices in the path
@@ -485,33 +222,10 @@ private:
    */
   ompl::base::Cost computePathCost(const std::shared_ptr<ompl::control::PathControl>& path) const;
 
-  /** \brief Given a path defined as list of vertex_descriptor \e vertex_path,
-   * extract the corresponding states and controls from the graph \e g
-   * and populate the ompl::control::PathControl \e path.
-   * also populate the vertexprop_path with the vertex properties of the path.
-   * \param vertex_path is the path defined as list of vertex_descriptor
-   * \param g is the graph from which the path is extracted
-   * \param weightmap is the weightmap of the graph from which the path is extracted
-   * \param path is the ompl::control::PathControl to be populated
-   * \param vertexprop_path is the vector of vertex properties to be populated
-   * \param control is a flag to indicate if the path is control path or not
-   *  */
-  void populateOmplPathfromVertexPath(const std::list<vertex_descriptor>& vertex_path, GraphT& g, WeightMap& weightmap,
-                                      std::shared_ptr<ompl::control::PathControl>& path,
-                                      std::vector<VertexProperty*>& vertexprop_path, const bool control = false) const;
-
   /** \brief Extract the states from the path and return them as a vector of const states
    * \param path is the ompl::control::PathControl from which the states are extracted
    */
   std::vector<const ompl::base::State*> getConstStatesFromPath(const std::shared_ptr<ompl::control::PathControl>& path);
-
-  /** \brief Clear the control graphs and the corresponding nearest neighbor structures in all threads
-   * but again populate the start and goal vertices in the control graphs while only populating the start vertex in the
-   * nearest neighbor structures \param weightmap_controls is the vector of weightmaps of the control graphs \param
-   * control_start_goal_descriptors is the vector of start and goal vertex descriptors of the control graphs
-   */
-  void clearControlGraphs(std::vector<WeightMap>& weightmap_controls,
-                          std::vector<std::pair<vertex_descriptor, vertex_descriptor>>& control_start_goal_descriptors);
 
   // RVIZ Visualization of planner progess, this will be removed in the future
 
@@ -519,11 +233,6 @@ private:
   static void visualizeRGG(const std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
                            const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr& publisher,
                            const std::string& ns, const std_msgs::msg::ColorRGBA& color, const int& state_space_type);
-
-  /** \brief static method to visulize a path in RVIZ*/
-  static void visualizePath(const GraphT& g, const std::list<vertex_descriptor>& path,
-                            const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr& publisher,
-                            const std::string& ns, const std_msgs::msg::ColorRGBA& color, const int& state_space_type);
 
   static void visualizePath(const std::shared_ptr<PathControl>& path,
                             const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr& publisher,

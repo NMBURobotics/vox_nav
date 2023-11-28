@@ -41,17 +41,16 @@ EXACT_SOLUTION = 'Exact'
 
 def plot_status():
     # ALL SBO PLANNERS
-    
 
     SST = []
-    InformedSGCP = []
+    CP = []
     EST = []
     KPIECE1 = []
     PDST = []
     RRT = []
 
     file1 = open(
-        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/tools/carim.txt', 'r')
+        '/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/src/tools/car_becnh_100.txt', 'r')
     Lines = file1.readlines()
     count = 0
     for line in Lines:
@@ -61,8 +60,8 @@ def plot_status():
 
         if line.split()[0] == 'SST':
             SST = np.append(SST, line.split()[1])
-        if line.split()[0] == 'InformedSGCP':
-            InformedSGCP = np.append(InformedSGCP, line.split()[1])
+        if line.split()[0] == 'CP':
+            CP = np.append(CP, line.split()[1])
         if line.split()[0] == 'EST':
             EST = np.append(EST, line.split()[1])
         if line.split()[0] == 'KPIECE1':
@@ -78,7 +77,7 @@ def plot_status():
 
     f = [
         SST,
-        InformedSGCP,
+        CP,
         EST,
         KPIECE1,
         PDST,
@@ -87,7 +86,7 @@ def plot_status():
 
     x = [
         'SST',
-        'InformedSGCP',
+        'CP',
         'EST',
         'KPIECE1',
         'PDST',
@@ -122,14 +121,14 @@ def plot_status():
 def plot_lenght():
     # ALL SBO PLANNERS
     SST = []
-    InformedSGCP = []
+    CP = []
     EST = []
     KPIECE1 = []
     PDST = []
     RRT = []
 
     file1 = open(
-        '/home/atas/colcon_ws/src/vox_nav/vox_nav_planning/src/tools/carim.txt', 'r')
+        '/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/src/tools/car_becnh_100.txt', 'r')
     Lines = file1.readlines()
     count = 0
     for line in Lines:
@@ -140,8 +139,8 @@ def plot_lenght():
 
         if line.split()[0] == 'SST' and line.split()[1] == 'Exact':
             SST = np.append(SST, res)
-        if line.split()[0] == 'InformedSGCP' and line.split()[1] == 'Exact':
-            InformedSGCP = np.append(InformedSGCP, res)
+        if line.split()[0] == 'CP' and line.split()[1] == 'Exact':
+            CP = np.append(CP, res)
         if line.split()[0] == 'EST' and line.split()[1] == 'Exact':
             EST = np.append(EST, res)
         if line.split()[0] == 'KPIECE1' and line.split()[1] == 'Exact':
@@ -159,7 +158,7 @@ def plot_lenght():
 
     data = [
         SST,
-        InformedSGCP,
+        CP,
         EST,
         KPIECE1,
         PDST,
@@ -183,7 +182,7 @@ def plot_lenght():
     
     x = [
         'SST,\n (mean='+str(m1[0])+'\nstd='+str(st1[0])+')',
-        'InformedSGCP,\n (mean='+str(m1[1])+'\nstd='+str(st1[1])+')',
+        'CP,\n (mean='+str(m1[1])+'\nstd='+str(st1[1])+')',
         'EST\n (mean='+str(m1[2])+'\nstd='+str(st1[2])+')',
         'KPIECE1\n (mean='+str(m1[3])+'\nstd='+str(st1[3])+')',
         'PDST\n (mean='+str(m1[4])+'\nstd='+str(st1[4])+')',
@@ -194,7 +193,7 @@ def plot_lenght():
     ax = fig.add_subplot(111)
 
     bp = ax.boxplot(data, patch_artist=True,
-                    notch='True', vert=0, showfliers=True, autorange=True, showbox=True, showmeans=True)
+                    notch='False', vert=0, showfliers=True, autorange=False, showbox=True, showmeans=True)
 
     colors = ['#0000FF', '#00FF00',
               '#FFFF00', '#FF00FF', '#FFF0FF']
@@ -206,14 +205,14 @@ def plot_lenght():
     # whiskers
     for whisker in bp['whiskers']:
         whisker.set(color='#8B008B',
-                    linewidth=1.5,
+                    linewidth=2.5,
                     linestyle=":")
 
     # changing color and linewidth of
     # caps
     for cap in bp['caps']:
         cap.set(color='#8B008B',
-                linewidth=2)
+                linewidth=3)
 
     # changing color and linewidth of
     # medians
@@ -238,9 +237,9 @@ def plot_lenght():
     # ticks
     ax.get_xaxis().tick_bottom()
     ax.get_yaxis().tick_left()
-    plt.xlabel("Path Lengths")
+    plt.xlabel("Path Cost")
     plt.ylabel("Planner")
-    plt.yticks(range(0, len(x) * 2, 2), x, fontsize=8, rotation=30)
+    plt.yticks(range(1, len(x) * 1 + 1, 1), x, fontsize=8, rotation=30)
 
     # show plot
     plt.show()

@@ -2,21 +2,21 @@ quadrotor_control_planners_benchmark:
   ros__parameters:
     planner_timeout: 40.0
     interpolation_parameter: 50
-    selected_planners: [SST, InformedSGCP, EST, KPIECE1, PDST]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, 
+    selected_planners: [CP]  # RRT,RRTStarF,LQRPlanner,LQRRRTStar,SST,EST, KPIECE1, InformedSGCP
     robot_mesh_path: "" # leave empty if you do not have one, robot_mesh_path: ""
     state_bounds:
-      min_x_pos: -10.0
-      max_x_pos: 10.0
-      min_y_pos: -7.0
-      max_y_pos: 7.0
+      min_x_pos: -12.0
+      max_x_pos: 12.0
+      min_y_pos: -10.0
+      max_y_pos: 10.0
       min_z_pos: 0.0
       max_z_pos: 2.0
       min_roll: -0.5
       max_roll: 0.5
       min_pitch: -0.4
       max_pitch: 0.4
-      min_yaw: -0.5
-      max_yaw: 0.5
+      min_yaw: -3.14
+      max_yaw: 3.14
       min_x_vel: -0.5
       max_x_vel: 0.5
       min_y_vel: -0.5
@@ -49,10 +49,10 @@ quadrotor_control_planners_benchmark:
       min_z_acc: -1.5
       max_z_acc: 1.5
     robot_body_dimens:
-      x: 0.3
-      y: 0.3
-      z: 0.2
-    goal_tolerance: 0.5
+      x: 0.2
+      y: 0.2
+      z: 0.1
+    goal_tolerance: 2.0
     min_euclidean_dist_start_to_goal: 25.0
     batch_size: 1
     epochs: 1

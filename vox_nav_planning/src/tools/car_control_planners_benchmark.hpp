@@ -319,12 +319,11 @@ public:
     else if (selected_planner_name == std::string("CP"))
     {
       planner = ompl::base::PlannerPtr(new ompl::control::CP(si));
-      planner->as<ompl::control::CP>()->setMinDistBetweenVertices(0.05);
-      planner->as<ompl::control::CP>()->setGoalBias(0.25);
-      planner->as<ompl::control::CP>()->setSolveControlGraph(true);
       planner->as<ompl::control::CP>()->setNumThreads(12);
-      planner->as<ompl::control::CP>()->setBatchSize(10);        // max frontiers
-      planner->as<ompl::control::CP>()->setKNumberControls(10);  // branch for each frontier
+      planner->as<ompl::control::CP>()->setMinNumberOfBranchesToExtend(5);
+      planner->as<ompl::control::CP>()->setMaxNumberOfBranchesToExtend(10);
+      planner->as<ompl::control::CP>()->setMaxNumberOfFrontierNodes(50);
+      planner->as<ompl::control::CP>()->setMinDistanceBetweenNodes(0.1);
     }
     else if (selected_planner_name == std::string("PDST"))
     {
