@@ -50,7 +50,7 @@ def plot_status():
     RRT = []
 
     file1 = open(
-        '/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/src/tools/car_becnh_100.txt', 'r')
+        '/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/src/tools/quad.txt', 'r')
     Lines = file1.readlines()
     count = 0
     for line in Lines:
@@ -128,7 +128,7 @@ def plot_lenght():
     RRT = []
 
     file1 = open(
-        '/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/src/tools/car_becnh_100.txt', 'r')
+        '/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/src/tools/quad.txt', 'r')
     Lines = file1.readlines()
     count = 0
     for line in Lines:

@@ -64,7 +64,6 @@ ompl::control::CP::CP(const SpaceInformationPtr& si) : base::Planner(si, "CP")
 
 ompl::control::CP::~CP()
 {
-  freeMemory();
 }
 
 void ompl::control::CP::setup()
@@ -147,10 +146,33 @@ void ompl::control::CP::clear()
   {
     nn->clear();
   }
+  // clear the start and goal vertices
+  startVerticesControl_.clear();
+  goalVerticesControl_.clear();
 }
 
 void ompl::control::CP::freeMemory()
 {
+  // go through all the threads and delete all the vertices
+  for (auto& nn : nnControlsThreads_)
+  {
+    std::vector<VertexProperty*> vertices;
+    nn->list(vertices);
+    for (auto& vertex : vertices)
+    {
+      // make sure they do not belong to the solution;
+      if (vertex->belongs_to_solution || vertex->control == nullptr)
+      {
+        continue;
+      }
+
+      si_->freeState(vertex->state);
+      siC_->freeControl(vertex->control);
+      delete vertex;
+    }
+  }
+
+  // free the start and goal states
 }
 
 double ompl::control::CP::distanceFunction(const VertexProperty* a, const VertexProperty* b) const
@@ -531,7 +553,7 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
 
     // best control path
 
-    visualizePath(bestControlPath_, control_path_pub_, "c", getColor(red), si_->getStateSpace()->getType());
+    /*visualizePath(bestControlPath_, control_path_pub_, "c", getColor(red), si_->getStateSpace()->getType());
 
     visualizeRGG(best_control_nn_structure, first_control_graph_pub_, "c", getColor(red),
                  si_->getStateSpace()->getType());
@@ -542,7 +564,7 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
     if (static_cast<bool>(Planner::pdef_->getIntermediateSolutionCallback()))
     {
       pdef_->getIntermediateSolutionCallback()(this, getConstStatesFromPath(bestControlPath_), bestControlCost_);
-    }
+    }*/
   }
 
   // Add the best path to the solution path
