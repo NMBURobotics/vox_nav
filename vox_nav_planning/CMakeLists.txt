@@ -72,7 +72,7 @@ add_library(vox_nav_ompl_planners SHARED  src/native_planners/RRTStarF.cpp
                                           src/native_planners/LQRPlanner.cpp
                                           src/native_planners/LQRRRTStar.cpp 
                                           src/native_planners/InformedSGCP.cpp
-                                          src/native_planners/CP.cpp)
+                                          src/native_planners/CostTrustKinoPlanner.cpp)
 target_link_libraries(vox_nav_ompl_planners ${PCL_LIBRARIES})
 ament_target_dependencies(vox_nav_ompl_planners ${dependencies})
 

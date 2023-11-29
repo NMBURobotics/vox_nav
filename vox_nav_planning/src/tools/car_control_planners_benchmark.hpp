@@ -70,7 +70,7 @@
 #include "vox_nav_planning/native_planners/LQRPlanner.hpp"
 #include "vox_nav_planning/native_planners/LQRRRTStar.hpp"
 #include "vox_nav_planning/native_planners/InformedSGCP.hpp"
-#include "vox_nav_planning/native_planners/CP.hpp"
+#include "vox_nav_planning/native_planners/CostTrustKinoPlanner.hpp"
 // OMPL BASE
 #include <ompl/base/OptimizationObjective.h>
 #include <ompl/base/objectives/MaximizeMinClearanceObjective.h>
@@ -316,14 +316,14 @@ public:
       planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(true);
       planner->as<ompl::control::InformedSGCP>()->setNumThreads(12);
     }
-    else if (selected_planner_name == std::string("CP"))
+    else if (selected_planner_name == std::string("CostTrustKinoPlanner"))
     {
-      planner = ompl::base::PlannerPtr(new ompl::control::CP(si));
-      planner->as<ompl::control::CP>()->setNumThreads(12);
-      planner->as<ompl::control::CP>()->setMinNumberOfBranchesToExtend(5);
-      planner->as<ompl::control::CP>()->setMaxNumberOfBranchesToExtend(10);
-      planner->as<ompl::control::CP>()->setMaxNumberOfFrontierNodes(50);
-      planner->as<ompl::control::CP>()->setMinDistanceBetweenNodes(0.1);
+      planner = ompl::base::PlannerPtr(new ompl::control::CostTrustKinoPlanner(si));
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setNumThreads(12);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setMinNumberOfBranchesToExtend(5);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setMaxNumberOfBranchesToExtend(10);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setMaxNumberOfFrontierNodes(50);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setMinDistanceBetweenNodes(0.1);
     }
     else if (selected_planner_name == std::string("PDST"))
     {

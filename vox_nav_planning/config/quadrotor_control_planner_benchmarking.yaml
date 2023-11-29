@@ -2,7 +2,7 @@ quadrotor_control_planners_benchmark:
   ros__parameters:
     planner_timeout: 40.0
     interpolation_parameter: 50
-    selected_planners: [CP]  # [SST,CP,EST,KPIECE1,PDST,RRT]
+    selected_planners: [CostTrustKinoPlanner]  # [SST,CostTrustKinoPlanner,EST,KPIECE1,PDST,RRT]
     robot_mesh_path: "/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/config/drone.stl" # leave empty if you do not have one, robot_mesh_path: ""
     state_bounds:
       min_x_pos: -12.0

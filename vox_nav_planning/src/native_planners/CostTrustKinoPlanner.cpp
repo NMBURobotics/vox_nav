@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vox_nav_planning/native_planners/CP.hpp"
+#include "vox_nav_planning/native_planners/CostTrustKinoPlanner.hpp"
 
-ompl::control::CP::CP(const SpaceInformationPtr& si) : base::Planner(si, "CP")
+ompl::control::CostTrustKinoPlanner::CostTrustKinoPlanner(const SpaceInformationPtr& si)
+  : base::Planner(si, "CostTrustKinoPlanner")
 {
   // set planner specs
   specs_.approximateSolutions = true;
@@ -28,45 +29,47 @@ ompl::control::CP::CP(const SpaceInformationPtr& si) : base::Planner(si, "CP")
   // declare configuration parameters, the user can use these parameters to tune the planner
 
   // Number of threads to use for planning, This needs to be an even number and no less than 2
-  declareParam<int>("num_threads", this, &CP::setNumThreads, &CP::getNumThreads, "1:12:12");
+  declareParam<int>("num_threads", this, &CostTrustKinoPlanner::setNumThreads, &CostTrustKinoPlanner::getNumThreads,
+                    "1:12:12");
 
   // Batch size for each thread, we generate this many samples in each thread at each iteration
-  declareParam<int>("min_number_of_branches_to_extend", this, &CP::setMinNumberOfBranchesToExtend,
-                    &CP::getMinNumberOfBranchesToExtend, "1:5:10");
+  declareParam<int>("min_number_of_branches_to_extend", this, &CostTrustKinoPlanner::setMinNumberOfBranchesToExtend,
+                    &CostTrustKinoPlanner::getMinNumberOfBranchesToExtend, "1:5:10");
 
   // Maximum number of samples to generate in each thread at each iteration
-  declareParam<int>("max_number_of_branches_to_extend", this, &CP::setMaxNumberOfBranchesToExtend,
-                    &CP::getMaxNumberOfBranchesToExtend, "10:12:20");
+  declareParam<int>("max_number_of_branches_to_extend", this, &CostTrustKinoPlanner::setMaxNumberOfBranchesToExtend,
+                    &CostTrustKinoPlanner::getMaxNumberOfBranchesToExtend, "10:12:20");
 
   // Maximum number of frontier nodes to keep in each thread
-  declareParam<int>("max_number_of_frontier_nodes", this, &CP::setMaxNumberOfFrontierNodes,
-                    &CP::getMaxNumberOfFrontierNodes, "10:50:100");
+  declareParam<int>("max_number_of_frontier_nodes", this, &CostTrustKinoPlanner::setMaxNumberOfFrontierNodes,
+                    &CostTrustKinoPlanner::getMaxNumberOfFrontierNodes, "10:50:100");
 
   // Minimum distance between nodes in the graph
-  declareParam<double>("min_distance_between_nodes", this, &CP::setMinDistanceBetweenNodes,
-                       &CP::getMinDistanceBetweenNodes, "0.1:0.1:2.0");
+  declareParam<double>("min_distance_between_nodes", this, &CostTrustKinoPlanner::setMinDistanceBetweenNodes,
+                       &CostTrustKinoPlanner::getMinDistanceBetweenNodes, "0.1:0.1:2.0");
 
   // k parameter for preferring nodes with low number of branches
-  declareParam<double>("k_prefer_nodes_with_low_branches", this, &CP::setKPreferNodesWithLowBranches,
-                       &CP::getKPreferNodesWithLowBranches, "0.0:1.0:5.0");
+  declareParam<double>("k_prefer_nodes_with_low_branches", this, &CostTrustKinoPlanner::setKPreferNodesWithLowBranches,
+                       &CostTrustKinoPlanner::getKPreferNodesWithLowBranches, "0.0:1.0:5.0");
 
   // k parameter for preferring nodes with high cost
-  declareParam<double>("k_prefer_nodes_with_high_cost", this, &CP::setKPreferNodesWithHighCost,
-                       &CP::getKPreferNodesWithHighCost, "0.0:5.0:5.0");
+  declareParam<double>("k_prefer_nodes_with_high_cost", this, &CostTrustKinoPlanner::setKPreferNodesWithHighCost,
+                       &CostTrustKinoPlanner::getKPreferNodesWithHighCost, "0.0:5.0:5.0");
 
   // Number of neighbors to consider for density calculation
-  declareParam<int>("num_of_neighbors_to_consider_for_density", this, &CP::setNumOfNeighborsToConsiderForDensity,
-                    &CP::getNumOfNeighborsToConsiderForDensity, "1:20:25");
+  declareParam<int>("num_of_neighbors_to_consider_for_density", this,
+                    &CostTrustKinoPlanner::setNumOfNeighborsToConsiderForDensity,
+                    &CostTrustKinoPlanner::getNumOfNeighborsToConsiderForDensity, "1:20:25");
 
   // as planner progresses, the cost of the best control solution is updated
   addPlannerProgressProperty("control_cost DOUBLE", [this]() { return std::to_string(bestControlCost_.value()); });
 }
 
-ompl::control::CP::~CP()
+ompl::control::CostTrustKinoPlanner::~CostTrustKinoPlanner()
 {
 }
 
-void ompl::control::CP::setup()
+void ompl::control::CostTrustKinoPlanner::setup()
 {
   base::Planner::setup();
 
@@ -122,19 +125,19 @@ void ompl::control::CP::setup()
 
   // RVIZ VISUALIZATIONS, this is likely to be removed in the future, but for now it is useful
   node_ = std::make_shared<rclcpp::Node>("CP_rclcpp_node");
-  rgg_graph_pub_ =
-      node_->create_publisher<visualization_msgs::msg::MarkerArray>("vox_nav/CP/rgg", rclcpp::SystemDefaultsQoS());
-  geometric_path_pub_ =
-      node_->create_publisher<visualization_msgs::msg::MarkerArray>("vox_nav/CP/g_plan", rclcpp::SystemDefaultsQoS());
+  rgg_graph_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>("vox_nav/CostTrustKinoPlanner/rgg",
+                                                                                 rclcpp::SystemDefaultsQoS());
+  geometric_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "vox_nav/CostTrustKinoPlanner/g_plan", rclcpp::SystemDefaultsQoS());
   first_control_graph_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "vox_nav/CP/first_control_rgg", rclcpp::SystemDefaultsQoS());
+      "vox_nav/CostTrustKinoPlanner/first_control_rgg", rclcpp::SystemDefaultsQoS());
   second_control_graph_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "vox_nav/CP/second_control_rgg", rclcpp::SystemDefaultsQoS());
-  control_path_pub_ =
-      node_->create_publisher<visualization_msgs::msg::MarkerArray>("vox_nav/CP/c_plan", rclcpp::SystemDefaultsQoS());
+      "vox_nav/CostTrustKinoPlanner/second_control_rgg", rclcpp::SystemDefaultsQoS());
+  control_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "vox_nav/CostTrustKinoPlanner/c_plan", rclcpp::SystemDefaultsQoS());
 }
 
-void ompl::control::CP::clear()
+void ompl::control::CostTrustKinoPlanner::clear()
 {
   Planner::clear();
   bestControlCost_ = opt_->infiniteCost();
@@ -151,7 +154,7 @@ void ompl::control::CP::clear()
   goalVerticesControl_.clear();
 }
 
-void ompl::control::CP::freeMemory()
+void ompl::control::CostTrustKinoPlanner::freeMemory()
 {
   // go through all the threads and delete all the vertices
   for (auto& nn : nnControlsThreads_)
@@ -175,97 +178,97 @@ void ompl::control::CP::freeMemory()
   // free the start and goal states
 }
 
-double ompl::control::CP::distanceFunction(const VertexProperty* a, const VertexProperty* b) const
+double ompl::control::CostTrustKinoPlanner::distanceFunction(const VertexProperty* a, const VertexProperty* b) const
 {
   return si_->distance(a->state, b->state);
 }
 
-double ompl::control::CP::distanceFunction(const base::State* a, const base::State* b) const
+double ompl::control::CostTrustKinoPlanner::distanceFunction(const base::State* a, const base::State* b) const
 {
   return si_->distance(a, b);
 }
 
-void ompl::control::CP::setNumThreads(int num_threads)
+void ompl::control::CostTrustKinoPlanner::setNumThreads(int num_threads)
 {
   params_.num_threads_ = num_threads;
 }
 
-int ompl::control::CP::getNumThreads() const
+int ompl::control::CostTrustKinoPlanner::getNumThreads() const
 {
   return params_.num_threads_;
 }
 
-void ompl::control::CP::setMinNumberOfBranchesToExtend(int x)
+void ompl::control::CostTrustKinoPlanner::setMinNumberOfBranchesToExtend(int x)
 {
   params_.min_number_of_branches_to_extend_ = x;
 }
 
-int ompl::control::CP::getMinNumberOfBranchesToExtend() const
+int ompl::control::CostTrustKinoPlanner::getMinNumberOfBranchesToExtend() const
 {
   return params_.min_number_of_branches_to_extend_;
 }
 
-void ompl::control::CP::setMaxNumberOfBranchesToExtend(int x)
+void ompl::control::CostTrustKinoPlanner::setMaxNumberOfBranchesToExtend(int x)
 {
   params_.max_number_of_branches_to_extend_ = x;
 }
 
-int ompl::control::CP::getMaxNumberOfBranchesToExtend() const
+int ompl::control::CostTrustKinoPlanner::getMaxNumberOfBranchesToExtend() const
 {
   return params_.max_number_of_branches_to_extend_;
 }
 
-void ompl::control::CP::setMaxNumberOfFrontierNodes(int x)
+void ompl::control::CostTrustKinoPlanner::setMaxNumberOfFrontierNodes(int x)
 {
   params_.max_number_of_frontier_nodes_ = x;
 }
 
-int ompl::control::CP::getMaxNumberOfFrontierNodes() const
+int ompl::control::CostTrustKinoPlanner::getMaxNumberOfFrontierNodes() const
 {
   return params_.max_number_of_frontier_nodes_;
 }
 
-void ompl::control::CP::setMinDistanceBetweenNodes(double x)
+void ompl::control::CostTrustKinoPlanner::setMinDistanceBetweenNodes(double x)
 {
   params_.min_distance_between_nodes_ = x;
 }
 
-double ompl::control::CP::getMinDistanceBetweenNodes() const
+double ompl::control::CostTrustKinoPlanner::getMinDistanceBetweenNodes() const
 {
   return params_.min_distance_between_nodes_;
 }
 
-void ompl::control::CP::setKPreferNodesWithLowBranches(double x)
+void ompl::control::CostTrustKinoPlanner::setKPreferNodesWithLowBranches(double x)
 {
   params_.k_prefer_nodes_with_low_branches_ = x;
 }
 
-double ompl::control::CP::getKPreferNodesWithLowBranches() const
+double ompl::control::CostTrustKinoPlanner::getKPreferNodesWithLowBranches() const
 {
   return params_.k_prefer_nodes_with_low_branches_;
 }
 
-void ompl::control::CP::setKPreferNodesWithHighCost(double x)
+void ompl::control::CostTrustKinoPlanner::setKPreferNodesWithHighCost(double x)
 {
   params_.k_prefer_nodes_with_high_cost_ = x;
 }
 
-double ompl::control::CP::getKPreferNodesWithHighCost() const
+double ompl::control::CostTrustKinoPlanner::getKPreferNodesWithHighCost() const
 {
   return params_.k_prefer_nodes_with_high_cost_;
 }
 
-void ompl::control::CP::setNumOfNeighborsToConsiderForDensity(int x)
+void ompl::control::CostTrustKinoPlanner::setNumOfNeighborsToConsiderForDensity(int x)
 {
   params_.num_of_neighbors_to_consider_for_density_ = x;
 }
 
-int ompl::control::CP::getNumOfNeighborsToConsiderForDensity() const
+int ompl::control::CostTrustKinoPlanner::getNumOfNeighborsToConsiderForDensity() const
 {
   return params_.num_of_neighbors_to_consider_for_density_;
 }
 
-ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminationCondition& ptc)
+ompl::base::PlannerStatus ompl::control::CostTrustKinoPlanner::solve(const base::PlannerTerminationCondition& ptc)
 {
   // check if the problem is setup properly
   checkValidity();
@@ -553,7 +556,7 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
 
     // best control path
 
-    /*visualizePath(bestControlPath_, control_path_pub_, "c", getColor(red), si_->getStateSpace()->getType());
+    visualizePath(bestControlPath_, control_path_pub_, "c", getColor(red), si_->getStateSpace()->getType());
 
     visualizeRGG(best_control_nn_structure, first_control_graph_pub_, "c", getColor(red),
                  si_->getStateSpace()->getType());
@@ -564,7 +567,7 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
     if (static_cast<bool>(Planner::pdef_->getIntermediateSolutionCallback()))
     {
       pdef_->getIntermediateSolutionCallback()(this, getConstStatesFromPath(bestControlPath_), bestControlCost_);
-    }*/
+    }
   }
 
   // Add the best path to the solution path
@@ -578,12 +581,12 @@ ompl::base::PlannerStatus ompl::control::CP::solve(const base::PlannerTerminatio
   return { exact_solution, approximate_solution };
 }
 
-void ompl::control::CP::getPlannerData(base::PlannerData& data) const
+void ompl::control::CostTrustKinoPlanner::getPlannerData(base::PlannerData& data) const
 {
   Planner::getPlannerData(data);
 }
 
-void ompl::control::CP::selectExplorativeFrontiers(
+void ompl::control::CostTrustKinoPlanner::selectExplorativeFrontiers(
     int max_number, std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
     std::vector<VertexProperty*>& frontier_nodes)
 {
@@ -679,13 +682,12 @@ void ompl::control::CP::selectExplorativeFrontiers(
   }
 }
 
-void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_nodes, int num_branch_to_extend,
-                                        std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
-                                        const base::PlannerTerminationCondition& ptc, VertexProperty* target_property,
-                                        std::shared_ptr<PathControl>& path,
-                                        std::vector<VertexProperty*>& control_paths_vertices,
-                                        const bool exact_solution_found, bool* should_stop_exploration,
-                                        const std::shared_ptr<PathControl>& current_best_path)
+void ompl::control::CostTrustKinoPlanner::extendFrontiers(
+    std::vector<VertexProperty*>& frontier_nodes, int num_branch_to_extend,
+    std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
+    const base::PlannerTerminationCondition& ptc, VertexProperty* target_property, std::shared_ptr<PathControl>& path,
+    std::vector<VertexProperty*>& control_paths_vertices, const bool exact_solution_found,
+    bool* should_stop_exploration, const std::shared_ptr<PathControl>& current_best_path)
 {
   // If all the new branches ended up with higher cost than the current best path, then we should stop exploration
   bool all_branches_are_worse_than_current_best_path{ true };
@@ -813,7 +815,8 @@ void ompl::control::CP::extendFrontiers(std::vector<VertexProperty*>& frontier_n
   }
 }
 
-ompl::base::Cost ompl::control::CP::computePathCost(std::shared_ptr<ompl::control::PathControl>& path) const
+ompl::base::Cost
+ompl::control::CostTrustKinoPlanner::computePathCost(std::shared_ptr<ompl::control::PathControl>& path) const
 {
   ompl::base::Cost path_cost = opt_->infiniteCost();
   if (path->getStateCount() == 0)
@@ -828,7 +831,8 @@ ompl::base::Cost ompl::control::CP::computePathCost(std::shared_ptr<ompl::contro
   return path_cost;
 }
 
-ompl::base::Cost ompl::control::CP::computePathCost(const std::shared_ptr<ompl::control::PathControl>& path) const
+ompl::base::Cost
+ompl::control::CostTrustKinoPlanner::computePathCost(const std::shared_ptr<ompl::control::PathControl>& path) const
 {
   ompl::base::Cost path_cost = opt_->infiniteCost();
   if (path->getStateCount() == 0)
@@ -844,7 +848,7 @@ ompl::base::Cost ompl::control::CP::computePathCost(const std::shared_ptr<ompl::
 }
 
 std::vector<const ompl::base::State*>
-ompl::control::CP::getConstStatesFromPath(const std::shared_ptr<ompl::control::PathControl>& path)
+ompl::control::CostTrustKinoPlanner::getConstStatesFromPath(const std::shared_ptr<ompl::control::PathControl>& path)
 {
   std::vector<const ompl::base::State*> states;
   for (std::size_t i = 0; i < path->getStateCount(); ++i)
@@ -854,7 +858,7 @@ ompl::control::CP::getConstStatesFromPath(const std::shared_ptr<ompl::control::P
   return states;
 }
 
-void ompl::control::CP::visualizeRGG(
+void ompl::control::CostTrustKinoPlanner::visualizeRGG(
     const std::shared_ptr<ompl::NearestNeighbors<VertexProperty*>>& nn_structure,
     const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr& publisher, const std::string& ns,
     const std_msgs::msg::ColorRGBA& color, const int& state_space_type)
@@ -976,7 +980,7 @@ void ompl::control::CP::visualizeRGG(
   publisher->publish(marker_array);
 }
 
-void ompl::control::CP::visualizePath(
+void ompl::control::CostTrustKinoPlanner::visualizePath(
     const std::shared_ptr<PathControl>& path,
     const rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr& publisher, const std::string& ns,
     const std_msgs::msg::ColorRGBA& color, const int& state_space_type)
@@ -1072,7 +1076,7 @@ void ompl::control::CP::visualizePath(
   publisher->publish(marker_array);
 }
 
-std_msgs::msg::ColorRGBA ompl::control::CP::getColor(std::string& color)
+std_msgs::msg::ColorRGBA ompl::control::CostTrustKinoPlanner::getColor(std::string& color)
 {
   std_msgs::msg::ColorRGBA color_rgba;
   if (color == "red")

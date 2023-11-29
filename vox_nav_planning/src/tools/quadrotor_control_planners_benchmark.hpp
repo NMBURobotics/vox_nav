@@ -69,7 +69,7 @@
 #include "vox_nav_planning/native_planners/LQRPlanner.hpp"
 #include "vox_nav_planning/native_planners/LQRRRTStar.hpp"
 #include "vox_nav_planning/native_planners/InformedSGCP.hpp"
-#include "vox_nav_planning/native_planners/CP.hpp"
+#include "vox_nav_planning/native_planners/CostTrustKinoPlanner.hpp"
 #include "Quadrotor.hpp"
 // OMPL BASE
 #include <ompl/base/OptimizationObjective.h>
@@ -295,17 +295,17 @@ public:
       planner->as<ompl::control::InformedSGCP>()->setMinDistBetweenVertices(0.5);
       planner->as<ompl::control::InformedSGCP>()->setSolveControlGraph(true);
     }
-    else if (selected_planner_name == std::string("CP"))
+    else if (selected_planner_name == std::string("CostTrustKinoPlanner"))
     {
-      planner = ompl::base::PlannerPtr(new ompl::control::CP(si));
-      planner->as<ompl::control::CP>()->setNumThreads(6);
-      planner->as<ompl::control::CP>()->setMinNumberOfBranchesToExtend(5);
-      planner->as<ompl::control::CP>()->setMaxNumberOfBranchesToExtend(10);
-      planner->as<ompl::control::CP>()->setMaxNumberOfFrontierNodes(25);
-      planner->as<ompl::control::CP>()->setMinDistanceBetweenNodes(1.0);
-      planner->as<ompl::control::CP>()->setKPreferNodesWithLowBranches(1.0);
-      planner->as<ompl::control::CP>()->setKPreferNodesWithHighCost(5.0);
-      planner->as<ompl::control::CP>()->setNumOfNeighborsToConsiderForDensity(20);
+      planner = ompl::base::PlannerPtr(new ompl::control::CostTrustKinoPlanner(si));
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setNumThreads(6);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setMinNumberOfBranchesToExtend(5);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setMaxNumberOfBranchesToExtend(10);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setMaxNumberOfFrontierNodes(25);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setMinDistanceBetweenNodes(1.0);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setKPreferNodesWithLowBranches(1.0);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setKPreferNodesWithHighCost(5.0);
+      planner->as<ompl::control::CostTrustKinoPlanner>()->setNumOfNeighborsToConsiderForDensity(20);
     }
     else if (selected_planner_name == std::string("PDST"))
     {

@@ -14,8 +14,7 @@
 
 #include "vox_nav_planning/native_planners/RRTStarF.hpp"
 
-ompl::control::RRTStarF::RRTStarF(const SpaceInformationPtr & si)
-: base::Planner(si, "RRTStarF")
+ompl::control::RRTStarF::RRTStarF(const SpaceInformationPtr& si) : base::Planner(si, "RRTStarF")
 {
   specs_.approximateSolutions = true;
   siC_ = si.get();
@@ -29,19 +28,20 @@ ompl::control::RRTStarF::~RRTStarF()
 void ompl::control::RRTStarF::setup()
 {
   base::Planner::setup();
-  if (!nn_) {
-    nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<Node *>(this));
+  if (!nn_)
+  {
+    nn_.reset(tools::SelfConfig::getDefaultNearestNeighbors<Node*>(this));
   }
-  nn_->setDistanceFunction(
-    [this](const Node * a, const Node * b)
-    {
-      return distanceFunction(a, b);
-    });
+  nn_->setDistanceFunction([this](const Node* a, const Node* b) { return distanceFunction(a, b); });
 
-  if (pdef_) {
-    if (pdef_->hasOptimizationObjective()) {
+  if (pdef_)
+  {
+    if (pdef_->hasOptimizationObjective())
+    {
       opt_ = pdef_->getOptimizationObjective();
-    } else {
+    }
+    else
+    {
       OMPL_WARN("%s: No optimization object set. Using path length", getName().c_str());
       opt_ = std::make_shared<base::PathLengthOptimizationObjective>(si_);
       pdef_->setOptimizationObjective(opt_);
@@ -51,10 +51,8 @@ void ompl::control::RRTStarF::setup()
   // ros2 node to publish rrt nodes
   node_ = std::make_shared<rclcpp::Node>("rrtstarf_rclcpp_node");
 
-  rrt_nodes_pub_ =
-    node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-    "vox_nav/rrtstar/nodes", rclcpp::SystemDefaultsQoS());
-
+  rrt_nodes_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>("vox_nav/rrtstar/nodes",
+                                                                                 rclcpp::SystemDefaultsQoS());
 }
 
 void ompl::control::RRTStarF::clear()
@@ -63,69 +61,75 @@ void ompl::control::RRTStarF::clear()
   sampler_.reset();
   valid_state_sampler_.reset();
   freeMemory();
-  if (nn_) {
+  if (nn_)
+  {
     nn_->clear();
   }
 }
 
 void ompl::control::RRTStarF::freeMemory()
 {
-
 }
 
-ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
-  const base::PlannerTerminationCondition & ptc)
+ompl::base::PlannerStatus ompl::control::RRTStarF::solve(const base::PlannerTerminationCondition& ptc)
 {
   checkValidity();
-  base::Goal * goal = pdef_->getGoal().get();
-  auto * goal_s = dynamic_cast<base::GoalSampleableRegion *>(goal);
+  base::Goal* goal = pdef_->getGoal().get();
+  auto* goal_s = dynamic_cast<base::GoalSampleableRegion*>(goal);
 
   // get the goal node and state
-  auto * goal_node = new Node(siC_);
-  while (const base::State * goal = pis_.nextGoal()) {
+  auto* goal_node = new Node(siC_);
+  while (const base::State* goal = pis_.nextGoal())
+  {
     si_->copyState(goal_node->state_, goal);
   }
 
   // get start node and state,push  the node inton nn_ as well
-  auto * start_node = new Node(siC_);
-  while (const base::State * st = pis_.nextStart()) {
+  auto* start_node = new Node(siC_);
+  while (const base::State* st = pis_.nextStart())
+  {
     si_->copyState(start_node->state_, st);
     nn_->add(start_node);
   }
 
-  if (nn_->size() == 0) {
+  if (nn_->size() == 0)
+  {
     OMPL_ERROR("%s: There are no valid initial states!", getName().c_str());
     return base::PlannerStatus::INVALID_START;
   }
 
   // Use valid state sampler
-  if (!valid_state_sampler_) {
+  if (!valid_state_sampler_)
+  {
     valid_state_sampler_ = si_->allocValidStateSampler();
   }
-  if (!sampler_) {
+  if (!sampler_)
+  {
     sampler_ = si_->allocStateSampler();
   }
 
-  OMPL_INFORM(
-    "%s: Starting planning with %u states already in datastructure\n",
-    getName().c_str(), nn_->size());
+  OMPL_INFORM("%s: Starting planning with %u states already in datastructure\n", getName().c_str(), nn_->size());
 
-  auto * random_node = new Node(siC_);
-  base::State * random_state = random_node->state_;
+  auto* random_node = new Node(siC_);
+  base::State* random_state = random_node->state_;
 
   unsigned iterations = 0;
 
-  Node * last_node = new Node(siC_);
-  Node * last_valid_node = new Node(siC_);
+  Node* last_node = new Node(siC_);
+  Node* last_valid_node = new Node(siC_);
   last_valid_node->cost_ = base::Cost(std::numeric_limits<double>::max());
 
-  while (ptc == false) {
+  while (ptc == false)
+  {
     /* sample random state (with goal biasing) */
-    if (goal_s && rng_.uniform01() < goalBias_ && goal_s->canSample()) {
+    if (goal_s && rng_.uniform01() < goalBias_ && goal_s->canSample())
+    {
       goal_s->sampleGoal(random_state);
-    } else {
-      // sampler_->sampleUniform(random_state);
-      valid_state_sampler_->sample(random_state);
+    }
+    else
+    {
+      sampler_->sampleUniform(random_state);
+      // valid_state_sampler_->sample(random_state);
     }
 
     auto nearest_node = get_nearest_node(random_node);
@@ -133,54 +137,66 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
     auto inc_cost = opt_->motionCost(nearest_node->state_, new_node->state_);
     new_node->cost_ = opt_->combineCosts(nearest_node->cost_, inc_cost);
 
-    if (check_collision(new_node)) {
-      std::vector<Node *> near_nodes = find_near_nodes(new_node);
+    if (check_collision(new_node))
+    {
+      std::vector<Node*> near_nodes = find_near_nodes(new_node);
       auto node_with_updated_parent = choose_parent(new_node, near_nodes);
-      if (node_with_updated_parent != nullptr) {
+      if (node_with_updated_parent != nullptr)
+      {
+        // check motion
+        if (!si_->checkMotion(node_with_updated_parent->state_, new_node->state_))
+        {
+          continue;
+        }
         rewire(node_with_updated_parent, near_nodes);
         nn_->add(node_with_updated_parent);
-      } else {
+      }
+      else
+      {
         nn_->add(new_node);
       }
       last_node = search_best_goal_node(goal_node);
     }
 
-    if (last_node != nullptr && last_node->cost_.value() < last_valid_node->cost_.value()) {
+    if (last_node != nullptr && last_node->cost_.value() < last_valid_node->cost_.value())
+    {
       last_valid_node = last_node;
     }
     iterations++;
 
-    if (iterations % 200 == 0 && last_valid_node &&
-      static_cast<int>(last_valid_node->cost_.value()))
+    if (iterations % 200 == 0 && last_valid_node && static_cast<int>(last_valid_node->cost_.value()))
     {
       OMPL_INFORM("Current solution cost %.2f", last_valid_node->cost_.value());
     }
-
   }
 
   auto final_node = steer(last_valid_node, goal_node);
-  if (final_node) {
-    if (check_collision(final_node)) {
-      std::vector<Node *> near_nodes = find_near_nodes(final_node);
+  if (final_node)
+  {
+    if (check_collision(final_node))
+    {
+      std::vector<Node*> near_nodes = find_near_nodes(final_node);
       auto final_node_parent = choose_parent(final_node, near_nodes);
-      if (final_node_parent != nullptr) {
+      if (final_node_parent != nullptr)
+      {
         nn_->add(final_node_parent);
       }
     }
   }
 
-  OMPL_INFORM(
-    "%s: Created %u states in %u iterations", getName().c_str(), nn_->size(),
-    iterations);
+  OMPL_INFORM("%s: Created %u states in %u iterations", getName().c_str(), nn_->size(), iterations);
 
   // visualize rrt node tree growth in RVIZ
-  std::vector<Node *> all_nodes;
+  std::vector<Node*> all_nodes;
   nn_->list(all_nodes);
   visualization_msgs::msg::MarkerArray rrt_nodes;
   int node_index_counter = 0;
-  for (auto i : all_nodes) {
-    if (i) {
-      if (!i->parent_) {
+  for (auto i : all_nodes)
+  {
+    if (i)
+    {
+      if (!i->parent_)
+      {
         continue;
       }
       visualization_msgs::msg::Marker marker;
@@ -196,17 +212,16 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
       marker.color.a = 1.0;
       marker.color.b = 1.0;
       marker.colors.push_back(marker.color);
-      const auto * cstate = i->state_->as<ompl::base::ElevationStateSpace::StateType>();
-      const auto * so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-      const auto * xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      const auto* cstate = i->state_->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto* so2 = cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+      const auto* xyzv = cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
       geometry_msgs::msg::Point node_point, parent_point;
       node_point.x = xyzv->values[0];
       node_point.y = xyzv->values[1];
       node_point.z = xyzv->values[2];
-      const auto * parent_cstate =
-        i->parent_->state_->as<ompl::base::ElevationStateSpace::StateType>();
-      const auto * parent_so2 = parent_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
-      const auto * parent_xyzv = parent_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
+      const auto* parent_cstate = i->parent_->state_->as<ompl::base::ElevationStateSpace::StateType>();
+      const auto* parent_so2 = parent_cstate->as<ompl::base::SO2StateSpace::StateType>(0);
+      const auto* parent_xyzv = parent_cstate->as<ompl::base::RealVectorStateSpace::StateType>(1);
       parent_point.x = parent_xyzv->values[0];
       parent_point.y = parent_xyzv->values[1];
       parent_point.z = parent_xyzv->values[2];
@@ -222,10 +237,10 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
   bool approximate = false;
   double approxdif = std::numeric_limits<double>::infinity();
 
-  if (final_node) {
-
+  if (final_node)
+  {
     OMPL_INFORM("Final solution cost %.2f", final_node->cost_.value());
-    std::vector<base::State *> final_course = generate_final_course(last_valid_node);
+    std::vector<base::State*> final_course = generate_final_course(last_valid_node);
     OMPL_INFORM("Total states in solution %d", final_course.size());
     final_course = remove_duplicate_states(final_course);
     OMPL_INFORM("Total states in solution after removing duplicates %d", final_course.size());
@@ -236,8 +251,10 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
     bool solv = goal->isSatisfied(final_course.back(), &dist);
     /* set the solution path */
     auto path(std::make_shared<PathControl>(si_));
-    for (auto i : final_course) {
-      if (i) {
+    for (auto i : final_course)
+    {
+      if (i)
+      {
         path->append(i);
       }
     }
@@ -247,19 +264,22 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
 
     approxdif = dist;
 
-    if (solv) {
+    if (solv)
+    {
       solved = true;
       approximate = false;
       pdef_->addSolutionPath(path, approximate, approxdif, getName());
       OMPL_INFORM("Found solution with cost %.2f", last_valid_node->cost_.value());
-    } else if (!solv && (path->length() > 1.0 )) { // approx
+    }
+    else if (!solv && (path->length() > 1.0))
+    {  // approx
       solved = true;
       approximate = true;
       pdef_->addSolutionPath(path, approximate, approxdif, getName());
-      OMPL_INFORM(
-        "%s: Approx solution with cost %.2f",
-        getName().c_str(), last_valid_node->cost_.value());
-    } else {
+      OMPL_INFORM("%s: Approx solution with cost %.2f", getName().c_str(), last_valid_node->cost_.value());
+    }
+    else
+    {
       solved = false;
       approximate = false;
       pdef_->addSolutionPath(path, approximate, approxdif, getName());
@@ -269,33 +289,38 @@ ompl::base::PlannerStatus ompl::control::RRTStarF::solve(
 
   clear();
 
-  return {solved, approximate};
+  return { solved, approximate };
 }
 
-void ompl::control::RRTStarF::getPlannerData(base::PlannerData & data) const
+void ompl::control::RRTStarF::getPlannerData(base::PlannerData& data) const
 {
   Planner::getPlannerData(data);
 
-  std::vector<Node *> Nodes;
-  std::vector<Node *> allNodes;
-  if (nn_) {
+  std::vector<Node*> Nodes;
+  std::vector<Node*> allNodes;
+  if (nn_)
+  {
     nn_->list(Nodes);
   }
 
-  for (unsigned i = 0; i < allNodes.size(); i++) {
-    if (allNodes[i]->parent_ != nullptr) {
+  for (unsigned i = 0; i < allNodes.size(); i++)
+  {
+    if (allNodes[i]->parent_ != nullptr)
+    {
       allNodes.push_back(allNodes[i]->parent_);
     }
   }
 
   double delta = siC_->getPropagationStepSize();
 
-  for (auto m : allNodes) {
-    if (m->parent_) {
-      data.addEdge(
-        base::PlannerDataVertex(m->parent_->state_),
-        base::PlannerDataVertex(m->state_));
-    } else {
+  for (auto m : allNodes)
+  {
+    if (m->parent_)
+    {
+      data.addEdge(base::PlannerDataVertex(m->parent_->state_), base::PlannerDataVertex(m->state_));
+    }
+    else
+    {
       data.addStartVertex(base::PlannerDataVertex(m->state_));
     }
   }

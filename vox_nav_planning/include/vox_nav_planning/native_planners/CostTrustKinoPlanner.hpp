@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Fetullah Atas, Norwegian University of Life Sciences
+// Copyright (c) 2023 Fetullah Atas, Norwegian University of Life Sciences
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef VOX_NAV_PLANNING__RRT__CP_HPP_
-#define VOX_NAV_PLANNING__RRT__CP_HPP_
+#ifndef VOX_NAV_PLANNING__NATIVE_PLANNERS__COST_TRUST_KINO_PLANNER_HPP_
+#define VOX_NAV_PLANNING__NATIVE_PLANNERS__COST_TRUST_KINO_PLANNER_HPP_
 
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
@@ -54,17 +54,23 @@ namespace ompl
 namespace control
 {
 /**
-   @anchor cCP
+   @anchor cCostTrustKinoPlanner
    @par Short description
-   \ref Informed Simultaneous Geometric and Control Planner (CP).
-   The implementation is based on boost graph library.
-   An accompanying paper explaining novelities of this planner will be published soon.
+   \ref This algorithm features a novel node selection process, identifying 'frontier' nodes based on multiple criteria:
+        the number of branches per node, the cost from the start node, and local node density.
+        This approach prioritizes nodes that potentially enable quicker exploration of the state space.
+        Once frontier nodes are selected, they are expanded using random controls to converge towards the desired goal
+   pose. Upon finding a solution, the algorithm randomly selects a segment of the path, resets the tree, and reruns the
+   process for continuous optimization. Additionally, the planner operates on a multi-threaded architecture,
+   significantly enhancing the probability of discovering an optimal path. An accompanying paper explaining novelities
+   of this planner will be published soon.
+
    @par External documentation
    TBD
 */
-struct CPParameters
+struct CostTrustParameters
 {
-  /** \brief All configurable parameters of CP. */
+  /** \brief All configurable parameters of CostTrustKinoPlanner. */
 
   /** \brief The number of threads to be used in parallel for geometric and control. No odd numbers and less than 2 */
   int num_threads_{ 6 };
@@ -91,14 +97,14 @@ struct CPParameters
   int num_of_neighbors_to_consider_for_density_{ 20 };
 };
 
-class CP : public base::Planner
+class CostTrustKinoPlanner : public base::Planner
 {
 public:
   /** \brief Constructor */
-  CP(const SpaceInformationPtr& si);
+  CostTrustKinoPlanner(const SpaceInformationPtr& si);
 
   /** \brief Destructor */
-  ~CP() override;
+  ~CostTrustKinoPlanner() override;
 
   /** \brief Setup the planner */
   void setup() override;
@@ -169,7 +175,7 @@ public:
 
 private:
   /** \brief All configurable parames live here. */
-  CPParameters params_;
+  CostTrustParameters params_;
 
   /** \brief Control space information */
   const SpaceInformation* siC_{ nullptr };
@@ -259,8 +265,8 @@ private:
   /** \brief The node*/
   rclcpp::Node::SharedPtr node_;
 
-};  // class CP
+};  // class CostTrustKinoPlanner
 }  // namespace control
 }  // namespace ompl
 
-#endif  // VOX_NAV_PLANNING__RRT__CP_HPP_
+#endif  // VOX_NAV_PLANNING__NATIVE_PLANNERS__COST_TRUST_KINO_PLANNER_HPP_
