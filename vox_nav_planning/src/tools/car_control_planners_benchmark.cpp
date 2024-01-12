@@ -137,7 +137,7 @@ CarControlPlannersBenchMarking::CarControlPlannersBenchMarking() : Node("car_con
   get_traversability_map_client_ =
       get_map_client_node_->create_client<vox_nav_msgs::srv::GetTraversabilityMap>("get_traversability_map");
 
-  octomap_publisher_ = this->create_publisher<octomap_msgs::msg::Octomap>("octomap", rclcpp::SensorDataQoS());
+  octomap_publisher_ = this->create_publisher<octomap_msgs::msg::Octomap>("octomap", rclcpp::SystemDefaultsQoS());
   setupMap();
 
   // WARN elevated_surfel_poses_msg_ needs to be populated by setupMap();

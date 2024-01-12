@@ -839,7 +839,7 @@ ompl::base::PlannerStatus ompl::control::InformedSGCP::solve(const base::Planner
                  control_start_goal_descriptors[bestControlPathIndex_].first,
                  control_start_goal_descriptors[bestControlPathIndex_].second, si_->getStateSpace()->getType());
 
-    visualizeRGG(best_control_graph_counterpart, second_control_graph_pub_, "c", getColor(blue),
+    visualizeRGG(best_control_graph_counterpart, second_control_graph_pub_, "c", getColor(green),
                  control_start_goal_descriptors[bestControlPathIndex_].first,
                  control_start_goal_descriptors[bestControlPathIndex_].second, si_->getStateSpace()->getType());
   }

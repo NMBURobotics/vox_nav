@@ -43,14 +43,14 @@ def plot_status():
     # ALL SBO PLANNERS
 
     SST = []
-    CP = []
+    CostTrust = []
     EST = []
     KPIECE1 = []
     PDST = []
     RRT = []
 
     file1 = open(
-        '/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/src/tools/quad.txt', 'r')
+        '/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/src/tools/quad_bench_100.txt', 'r')
     Lines = file1.readlines()
     count = 0
     for line in Lines:
@@ -60,8 +60,8 @@ def plot_status():
 
         if line.split()[0] == 'SST':
             SST = np.append(SST, line.split()[1])
-        if line.split()[0] == 'CP':
-            CP = np.append(CP, line.split()[1])
+        if line.split()[0] == 'CostTrust':
+            CostTrust = np.append(CostTrust, line.split()[1])
         if line.split()[0] == 'EST':
             EST = np.append(EST, line.split()[1])
         if line.split()[0] == 'KPIECE1':
@@ -77,7 +77,7 @@ def plot_status():
 
     f = [
         SST,
-        CP,
+        CostTrust,
         EST,
         KPIECE1,
         PDST,
@@ -86,7 +86,7 @@ def plot_status():
 
     x = [
         'SST',
-        'CP',
+        'CostTrust (Our)',
         'EST',
         'KPIECE1',
         'PDST',
@@ -105,6 +105,8 @@ def plot_status():
     exact_sol = np.array(exact_sol)
     apprx_sol = np.array(apprx_sol)
     timeout = np.array(timeout)
+    
+    print(exact_sol)
 
     # plot bars in stack manner
     plt.bar(x, exact_sol,  color='g')
@@ -112,6 +114,9 @@ def plot_status():
     plt.bar(x, timeout, bottom=exact_sol + apprx_sol, color='b')
     plt.xlabel("Planners")
     plt.ylabel("Total Number of Runs")
+    plt.yticks(fontsize=18, rotation=30)
+    plt.yticks(fontsize=18, rotation=30)
+
     plt.legend(["Exact Solution",
                "Approximate Solution", "Timeout"])
     plt.title(
@@ -121,14 +126,14 @@ def plot_status():
 def plot_lenght():
     # ALL SBO PLANNERS
     SST = []
-    CP = []
+    CostTrust = []
     EST = []
     KPIECE1 = []
     PDST = []
     RRT = []
 
     file1 = open(
-        '/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/src/tools/quad.txt', 'r')
+        '/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/src/tools/quad_bench_100.txt', 'r')
     Lines = file1.readlines()
     count = 0
     for line in Lines:
@@ -139,8 +144,8 @@ def plot_lenght():
 
         if line.split()[0] == 'SST' and line.split()[1] == 'Exact':
             SST = np.append(SST, res)
-        if line.split()[0] == 'CP' and line.split()[1] == 'Exact':
-            CP = np.append(CP, res)
+        if line.split()[0] == 'CostTrust' and line.split()[1] == 'Exact':
+            CostTrust = np.append(CostTrust, res)
         if line.split()[0] == 'EST' and line.split()[1] == 'Exact':
             EST = np.append(EST, res)
         if line.split()[0] == 'KPIECE1' and line.split()[1] == 'Exact':
@@ -158,7 +163,7 @@ def plot_lenght():
 
     data = [
         SST,
-        CP,
+        CostTrust,
         EST,
         KPIECE1,
         PDST,
@@ -182,18 +187,18 @@ def plot_lenght():
     
     x = [
         'SST,\n (mean='+str(m1[0])+'\nstd='+str(st1[0])+')',
-        'CP,\n (mean='+str(m1[1])+'\nstd='+str(st1[1])+')',
+        'CostTrust (Our),\n (mean='+str(m1[1])+'\nstd='+str(st1[1])+')',
         'EST\n (mean='+str(m1[2])+'\nstd='+str(st1[2])+')',
         'KPIECE1\n (mean='+str(m1[3])+'\nstd='+str(st1[3])+')',
         'PDST\n (mean='+str(m1[4])+'\nstd='+str(st1[4])+')',
         'RRT\n (mean='+str(m1[5])+'\nstd='+str(st1[5])+')'
     ]
     
-    fig = plt.figure(figsize=(10, 7))
+    fig = plt.figure(figsize=(9, 7))
     ax = fig.add_subplot(111)
 
     bp = ax.boxplot(data, patch_artist=True,
-                    notch='False', vert=0, showfliers=True, autorange=False, showbox=True, showmeans=True)
+                    notch='True', vert=0, showfliers=False, autorange=True, showbox=True, showmeans=True)
 
     colors = ['#0000FF', '#00FF00',
               '#FFFF00', '#FF00FF', '#FFF0FF']
@@ -231,7 +236,7 @@ def plot_lenght():
 
     # Adding title
     plt.title(
-        "Means of Path lenghts by each planner computed only by exact solutions")
+        "Means of Path Costs Computed by Exact Solutions")
 
     # Removing top axes and right axes
     # ticks
@@ -239,7 +244,7 @@ def plot_lenght():
     ax.get_yaxis().tick_left()
     plt.xlabel("Path Cost")
     plt.ylabel("Planner")
-    plt.yticks(range(1, len(x) * 1 + 1, 1), x, fontsize=8, rotation=30)
+    plt.yticks(range(1, len(x) * 1 + 1, 1), x, fontsize=12, rotation=30)
 
     # show plot
     plt.show()

@@ -3,14 +3,14 @@ quadrotor_control_planners_benchmark:
     planner_timeout: 40.0
     interpolation_parameter: 50
     selected_planners: [CostTrustKinoPlanner]  # [SST,CostTrustKinoPlanner,EST,KPIECE1,PDST,RRT]
-    robot_mesh_path: "/home/atas/ros2_ws/src/VOX_NAV_FRIENDS/vox_nav/vox_nav_planning/config/drone.stl" # leave empty if you do not have one, robot_mesh_path: ""
+    robot_mesh_path: "" # leave empty if you do not have one, robot_mesh_path: ""
     state_bounds:
       min_x_pos: -12.0
       max_x_pos: 12.0
       min_y_pos: -10.0
       max_y_pos: 10.0
       min_z_pos: 0.0
-      max_z_pos: 2.0
+      max_z_pos: 1.0
       min_roll: -0.5
       max_roll: 0.5
       min_pitch: -0.4

@@ -331,15 +331,15 @@ std::map<int, ompl::control::PathControl> QuadrotorControlPlannersBenchMarking::
     start_yaw = getRangedRandom(state_bounds_.yaw.first, state_bounds_.yaw.second);
     goal_yaw = getRangedRandom(state_bounds_.yaw.first, state_bounds_.yaw.second);
 
-    start.pose.position.x = 7.9;  // getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+    start.pose.position.x = 0.0;  // getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
     start.pose.position.y = 9.0;  // getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
     start.pose.position.z = 0.5;  // getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
 
     start.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 1.57);
 
-    goal.pose.position.x = 7.9;  // getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
-    goal.pose.position.y = 2.8;  // getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
-    goal.pose.position.z = 1.0;  // getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+    goal.pose.position.x = 7.9;   // getRangedRandom(se_bounds_.minx, se_bounds_.maxx);
+    goal.pose.position.y = -1.8;  // getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
+    goal.pose.position.z = 1.0;   // getRangedRandom(se_bounds_.miny, se_bounds_.maxy);
 
     goal.pose.orientation = vox_nav_utilities::getMsgQuaternionfromRPY(nan, nan, 0);
 

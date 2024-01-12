@@ -125,16 +125,16 @@ void ompl::control::CostTrustKinoPlanner::setup()
 
   // RVIZ VISUALIZATIONS, this is likely to be removed in the future, but for now it is useful
   node_ = std::make_shared<rclcpp::Node>("CP_rclcpp_node");
-  rgg_graph_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>("vox_nav/CostTrustKinoPlanner/rgg",
-                                                                                 rclcpp::SystemDefaultsQoS());
-  geometric_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "vox_nav/CostTrustKinoPlanner/g_plan", rclcpp::SystemDefaultsQoS());
+
+  // reliable QOS settings for rviz visualization
+  auto reliable_qos = rclcpp::QoS(rclcpp::KeepLast(1)).reliable();
+
   first_control_graph_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "vox_nav/CostTrustKinoPlanner/first_control_rgg", rclcpp::SystemDefaultsQoS());
+      "vox_nav/CostTrustKinoPlanner/first_control_rgg", reliable_qos);
   second_control_graph_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "vox_nav/CostTrustKinoPlanner/second_control_rgg", rclcpp::SystemDefaultsQoS());
+      "vox_nav/CostTrustKinoPlanner/second_control_rgg", reliable_qos);
   control_path_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "vox_nav/CostTrustKinoPlanner/c_plan", rclcpp::SystemDefaultsQoS());
+      "vox_nav/CostTrustKinoPlanner/c_plan", reliable_qos);
 }
 
 void ompl::control::CostTrustKinoPlanner::clear()
@@ -556,12 +556,12 @@ ompl::base::PlannerStatus ompl::control::CostTrustKinoPlanner::solve(const base:
 
     // best control path
 
-    visualizePath(bestControlPath_, control_path_pub_, "c", getColor(red), si_->getStateSpace()->getType());
+    visualizePath(bestControlPath_, control_path_pub_, "c", getColor(blue), si_->getStateSpace()->getType());
 
     visualizeRGG(best_control_nn_structure, first_control_graph_pub_, "c", getColor(red),
                  si_->getStateSpace()->getType());
 
-    visualizeRGG(best_control_nn_structure_counterpart, second_control_graph_pub_, "c", getColor(blue),
+    visualizeRGG(best_control_nn_structure_counterpart, second_control_graph_pub_, "c", getColor(green),
                  si_->getStateSpace()->getType());
 
     if (static_cast<bool>(Planner::pdef_->getIntermediateSolutionCallback()))
@@ -1060,7 +1060,7 @@ void ompl::control::CostTrustKinoPlanner::visualizePath(
     text.id = i - 1;  // g[u].id;
     text.type = visualization_msgs::msg::Marker::TEXT_VIEW_FACING;
     text.action = visualization_msgs::msg::Marker::ADD;
-    text.lifetime = rclcpp::Duration::from_seconds(0);
+    text.lifetime = rclcpp::Duration::from_seconds(1);
     text.text = std::to_string(i - 1);
     text.pose.position = source_point;
     text.pose.position.z += 0.5;
